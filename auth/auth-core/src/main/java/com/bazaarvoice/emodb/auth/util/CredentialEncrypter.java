@@ -45,7 +45,7 @@ public class CredentialEncrypter {
     }
 
     /**
-     * Convenience constructor to initialize from the a string converted to a UTF-8 byte array.
+     * Convenience constructor to initialize from a string converted to a UTF-8 byte array.
      */
     public CredentialEncrypter(String initializationString) {
         this(checkNotNull(initializationString, "initializationString").getBytes(Charsets.UTF_8));

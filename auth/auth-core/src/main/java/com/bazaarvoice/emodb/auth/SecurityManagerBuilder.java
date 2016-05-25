@@ -68,7 +68,7 @@ public class SecurityManagerBuilder {
         return this;
     }
 
-    public SecurityManager build() {
+    public EmoSecurityManager build() {
         checkNotNull(_authIdentityManager, "authIdentityManager not set");
         checkNotNull(_permissionManager, "permissionManager not set");
         if(_cacheManager == null) { // intended for test use

@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
@@ -16,6 +17,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.net.HostAndPort;
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import org.apache.cassandra.thrift.AuthorizationException;
@@ -29,6 +31,7 @@ import java.io.PrintWriter;
 import java.security.SecureRandom;
 import java.util.Date;
 import java.util.Set;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -167,6 +170,15 @@ public class ApiKeyAdminTask extends Task {
         }
     }
 
+    private String createUniqueInternalId() {
+        // This is effectively a TimeUUID but condensed to a slightly smaller String representation.
+        UUID uuid = TimeUUIDs.newUUID();
+        byte[] b = new byte[16];
+        System.arraycopy(Longs.toByteArray(uuid.getMostSignificantBits()), 0, b, 0, 8);
+        System.arraycopy(Longs.toByteArray(uuid.getLeastSignificantBits()), 0, b, 8, 8);
+        return BaseEncoding.base32().omitPadding().encode(b);
+    }
+
     private void createApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output)
                 throws Exception {
         String owner = getValueFromParams("owner", parameters);
@@ -180,6 +192,9 @@ public class ApiKeyAdminTask extends Task {
 
         checkArgument(Sets.intersection(roles, _reservedRoles).isEmpty(), "Cannot assign reserved role");
 
+        // Generate a unique internal ID for this new key
+        String internalId = createUniqueInternalId();
+
         String key;
         if (providedKey.isPresent()) {
             key = providedKey.get();
@@ -187,26 +202,26 @@ public class ApiKeyAdminTask extends Task {
                 output.println("Error:  Provided key is not valid");
                 return;
             }
-            if (!createApiKeyIfAvailable(key, owner, roles, description)) {
+            if (!createApiKeyIfAvailable(key, internalId, owner, roles, description)) {
                 output.println("Error:  Provided key exists");
                 return;
             }
         } else {
-            key = createRandomApiKey(owner, roles, description);
+            key = createRandomApiKey(internalId, owner, roles, description);
         }
 
         output.println("API key: " + key);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
-    private boolean createApiKeyIfAvailable(String key, String owner, Set<String> roles, String description) {
+    private boolean createApiKeyIfAvailable(String key, String internalId, String owner, Set<String> roles, String description) {
         boolean exists = _authIdentityManager.getIdentity(key) != null;
 
         if (exists) {
             return false;
         }
 
-        ApiKey apiKey = new ApiKey(key, roles);
+        ApiKey apiKey = new ApiKey(key, internalId, roles);
         apiKey.setOwner(owner);
         apiKey.setDescription(description);
         apiKey.setIssued(new Date());
@@ -216,7 +231,7 @@ public class ApiKeyAdminTask extends Task {
         return true;
     }
 
-    private String createRandomApiKey(String owner, Set<String> roles, String description) {
+    private String createRandomApiKey(String internalId, String owner, Set<String> roles, String description) {
         // Since API keys are stored hashed we create them in a loop to ensure we don't grab one that is already picked
 
         String key = null;
@@ -224,7 +239,7 @@ public class ApiKeyAdminTask extends Task {
 
         while (!apiKeyCreated) {
             key = generateRandomApiKey();
-            apiKeyCreated = createApiKeyIfAvailable(key, owner, roles, description);
+            apiKeyCreated = createApiKeyIfAvailable(key, internalId, owner, roles, description);
         }
 
         return key;
@@ -291,7 +306,7 @@ public class ApiKeyAdminTask extends Task {
         roles.removeAll(removeRoles);
 
         if (!roles.equals(apiKey.getRoles())) {
-            ApiKey updatedKey = new ApiKey(key, roles);
+            ApiKey updatedKey = new ApiKey(key, apiKey.getInternalId(), roles);
             updatedKey.setOwner(apiKey.getOwner());
             updatedKey.setDescription(apiKey.getDescription());
             updatedKey.setIssued(new Date());
@@ -309,7 +324,7 @@ public class ApiKeyAdminTask extends Task {
 
         // Create a new key with the same information as the existing one
         //noinspection ConstantConditions
-        String newKey = createRandomApiKey(apiKey.getOwner(), apiKey.getRoles(), apiKey.getDescription());
+        String newKey = createRandomApiKey(apiKey.getInternalId(), apiKey.getOwner(), apiKey.getRoles(), apiKey.getDescription());
         // Delete the existing key
         _authIdentityManager.deleteIdentity(key);
 

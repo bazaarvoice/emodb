@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.auth.identity;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -30,6 +31,17 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
     public void deleteIdentity(String id) {
         checkNotNull(id, "id");
         _identityMap.remove(id);
+    }
+
+    @Override
+    public Set<String> getRolesByInternalId(String internalId) {
+        checkNotNull(internalId, "internalId");
+        for (T identity : _identityMap.values()) {
+            if (internalId.equals(identity.getInternalId())) {
+                return identity.getRoles();
+            }
+        }
+        return null;
     }
 
     public void reset() {

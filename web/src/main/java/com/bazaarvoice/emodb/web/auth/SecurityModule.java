@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.AuthCacheRegistry;
+import com.bazaarvoice.emodb.auth.EmoSecurityManager;
+import com.bazaarvoice.emodb.auth.InternalAuthorizer;
 import com.bazaarvoice.emodb.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
@@ -55,12 +57,18 @@ import java.util.Set;
  * <ul>
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
+ * <li> {@link InternalAuthorizer}
  * </ul>
  */
 public class SecurityModule extends PrivateModule {
 
     private final static String REALM_NAME = "EmoDB";
     private final static String ANONYMOUS_KEY = "anonymous";
+
+    // Internal identifiers for reserved API keys
+    private final static String ADMIN_INTERNAL_ID = "__admin";
+    private final static String REPLICATION_INTERNAL_ID = "__replication";
+    private final static String ANONYMOUS_INTERNAL_ID = "__anonymous";
 
     @Override
     protected void configure() {
@@ -76,15 +84,18 @@ public class SecurityModule extends PrivateModule {
                         DefaultRoles.anonymous.toString()));
 
         bind(PermissionResolver.class).to(EmoPermissionResolver.class).asEagerSingleton();
+        bind(SecurityManager.class).to(EmoSecurityManager.class);
+        bind(InternalAuthorizer.class).to(EmoSecurityManager.class);
 
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
+        expose(InternalAuthorizer.class);
     }
 
     @Provides
     @Singleton
     @Inject
-    SecurityManager provideSecurityManager(
+    EmoSecurityManager provideSecurityManager(
             AuthIdentityManager<ApiKey> authIdentityManager,
             PermissionManager permissionManager,
             InvalidatableCacheManager cacheManager,
@@ -152,7 +163,7 @@ public class SecurityModule extends PrivateModule {
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash) {
         return new TableAuthIdentityManager<>(ApiKey.class, dataStore, config.getIdentityTable(),
-                config.getTablePlacement(), hash);
+                config.getInternalIdIndexTable(), config.getTablePlacement(), hash);
     }
 
     @Provides
@@ -166,11 +177,11 @@ public class SecurityModule extends PrivateModule {
 
         ImmutableList.Builder<ApiKey> reservedIdentities = ImmutableList.builder();
         reservedIdentities.add(
-                new ApiKey(replicationKey, ImmutableSet.of(DefaultRoles.replication.toString())),
-                new ApiKey(adminKey, ImmutableSet.of(DefaultRoles.admin.toString())));
+                new ApiKey(replicationKey, REPLICATION_INTERNAL_ID, ImmutableSet.of(DefaultRoles.replication.toString())),
+                new ApiKey(adminKey, ADMIN_INTERNAL_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
-            reservedIdentities.add(new ApiKey(anonymousKey.get(), ImmutableSet.of(DefaultRoles.anonymous.toString())));
+            reservedIdentities.add(new ApiKey(anonymousKey.get(), ANONYMOUS_INTERNAL_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
         AuthIdentityManager<ApiKey> deferring = new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
