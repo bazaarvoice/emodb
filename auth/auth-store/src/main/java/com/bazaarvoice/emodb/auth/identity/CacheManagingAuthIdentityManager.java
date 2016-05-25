@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.auth.identity;
 
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 
+import java.util.Set;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -35,5 +37,11 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
         checkNotNull(id);
         _manager.deleteIdentity(id);
         _cacheManager.invalidateAll();
+    }
+
+    @Override
+    public Set<String> getRolesByInternalId(String internalId) {
+        checkNotNull(internalId, "internalId");
+        return _manager.getRolesByInternalId(internalId);
     }
 }

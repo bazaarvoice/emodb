@@ -54,8 +54,8 @@ public class QueueJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new QueueResource1(_server, QueueServiceAuthenticator.proxied(_proxy))),
-            new ApiKey(APIKEY_QUEUE, ImmutableSet.of("queue-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
+            new ApiKey(APIKEY_QUEUE, "queue", ImmutableSet.of("queue-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
             "queue");
 
     @After

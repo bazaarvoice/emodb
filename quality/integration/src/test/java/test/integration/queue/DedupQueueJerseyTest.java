@@ -52,8 +52,8 @@ public class DedupQueueJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy))),
-            new ApiKey(APIKEY_QUEUE, ImmutableSet.of("queue-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
+            new ApiKey(APIKEY_QUEUE, "queue", ImmutableSet.of("queue-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
             "queue");
 
     @After

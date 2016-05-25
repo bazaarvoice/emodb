@@ -50,7 +50,7 @@ public class ApiKeyAdminTaskTest {
 
         _task = new ApiKeyAdminTask(securityManager, mock(TaskRegistry.class), _authIdentityManager,
                 HostAndPort.fromParts("0.0.0.0", 8080), ImmutableSet.of("reservedrole"));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
     }
 
     @AfterMethod
@@ -83,7 +83,7 @@ public class ApiKeyAdminTaskTest {
     public void testUpdateApiKey() throws Exception {
         String key = "updateapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, ImmutableSet.of("role1", "role2", "role3")));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_update", ImmutableSet.of("role1", "role2", "role3")));
 
         _task.execute(ImmutableMultimap.<String, String>builder()
                 .put(ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin")
@@ -102,7 +102,7 @@ public class ApiKeyAdminTaskTest {
     public void testMigrateApiKey() throws Exception {
         String key = "migrateapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, ImmutableSet.of("role1", "role2")));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_migrate", ImmutableSet.of("role1", "role2")));
         assertNotNull(_authIdentityManager.getIdentity(key));
 
         StringWriter output = new StringWriter();
@@ -115,6 +115,7 @@ public class ApiKeyAdminTaskTest {
         ApiKey apiKey = _authIdentityManager.getIdentity(newKey);
         assertNotNull(apiKey);
         assertEquals(apiKey.getRoles(), ImmutableSet.of("role1", "role2"));
+        assertEquals(apiKey.getInternalId(), "id_migrate");
         assertNull(_authIdentityManager.getIdentity(key));
     }
 
@@ -122,7 +123,7 @@ public class ApiKeyAdminTaskTest {
     public void testDeleteApiKey() throws Exception {
         String key = "deleteapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, ImmutableSet.of("role1", "role2")));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_delete", ImmutableSet.of("role1", "role2")));
         assertNotNull(_authIdentityManager.getIdentity(key));
 
         _task.execute(ImmutableMultimap.of(

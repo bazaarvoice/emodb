@@ -97,8 +97,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
             Collections.<Object>singletonList(new DatabusResource1(_server, DatabusAuthenticator.proxied(_proxy), mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
-            new ApiKey(APIKEY_DATABUS, ImmutableSet.of("databus-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
+            new ApiKey(APIKEY_DATABUS, "bus", ImmutableSet.of("databus-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
             "databus");
 
     @After

@@ -100,10 +100,10 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private ResourceTestRule setupResourceTestRule() {
         final InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB, ImmutableSet.of("blob-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_A, ImmutableSet.of("blob-role-a")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_B, ImmutableSet.of("blob-role-b")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB, "id0", ImmutableSet.of("blob-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UNAUTHORIZED, "id1", ImmutableSet.of("unauthorized-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_A, "id2", ImmutableSet.of("blob-role-a")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_B, "id3", ImmutableSet.of("blob-role-b")));
 
         final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), _server);
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
