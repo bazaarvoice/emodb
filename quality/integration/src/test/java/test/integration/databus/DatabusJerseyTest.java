@@ -2,7 +2,7 @@ package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
-import com.bazaarvoice.emodb.client.EmoClientException;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
@@ -14,16 +14,19 @@ import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.test.ResourceTest;
+import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxy;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResource1;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
 import com.bazaarvoice.emodb.web.resources.databus.LongPollingExecutorServices;
@@ -38,10 +41,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
-import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.junit.After;
@@ -73,7 +78,9 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Matchers.argThat;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -87,39 +94,64 @@ import static org.mockito.Mockito.when;
  */
 public class DatabusJerseyTest extends ResourceTest {
     private static final String APIKEY_DATABUS = "databus-key";
+    private static final String INTERNAL_ID_DATABUS = "databus-id";
     private static final String APIKEY_UNAUTHORIZED = "unauthorized-key";
+    private static final String INTERNAL_ID_UNAUTHORIZED = "unauthorized-id";
 
     private final PartitionContextValidator<AuthDatabus> _pcxtv =
             OstrichAccessors.newPartitionContextTest(AuthDatabus.class, DatabusClient.class);
+    private final DatabusFactory _factory = mock(DatabusFactory.class);
     private final Databus _server = mock(Databus.class);
-    private final AuthDatabus _proxy = mock(AuthDatabus.class);
+    private final DatabusClientSubjectProxy _proxyProvider = mock(DatabusClientSubjectProxy.class);
+    private final Databus _proxy = mock(Databus.class);
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DatabusResource1(_server, DatabusAuthenticator.proxied(_proxy), mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
-            new ApiKey(APIKEY_DATABUS, "bus", ImmutableSet.of("databus-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
-            "databus");
+            Collections.<Object>singletonList(new DatabusResource1(_factory, _proxyProvider, mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
+                    new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
+                    new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
+                    "databus");
 
     @After
     public void tearDownMocksAndClearState() {
         verifyNoMoreInteractions(_server, _proxy);
-        reset(_server, _proxy);
+        reset(_factory, _server, _proxyProvider, _proxy);
     }
 
     private Databus databusClient() {
+        when(_factory.forOwner(INTERNAL_ID_DATABUS)).thenReturn(_server);
+        when(_proxyProvider.forSubject(argThat(matchesKey(APIKEY_DATABUS)))).thenReturn(_proxy);
         return DatabusAuthenticator.proxied(new DatabusClient(URI.create("/bus/1"), new JerseyEmoClient(_resourceTestRule.client())))
                 .usingCredentials(APIKEY_DATABUS);
     }
 
     private Databus databusClient(boolean partitioned) {
+        when(_factory.forOwner(INTERNAL_ID_DATABUS)).thenReturn(_server);
+        when(_proxyProvider.forSubject(argThat(matchesKey(APIKEY_DATABUS)))).thenReturn(_proxy);
         return DatabusAuthenticator.proxied(new DatabusClient(URI.create("/bus/1"), partitioned, new JerseyEmoClient(_resourceTestRule.client())))
                 .usingCredentials(APIKEY_DATABUS);
     }
 
     private Databus unauthorizedDatabusClient(boolean partitioned) {
+        when(_factory.forOwner(INTERNAL_ID_UNAUTHORIZED)).thenReturn(_server);
+        when(_proxyProvider.forSubject(argThat(matchesKey(APIKEY_UNAUTHORIZED)))).thenReturn(_proxy);
         return DatabusAuthenticator.proxied(new DatabusClient(URI.create("/bus/1"), partitioned, new JerseyEmoClient(_resourceTestRule.client())))
                 .usingCredentials(APIKEY_UNAUTHORIZED);
+    }
+
+    private Matcher<Subject> matchesKey(final String apiKey) {
+        return new BaseMatcher<Subject>() {
+            @Override
+            public boolean matches(Object o) {
+                Subject subject = (Subject) o;
+                return subject != null && subject.getId().equals(apiKey);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("API key ").appendText(apiKey);
+            }
+        };
     }
 
     @Test
@@ -207,6 +239,26 @@ public class DatabusJerseyTest extends ResourceTest {
     }
 
     @Test
+    public void testSubscribeNotOwner() {
+        Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
+        Duration subscriptionTtl = Duration.standardDays(15);
+        Duration eventTtl = Duration.standardDays(2);
+
+        doThrow(new UnauthorizedSubscriptionException("Not owner", "queue-name")).
+            when(_server).subscribe("queue-name", condition, subscriptionTtl, eventTtl, true);
+
+        try {
+            databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
+            fail();
+        } catch (UnauthorizedSubscriptionException e) {
+            assertEquals(e.getSubscription(), "queue-name");
+        }
+
+        verify(_server).subscribe("queue-name", condition, subscriptionTtl, eventTtl, true);
+        verifyNoMoreInteractions(_server);
+    }
+
+    @Test
     public void testUnsubscribePartitionContext() {
         _pcxtv.expect(PartitionContextBuilder.of("queue-name"))
                 .unsubscribe(APIKEY_DATABUS, "queue-name");
@@ -216,8 +268,9 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testUnsubscribe() {
         databusClient().unsubscribe("queue-name");
 
-        verify(_proxy).unsubscribe(APIKEY_DATABUS, "queue-name");
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).unsubscribe("queue-name");
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -273,13 +326,14 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testGetEventCount() {
         long expected = 123L;
-        when(_proxy.getEventCount(APIKEY_DATABUS, "queue-name")).thenReturn(expected);
+        when(_proxy.getEventCount("queue-name")).thenReturn(expected);
 
         long actual = databusClient().getEventCount("queue-name");
 
         assertEquals(actual, expected);
-        verify(_proxy).getEventCount(APIKEY_DATABUS, "queue-name");
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).getEventCount("queue-name");
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -303,13 +357,14 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testGetEventCountUpTo() {
         long expected = 123L;
-        when(_proxy.getEventCountUpTo(APIKEY_DATABUS, "queue-name", 10000L)).thenReturn(expected);
+        when(_proxy.getEventCountUpTo("queue-name", 10000L)).thenReturn(expected);
 
         long actual = databusClient().getEventCountUpTo("queue-name", 10000L);
 
         assertEquals(actual, expected);
-        verify(_proxy).getEventCountUpTo(APIKEY_DATABUS, "queue-name", 10000L);
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).getEventCountUpTo("queue-name", 10000L);
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -333,13 +388,14 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testGetClaimCount() {
         long expected = 123L;
-        when(_proxy.getClaimCount(APIKEY_DATABUS, "queue-name")).thenReturn(expected);
+        when(_proxy.getClaimCount("queue-name")).thenReturn(expected);
 
         long actual = databusClient(false).getClaimCount("queue-name");
 
         assertEquals(actual, expected);
-        verify(_proxy).getClaimCount(APIKEY_DATABUS, "queue-name");
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).getClaimCount("queue-name");
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -374,7 +430,8 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> peekResults = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
-        when(_proxy.peek(APIKEY_DATABUS, "queue-name", 123)).thenReturn(peekResults);
+        when(_proxy.peek("queue-name", 123)).thenReturn(peekResults);
+        when(_proxyProvider.forSubject(argThat(matchesKey(APIKEY_DATABUS)))).thenReturn(_proxy);
 
         List<Event> expected;
         List<Event> actual;
@@ -399,8 +456,9 @@ public class DatabusJerseyTest extends ResourceTest {
         }
 
         assertEquals(actual, expected);
-        verify(_proxy).peek(APIKEY_DATABUS, "queue-name", 123);
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).peek("queue-name", 123);
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -423,7 +481,8 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> pollResults = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
-        when(_proxy.poll(APIKEY_DATABUS, "queue-name", Duration.standardSeconds(15), 123)).thenReturn(pollResults);
+        when(_proxy.poll("queue-name", Duration.standardSeconds(15), 123)).thenReturn(pollResults);
+        when(_proxyProvider.forSubject(argThat(matchesKey(APIKEY_DATABUS)))).thenReturn(_proxy);
 
         List<Event> expected;
         List<Event> actual;
@@ -449,8 +508,9 @@ public class DatabusJerseyTest extends ResourceTest {
         }
 
         assertEquals(actual, expected);
-        verify(_proxy).poll(APIKEY_DATABUS, "queue-name", Duration.standardSeconds(15), 123);
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).poll("queue-name", Duration.standardSeconds(15), 123);
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -655,6 +715,25 @@ public class DatabusJerseyTest extends ResourceTest {
     }
 
     @Test
+    public void testPollNotOwner() {
+        Duration ttl = Duration.standardSeconds(15);
+        int limit = 123;
+
+        when(_proxy.poll("queue-name", ttl, limit))
+                .thenThrow(new UnauthorizedSubscriptionException("Not owner", "queue-name"));
+
+        try {
+            databusClient().poll("queue-name", ttl, limit);
+            fail();
+        } catch (UnauthorizedException e) {
+            // expected
+        }
+
+        verify(_proxy).poll("queue-name", ttl, limit);
+        verifyNoMoreInteractions(_proxy);
+    }
+
+    @Test
     public void testPollPartitioned() {
         List<Event> expected = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
@@ -690,8 +769,9 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testRenew() {
         databusClient().renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
 
-        verify(_proxy).renew(APIKEY_DATABUS, "queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -712,8 +792,9 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testAcknowledge() {
         databusClient().acknowledge("queue-name", ImmutableList.of("id-1", "id-2"));
 
-        verify(_proxy).acknowledge(APIKEY_DATABUS, "queue-name", ImmutableList.of("id-1", "id-2"));
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).acknowledge("queue-name", ImmutableList.of("id-1", "id-2"));
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -801,8 +882,9 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testUnclaimAll() {
         databusClient().unclaimAll("queue-name");
 
-        verify(_proxy).unclaimAll(APIKEY_DATABUS, "queue-name");
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).unclaimAll("queue-name");
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test
@@ -823,8 +905,9 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testPurge() {
         databusClient().purge("queue-name");
 
-        verify(_proxy).purge(APIKEY_DATABUS, "queue-name");
-        verifyNoMoreInteractions(_proxy);
+        verify(_proxyProvider).forSubject(argThat(matchesKey(APIKEY_DATABUS)));
+        verify(_proxy).purge("queue-name");
+        verifyNoMoreInteractions(_proxyProvider, _proxy);
     }
 
     @Test

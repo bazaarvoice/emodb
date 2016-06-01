@@ -15,12 +15,13 @@ public class ReplayRequestTest {
     @Test
     public void testReplayRequestJson() {
         String json = "{" +
-                "\"subscription\":\"test\"}";
+                "\"ownerId\":\"123\",\"subscription\":\"test\"}";
         ReplaySubscriptionRequest request = JsonHelper.fromJson(json, ReplaySubscriptionRequest.class);
         assertEquals(JsonHelper.asJson(request), json, "Json representation without 'since' looks good");
         SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
         dateFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
         String jsonWithSince = "{" +
+                "\"ownerId\":\"123\"," +
                 "\"subscription\":\"test\"," +
                 "\"since\":\"" + dateFmt.format(new Date()) + "\"}";
         request = JsonHelper.fromJson(jsonWithSince, ReplaySubscriptionRequest.class);

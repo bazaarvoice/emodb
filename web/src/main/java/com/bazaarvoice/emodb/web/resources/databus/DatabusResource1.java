@@ -9,9 +9,9 @@ import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
-import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
@@ -66,14 +66,14 @@ public class DatabusResource1 {
     private static final PeekOrPollResponseHelper _helperContentOnly = new PeekOrPollResponseHelper(EventViews.ContentOnly.class);
     private static final PeekOrPollResponseHelper _helperWithTags = new PeekOrPollResponseHelper(EventViews.WithTags.class);
 
-    private final Databus _databus;
-    private final DatabusAuthenticator _databusClient;
+    private final DatabusFactory _databusFactory;
+    private final DatabusClientSubjectProxy _databusClient;
     private final DatabusEventStore _eventStore;
     private final DatabusResourcePoller _poller;
 
-    public DatabusResource1(Databus databus, DatabusAuthenticator databusClient, DatabusEventStore eventStore,
+    public DatabusResource1(DatabusFactory databusFactory, DatabusClientSubjectProxy databusClient, DatabusEventStore eventStore,
                             DatabusResourcePoller databusResourcePoller) {
-        _databus = checkNotNull(databus, "databus");
+        _databusFactory = checkNotNull(databusFactory, "databusFactory");
         _databusClient = checkNotNull(databusClient, "databusClient");
         _eventStore = checkNotNull(eventStore, "eventStore");
         _poller = databusResourcePoller;
@@ -91,8 +91,9 @@ public class DatabusResource1 {
             response = Subscription.class
     )
     public Iterator<Subscription> listSubscription(@QueryParam ("from") String fromKeyExclusive,
-                                                   @QueryParam ("limit") @DefaultValue ("10") LongParam limit) {
-        return streamingIterator(_databus.listSubscriptions(Strings.emptyToNull(fromKeyExclusive), limit.get()));
+                                                   @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                                                   @Authenticated Subject subject) {
+        return streamingIterator(getService(subject).listSubscriptions(Strings.emptyToNull(fromKeyExclusive), limit.get()));
     }
 
     @PUT
@@ -108,14 +109,15 @@ public class DatabusResource1 {
                                      String conditionString,
                                      @QueryParam ("ttl") @DefaultValue ("86400") SecondsParam subscriptionTtl,
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
-                                     @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam) {
+                                     @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam,
+                                     @Authenticated Subject subject) {
         // By default, ignore events tagged with "re-etl"
         boolean ignoreSuppressedEvents = ignoreSuppressedEventsParam == null ? true : ignoreSuppressedEventsParam.get();
         Condition tableFilter = Conditions.alwaysTrue();
         if (!conditionString.isEmpty()) {
             tableFilter = new ConditionParam(conditionString).get();
         }
-        _databus.subscribe(subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), ignoreSuppressedEvents);
+        getService(subject).subscribe(subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), ignoreSuppressedEvents);
         return SuccessResponse.instance();
     }
 
@@ -130,7 +132,7 @@ public class DatabusResource1 {
     public SuccessResponse unsubscribe(@QueryParam ("partitioned") BooleanParam partitioned,
                                        @PathParam ("subscription") String subscription,
                                        @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).unsubscribe(subscription);
+        getService(partitioned, subject).unsubscribe(subscription);
         return SuccessResponse.instance();
     }
 
@@ -141,8 +143,9 @@ public class DatabusResource1 {
             notes = "Returns a Subscription.",
             response = Subscription.class
     )
-    public Subscription getSubscription(@PathParam ("subscription") String subscription) {
-        return _databus.getSubscription(subscription);
+    public Subscription getSubscription(@PathParam ("subscription") String subscription,
+                                        @Authenticated Subject subject) {
+        return getService(subject).getSubscription(subscription);
     }
 
     @GET
@@ -158,9 +161,9 @@ public class DatabusResource1 {
                               @Authenticated Subject subject) {
         // Call different getEventCount* methods to collect metrics data that distinguish limited vs. unlimited calls.
         if (limit == null || limit.get() == Long.MAX_VALUE) {
-            return getService(partitioned, subject.getId()).getEventCount(subscription);
+            return getService(partitioned, subject).getEventCount(subscription);
         } else {
-            return getService(partitioned, subject.getId()).getEventCountUpTo(subscription, limit.get());
+            return getService(partitioned, subject).getEventCountUpTo(subscription, limit.get());
         }
     }
 
@@ -175,7 +178,7 @@ public class DatabusResource1 {
     public long getClaimCount(@QueryParam ("partitioned") BooleanParam partitioned,
                               @PathParam ("subscription") String subscription,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getId()).getClaimCount(subscription);
+        return getService(partitioned, subject).getClaimCount(subscription);
     }
 
     @GET
@@ -194,7 +197,7 @@ public class DatabusResource1 {
         // For backwards compatibility with older clients only include tags if explicitly requested
         // (default is false).
         PeekOrPollResponseHelper helper = getPeekOrPollResponseHelper(includeTags.get());
-        List<Event> events = getService(partitioned, subject.getId()).peek(subscription, limit.get());
+        List<Event> events = getService(partitioned, subject).peek(subscription, limit.get());
         return Response.ok().entity(helper.asEntity(events)).build();
     }
 
@@ -215,7 +218,7 @@ public class DatabusResource1 {
                          @Authenticated Subject subject) {
         // For backwards compatibility with older clients only include tags if explicitly requested
         // (default is false).
-        Databus databus = getService(partitioned, subject.getId());
+        Databus databus = getService(partitioned, subject);
         PeekOrPollResponseHelper helper = getPeekOrPollResponseHelper(includeTags.get());
         return _poller.poll(databus, subscription, claimTtl.get(), limit.get(), request,
                 ignoreLongPoll.get(), helper);
@@ -239,7 +242,7 @@ public class DatabusResource1 {
                                  @QueryParam ("ttl") @DefaultValue ("30") SecondsParam claimTtl,
                                  List<String> eventKeys,
                                  @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).renew(subscription, eventKeys, claimTtl.get());
+        getService(partitioned, subject).renew(subscription, eventKeys, claimTtl.get());
         return SuccessResponse.instance();
     }
 
@@ -258,7 +261,7 @@ public class DatabusResource1 {
                                        @Authenticated Subject subject) {
         // Check for null parameters, which will throw a 400, otherwise it throws a 5xx error
         checkArgument(eventKeys != null, "Missing event keys");
-        getService(partitioned, subject.getId()).acknowledge(subscription, eventKeys);
+        getService(partitioned, subject).acknowledge(subscription, eventKeys);
         return SuccessResponse.instance();
     }
 
@@ -271,13 +274,14 @@ public class DatabusResource1 {
             response = Map.class
     )
     public Map<String, Object> replay(@PathParam ("subscription") String subscription,
-                                      @QueryParam ("since") DateTimeParam sinceParam) {
+                                      @QueryParam ("since") DateTimeParam sinceParam,
+                                      @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(subscription), "subscription is required");
         Date since = (sinceParam == null) ? null : sinceParam.get().toDate();
         // Make sure since is within Replay TTL
         checkArgument(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
                 "Since timestamp is outside the replay TTL. Use null 'since' if you want to replay all events.");
-        String id = _databus.replayAsyncSince(subscription, since);
+        String id = getService(subject).replayAsyncSince(subscription, since);
         return ImmutableMap.<String, Object>of("id", id);
     }
 
@@ -288,8 +292,9 @@ public class DatabusResource1 {
             notes = "Returns a ReplaySubsciptionStatus.",
             response = ReplaySubscriptionStatus.class
     )
-    public ReplaySubscriptionStatus getReplayStatus(@PathParam ("replayId") String replayId) {
-        return _databus.getReplayStatus(replayId);
+    public ReplaySubscriptionStatus getReplayStatus(@PathParam ("replayId") String replayId,
+                                                    @Authenticated Subject subject) {
+        return getService(subject).getReplayStatus(replayId);
     }
 
     @POST
@@ -300,12 +305,13 @@ public class DatabusResource1 {
             notes = "Returns a Map.",
             response = Map.class
     )
-    public Map<String, Object> move(@QueryParam ("from") String from, @QueryParam ("to") String to) {
+    public Map<String, Object> move(@QueryParam ("from") String from, @QueryParam ("to") String to,
+                                    @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(from), "from is required");
         checkArgument(!Strings.isNullOrEmpty(to), "to is required");
         checkArgument(!from.equals(to), "cannot move subscription to itself");
 
-        String id = _databus.moveAsync(from, to);
+        String id = getService(subject).moveAsync(from, to);
         return ImmutableMap.<String, Object>of("id", id);
     }
 
@@ -316,8 +322,9 @@ public class DatabusResource1 {
             notes = "Returns a MoveSubscriptionStatus.",
             response = MoveSubscriptionStatus.class
     )
-    public MoveSubscriptionStatus getMoveStatus(@PathParam ("reference") String reference) {
-        return _databus.getMoveStatus(reference);
+    public MoveSubscriptionStatus getMoveStatus(@PathParam ("reference") String reference,
+                                                @Authenticated Subject subject) {
+        return getService(subject).getMoveStatus(reference);
     }
 
     @POST
@@ -330,9 +337,10 @@ public class DatabusResource1 {
     )
     public SuccessResponse injectEvent(@PathParam ("subscription") String subscription,
                                        @QueryParam ("table") String table,
-                                       @QueryParam ("key") String key) {
+                                       @QueryParam ("key") String key,
+                                       @Authenticated Subject subject) {
         // Not partitioned--any server can write events to Cassandra.
-        _databus.injectEvent(subscription, table, key);
+        getService(subject).injectEvent(subscription, table, key);
         return SuccessResponse.instance();
     }
 
@@ -347,7 +355,7 @@ public class DatabusResource1 {
     public SuccessResponse unclaimAll(@QueryParam ("partitioned") BooleanParam partitioned,
                                       @PathParam ("subscription") String subscription,
                                       @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).unclaimAll(subscription);
+        getService(partitioned, subject).unclaimAll(subscription);
         return SuccessResponse.instance();
     }
 
@@ -362,12 +370,18 @@ public class DatabusResource1 {
     public SuccessResponse purge(@QueryParam ("partitioned") BooleanParam partitioned,
                                  @PathParam ("subscription") String subscription,
                                  @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).purge(subscription);
+        getService(partitioned, subject).purge(subscription);
         return SuccessResponse.instance();
     }
 
-    private Databus getService(BooleanParam partitioned, String apiKey) {
-        return partitioned != null && partitioned.get() ? _databus : _databusClient.usingCredentials(apiKey);
+    private Databus getService(Subject subject) {
+        return _databusFactory.forOwner(subject.getInternalId());
+    }
+
+    private Databus getService(BooleanParam partitioned, Subject subject) {
+        return partitioned != null && partitioned.get() ?
+                getService(subject) :
+                _databusClient.forSubject(subject);
     }
 
     private static <T> Iterator<T> streamingIterator(Iterator<T> iterator) {

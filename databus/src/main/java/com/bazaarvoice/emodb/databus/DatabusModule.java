@@ -19,12 +19,14 @@ import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.core.CanaryManager;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.databus.core.DedupMigrationTask;
 import com.bazaarvoice.emodb.databus.core.DefaultDatabus;
 import com.bazaarvoice.emodb.databus.core.DefaultFanoutManager;
 import com.bazaarvoice.emodb.databus.core.DefaultRateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.core.FanoutManager;
 import com.bazaarvoice.emodb.databus.core.MasterFanout;
+import com.bazaarvoice.emodb.databus.core.OwnerAwareDatabus;
 import com.bazaarvoice.emodb.databus.core.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.core.SubscriptionEvaluator;
 import com.bazaarvoice.emodb.databus.core.SystemQueueMonitorManager;
@@ -84,13 +86,15 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> @{@link Global} {@link CuratorFramework}
  * <li> Jersey {@link Client}
  * <li> @{@link ReplicationKey} String
+ * <li> @{@link SystemInternalId} String
  * <li> DataStore {@link DataProvider}
  * <li> DataStore {@link EventBus}
  * <li> DataStore {@link DataStoreConfiguration}
+ * <li> {@link com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer}
  * </ul>
  * Exports the following:
  * <ul>
- * <li> {@link Databus}
+ * <li> {@link DatabusFactory}
  * <li> {@link DatabusEventStore}
  * <li> {@link ReplicationSource}
  * </ul>
@@ -146,8 +150,9 @@ public class DatabusModule extends PrivateModule {
         expose(DatabusEventStore.class);
 
         // Bind the Databus instance that the rest of the application will consume
-        bind(Databus.class).to(DefaultDatabus.class).asEagerSingleton();
-        expose(Databus.class);
+        bind(OwnerAwareDatabus.class).to(DefaultDatabus.class).asEagerSingleton();
+        bind(DatabusFactory.class).asEagerSingleton();
+        expose(DatabusFactory.class);
 
         // Bind the cross-data center outbound replication end point
         bind(ReplicationSource.class).to(DefaultReplicationSource.class).asEagerSingleton();

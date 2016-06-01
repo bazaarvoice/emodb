@@ -11,9 +11,8 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
-import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
@@ -35,6 +34,7 @@ import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
+import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxy;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResource1;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
 import com.bazaarvoice.emodb.web.resources.databus.ReplicationResource1;
@@ -248,8 +248,8 @@ public class EmoService extends Application<EmoConfiguration> {
             return;
         }
 
-        Databus databus = _injector.getInstance(Databus.class);
-        DatabusAuthenticator databusClient = _injector.getInstance(Key.get(DatabusAuthenticator.class, PartitionAwareClient.class));
+        DatabusFactory databus = _injector.getInstance(DatabusFactory.class);
+        DatabusClientSubjectProxy databusClient = _injector.getInstance(Key.get(DatabusClientSubjectProxy.class, PartitionAwareClient.class));
         DatabusEventStore databusEventStore = _injector.getInstance(DatabusEventStore.class);
         ReplicationSource replicationSource = _injector.getInstance(ReplicationSource.class);
 

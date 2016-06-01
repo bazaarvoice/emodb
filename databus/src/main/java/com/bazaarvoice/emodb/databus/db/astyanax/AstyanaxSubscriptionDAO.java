@@ -3,9 +3,9 @@ package com.bazaarvoice.emodb.databus.db.astyanax;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
-import com.bazaarvoice.emodb.databus.api.DefaultSubscription;
-import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.model.DefaultOwnedSubscription;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.codahale.metrics.annotation.Timed;
@@ -49,12 +49,14 @@ public class AstyanaxSubscriptionDAO implements SubscriptionDAO {
 
     @Timed(name = "bv.emodb.databus.AstyanaxSubscriptionDAO.insertSubscription", absolute = true)
     @Override
-    public void insertSubscription(String subscription, Condition tableFilter,
+    public void insertSubscription(String ownerId, String subscription, Condition tableFilter,
                                    Duration subscriptionTtl, Duration eventTtl) {
-        Map<String, Object> json = ImmutableMap.<String, Object>of(
-                "filter", tableFilter.toString(),
-                "expiresAt", System.currentTimeMillis() + subscriptionTtl.getMillis(),
-                "eventTtl", Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE));
+        Map<String, Object> json = ImmutableMap.<String, Object>builder()
+                .put("filter", tableFilter.toString())
+                .put("expiresAt", System.currentTimeMillis() + subscriptionTtl.getMillis())
+                .put("eventTtl", Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE))
+                .put("ownerId", ownerId)
+                .build();
         execute(_keyspace.prepareColumnMutation(CF_SUBSCRIPTION, ROW_KEY, subscription, CL_LOCAL_QUORUM)
                 .putValue(JsonHelper.asJson(json), Ttls.toSeconds(subscriptionTtl, 1, Integer.MAX_VALUE)));
     }
@@ -67,23 +69,25 @@ public class AstyanaxSubscriptionDAO implements SubscriptionDAO {
     }
 
     @Override
-    public Subscription getSubscription(String subscription) {
+    public OwnedSubscription getSubscription(String subscription) {
         throw new UnsupportedOperationException();  // CachingSubscriptionDAO should prevent calls to this method.
     }
 
     @Timed(name = "bv.emodb.databus.AstyanaxSubscriptionDAO.getAllSubscriptions", absolute = true)
     @Override
-    public Collection<Subscription> getAllSubscriptions() {
+    public Collection<OwnedSubscription> getAllSubscriptions() {
         ColumnList<String> columns = execute(_keyspace.prepareQuery(CF_SUBSCRIPTION, CL_LOCAL_QUORUM)
                 .getKey(ROW_KEY));
-        List<Subscription> subscriptions = Lists.newArrayListWithCapacity(columns.size());
+        List<OwnedSubscription> subscriptions = Lists.newArrayListWithCapacity(columns.size());
         for (Column<String> column : columns) {
             String name = column.getName();
             Map<?, ?> json = JsonHelper.fromJson(column.getStringValue(), Map.class);
             Condition tableFilter = Conditions.fromString((String) checkNotNull(json.get("filter"), "filter"));
             Date expiresAt = new Date(((Number) checkNotNull(json.get("expiresAt"), "expiresAt")).longValue());
             Duration eventTtl = Duration.standardSeconds(((Number) checkNotNull(json.get("eventTtl"), "eventTtl")).intValue());
-            subscriptions.add(new DefaultSubscription(name, tableFilter, expiresAt, eventTtl));
+            // TODO:  Once API keys are fully integrated enforce non-null
+            String ownerId = (String) json.get("ownerId");
+            subscriptions.add(new DefaultOwnedSubscription(name, tableFilter, expiresAt, eventTtl, ownerId));
         }
         return subscriptions;
     }

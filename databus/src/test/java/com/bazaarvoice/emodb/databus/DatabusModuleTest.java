@@ -11,7 +11,8 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
@@ -49,14 +50,14 @@ public class DatabusModuleTest {
     public void testWebServer() {
         Injector injector = createInjector(EmoServiceMode.STANDARD_ALL);
 
-        assertNotNull(injector.getInstance(Databus.class));
+        assertNotNull(injector.getInstance(DatabusFactory.class));
     }
 
     @Test
     public void testCliTool() {
         Injector injector = createInjector(EmoServiceMode.CLI_TOOL);
 
-        assertNotNull(injector.getInstance(Databus.class));
+        assertNotNull(injector.getInstance(DatabusFactory.class));
     }
 
     private Injector createInjector(final EmoServiceMode serviceMode) {
@@ -98,10 +99,12 @@ public class DatabusModuleTest {
                 bind(CuratorFramework.class).annotatedWith(DatabusZooKeeper.class).toInstance(curator);
                 bind(HostDiscovery.class).annotatedWith(DatabusHostDiscovery.class).toInstance(mock(HostDiscovery.class));
                 bind(String.class).annotatedWith(ReplicationKey.class).toInstance("password");
+                bind(String.class).annotatedWith(SystemInternalId.class).toInstance("system");
                 bind(new TypeLiteral<Collection<ClusterInfo>>(){}).annotatedWith(DatabusClusterInfo.class)
                         .toInstance(ImmutableList.of(new ClusterInfo("Test Cluster", "Test Metric Cluster")));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
+                bind(DatabusAuthorizer.class).toInstance(mock(DatabusAuthorizer.class));
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);

@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
+import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -57,6 +58,8 @@ import java.util.Set;
  * <ul>
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
+ * <li> @{@link SystemInternalId} String
+ * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
  * </ul>
  */
@@ -69,6 +72,9 @@ public class SecurityModule extends PrivateModule {
     private final static String ADMIN_INTERNAL_ID = "__admin";
     private final static String REPLICATION_INTERNAL_ID = "__replication";
     private final static String ANONYMOUS_INTERNAL_ID = "__anonymous";
+
+    // Internal identifier for reserved internal processes that do not have a public facing API key
+    private final static String SYSTEM_INTERNAL_ID = "__system";
 
     @Override
     protected void configure() {
@@ -87,8 +93,12 @@ public class SecurityModule extends PrivateModule {
         bind(SecurityManager.class).to(EmoSecurityManager.class);
         bind(InternalAuthorizer.class).to(EmoSecurityManager.class);
 
+        bind(String.class).annotatedWith(SystemInternalId.class).toInstance(SYSTEM_INTERNAL_ID);
+
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
+        expose(Key.get(String.class, SystemInternalId.class));
+        expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
     }
 
