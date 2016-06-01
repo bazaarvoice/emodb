@@ -2,8 +2,9 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
@@ -58,9 +59,9 @@ public class ConsolidationTest {
             }
         };
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
-        Databus databus = newDatabus(eventStore, new TestDataProvider().add(content));
+        OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 1);
+        List<Event> events = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -87,9 +88,9 @@ public class ConsolidationTest {
             }
         };
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
-        Databus databus = newDatabus(eventStore, new TestDataProvider().add(content));
+        OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 1);
+        List<Event> events = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -118,9 +119,9 @@ public class ConsolidationTest {
             }
         };
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
-        Databus databus = newDatabus(eventStore, new TestDataProvider().add(content));
+        OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 1);
+        List<Event> events = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -152,9 +153,9 @@ public class ConsolidationTest {
             }
         };
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
-        Databus databus = newDatabus(eventStore, new TestDataProvider().add(content));
+        OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 1);
+        List<Event> events = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -202,7 +203,7 @@ public class ConsolidationTest {
         DefaultDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content), clock);
 
         // Use a limit of 2 to force multiple calls to the event store.
-        List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 2);
+        List<Event> events = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 2);
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -227,9 +228,10 @@ public class ConsolidationTest {
         SubscriptionEvaluator subscriptionEvaluator = mock(SubscriptionEvaluator.class);
         JobService jobService = mock(JobService.class);
         JobHandlerRegistry jobHandlerRegistry = mock(JobHandlerRegistry.class);
+        DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
-                jobService, jobHandlerRegistry, new MetricRegistry(), Suppliers.ofInstance(Conditions.alwaysFalse()),
-                clock);
+                jobService, jobHandlerRegistry,  databusAuthorizer, "replication",
+                Suppliers.ofInstance(Conditions.alwaysFalse()), new MetricRegistry(), clock);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

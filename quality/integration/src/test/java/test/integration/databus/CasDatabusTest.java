@@ -13,13 +13,16 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
-import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
@@ -74,7 +77,7 @@ import static org.testng.Assert.assertTrue;
 public class CasDatabusTest {
     private SimpleLifeCycleRegistry _lifeCycle;
     private HealthCheckRegistry _healthChecks;
-    private Databus _bus;
+    private DatabusFactory _bus;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -143,6 +146,8 @@ public class CasDatabusTest {
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
+                bind(DatabusAuthorizer.class).toInstance(ConstantDatabusAuthorizer.ALLOW_ALL);
+                bind(String.class).annotatedWith(SystemInternalId.class).toInstance("system");
                 bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
 
@@ -156,7 +161,7 @@ public class CasDatabusTest {
                 install(new DatabusModule(serviceMode, metricRegistry));
             }
         });
-        _bus = injector.getInstance(Databus.class);
+        _bus = injector.getInstance(DatabusFactory.class);
 
         _lifeCycle.start();
     }

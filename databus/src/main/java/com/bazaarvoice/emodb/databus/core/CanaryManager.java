@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerFactory;
@@ -37,7 +38,8 @@ public class CanaryManager {
     public CanaryManager(final LifeCycleRegistry lifeCycle,
                          @DatabusClusterInfo Collection<ClusterInfo> clusterInfo,
                          Placements placements,
-                         final Databus databus,
+                         final DatabusFactory databusFactory,
+                         final @SystemInternalId String systemInternalId,
                          final RateLimitedLogFactory logFactory,
                          OstrichOwnerGroupFactory ownerGroupFactory,
                          final MetricRegistry metricRegistry) {
@@ -84,6 +86,7 @@ public class CanaryManager {
             public Service create(String clusterName) {
                 ClusterInfo cluster = checkNotNull(clusterInfoMap.get(clusterName), clusterName);
                 Condition condition = checkNotNull(clusterToConditionMap.get(clusterName), clusterName);
+                Databus databus = databusFactory.forOwner(systemInternalId);
                 return new Canary(cluster, condition, databus, logFactory, metricRegistry);
             }
         }, null);

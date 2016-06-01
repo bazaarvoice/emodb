@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
@@ -44,7 +45,8 @@ public class DatabusSizeCachingTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
-                mock(MetricRegistry.class), Suppliers.ofInstance(Conditions.alwaysFalse()), clock);
+                mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()),
+                mock(MetricRegistry.class), clock);
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
@@ -52,24 +54,24 @@ public class DatabusSizeCachingTest {
         when(mockEventStore.getSizeEstimate("testsubscription", 50L)).thenReturn(5000L);
 
         // Let's get the size estimate with limit=50
-        long size = testDatabus.getEventCountUpTo("testsubscription", 50L);
+        long size = testDatabus.getEventCountUpTo("id", "testsubscription", 50L);
         assertEquals(size, 5000L, "Size should be 5000");
         verify(mockEventStore, times(1)).getSizeEstimate("testsubscription", 50L);
 
         // verify no more interaction for the second call within 15 seconds
-        size = testDatabus.getEventCountUpTo("testsubscription", 50L);
+        size = testDatabus.getEventCountUpTo("id", "testsubscription", 50L);
         assertEquals(size, 5000L, "Size should be 5000");
         verifyNoMoreInteractions(mockEventStore);
 
         // verify that it does interact if the accuracy is increased limit=500
-        size = testDatabus.getEventCountUpTo("testsubscription", 500L);
+        size = testDatabus.getEventCountUpTo("id", "testsubscription", 500L);
         assertEquals(size, 4800L, "Size should be 4800");
         verify(mockEventStore, times(1)).getSizeEstimate("testsubscription", 500L);
 
         // verify that it does *not* interact if the accuracy is decreased limit=50 over the next 14 seconds
         for (int i=1; i <= 14; i++) {
             when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(i));
-            size = testDatabus.getEventCountUpTo("testsubscription", 50L);
+            size = testDatabus.getEventCountUpTo("id", "testsubscription", 50L);
             assertEquals(size, 4800L, "Size should still be 4800");
             verifyNoMoreInteractions(mockEventStore);
         }
@@ -77,7 +79,7 @@ public class DatabusSizeCachingTest {
         // Simulate one more second elapsed, making the total 15
         when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(15));
 
-        size = testDatabus.getEventCountUpTo("testsubscription", 50L);
+        size = testDatabus.getEventCountUpTo("id", "testsubscription", 50L);
         assertEquals(size, 5000L, "Size should be 5000");
         // By now it should've interacted twice in the entire testing cycle
         verify(mockEventStore, times(2)).getSizeEstimate("testsubscription", 50L);

@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
 import com.bazaarvoice.emodb.databus.api.UnknownMoveException;
 import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -419,6 +420,13 @@ public class DatabusClient implements AuthDatabus {
         } else if (response.getStatus() == Response.Status.NOT_FOUND.getStatusCode() &&
                 UnknownReplayException.class.getName().equals(exceptionType)) {
             return response.getEntity(UnknownReplayException.class);
+        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
+                UnauthorizedSubscriptionException.class.getName().equals(exceptionType)) {
+            if (response.hasEntity()) {
+                return (RuntimeException) response.getEntity(UnauthorizedSubscriptionException.class).initCause(e);
+            } else {
+                return (RuntimeException) new UnauthorizedSubscriptionException().initCause(e);
+            }
         } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
                 UnauthorizedException.class.getName().equals(exceptionType)) {
             if (response.hasEntity()) {
