@@ -39,7 +39,9 @@ String apiKey = "xyz";  // Use the API key provided by EmoDB
 MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
 QueueService queueService = ServicePoolBuilder.create(QueueService.class)
                 .withHostDiscoverySource(new QueueFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(QueueClientFactory.forCluster("local_default", metricRegistry).usingCredentials(apiKey))
+                .withServiceFactory(
+                        QueueClientFactory.forCluster("local_default", metricRegistry)
+                                .usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
 
@@ -86,6 +88,10 @@ protected void initialize(Configuration configuration, Environment environment) 
 Queue Operations
 ----------------
 
+All queue operations should include the caller's API key.  When making direct HTTP requests the API key should be
+included as an "X-BV-API-Key" header.  The Java client will automatically include this header with the API key provided
+by the client factory's configuration.
+
 ### Send a single message
 
 Post a single message into a queue.  There is no need to create the queue in advance.  The message must be a valid JSON
@@ -113,7 +119,7 @@ Request HTTP Headers:
 
 Example:
 
-    $ curl -s -XPOST -H "Content-Type: application/json" \
+    $ curl -s -XPOST -H "Content-Type: application/json" -H "X-BV-API-Key: api_key" \
         "http://localhost:8080/queue/1/demo-app_provision-q/send" \
         --data-binary '{"provision":"TestCustomer"}'
     {
@@ -156,7 +162,7 @@ Request HTTP Headers:
 
 Example:
 
-    $ curl -s -XPOST -H "Content-Type: application/json" \
+    $ curl -s -XPOST -H "Content-Type: application/json" -H "X-BV-API-Key: api_key" \
         "http://localhost:8080/queue/1/_sendbatch" \
         --data-binary '{"demo-app_provision-q":[{"provision":"TestCustomer"}]}'
     {
@@ -275,16 +281,35 @@ There is currently no way to iterate through more items than can be fetched in a
 
 ### Count Messages
 
-Get an estimate of the number of unacknowledged messages pending for a queue.  This may not be performant, and is most
-useful for debugging.
+Get an estimate of the number of unacknowledged messages pending for a queue.  The returned value is an estimate because
+it may or may not include messages whose status' change during the message counting process, such as by being created or
+acknowledged.
+
+The time it takes to perform a full count of the queue size scales linearly with the current size of the queue.  For
+particularly large queues this can result in long response times when getting a count.  Frequently the caller is only
+interested in an estimate up to a certain point.  For example, an alert monitor may only take action if there are more
+than 1,000 records in the queue and waiting for a complete total beyond 1,000 records provides little additional
+benefit.  To support this the caller can optionally pass in a limit parameter.  This will perform a full count up
+to the limit then use a faster heuristic approximation to count the remaining messages.  For example, with a limit
+of 1,000 a return value of 20,000 means the count found 1,000 messages and approximated there were an additional 19,000
+messages.
+
 
 HTTP:
 
-    GET /queue/1/<queue>/size
+    GET /queue/1/<queue>/size?limit=<number>
 
 Java:
 
-    int getEventCount(String queue);
+    long getMessageCount(String queue);
+    long getMessageCountUpTo(String queue, long limit);
+
+Request URL Parameters:
+
+*   `queue` - required - The name of the queue for querying the size.
+
+*   `limit` - optional - If provided the count returned will heuristically approximate the number of messages beyond
+    the first `limit` messages.
 
 ### Count Outstanding Claims
 
