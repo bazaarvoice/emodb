@@ -1,9 +1,11 @@
 [![Build Status](https://travis-ci.com/bazaarvoice/emodb.svg?token=AwBevKKpyg5x21QsyKTV&branch=master)](https://travis-ci.com/bazaarvoice/emodb)
 
-emodb
+EmoDB
 =====
 
 Store your feelings here.
+
+Written by [Bazaarvoice](http://www.bazaarvoice.com): see [the credits page](https://github.com/bazaarvoice/emodb/blob/master/Credits.md) for more details.
 
 Introduction
 ------------
