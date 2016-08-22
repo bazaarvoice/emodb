@@ -1,0 +1,113 @@
+package com.bazaarvoice.emodb.sor.condition.impl;
+
+import com.bazaarvoice.emodb.common.json.OrderedJson;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
+import com.bazaarvoice.emodb.sor.condition.EqualCondition;
+import com.bazaarvoice.emodb.sor.condition.InCondition;
+import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
+import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.OrConditionBuilder;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Lists;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+
+public class OrConditionBuilderImpl implements OrConditionBuilder {
+
+    private List<Condition> _conditions;
+    private List<Object> _values;
+    private ListMultimap<String, Condition> _intrinsics;
+    private boolean _alwaysTrue;
+
+    @Override
+    public OrConditionBuilder or(Condition condition) {
+        // OR conditions are inherently O(n).  There are a few patterns (eg. Polloi subscriptions) that can lead to
+        // long lists of OR conditions and it's worth it to try to convert those conditions to more efficient O(1)
+        // lookups using sets.  The optimizations performed here include:
+        // 1.  or(..., alwaysTrue(), ...) => alwaysTrue()                     (rare)
+        // 2.  or(..., alwaysFalse(), ...) => or(..., ...)                    (rare)
+        // 3.  or(equal(val1), equal(val2), ...) => or(in(val1, val2), ...)   (classic O(n) lookup converted to O(1))
+        // 4.  or(intrinsic(name:val1), intrinsic(name:val2), ...) =>
+        //            or(intrinsic(name:val1,val2), ...)                      (intrinsic O(n) lookup converted to O(1))
+        // 5.  or(..., or(...), ...) => or(..., ... ,...)           (flatten OR to increase optimization opportunities)
+        //
+        // Polloi uses the 4th form.  That's the optimization that has the biggest impact.
+
+        if (condition instanceof ConstantCondition) {
+            if (((ConstantCondition) condition).getValue()) {
+                _alwaysTrue = true;
+            }
+            // else ignore alwaysFalse()
+
+        } else if (condition instanceof EqualCondition) {
+            if (_values == null) {
+                _values = Lists.newArrayList();
+            }
+            _values.add(((EqualCondition) condition).getValue());
+
+        } else if (condition instanceof InCondition) {
+            if (_values == null) {
+                _values = Lists.newArrayList();
+            }
+            _values.addAll(((InCondition) condition).getValues());
+
+        } else if (condition instanceof IntrinsicCondition) {
+            if (_intrinsics == null) {
+                _intrinsics = ArrayListMultimap.create();
+            }
+            IntrinsicCondition intrinsic = (IntrinsicCondition) condition;
+            _intrinsics.put(intrinsic.getName(), intrinsic.getCondition());
+
+        } else if (condition instanceof OrCondition) {
+            orAny(((OrCondition) condition).getConditions());
+
+        } else {
+            if (_conditions == null) {
+                _conditions = Lists.newArrayList();
+            }
+            _conditions.add(condition);
+        }
+        return this;
+    }
+
+    public OrConditionBuilder orAny(Collection<? extends Condition> conditions) {
+        for (Condition condition : conditions) {
+            or(condition);
+        }
+        return this;
+    }
+
+    @Override
+    public Condition build() {
+        if (_alwaysTrue) {
+            return Conditions.alwaysTrue();
+        }
+
+        List<Condition> conditions = Lists.newArrayList();
+        if (_values != null) {
+            conditions.add(Conditions.in(_values));
+        }
+        if (_intrinsics != null) {
+            for (Map.Entry<String, Collection<Condition>> entry :
+                    OrderedJson.ENTRY_COMPARATOR.immutableSortedCopy(_intrinsics.asMap().entrySet())) {
+                conditions.add(Conditions.intrinsic(entry.getKey(), Conditions.or(entry.getValue())));
+            }
+        }
+        if (_conditions != null) {
+            conditions.addAll(_conditions);
+        }
+
+        if (conditions.isEmpty()) {
+            return Conditions.alwaysFalse();
+        } else if (conditions.size() == 1) {
+            return conditions.get(0);
+        } else {
+            return new OrConditionImpl(conditions);
+        }
+    }
+}

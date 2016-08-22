@@ -1,0 +1,171 @@
+package com.bazaarvoice.emodb.table.db.generic;
+
+import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
+import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
+import com.bazaarvoice.emodb.sor.api.FacadeOptions;
+import com.bazaarvoice.emodb.sor.api.TableExistsException;
+import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
+import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.table.db.DroppedTableException;
+import com.bazaarvoice.emodb.table.db.MoveType;
+import com.bazaarvoice.emodb.table.db.Table;
+import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.bazaarvoice.emodb.table.db.TableSet;
+import com.codahale.metrics.annotation.Timed;
+import com.google.common.base.Optional;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.inject.Inject;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
+
+/**
+ * Wraps a {@link TableDAO} with a cache that makes it fast and efficient to lookup table metadata.  The downside
+ * is that servers must globally coordinate changes to table metadata because the consequences of using out-of-date
+ * cached table metadata are pretty severe.
+ * <p>
+ * This class assumes that create/drop operations are protected/wrapped by {@link MutexTableDAO}.
+ */
+public class CachingTableDAO implements TableDAO {
+    public static final Duration CACHE_DURATION = Duration.standardMinutes(10);
+
+    private final TableDAO _delegate;
+    private final LoadingCache<String, Optional<Table>> _tableCache;
+
+    @Inject
+    public CachingTableDAO(@CachingTableDAODelegate TableDAO delegate,
+                           @CachingTableDAORegistry CacheRegistry cacheRegistry) {
+        _delegate = checkNotNull(delegate, "delegate");
+
+        // The table cache maps table names to AstyanaxTable objects.
+        _tableCache = CacheBuilder.newBuilder()
+                .expireAfterWrite(CACHE_DURATION.getMillis(), TimeUnit.MILLISECONDS)
+                .recordStats()
+                .build(new CacheLoader<String, Optional<Table>>() {
+                    @Override
+                    public Optional<Table> load(String name) throws Exception {
+                        try {
+                            return Optional.of(_delegate.get(name));
+                        } catch (UnknownTableException e) {
+                            return Optional.absent();
+                        }
+                    }
+                });
+        cacheRegistry.register("tables", _tableCache, true);
+    }
+
+    @Override
+    public Iterator<Table> list(@Nullable String fromNameExclusive, LimitCounter limit) {
+        return _delegate.list(fromNameExclusive, limit);
+    }
+
+    @Timed(name = "bv.emodb.table.CachingTableDAO.create", absolute = true)
+    @Override
+    public void create(String name, TableOptions options, Map<String, ?> attributes, Audit audit)
+            throws TableExistsException {
+        checkNotNull(name, "table");
+
+        _delegate.create(name, options, attributes, audit);
+    }
+
+    @Override
+    public void createFacade(String name, FacadeOptions options, Audit audit) throws FacadeExistsException {
+        checkNotNull(name, "table");
+
+        _delegate.createFacade(name, options, audit);
+    }
+
+    @Override
+    public boolean checkFacadeAllowed(String name, FacadeOptions options) throws TableExistsException {
+        return _delegate.checkFacadeAllowed(name, options);
+    }
+
+    @Timed(name = "bv.emodb.table.CachingTableDAO.drop", absolute = true)
+    @Override
+    public void drop(String name, Audit audit) throws UnknownTableException {
+        checkNotNull(name, "table");
+
+        _delegate.drop(name, audit);
+    }
+
+    @Override
+    public void dropFacade(String name, String placement, Audit audit) throws UnknownFacadeException {
+        checkNotNull(name, "table");
+
+        _delegate.dropFacade(name, placement, audit);
+    }
+
+    @Override
+    public void move(String name, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType) throws UnknownTableException {
+        checkNotNull(name, "table");
+
+        _delegate.move(name, destPlacement, numShards, audit, moveType);
+    }
+
+    @Override
+    public void moveFacade(String name, String sourcePlacement, String destPlacement, Optional<Integer> numShards, Audit audit, MoveType moveType) throws UnknownTableException {
+        checkNotNull(name, "table");
+
+        _delegate.moveFacade(name, sourcePlacement, destPlacement, numShards, audit, moveType);
+    }
+
+    @Timed(name = "bv.emodb.table.CachingTableDAO.setAttributes", absolute = true)
+    @Override
+    public void setAttributes(String name, Map<String, ?> attributes, Audit audit) throws UnknownTableException {
+        checkNotNull(name, "table");
+
+        _delegate.setAttributes(name, attributes, audit);
+    }
+
+    @Override
+    public void audit(String name, String op, Audit audit) {
+        _delegate.audit(name, op, audit);
+    }
+
+    @Override
+    public boolean exists(String name) {
+        return _tableCache.getUnchecked(name).isPresent();
+    }
+
+    @Override
+    public boolean isMoveToThisPlacementAllowed(String placement) {
+        return _delegate.isMoveToThisPlacementAllowed(placement);
+    }
+
+    @Override
+    public Table get(String name) throws UnknownTableException {
+        Optional<Table> table = _tableCache.getUnchecked(name);
+        if (!table.isPresent()) {
+            throw new UnknownTableException(format("Unknown table: %s", name), name);
+        }
+        return table.get();
+    }
+
+    @Override
+    public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+        // ID lookups are done used only by internal tools.  Do not cache table information by ID.
+        return _delegate.getByUuid(uuid);
+    }
+
+    @Override
+    public Collection<String> getTablePlacements(boolean includeInternal, boolean localOnly) {
+        return _delegate.getTablePlacements(includeInternal, localOnly);
+    }
+
+    @Override
+    public TableSet createTableSet() {
+        return _delegate.createTableSet();
+    }
+}

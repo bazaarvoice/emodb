@@ -1,0 +1,1978 @@
+package com.bazaarvoice.emodb.table.db.astyanax;
+
+import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
+import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.common.json.JsonHelper;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
+import com.bazaarvoice.emodb.datacenter.api.DataCenter;
+import com.bazaarvoice.emodb.datacenter.core.DefaultDataCenter;
+import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
+import com.bazaarvoice.emodb.sor.api.FacadeOptions;
+import com.bazaarvoice.emodb.sor.api.FacadeOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
+import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
+import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.table.db.MoveType;
+import com.bazaarvoice.emodb.table.db.TableBackingStore;
+import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.testng.annotations.Test;
+
+import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Set;
+import java.util.UUID;
+
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_ACTIVATED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_CONSISTENT;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_COPIED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_CREATED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_DEMOTED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_EXPIRED;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_EXPIRING;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PRIMARY;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_1;
+import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_2;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.String.format;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
+
+/**
+ * Tests the life cycle of SoR and Blob tables: create, move, drop operations.
+ */
+public class TableLifeCycleTest {
+    public static final String DC_US = "us-1";
+    public static final String DC_EU = "eu-2";
+    public static final String DC_SA = "sa-3";
+    public static final String DC_ZZ = "zz-4";
+
+    public static final String PL_GLOBAL = "global";
+    public static final String PL_US_EU = "us-eu";
+    public static final String PL_EU_APAC = "eu-apac";
+    public static final String PL_US = "us";
+    public static final String PL_EU = "eu";
+    public static final String PL_APAC = "apac";
+    public static final String PL_ZZ = "zz";
+    public static final String PL_ZZ_MOVING = "zz_moving";
+
+    public static final String TABLE = "my:table";
+    public static final String TABLE1 = "my1:table";
+    public static final String TABLE2 = "my2:table";
+    public static final String TABLE3 = "my3:table";
+    public static final String TABLE4 = "my4:table";
+    public static final String TABLE5 = "my5:table";
+    public static final String TABLE6 = "my6:table";
+
+    @Test
+    public void testCreate() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+
+        // Verify top-level attributes.
+        String uuid = checkNotNull(table.getUuidString());
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
+        assertEquals(table.getStorages().size(), 1);
+        assertFalse(table.isDeleted());
+        assertFalse(table.isDropped());
+
+        // Verify storage-level attributes.
+        Storage storage = checkNotNull(table.getMasterStorage());
+        assertEquals(storage.getUuidString(), uuid);
+        assertEquals(storage.getState(), PRIMARY);
+        assertEquals(storage.getRawJson(), ImmutableMap.of(
+                "placement", PL_US,
+                "shards", 16));
+    }
+
+    @Test
+    public void testCreateFacade() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+
+        // Verify top-level attributes.
+        String uuid = checkNotNull(table.getUuidString());
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
+        assertEquals(table.getStorages().size(), 3);
+
+        // Verify storage-level attributes.
+        Storage storage = checkNotNull(table.getMasterStorage());
+        assertEquals(storage.getUuidString(), uuid);
+        assertEquals(storage.getState(), PRIMARY);
+        assertEquals(storage.getRawJson(), ImmutableMap.of(
+                "placement", PL_US,
+                "shards", 16));
+
+        assertEquals(table.getFacades().size(), 2);
+        Storage facadeEu = table.getFacadeForPlacement(PL_EU);
+        Storage facadeApac = table.getFacadeForPlacement(PL_APAC);
+        assertEquals(facadeEu.getState(), PRIMARY);
+        assertEquals(facadeEu.getRawJson(), ImmutableMap.of(
+                "facade", true,
+                "placement", PL_EU,
+                "shards", 16));
+        assertEquals(facadeApac.getState(), PRIMARY);
+        assertEquals(facadeApac.getRawJson(), ImmutableMap.of(
+                "facade", true,
+                "placement", PL_APAC,
+                "shards", 16));
+    }
+
+    @Test
+    public void testDrop() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+
+        // Drop the table
+        DateTime start = new DateTime();
+        tableDAO.drop(TABLE, newAudit());
+        DateTime end = new DateTime();
+
+        TableJson table = tableDAO.readTableJson(TABLE, false);
+        assertNull(tableDAO.tableFromJson(table));
+
+        // Verify top-level attributes.
+        assertNull(table.getUuidString());
+        assertEquals(table.getAttributeMap(), null);
+        assertEquals(table.getStorages().size(), 1);
+
+        // Verify storage-level attributes.
+        assertNull(table.getMasterStorage());
+        assertEquals(table.getFacades().size(), 0);
+        Storage storage = checkNotNull(getStorage(table, uuid));
+        DateTime droppedAt = storage.getTransitionedTimestamp(DROPPED);
+        assertEquals(storage.getUuidString(), uuid);
+        assertEquals(storage.getState(), DROPPED);
+        assertEquals(storage.getRawJson(), ImmutableMap.of(
+                "placement", PL_US,
+                "shards", 16,
+                "droppedAt", formatTimestamp(droppedAt)));
+        assertTrue(storage.isDropped());
+        assertBetween(start, droppedAt, end);
+    }
+
+    @Test
+    public void testDropPurgeDelete() throws Exception {
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+        tableDAO.drop(TABLE, newAudit());
+        DateTime droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), uuid)
+                .getTransitionedTimestamp(DROPPED);
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should do the initial purge of the data.
+        DateTime purgedAt1;
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
+            droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_1);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", uuid), droppedAt);
+
+            // Maintenance from the EU should no-op.  Metadata maintenance should no-op.
+            assertNoopMetadataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopDataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // Next do data maintenance from the US.  It should do the purge and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            // Did we mark the purge as having occurred?
+            TableJson table = tableDAO.readTableJson(TABLE, false);
+
+            Storage storage = getStorage(table, uuid);
+            assertEquals(storage.getState(), PURGED_1);
+            purgedAt1 = storage.getTransitionedTimestamp(PURGED_1);
+            assertBetween(start, purgedAt1, end);
+            assertNull(storage.getTransitionedTimestamp(PURGED_2));
+
+            // Did the purge method get called?
+            ArgumentCaptor<AstyanaxStorage> storageCapture = ArgumentCaptor.forClass(AstyanaxStorage.class);
+            verify(usDataPurgeDAO).purge(storageCapture.capture(), Mockito.<Runnable>any());
+            assertTrue(storageCapture.getValue().hasUUID(getStorage(table, uuid).getUuid()));
+            verifyNoMoreInteractions(usDataCopyDAO, usDataPurgeDAO);
+        }
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should do the final purge of the data.
+        DateTime purgedAt2;
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
+            droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_2);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", uuid), droppedAt);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // The 2nd purge is delayed until full consistency is achieved relative to the time of the drop.
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (FullConsistencyException e) {
+                // Expected
+            }
+            fct.setTime(droppedAt.getMillis() + 1);
+
+            // Next do data maintenance from the US.  It should do the purge and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            TableJson table = tableDAO.readTableJson(TABLE, false);
+            Storage storage = checkNotNull(getStorage(table, uuid));
+            purgedAt2 = storage.getTransitionedTimestamp(PURGED_2);
+            assertBetween(start, purgedAt2, end);
+            assertEquals(storage.getTransitionedTimestamp(PURGED_1), purgedAt1);
+
+            // Verify top-level attributes.
+            assertNull(table.getUuidString());
+            assertEquals(table.getAttributeMap(), null);
+            assertEquals(table.getStorages().size(), 1);
+
+            // Verify storage-level attributes.
+            assertNull(table.getMasterStorage());
+            droppedAt = storage.getTransitionedTimestamp(DROPPED);
+            assertEquals(storage.getUuidString(), uuid);
+            assertEquals(storage.getState(), PURGED_2);
+            assertEquals(storage.getRawJson(), ImmutableMap.of(
+                    "placement", PL_US,
+                    "shards", 16,
+                    "droppedAt", formatTimestamp(droppedAt),
+                    "purgedAt1", formatTimestamp(purgedAt1),
+                    "purgedAt2", formatTimestamp(purgedAt2)));
+            assertTrue(storage.isDropped());
+        }
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should delete the json metadata completely.
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the delete.
+            purgedAt2 = purgedAt2.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", uuid), purgedAt2);
+
+            // Data maintenance should no-op.
+            assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // Next do metadata maintenance from the US.  It should delete the table metadata.
+            DateTime start = new DateTime();
+            usTableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            // Is all the data gone?
+            TableJson table = tableDAO.readTableJson(TABLE, false);
+            assertTrue(table.isDeleted());
+            assertTrue(table.isDropped());
+            assertNull(table.getRawJson().get("uuid"));
+            assertNull(table.getRawJson().get("attributes"));
+            assertNull(table.getRawJson().get("storage"));
+            assertBetween(start, new DateTime(Intrinsic.getLastUpdateAt(table.getRawJson())), end);
+        }
+    }
+
+    @Test
+    public void testDropFacade() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String masterUuid = checkNotNull(table.getUuidString());
+        String usUuid = checkNotNull(table.getFacadeForPlacement(PL_US).getUuidString());
+        String euUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
+
+        // Drop a facade
+        DateTime start = new DateTime();
+        tableDAO.dropFacade(TABLE, PL_US, newAudit());
+        DateTime end = new DateTime();
+
+        table = tableDAO.readTableJson(TABLE, false);
+        DateTime droppedAt = checkNotNull(getStorage(table, usUuid).getTransitionedTimestamp(DROPPED));
+
+        // Verify top-level attributes.
+        assertEquals(table.getUuidString(), masterUuid);
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
+        assertEquals(table.getStorages().size(), 3);
+
+        // Verify storage-level attributes.
+        Storage master = checkNotNull(table.getMasterStorage());
+        assertEquals(master.getUuidString(), masterUuid);
+        assertEquals(master.getState(), PRIMARY);
+        assertEquals(master.getRawJson(), ImmutableMap.of(
+                "placement", PL_APAC,
+                "shards", 16));
+        Storage us = checkNotNull(getStorage(table, usUuid));
+        assertEquals(us.getUuidString(), usUuid);
+        assertEquals(us.getState(), DROPPED);
+        assertEquals(us.getRawJson(), ImmutableMap.of(
+                "facade", true,
+                "placement", PL_US,
+                "shards", 16,
+                "droppedAt", formatTimestamp(droppedAt)));
+        Storage eu = checkNotNull(getStorage(table, euUuid));
+        assertEquals(eu.getUuidString(), euUuid);
+        assertEquals(eu.getState(), PRIMARY);
+        assertEquals(eu.getRawJson(), ImmutableMap.of(
+                "facade", true,
+                "placement", PL_EU,
+                "shards", 16));
+        assertTrue(us.isDropped());
+        assertBetween(start, droppedAt, end);
+
+        try {
+            table.getFacadeForPlacement(PL_US);
+            fail();
+        } catch (UnknownFacadeException e) {
+            assertEquals(e.getMessage(), "Unknown facade: my:table in us");
+        }
+        assertEquals(table.getFacadeForPlacement(PL_EU).getUuidString(), euUuid);
+    }
+
+    @Test
+    public void testDropFacadePurgeDelete() throws Exception {
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String masterUuid = checkNotNull(table.getUuidString());
+        String facadeUuid = checkNotNull(table.getFacadeForPlacement(PL_US).getUuidString());
+        tableDAO.dropFacade(TABLE, PL_US, newAudit());
+        DateTime droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), facadeUuid).getTransitionedTimestamp(DROPPED);
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should do the initial purge of the data.
+        DateTime purgedAt1;
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
+            droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_1);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", facadeUuid), droppedAt);
+
+            // Maintenance from the EU should no-op.  Metadata maintenance should no-op.
+            assertNoopMetadataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopDataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // Next do data maintenance from the US.  It should do the purge and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            // Did we mark the purge as having occurred?
+            table = tableDAO.readTableJson(TABLE, false);
+            Storage facade = getStorage(table, facadeUuid);
+            assertEquals(facade.getState(), PURGED_1);
+            purgedAt1 = facade.getTransitionedTimestamp(PURGED_1);
+            assertBetween(start, purgedAt1, end);
+            assertNull(facade.getTransitionedTimestamp(PURGED_2));
+
+            // Did the purge method get called?
+            ArgumentCaptor<AstyanaxStorage> storageCapture = ArgumentCaptor.forClass(AstyanaxStorage.class);
+            verify(usDataPurgeDAO).purge(storageCapture.capture(), Mockito.<Runnable>any());
+            assertTrue(storageCapture.getValue().hasUUID(facade.getUuid()));
+            verifyNoMoreInteractions(usDataCopyDAO, usDataPurgeDAO);
+        }
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should do the final purge of the data.
+        DateTime purgedAt2;
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
+            droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_2);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", facadeUuid), droppedAt);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+            fct.setTime(droppedAt.getMillis() + 1);
+
+            // Next do data maintenance from the US.  It should do the purge and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            table = tableDAO.readTableJson(TABLE, false);
+            Storage storage = getStorage(table, facadeUuid);
+            purgedAt2 = storage.getTransitionedTimestamp(PURGED_2);
+            assertBetween(start, purgedAt2, end);
+            assertEquals(storage.getTransitionedTimestamp(PURGED_1), purgedAt1);
+
+            // Verify top-level attributes.
+            assertFalse(table.isDropped());
+            assertEquals(table.getUuidString(), masterUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            assertEquals(table.getMasterStorage().getRawJson(), ImmutableMap.of(
+                    "placement", PL_APAC,
+                    "shards", 16));
+            Storage facade = checkNotNull(getStorage(table, facadeUuid));
+            droppedAt = facade.getTransitionedTimestamp(DROPPED);
+            assertEquals(facade.getUuidString(), facadeUuid);
+            assertEquals(facade.getState(), PURGED_2);
+            assertEquals(facade.getRawJson(), ImmutableMap.builder()
+                    .put("facade", true)
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("droppedAt", formatTimestamp(droppedAt))
+                    .put("purgedAt1", formatTimestamp(purgedAt1))
+                    .put("purgedAt2", formatTimestamp(purgedAt2))
+                    .build());
+            assertTrue(facade.isDropped());
+        }
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should completely delete the json metadata for the facade.
+        {
+            // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the delete.
+            purgedAt2 = purgedAt2.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", facadeUuid), purgedAt2);
+
+            // Data maintenance should no-op.
+            assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // Next do metadata maintenance from the US.  It should delete the facade metadata.
+            DateTime start = new DateTime();
+            usTableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            // Verify top-level attributes.
+            table = tableDAO.readTableJson(TABLE, false);
+            assertEquals(table.getUuidString(), masterUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
+            assertEquals(table.getStorages().size(), 1);
+            assertFalse(table.isDeleted());
+            assertFalse(table.isDropped());
+
+            // Verify storage-level attributes.
+            assertEquals(table.getMasterStorage().getRawJson(), ImmutableMap.of(
+                    "placement", PL_APAC,
+                    "shards", 16));
+            assertNull(getStorage(table, facadeUuid));
+            assertBetween(start, new DateTime(Intrinsic.getLastUpdateAt(table.getRawJson())), end);
+        }
+    }
+
+    @Test
+    public void testMoveStart() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        String srcUuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+
+        DateTime start = new DateTime();
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+        DateTime end = new DateTime();
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+
+        // Verify top-level attributes.
+        assertEquals(table.getUuidString(), srcUuid);
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+        assertEquals(table.getStorages().size(), 2);
+
+        // Verify storage-level attributes.
+        Storage src = checkNotNull(table.getMasterStorage());
+        Storage dest = checkNotNull(src.getMoveTo());
+        assertEquals(src.getUuidString(), srcUuid);
+        assertEquals(src.getState(), PRIMARY);
+        assertTrue(src.isPrimary());
+        assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_US)
+                .put("shards", 16)
+                .put("moveTo", dest.getUuidString())
+                .build());
+        assertEquals(src.getMirrors().size(), 1);
+        assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_GLOBAL)
+                .put("shards", 16)
+                .put("groupId", srcUuid)
+                .put("mirrorCreatedAt", dest.getRawJson().get("mirrorCreatedAt"))
+                .put("mirrorActivatedAt", dest.getRawJson().get("mirrorActivatedAt"))
+                .build());
+        assertEquals(dest.getState(), MIRROR_ACTIVATED);
+        assertFalse(dest.isPrimary());
+        assertEquals(dest.getPrimary(), src);
+        assertBetween(start, dest.getTransitionedTimestamp(MIRROR_CREATED), end);
+        assertBetween(start, dest.getTransitionedTimestamp(MIRROR_ACTIVATED), end);
+
+        // Verify that read/write mirroring is going to the right place.
+        assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
+        assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid());
+
+        // Verify that the next step in the move was scheduled as expected.
+        MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+        assertMaintenance(maintenanceOp, "Move:copy-data", MaintenanceType.DATA, DC_US);
+        assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+    }
+
+    /** Can't move directly from us to eu since there are no data centers in common. */
+    @Test
+    public void testMoveIncompatiblePlacement() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+
+        try {
+            tableDAO.move(TABLE, PL_EU, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Source and destination and mirror placements must overlap in some data center: eu, us");
+        }
+    }
+
+    @Test
+    public void testMoveFacadeStart() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_EU);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String masterUuid = checkNotNull(table.getUuidString());
+        String srcUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
+
+        DateTime start = new DateTime();
+        tableDAO.moveFacade(TABLE, PL_EU, PL_EU, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
+        DateTime end = new DateTime();
+
+        table = tableDAO.readTableJson(TABLE, true);
+        AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+
+        // Verify top-level attributes.
+        assertEquals(table.getUuidString(), masterUuid);
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+        assertEquals(table.getStorages().size(), 3);
+        assertEquals(table.getFacades().size(), 1);
+
+        // Verify storage-level attributes.
+        Storage master = checkNotNull(table.getMasterStorage());
+        Storage src = checkNotNull(getStorage(table, srcUuid));
+        Storage dest = checkNotNull(src.getMoveTo());
+        assertEquals(master.getUuidString(), masterUuid);
+        assertEquals(master.getState(), PRIMARY);
+        assertEquals(master.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_US)
+                .put("shards", 16)
+                .build());
+        assertEquals(src.getUuidString(), srcUuid);
+        assertEquals(src.getState(), PRIMARY);
+        assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("facade", true)
+                .put("placement", PL_EU)
+                .put("shards", 16)
+                .put("moveTo", dest.getUuidString())
+                .build());
+        assertEquals(src.getMirrors().size(), 1);
+        assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("facade", true)
+                .put("placement", PL_EU)
+                .put("shards", 32)
+                .put("groupId", srcUuid)
+                .put("mirrorCreatedAt", dest.getRawJson().get("mirrorCreatedAt"))
+                .put("mirrorActivatedAt", dest.getRawJson().get("mirrorActivatedAt"))
+                .build());
+        assertEquals(dest.getState(), MIRROR_ACTIVATED);
+        assertFalse(dest.isPrimary());
+        assertEquals(dest.getPrimary(), src);
+        assertBetween(start, dest.getTransitionedTimestamp(MIRROR_CREATED), end);
+        assertBetween(start, dest.getTransitionedTimestamp(MIRROR_ACTIVATED), end);
+
+        // Verify that read/write mirroring is going to the right place.
+        assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
+        assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid());
+
+        // Verify that the next step in the move was scheduled as expected.
+        MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+        assertMaintenance(maintenanceOp, "Move:copy-data", MaintenanceType.DATA, DC_EU);
+        assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+    }
+
+    @Test
+    public void testMoveCopyPromoteDrop() throws Exception {
+        Date fct = new Date(0);
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = table.getMasterStorage().getUuidString();
+        String destUuid = table.getMasterStorage().getMoveTo().getUuidString();
+        DateTime mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
+        DateTime mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should copy the data.
+        DateTime mirrorCopiedAt;
+        {
+            // Hack the table JSON to pretend the move started long enough ago that now it's time to do the copy.
+            mirrorActivatedAt = mirrorActivatedAt.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorActivatedAt", destUuid), mirrorActivatedAt);
+
+            // Maintenance from the EU should no-op.  Metadata maintenance should no-op.
+            assertNoopMetadataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopDataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // The copy is delayed until full consistency is achieved relative to the time of mirror activation.
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (FullConsistencyException e) {
+                // Expected
+            }
+            fct.setTime(mirrorActivatedAt.getMillis() + 1);
+
+            // Next do data maintenance from the US.  It should do the copy and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            // Did we mark the copy as having occurred?
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getMasterStorage().getState(), PRIMARY);
+            assertEquals(table.getMasterStorage().getMoveTo().getState(), MIRROR_COPIED);
+            mirrorCopiedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_COPIED));
+            assertBetween(start, mirrorCopiedAt, end);
+
+            // Did we copy to the right place?
+            ArgumentCaptor<AstyanaxStorage> src = ArgumentCaptor.forClass(AstyanaxStorage.class);
+            ArgumentCaptor<AstyanaxStorage> dest = ArgumentCaptor.forClass(AstyanaxStorage.class);
+            verify(usDataCopyDAO).copy(src.capture(), dest.capture(), Mockito.<Runnable>any());
+            assertTrue(src.getValue().hasUUID(table.getMasterStorage().getUuid()));
+            assertTrue(dest.getValue().hasUUID(table.getMasterStorage().getMoveTo().getUuid()));
+            assertEquals(src.getValue().getPlacement().getName(), PL_US);
+            assertEquals(dest.getValue().getPlacement().getName(), PL_GLOBAL);
+            verifyNoMoreInteractions(usDataCopyDAO, usDataPurgeDAO);
+
+            // Is followup maintenance scheduled?
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "Move:data-consistent", MaintenanceType.DATA, DC_US);
+            assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+        }
+
+        // Do maintenance from the US.  It should mark the mirror consistent.
+        DateTime mirrorConsistentAt;
+        {
+            // Hack the table JSON to pretend the copy started long enough ago that now it's time to check consistency.
+            mirrorCopiedAt = mirrorCopiedAt.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorCopiedAt", destUuid), mirrorCopiedAt);
+
+            // Maintenance from the EU should no-op.  Metadata maintenance should no-op.
+            assertNoopMetadataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopDataMaintenance(backingStore, DC_EU, TABLE);
+            assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+
+            DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
+            DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
+            AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+
+            // The copy is delayed until full consistency is achieved relative to the time of mirror copy.
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (FullConsistencyException e) {
+                // Expected
+            }
+            fct.setTime(mirrorCopiedAt.getMillis() + 1);
+
+            // Next do data maintenance from the US.  It should mark the mirror consistent and nothing else.
+            DateTime start = new DateTime();
+            usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+            DateTime end = new DateTime();
+
+            // Did we mark things as being consistent?
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getMasterStorage().getState(), PRIMARY);
+            assertEquals(table.getMasterStorage().getMoveTo().getState(), MIRROR_CONSISTENT);
+            mirrorConsistentAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CONSISTENT));
+            assertBetween(start, mirrorConsistentAt, end);
+            verifyNoMoreInteractions(usDataCopyDAO, usDataPurgeDAO);
+
+            // Is followup maintenance scheduled?
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "Move:promote-mirror", MaintenanceType.METADATA, "<system>");
+            assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_DELAY);
+        }
+
+        // Before the elapsed time has passed, doing maintenance shouldn't change anything.
+        assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
+        assertNoopDataMaintenance(backingStore, DC_US, TABLE);
+
+        // Do maintenance from the US.  It should promote the mirror and flip the primary & mirror relationship.
+        UUID promotionId;
+        DateTime primaryAt;
+        {
+            // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
+            mirrorConsistentAt = mirrorConsistentAt.minus(AstyanaxTableDAO.MIN_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", destUuid), mirrorConsistentAt);
+
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            table = tableDAO.readTableJson(TABLE, true);
+
+            // Verify top-level attributes.
+            assertEquals(table.getUuidString(), destUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage src = Iterables.getOnlyElement(dest.getMirrors());
+            promotionId = dest.getPromotionId();
+            primaryAt = checkNotNull(dest.getTransitionedTimestamp(PRIMARY));
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getState(), PRIMARY);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
+                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
+                    .put("mirrorCopiedAt", formatTimestamp(mirrorCopiedAt))
+                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getState(), MIRROR_DEMOTED);
+            assertNull(src.getMirrorExpiresAt());  // Not set yet
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid) // The old moveTo attribute are ignored since this is a mirror, but kept to facilitate debugging.
+                    .build());
+            assertBetween(start, new DateTime(TimeUUIDs.getDate(promotionId)), end);
+            assertBetween(start, primaryAt, end);
+
+            // Verify that read/write mirroring is going to the right place.
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), dest.getUuid(), src.getUuid());
+
+            // Verify that the next step in the move was scheduled as expected.
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "Move:set-expiration", MaintenanceType.METADATA, "<system>");
+            assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_DELAY);
+        }
+
+        // Do maintenance from the US.  It should set the expiration timestamp on the old primary.
+        DateTime mirrorExpiresAt;
+        {
+            // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
+            primaryAt = primaryAt.minus(AstyanaxTableDAO.MIN_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.primaryAt", destUuid), primaryAt);
+
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            table = tableDAO.readTableJson(TABLE, true);
+
+            // Verify top-level attributes.
+            assertEquals(table.getUuidString(), destUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage src = Iterables.getOnlyElement(dest.getMirrors());
+            mirrorExpiresAt = checkNotNull(src.getMirrorExpiresAt());
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getState(), PRIMARY);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
+                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
+                    .put("mirrorCopiedAt", formatTimestamp(mirrorCopiedAt))
+                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getState(), MIRROR_EXPIRING);
+            assertBetween(start, src.getMirrorExpiresAt(), end, AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid)
+                    .put("mirrorExpiresAt", formatTimestamp(mirrorExpiresAt))
+                    .build());
+
+            // Verify that read/write mirroring is going to the right place.
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), dest.getUuid(), src.getUuid());
+
+            // Verify that the next step in the move was scheduled as expected.
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "Move:expire-mirror", MaintenanceType.METADATA, "<system>");
+            assertEquals(maintenanceOp.getWhen(), mirrorExpiresAt);
+        }
+
+        // Do maintenance when the mirror expires.  It should drop the src table uuid.
+        DateTime mirrorExpiredAt, droppedAt;
+        {
+            // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
+            mirrorExpiresAt = mirrorExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid), mirrorExpiresAt);
+
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            table = tableDAO.readTableJson(TABLE, true);
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+
+            // Verify top-level attributes.
+            assertEquals(table.getUuidString(), destUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage src = getStorage(table, srcUuid);
+            mirrorExpiredAt = checkNotNull(src.getTransitionedTimestamp(MIRROR_EXPIRED));
+            droppedAt = checkNotNull(src.getTransitionedTimestamp(DROPPED));
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
+                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
+                    .put("mirrorCopiedAt", formatTimestamp(mirrorCopiedAt))
+                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+            assertTrue(src.isDropped());
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid)
+                    .put("mirrorExpiresAt", formatTimestamp(mirrorExpiresAt))
+                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
+                    .put("droppedAt", formatTimestamp(droppedAt))
+                    .build());
+            assertBetween(start, droppedAt, end);
+
+            // Verify that read/write mirroring is turned off.
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), dest.getUuid());
+
+            // Verify that the next step in the move was scheduled as expected.
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "Drop:purge-1", MaintenanceType.DATA, DC_US);
+            assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.DROP_TO_PURGE_1);
+        }
+    }
+
+    @Test
+    public void testMoveCanceledBeforePromote() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = checkNotNull(table.getUuidString());
+        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+        DateTime mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
+        DateTime mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+
+        {
+            // Cancel the move by executing a new move that takes us back to the original settings.
+            tableDAO.move(TABLE, PL_US, Optional.of(16), newAudit(), MoveType.SINGLE_TABLE);
+
+            table = tableDAO.readTableJson(TABLE, true);
+
+            // Verify top-level attributes.
+            assertEquals(table.getUuidString(), srcUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage src = checkNotNull(table.getMasterStorage());
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getState(), PRIMARY);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .build());
+            assertNull(src.getMoveTo());
+            assertEquals(dest.getState(), MIRROR_EXPIRED);
+            assertNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));  // The primary changed, not the mirror.
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
+                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
+                    .build());
+
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+
+            // Verify that read mirroring is turned off.
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid());
+
+            // Verify that the next step in the move was scheduled as expected.
+            DateTime start = new DateTime();
+            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            DateTime end = new DateTime();
+            assertMaintenance(maintenanceOp, "Move:expire-mirror", MaintenanceType.METADATA, "<system>");
+            assertBetween(start, maintenanceOp.getWhen(), end);
+        }
+
+        // Do maintenance and make sure the abandoned mirror gets dropped
+        DateTime mirrorExpiredAt, droppedAt;
+        {
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            table = tableDAO.readTableJson(TABLE, true);
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+
+            // Verify top-level attributes.
+            assertEquals(table.getUuidString(), srcUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage src = checkNotNull(table.getMasterStorage());
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            mirrorExpiredAt = checkNotNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));
+            droppedAt = checkNotNull(dest.getTransitionedTimestamp(DROPPED));
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getState(), PRIMARY);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .build());
+            assertNull(src.getMoveTo());
+            assertEquals(dest.getState(), DROPPED);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
+                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
+                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
+                    .put("droppedAt", formatTimestamp(droppedAt))
+                    .build());
+            assertBetween(start, mirrorExpiredAt, end);
+            assertBetween(start, droppedAt, end);
+
+            // Verify that read/write mirroring is turned off.
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid());
+        }
+    }
+
+    @Test
+    public void testMoveCanceledAfterPromote() throws Exception {
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+
+        // Perform an initial move.
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = checkNotNull(table.getUuidString());
+        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+
+        // Hack the table JSON to get to the state where promote has occurred.
+        advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
+
+        // Here lies the test!! Cancel the move by executing a new move that takes us back to the original settings.
+        DateTime mirrorConsistentAt;
+        {
+            DateTime start = new DateTime();
+            tableDAO.move(TABLE, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            DateTime end = new DateTime();
+
+            // Verify top-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getUuidString(), destUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            Storage storage = getStorage(table, srcUuid);
+
+            // Verify storage-level attributes.
+            Storage src = checkNotNull(getStorage(table, srcUuid));
+            Storage dest = checkNotNull(table.getMasterStorage());
+            mirrorConsistentAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
+            assertEquals(storage.getState(), MIRROR_CONSISTENT);
+            assertNull(src.getMoveTo());
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
+                    .build());
+            assertBetween(start, mirrorConsistentAt, end);
+
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getState(), PRIMARY);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("moveTo", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+        }
+
+        // We need one step of maintenance for the move to actually take effect.
+        DateTime primaryAt;
+        {
+            mirrorConsistentAt = mirrorConsistentAt.minus(AstyanaxTableDAO.MIN_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", srcUuid), mirrorConsistentAt);
+
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            // Verify top-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getUuidString(), srcUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage src = checkNotNull(table.getMasterStorage());
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            UUID promotionId = src.getPromotionId();
+            primaryAt = src.getTransitionedTimestamp(PRIMARY);
+            assertEquals(src.getUuidString(), srcUuid);
+            assertEquals(src.getState(), PRIMARY);
+            assertNull(src.getMoveTo());
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
+                    .put("promotionId", promotionId.toString())
+                    .put("primaryAt", formatTimestamp(primaryAt))
+                    .build());
+            assertBetween(start, new DateTime(TimeUUIDs.getDate(promotionId)), end);
+            assertBetween(start, primaryAt, end);
+
+            DateTime mirrorDemotedAt = dest.getTransitionedTimestamp(MIRROR_DEMOTED);
+            assertEquals(dest.getState(), MIRROR_DEMOTED);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("moveTo", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+            assertBetween(start, mirrorDemotedAt, end);
+        }
+    }
+
+    @Test
+    public void testMovePlacement() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        PlacementFactory placementFactory = newPlacementFactory(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE1, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE2, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE3, newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE4, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE5, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE6, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.createFacade(TABLE1, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.createFacade(TABLE2, newFacadeOptions(PL_US), newAudit());
+
+        // Start moving a table into another placement that should not affect this placement move
+        tableDAO.move(TABLE5, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        MoveTableTask moveTableTask =
+                new MoveTableTask(mock(TaskRegistry.class), "blob", tableDAO, mock(MaintenanceDAO.class),
+                        ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ));
+        MoveTableTask.MovePlacement movePlacement = moveTableTask.getTablesAndFacadesInSrcPlacement(PL_US);
+
+        assertEquals(movePlacement.getTables().size(), 3, "There should be 3 tables");
+        assertTrue(movePlacement.getTables().contains(TABLE), format("%s should be included", TABLE));
+        assertTrue(movePlacement.getTables().contains(TABLE1), format("%s should be included", TABLE1));
+        assertTrue(movePlacement.getTables().contains(TABLE4), format("%s should be included", TABLE4));
+
+        assertEquals(movePlacement.getFacades().size(), 1, "There should be 1 facade");
+        assertTrue(movePlacement.getFacades().contains(TABLE2), format("%s facade should be included", TABLE2));
+
+        // Move placement that is not accessible from System DataCenter.
+        movePlacement = moveTableTask.getTablesAndFacadesInSrcPlacement(PL_EU);
+        assertEquals(movePlacement.getTables().size(), 3, "There should be 3 tables");
+        assertTrue(movePlacement.getTables().contains(TABLE2), format("%s should be included", TABLE2));
+        assertTrue(movePlacement.getTables().contains(TABLE5), format("%s should be included", TABLE5));
+        assertTrue(movePlacement.getTables().contains(TABLE6), format("%s should be included", TABLE6));
+
+        assertEquals(movePlacement.getFacades().size(), 2, "There should be 2 facades");
+        assertTrue(movePlacement.getFacades().contains(TABLE), format("%s facade should be included", TABLE));
+        assertTrue(movePlacement.getFacades().contains(TABLE1), format("%s facade should be included", TABLE1));
+    }
+
+    @Test(expectedExceptions = IllegalStateException.class)
+    public void testMovePlacementWhileTableIsGettingMovedIntoSource() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        PlacementFactory placementFactory = newPlacementFactory(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE1, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE2, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE3, newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.create(TABLE4, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.createFacade(TABLE1, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.createFacade(TABLE2, newFacadeOptions(PL_US), newAudit());
+
+        // Start moving a table into placement that we are trying to move
+        tableDAO.move(TABLE3, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        MoveTableTask moveTableTask =
+                new MoveTableTask(mock(TaskRegistry.class), "blob", tableDAO, mock(MaintenanceDAO.class), ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ));
+
+        // This should throw an IllegalStateException due to the move above
+        MoveTableTask.MovePlacement movePlacement = moveTableTask.getTablesAndFacadesInSrcPlacement(PL_US);
+    }
+
+    /**
+     * Test move() then move() again before the first move() finishes.  Similar to testMoveCanceledBeforePromote()
+     * which tests move() then move() back except this test involves a 3rd storage.
+     */
+    @Test
+    public void testMoveChangedBeforePromotion() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = checkNotNull(table.getUuidString());
+        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+
+        // Execute a new move that supersedes the old move.
+        DateTime start = new DateTime();
+        tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
+        DateTime end = new DateTime();
+
+        table = tableDAO.readTableJson(TABLE, true);
+
+        // Verify top-level attributes.
+        assertEquals(table.getUuidString(), srcUuid);
+        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+        assertEquals(table.getStorages().size(), 3);
+
+        // Verify storage-level attributes.
+        Storage src = checkNotNull(table.getMasterStorage());
+        Storage dest = checkNotNull(getStorage(table, destUuid));
+        Storage newDest = checkNotNull(table.getMasterStorage().getMoveTo());
+        assertEquals(src.getUuidString(), srcUuid);
+        assertEquals(src.getState(), PRIMARY);
+        assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_US)
+                .put("shards", 16)
+                .put("moveTo", newDest.getUuidString())
+                .build());
+
+        assertEquals(dest.getState(), MIRROR_EXPIRED);
+        assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_GLOBAL)
+                .put("shards", 16)
+                .put("groupId", srcUuid)
+                .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                .build());
+        assertNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));
+
+        assertEquals(newDest.getState(), MIRROR_ACTIVATED);
+        assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
+                .put("placement", PL_US)
+                .put("shards", 32)
+                .put("groupId", srcUuid)
+                .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
+                .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                .build());
+        assertBetween(start, newDest.getTransitionedTimestamp(MIRROR_ACTIVATED), end);
+    }
+
+
+
+    @Test
+    public void testIfPurge1IsSkippedUnderPlacementWideMove() throws Exception {
+        Purge1IsSkipped(MoveType.FULL_PLACEMENT); // PURGED_1 should be skipped. After a day is passed, it should stay at DROPPED.
+        Purge1IsSkipped(MoveType.SINGLE_TABLE); // PURGED_1 should not be skipped. After a day is passed, it should move to PURGED_1.
+    }
+
+    private void Purge1IsSkipped(MoveType moveType)
+            throws Exception {
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+
+        // Perform an initial move as a part of placement move (the only difference is it skips the PURGE_1 state)
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), moveType);
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = checkNotNull(table.getUuidString());
+        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+
+        // Hack the table JSON to get to the state where promote has occurred.
+        advanceActivatedToSourcePurged(destUuid, tableDAO, backingStore, fct);
+
+        // Make sure PURGED_1 is skipped
+        if (moveType == MoveType.FULL_PLACEMENT) {
+            assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), srcUuid).getState(), DROPPED);
+        } else {
+            assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), srcUuid).getState(), PURGED_1);
+        }
+    }
+
+    @Test
+    public void testCreatesAreMadeInNewPlacementIfGivenPlacementUnderMove() throws Exception{
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_ZZ_MOVING), ImmutableMap.<String, Object>of(), newAudit());
+        // Make sure this table is created in
+        assertEquals(tableDAO.get(TABLE).getOptions().getPlacement(), PL_ZZ,
+                "Placement should revert to the new placement if it is under move.");
+        assertFalse(tableDAO.isMoveToThisPlacementAllowed(PL_ZZ_MOVING), "PL_ZZ_MOVING");
+    }
+
+    @Test
+    public void testMoveChangedAfterPromotion() throws Exception {
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+
+        // Perform an initial move
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        TableJson table = tableDAO.readTableJson(TABLE, true);
+        String srcUuid = checkNotNull(table.getUuidString());
+        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+
+        // Hack the table JSON to get to the state where promote has occurred.
+        advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
+
+        // Here lies the test!! Cancel the move by executing a new move that takes us to a 3rd set of settings.
+        DateTime srcExpiresAt;
+        String newDestUuid;
+        {
+            // Schedule a new move.
+            tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
+
+            // Verify top-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getUuidString(), destUuid);
+            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
+            assertEquals(table.getStorages().size(), 3);
+            assertEquals(table.getMasterStorage().getMirrors().size(), 2);
+
+            // Verify storage-level attributes.
+            Storage src = checkNotNull(getStorage(table, srcUuid));
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            Storage newDest = checkNotNull(dest.getMoveTo());
+            newDestUuid = newDest.getUuidString();
+
+            srcExpiresAt = src.getMirrorExpiresAt();
+            assertEquals(src.getState(), MIRROR_EXPIRING);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid)
+                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
+                    .build());
+
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getState(), PRIMARY);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("moveTo", newDest.getUuidString())
+                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+
+            assertEquals(newDest.getUuidString(), newDestUuid);
+            assertEquals(newDest.getState(), MIRROR_ACTIVATED);
+            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 32)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .build());
+
+            // Verify that read/write mirroring is going to the right place.
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid(), newDest.getUuid());
+        }
+
+        DateTime destExpiresAt;
+        {
+            // Hack the table JSON to get to the state where second promotion has occurred.
+            advanceActivatedToPromoted(newDestUuid, tableDAO, backingStore, fct);
+
+            // Verify storage-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            Storage src = checkNotNull(getStorage(table, srcUuid));
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
+            newDestUuid = newDest.getUuidString();
+            assertEquals(table.getMasterStorage().getMirrors().size(), 2);
+
+            assertEquals(src.getState(), MIRROR_EXPIRING);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid)
+                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
+                    .build());
+
+            assertEquals(dest.getUuidString(), destUuid);
+            assertEquals(dest.getState(), MIRROR_EXPIRING);
+            destExpiresAt = dest.getMirrorExpiresAt();
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("moveTo", newDest.getUuidString())
+                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .put("mirrorExpiresAt", formatTimestamp(destExpiresAt))
+                    .build());
+
+            assertEquals(newDest.getUuidString(), newDestUuid);
+            assertEquals(newDest.getState(), PRIMARY);
+            assertNull(newDest.getMoveTo());
+            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 32)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", newDest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(newDest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+
+            // Verify that read/write mirroring is going to the right place.
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(newDest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid(), newDest.getUuid());
+        }
+
+        {
+            // Hack the table JSON to get to the state where the original source expires.
+            srcExpiresAt = srcExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid), srcExpiresAt);
+
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            // Verify storage-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getUuidString(), newDestUuid);
+            assertEquals(table.getStorages().size(), 3);
+            assertEquals(table.getMasterStorage().getMirrors().size(), 1);
+
+            Storage src = checkNotNull(getStorage(table, srcUuid));
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
+            DateTime mirrorExpiredAt = src.getTransitionedTimestamp(MIRROR_EXPIRED);
+            DateTime droppedAt = src.getTransitionedTimestamp(DROPPED);
+            assertEquals(src.getState(), DROPPED);
+            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 16)
+                    .put("moveTo", destUuid)
+                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
+                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
+                    .put("droppedAt", formatTimestamp(droppedAt))
+                    .build());
+            assertBetween(start, mirrorExpiredAt, end);
+            assertBetween(start, droppedAt, end);
+
+            assertEquals(dest.getState(), MIRROR_EXPIRING);
+            assertEquals(newDest.getState(), PRIMARY);
+        }
+
+        {
+            // Hack the table JSON to get to the state where the original source is deleted, original dest expires.
+            DateTime purgedAt = new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            destExpiresAt = destExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", srcUuid), purgedAt);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", destUuid), destExpiresAt);
+
+            // Perform maintenance twice.  One will delete the original source, the other will drop the original dest. (Order is unspecified.)
+            DateTime start = new DateTime();
+            tableDAO.performMetadataMaintenance(TABLE);
+            tableDAO.performMetadataMaintenance(TABLE);
+            DateTime end = new DateTime();
+
+            // Verify storage-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getUuidString(), newDestUuid);
+            assertEquals(table.getStorages().size(), 2);
+            assertEquals(table.getMasterStorage().getMirrors().size(), 0);
+            Storage src = getStorage(table, srcUuid);
+            Storage dest = checkNotNull(getStorage(table, destUuid));
+            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
+
+            assertNull(src);
+
+            DateTime mirrorExpiredAt = dest.getTransitionedTimestamp(MIRROR_EXPIRED);
+            DateTime droppedAt = dest.getTransitionedTimestamp(DROPPED);
+            assertEquals(dest.getState(), DROPPED);
+            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_GLOBAL)
+                    .put("shards", 16)
+                    .put("groupId", srcUuid)
+                    .put("moveTo", newDest.getUuidString())
+                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", dest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
+                    .put("mirrorExpiresAt", formatTimestamp(destExpiresAt))
+                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
+                    .put("droppedAt", formatTimestamp(droppedAt))
+                    .build());
+            assertBetween(start, mirrorExpiredAt, end);
+            assertBetween(start, droppedAt, end);
+
+            assertEquals(newDest.getState(), PRIMARY);
+        }
+
+        {
+            // Hack the table JSON to get to the state where the original dest is deleted.
+            DateTime purgedAt = new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", destUuid), purgedAt);
+
+            // Perform metadata maintenance to delete the original dest.
+            tableDAO.performMetadataMaintenance(TABLE);
+
+            // Verify storage-level attributes.
+            table = tableDAO.readTableJson(TABLE, true);
+            assertEquals(table.getStorages().size(), 1);
+            assertEquals(table.getMasterStorage().getMirrors().size(), 0);
+            assertEquals(table.getUuidString(), newDestUuid);
+            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
+            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
+                    .put("placement", PL_US)
+                    .put("shards", 32)
+                    .put("groupId", srcUuid)
+                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
+                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
+                    .put("mirrorCopiedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_COPIED)))
+                    .put("mirrorConsistentAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
+                    .put("promotionId", newDest.getPromotionId().toString())
+                    .put("primaryAt", formatTimestamp(newDest.getTransitionedTimestamp(PRIMARY)))
+                    .build());
+
+            // Verify that read/write mirroring is going to the right place.
+            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
+            assertTrue(astyanaxTable.getReadStorage().hasUUID(newDest.getUuid()));
+            assertStorageUuids(astyanaxTable.getWriteStorage(), newDest.getUuid());
+        }
+    }
+
+    /** Can't move a facade directly from us to eu since there are no data centers in common. */
+    @Test
+    public void testMoveFacadeIncompatiblePlacement() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        try {
+            tableDAO.move(TABLE, PL_APAC, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Source and destination and mirror placements must overlap in some data center: apac, us");
+        }
+    }
+
+    /** Moving a table may cause a facade to become inaccessible. */
+    @Test
+    public void testMoveOverlapsFacade() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+    }
+
+    /** Moving a facade may not cause the facade to become inaccessible */
+    @Test
+    public void testMoveFacadeOverlapsMaster() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
+
+        try {
+            tableDAO.moveFacade(TABLE, PL_GLOBAL, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in the same placement as its table: us");
+        }
+    }
+
+    /** Moving a facade may not cause the choice of facade to become ambiguous in some data center. */
+    @Test
+    public void testMoveFacadeOverlapsFacade() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+
+        try {
+            tableDAO.moveFacade(TABLE, PL_EU, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (FacadeExistsException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on us)");
+            assertEquals(e.getTable(), TABLE);
+            assertEquals(e.getPlacement(), PL_US);
+        }
+    }
+
+    /** Creating a facade checks existing against both source and destination of table moves-in-progress. */
+    @Test
+    public void testCreateFacadeOverlapsMove() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        // Move hasn't completed yet, can't create a facade in the old location.
+        try {
+            tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in the same placement as its table: apac");
+        }
+        // And can't create a facade that overlaps with the new location.
+        try {
+            tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
+            fail();
+        } catch (IllegalArgumentException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in the same placement as its table: global");
+        }
+    }
+
+    /** Creating a facade checks existing against both source and destination of facade moves-in-progress. */
+    @Test
+    public void testCreateFacadeOverlapsMoveFacade() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        tableDAO.moveFacade(TABLE, PL_EU, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        // Move hasn't completed yet, creating a facade in the old location is idempotent.
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+
+        // Move hasn't completed yet, can't create a facade in the new location (if you tried you might
+        // not be able to write to it yet).
+        try {
+            tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
+            fail();
+        } catch (FacadeExistsException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on eu)");
+            assertEquals(e.getTable(), TABLE);
+            assertEquals(e.getPlacement(), "eu");
+        }
+        // And can't create a facade that overlaps with the new location.
+        try {
+            tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
+            fail();
+        } catch (FacadeExistsException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on global)");
+            assertEquals(e.getTable(), TABLE);
+            assertEquals(e.getPlacement(), "eu");
+        }
+    }
+
+    /** Moving a facade checks existing against the source of facade moves-in-progress. */
+    @Test
+    public void testMoveFacadeOverlapsMoveFacadeSource() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_US_EU), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
+        tableDAO.moveFacade(TABLE, PL_US_EU, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        // Move hasn't completed yet, moving a facade to the old location is not allowed.
+        try {
+            tableDAO.moveFacade(TABLE, PL_APAC, PL_US_EU, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (FacadeExistsException e) {
+            assertEquals(e.getMessage(), "Cannot move a facade to a placement for which another facade already exists: us-eu");
+            assertEquals(e.getTable(), TABLE);
+            assertEquals(e.getPlacement(), PL_US_EU);
+        }
+    }
+
+    /** Moving a facade checks existing against the destination of facade moves-in-progress. */
+    @Test
+    public void testMoveFacadeOverlapsMoveFacadeDestination() throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        tableDAO.create(TABLE, newOptions(PL_ZZ), ImmutableMap.<String, Object>of(), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
+        tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
+        tableDAO.moveFacade(TABLE, PL_US, PL_US_EU, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+
+        // Move hasn't completed yet, moving a facade to the new location is not allowed.
+        try {
+            tableDAO.moveFacade(TABLE, PL_APAC, PL_EU_APAC, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (FacadeExistsException e) {
+            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on us-eu)");
+            assertEquals(e.getTable(), TABLE);
+            assertEquals(e.getPlacement(), PL_US);
+        }
+    }
+
+    //
+    // Helper methods
+    //
+
+    private void advanceActivatedToPromoted(String destUuid, AstyanaxTableDAO tableDAO, InMemoryDataStore backingStore, Date fct) {
+        String srcUuid = tableDAO.readTableJson(TABLE, true).getMasterStorage().getUuidString();
+
+        // MIRROR_ACTIVATED -> MIRROR_COPIED
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_ACTIVATED);
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorActivatedAt", destUuid),
+                new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+        fct.setTime(System.currentTimeMillis() + 1);
+        tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+
+        // MIRROR_COPIED -> MIRROR_CONSISTENT
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_COPIED);
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorCopiedAt", destUuid),
+                new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+        fct.setTime(System.currentTimeMillis() + 1);
+        tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+
+        // MIRROR_CONSISTENT -> PRIMARY
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_CONSISTENT);
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", destUuid),
+                new DateTime().minus(AstyanaxTableDAO.MIN_DELAY));
+        tableDAO.performMetadataMaintenance(TABLE);
+
+        // Make sure the promote happened.
+        assertEquals(tableDAO.readTableJson(TABLE, true).getMasterStorage().getUuidString(), destUuid);
+
+        // MIRROR_DEMOTED -> MIRROR_EXPIRING (for the old primary)
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.primaryAt", destUuid),
+                new DateTime().minus(AstyanaxTableDAO.MIN_DELAY));
+        tableDAO.performMetadataMaintenance(TABLE);
+
+        // Check that all is in the expected final state.
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), srcUuid).getState(), MIRROR_EXPIRING);
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), PRIMARY);
+    }
+
+    private void advanceActivatedToSourcePurged(String destUuid, AstyanaxTableDAO tableDAO, InMemoryDataStore backingStore, Date fct) {
+        String srcUuid = tableDAO.readTableJson(TABLE, true).getMasterStorage().getUuidString();
+        advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
+
+        // MIRROR_EXPIRING -> DROPPED (for the old primary)
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid),
+                new DateTime().minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE));
+        tableDAO.performMetadataMaintenance(TABLE);
+
+        // DROPPED -> PURGED_1/PURGED_2 (for the old primary)
+        assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), srcUuid).getState(), DROPPED);
+        patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", srcUuid),
+                new DateTime().minus(AstyanaxTableDAO.DROP_TO_PURGE_1));
+        tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+    }
+
+    private void assertMaintenance(MaintenanceOp maintenanceOp, String name, MaintenanceType type, String dataCenter) {
+        assertEquals(maintenanceOp.getName(), name);
+        assertEquals(maintenanceOp.getType(), type);
+        assertEquals(maintenanceOp.getDataCenter(), dataCenter);
+    }
+
+    private void assertNoopMetadataMaintenance(InMemoryDataStore backingStore, String dataCenter, String table)
+            throws Exception {
+        DataCopyDAO dataCopyDAO = mock(DataCopyDAO.class);
+        DataPurgeDAO dataPurgeDAO = mock(DataPurgeDAO.class);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, dataCenter, dataCopyDAO, dataPurgeDAO, new Date(0));
+        TableJson before = tableDAO.readTableJson(table, false);
+
+        tableDAO.performMetadataMaintenance(table);
+
+        TableJson after = tableDAO.readTableJson(table, false);
+        assertEquals(after.getRawJson(), before.getRawJson());
+        verifyNoMoreInteractions(dataCopyDAO, dataPurgeDAO);
+    }
+
+    private void assertNoopDataMaintenance(InMemoryDataStore backingStore, String dataCenter, String table)
+            throws Exception {
+        DataCopyDAO euDataCopyDAO = mock(DataCopyDAO.class);
+        DataPurgeDAO euDataPurgeDAO = mock(DataPurgeDAO.class);
+        AstyanaxTableDAO euTableDAO = newTableDAO(backingStore, dataCenter, euDataCopyDAO, euDataPurgeDAO, new Date(0));
+
+        euTableDAO.performDataMaintenance(table, mock(Runnable.class));
+
+        // Wrong data center.  Nothing should have happened.
+        verifyNoMoreInteractions(euDataCopyDAO, euDataPurgeDAO);
+    }
+
+    private void assertBetween(DateTime start, DateTime actual, DateTime end) {
+        assertBetween(start, actual, end, Duration.ZERO);
+    }
+
+    private void assertBetween(DateTime start, DateTime actual, DateTime end, Duration offset) {
+        assertTrue(actual.compareTo(start.plus(offset)) >= 0, JsonHelper.formatTimestamp(actual.getMillis()));
+        assertTrue(actual.compareTo(end.plus(offset)) <= 0, JsonHelper.formatTimestamp(actual.getMillis()));
+    }
+
+    private void assertStorageUuids(Collection<AstyanaxStorage> storages, long... uuids) {
+        Set<Long> expected = Sets.newHashSet();
+        for (long uuid : uuids) {
+            expected.add(uuid);
+        }
+        for (AstyanaxStorage storage : storages) {
+            boolean found = false;
+            for (long uuid : expected) {
+                if (storage.hasUUID(uuid)) {
+                    expected.remove(uuid);
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found);
+        }
+        assertTrue(expected.isEmpty());
+    }
+
+    private TableOptions newOptions(String placement) {
+        return new TableOptionsBuilder().setPlacement(placement).build();
+    }
+
+    private FacadeOptions newFacadeOptions(String placement) {
+        return new FacadeOptionsBuilder().setPlacement(placement).build();
+    }
+
+    private Audit newAudit() {
+        return new AuditBuilder().build();
+    }
+
+    private void patchTableJsonTimestamp(TableBackingStore backingStore, String table, String dotPath, DateTime when) {
+        Delta delta = Deltas.literal(formatTimestamp(when));
+        for (String key : Lists.reverse(Arrays.asList(dotPath.split("\\.")))) {
+            delta = Deltas.mapBuilder().update(key, delta).build();
+        }
+        backingStore.update("__system:table", table, TimeUUIDs.newUUID(), delta, newAudit(), WriteConsistency.GLOBAL);
+    }
+
+    private AstyanaxTableDAO newTableDAO(String placement) throws Exception {
+        return newTableDAO(newBackingStore(new MetricRegistry()), placement,
+                mock(DataCopyDAO.class), mock(DataPurgeDAO.class), new Date(0));
+    }
+
+    private AstyanaxTableDAO newTableDAO(TableBackingStore backingStore, String dataCenter,
+                                         DataCopyDAO dataCopyDAO, DataPurgeDAO dataPurgeDAO,
+                                         final Date fullConsistencyTimestamp)
+            throws Exception {
+        PlacementFactory placementFactory = newPlacementFactory(dataCenter);
+
+        FullConsistencyTimeProvider fullConsistencyTimeProvider = mock(FullConsistencyTimeProvider.class);
+        when(fullConsistencyTimeProvider.getMaxTimeStamp(Mockito.<String>any())).then(new Answer<Long>() {
+            @Override
+            public Long answer(InvocationOnMock invocation) {
+                return fullConsistencyTimestamp.getTime();
+            }
+        });
+
+        CacheRegistry cacheRegistry = mock(CacheRegistry.class);
+        when(cacheRegistry.lookup("tables", true)).thenReturn(mock(CacheHandle.class));
+
+        ValueStore<Boolean> tableChangesEnabled = mock(ValueStore.class);
+        when(tableChangesEnabled.get()).thenReturn(true);
+
+        AstyanaxTableDAO tableDAO = new AstyanaxTableDAO(mock(LifeCycleRegistry.class),
+                "__system", PL_GLOBAL, 16, ImmutableMap.<String, Long>of(),
+                placementFactory, new PlacementCache(placementFactory),
+                dataCenter, mock(RateLimiterCache.class), dataCopyDAO, dataPurgeDAO,
+                fullConsistencyTimeProvider, tableChangesEnabled, cacheRegistry,
+                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ));
+        tableDAO.setBackingStore(backingStore);
+        return tableDAO;
+    }
+
+    private InMemoryDataStore newBackingStore(MetricRegistry metricRegistry) {
+        InMemoryDataStore store = new InMemoryDataStore(metricRegistry);
+        store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        return store;
+    }
+
+    private PlacementFactory newPlacementFactory(String dataCenter) throws Exception {
+        PlacementFactory placementFactory = mock(PlacementFactory.class);
+
+        DataCenter dc1 = newDataCenter(DC_US, true);
+        DataCenter dc2 = newDataCenter(DC_EU, false);
+        DataCenter dc3 = newDataCenter(DC_SA, false);
+        DataCenter dc4 = newDataCenter(DC_ZZ, false);
+
+        when(placementFactory.getDataCenters(PL_GLOBAL)).thenReturn(ImmutableList.of(dc1, dc2, dc3));
+        when(placementFactory.getDataCenters(PL_US_EU)).thenReturn(ImmutableList.of(dc1, dc2));
+        when(placementFactory.getDataCenters(PL_EU_APAC)).thenReturn(ImmutableList.of(dc2, dc3));
+        when(placementFactory.getDataCenters(PL_US)).thenReturn(ImmutableList.of(dc1));
+        when(placementFactory.getDataCenters(PL_EU)).thenReturn(ImmutableList.of(dc2));
+        when(placementFactory.getDataCenters(PL_APAC)).thenReturn(ImmutableList.of(dc3));
+        when(placementFactory.getDataCenters(PL_ZZ)).thenReturn(ImmutableList.of(dc4));
+        when(placementFactory.getDataCenters(PL_ZZ_MOVING)).thenReturn(ImmutableList.of(dc4));
+
+        for (String placement : new String[]{PL_GLOBAL, PL_US_EU, PL_EU_APAC, PL_US, PL_EU, PL_APAC, PL_ZZ, PL_ZZ_MOVING}) {
+            when(placementFactory.isValidPlacement(placement)).thenReturn(true);
+            for (DataCenter memberDataCenter : placementFactory.getDataCenters(placement)) {
+                if (dataCenter.equals(memberDataCenter.getName())) {
+                    when(placementFactory.isAvailablePlacement(placement)).thenReturn(true);
+                }
+            }
+
+            CassandraKeyspace keyspace = mock(CassandraKeyspace.class);
+            when(keyspace.getClusterName()).thenReturn("emo_cluster");
+
+            Placement placementObject = mock(Placement.class);
+            when(placementObject.getName()).thenReturn(placement);
+            when(placementFactory.newPlacement(placement)).thenReturn(placementObject);
+            when(placementObject.getKeyspace()).thenReturn(keyspace);
+        }
+
+        return placementFactory;
+    }
+
+    private DataCenter newDataCenter(String name, boolean system) {
+        return new DefaultDataCenter(name, URI.create("/"), URI.create("/"), system, name, ImmutableList.<String>of());
+    }
+
+    private Storage getStorage(TableJson table, String uuid) {
+        for (Storage storage : table.getStorages()) {
+            if (uuid.equals(storage.getUuidString())) {
+                return storage;
+            }
+        }
+        return null;
+    }
+
+    private String formatTimestamp(DateTime timestamp) {
+        return JsonMap.TimestampAttribute.format(checkNotNull(timestamp));
+    }
+}

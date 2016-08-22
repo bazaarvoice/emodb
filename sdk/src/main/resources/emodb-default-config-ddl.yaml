@@ -1,0 +1,56 @@
+systemOfRecord:
+   keyspaces:
+      ugc_global:
+         replicationFactor: 1
+         tables:
+            ugc:
+               keyspace: ugc_global
+               table.audit: ugc_audit
+               table.delta: ugc_delta
+               table.history: ugc_history
+      catalog_global:
+         replicationFactor: 1
+         tables:
+            ugc:
+               keyspace: catalog_global
+               table.audit: cat_audit
+               table.delta: cat_delta
+               table.history: cat_history
+      app_global:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: app_global
+               table.audit: default_audit
+               table.delta: default_delta
+               table.history: default_history
+            sys:
+               keyspace: app_global
+               table.audit: sys_audit
+               table.delta: sys_delta
+               table.history: sys_history
+
+databus:
+   keyspaces:
+      databus:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: databus
+
+queue:
+   keyspaces:
+      queue:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: queue
+
+blobStore:
+   keyspaces:
+      media_global:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: media_global
+               table: ugc_blob

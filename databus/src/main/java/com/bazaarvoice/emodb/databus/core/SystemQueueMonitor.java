@@ -1,0 +1,95 @@
+package com.bazaarvoice.emodb.databus.core;
+
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
+import com.bazaarvoice.emodb.databus.ChannelNames;
+import com.bazaarvoice.emodb.datacenter.api.DataCenter;
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
+import com.bazaarvoice.emodb.table.db.ClusterInfo;
+import com.codahale.metrics.MetricRegistry;
+import com.google.common.util.concurrent.AbstractScheduledService;
+import org.joda.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/**
+ * A service that polls system queue sizes periodically and reports them to Datadog via Yammer Metrics, subject
+ * to leader election.
+ */
+public class SystemQueueMonitor extends AbstractScheduledService {
+    private static final Logger _log = LoggerFactory.getLogger(SystemQueueMonitor.class);
+
+    private static final Duration POLL_INTERVAL = Duration.standardMinutes(1);
+
+    private final DatabusEventStore _eventStore;
+    private final DataCenters _dataCenters;
+    private final Collection<ClusterInfo> _clusterInfo;
+    private final MetricsGroup _gauges;
+
+    public SystemQueueMonitor(DatabusEventStore eventStore, DataCenters dataCenters,
+                              Collection<ClusterInfo> clusterInfo, MetricRegistry metricRegistry) {
+        _eventStore = checkNotNull(eventStore, "eventStore");
+        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _clusterInfo = checkNotNull(clusterInfo, "clusterInfo");
+        _gauges = new MetricsGroup(metricRegistry);
+        ServiceFailureListener.listenTo(this, metricRegistry);
+    }
+
+    @Override
+    protected Scheduler scheduler() {
+        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    protected void shutDown() {
+        _gauges.close();
+    }
+
+    @Override
+    protected void runOneIteration() {
+        try {
+            pollQueueSizes();
+        } catch (Throwable t) {
+            _log.error("Unexpected exception.", t);
+        }
+    }
+
+    private void pollQueueSizes() {
+        _gauges.beginUpdates();
+
+        pollQueueSize("master", ChannelNames.getMasterFanoutChannel());
+
+        for (ClusterInfo cluster : _clusterInfo) {
+            pollQueueSize("canary-" + cluster.getClusterMetric(), ChannelNames.getMasterCanarySubscription(cluster.getCluster()));
+        }
+
+        DataCenter self = _dataCenters.getSelf();
+        for (DataCenter dataCenter : _dataCenters.getAll()) {
+            if (!dataCenter.equals(self)) {
+                pollQueueSize("out-" + dataCenter.getName(), ChannelNames.getReplicationFanoutChannel(dataCenter));
+            }
+        }
+
+        _gauges.endUpdates();
+    }
+
+    private void pollQueueSize(String name, String channel) {
+        try {
+            // Exact count up to 500, estimate above that.
+            long count = _eventStore.getSizeEstimate(channel, 500);
+            _log.debug("System queue size {}: {} (channel={})", name, count, channel);
+            _gauges.gauge(newMetric(name)).set(count);
+        } catch (Exception e) {
+            _log.error("Unexpected exception polling channel size: {}", channel, e);
+        }
+    }
+
+    private String newMetric(String name) {
+        return MetricRegistry.name("bv.emodb.databus", "SystemQueue", name);
+    }
+}

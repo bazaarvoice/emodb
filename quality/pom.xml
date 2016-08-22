@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.bazaarvoice.emodb</groupId>
+        <artifactId>emodb-parent</artifactId>
+        <version>5.4-SNAPSHOT</version>
+        <relativePath>../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>emodb-quality-base</artifactId>
+    <packaging>pom</packaging>
+    <name>EmoDB Quality Tests</name>
+
+    <properties>
+        <runCompatibilityTests>false</runCompatibilityTests>
+    </properties>
+
+    <modules>
+        <module>integration</module>
+    </modules>
+
+    <profiles>
+        <!--
+            The compatibility module tests backwards compatibility for the EmoDB shaded client.  It relies on
+            classes that are relocated within the emodb-shaded-clients-core shaded jar artifact.  Because of this
+            it does not build correctly for all maven commands, such as "mvn test".  Therefore it is only
+            run if explicitly requested, such as "mvn verify -DrunCompatibilityTests=true"
+        -->
+        <profile>
+            <id>run-compatibility-tests</id>
+            <activation>
+                <property>
+                    <name>runCompatibilityTests</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <modules>
+                <module>compatibility</module>
+            </modules>
+        </profile>
+    </profiles>
+</project>

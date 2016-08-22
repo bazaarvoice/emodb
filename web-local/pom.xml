@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.bazaarvoice.emodb</groupId>
+        <artifactId>emodb-parent</artifactId>
+        <version>5.4-SNAPSHOT</version>
+        <relativePath>../parent/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>emodb-web-local</artifactId>
+    <packaging>jar</packaging>
+
+    <name>EmoDB Local Server Mode</name>
+    <properties>
+        <mavenVersion>3.1.1</mavenVersion>
+        <mavenPluginAnnotationsVersion>3.2</mavenPluginAnnotationsVersion>
+        <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard.metrics</groupId>
+            <artifactId>metrics-jvm</artifactId>
+            <version>3.1.1</version>
+        </dependency>
+        <!-- Bazaarvoice dependencies -->
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-web</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.codahale.metrics</groupId>
+                    <artifactId>metrics-core</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.codahale.metrics</groupId>
+                    <artifactId>metrics-jvm</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- 3rd-party dependencies -->
+        <dependency>
+            <groupId>com.bazaarvoice.curator</groupId>
+            <artifactId>test</artifactId>
+            <exclusions>
+                <!-- Exclude dependencies that cause slf4j warnings due to overlap with emodb-web shaded jar. -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.bazaarvoice.maven.plugins</groupId>
+                <artifactId>cassandra-maven-plugin</artifactId>
+                <configuration>
+                    <stopPort>7198</stopPort>
+                    <!-- default of 8081 collides with dropwizard -->
+                    <yaml>
+                        <!-- DataStore requires ByteOrderedPartitioner.  Databus and BlobStore prefer RandomPartitioner. -->
+                        partitioner: org.apache.cassandra.dht.ByteOrderedPartitioner
+                    </yaml>
+                    <loadAfterFirstStart>false</loadAfterFirstStart>
+                    <startNativeTransport>true</startNativeTransport>
+                    <nativeTransportPort>9164</nativeTransportPort>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <configuration>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                </configuration>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-local.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-jenkins-emodb</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-jenkins.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb-main-role</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-local-main-role.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb-blob-role</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-local-blob-role.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb-scan-role</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-scantest.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that starts embedded cassandra -->
+            <id>init-cassandra</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>com.bazaarvoice.maven.plugins</groupId>
+                        <artifactId>cassandra-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>startstop</id>
+                                <goals>
+                                    <goal>start</goal>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <loadAfterFirstStart>false</loadAfterFirstStart>
+                                    <startNativeTransport>true</startNativeTransport>
+                                    <nativeTransportPort>9164</nativeTransportPort>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

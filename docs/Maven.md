@@ -1,0 +1,85 @@
+EmoDB SDK
+============
+
+The EmoDB SDK Maven plugin can be used to start a local EmoDB Server (along with Cassandra and Zookeeper). It can also
+be used in conjuction with maven failsafe plugin to start the EmoDB Server during pre-integration-test phase and stop
+it during the post-integration-test phase.
+
+Here is an example usage of the plugin:
+
+```xml
+<!-- Start/stop a local zookeeper, cassandra and emodb server. Runs inside the Maven launcher's JVM. -->
+      <plugin>
+          <groupId>com.bazaarvoice.emodb</groupId>
+          <artifactId>emodb-sdk</artifactId>
+          <version>${emodb.version}</version>
+          <executions>
+              <execution>
+                  <goals>
+                      <goal>start</goal>
+                      <goal>stop</goal>
+                  </goals>
+              </execution>
+          </executions>
+          <configuration>
+              <autoStartCassandra>true</autoStartCassandra>
+              <autoStartZookeeper>true</autoStartZookeeper>
+              <autoStartEmo>true</autoStartEmo>
+              <waitForInterrupt>true</waitForInterrupt>  <!-- require kill signal to stop server -->
+          </configuration>
+      </plugin>
+```
+
+By setting `waitForInterrupt = false`, the server will be stopped in the post-integration-test phase.
+
+The plugin uses a default EmoDB configuration file (sdk/src/main/resources/emo-default-config.yaml).  To use
+a different configuration, you can supply a path for the configuration file:
+
+```xml
+    <configuration>
+        <autoStartCassandra>true</autoStartCassandra>
+        <autoStartZookeeper>true</autoStartZookeeper>
+        <autoStartEmo>true</autoStartEmo>
+        <waitForInterrupt>true</waitForInterrupt>  <!-- require kill signal to stop server -->
+        <emoConfigurationFile>${path/to/EmoConfig.yaml}</emoConfigurationFile>
+    </configuration>
+```
+
+You can supply a list of roles and API keys to be automatically available once EmoDB has started.  This may be
+necessary if your application makes EmoDB API requests which require specific permissions.  Ideally the permissions
+granted by your integration tests would match the actual permissions that your application would be granted
+in production.
+
+The following example demonstrates creating a single role and associating it with an API key.  Any number of roles
+and API keys can be provided.  The only restriction is that each API key must be a 48 character alpha-numeric string.
+
+```xml
+    <configuration>
+        <autoStartCassandra>true</autoStartCassandra>
+        <autoStartZookeeper>true</autoStartZookeeper>
+        <autoStartEmo>true</autoStartEmo>
+        <roles>
+            <role>
+                <name>integration-test-role</name>
+                <permissions>
+                    <!-- Grant role full permissions for sor and databus operations -->
+                    <permission>sor|*</permission>
+                    <permission>databus|*</permission>
+                </permissions>
+            </role>
+        </roles>
+        <apiKeys>
+            <apiKey>
+                <value>IntegrationTestApiKey000000000000000000000000000</value>
+                <roles>
+                    <role>integration-test-role</role>
+                </roles>
+            </apiKey>
+        </apiKeys>
+    </configuration>
+```
+
+
+
+
+

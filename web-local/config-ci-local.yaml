@@ -1,0 +1,218 @@
+# Select service mode
+serviceMode: STANDARD_ALL
+
+# A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
+cluster: local_default
+
+# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
+#metrics:
+#  reporters:
+#  - type: datadogExpansionFiltered
+#    host: <output-of-"hostname -f">
+#    excludeExpansions:
+#    - 5MinuteRate
+#    - 15MinuteRate
+#    - meanRate
+#    - min
+#    - max
+#    - mean
+#    - stddev
+#    - p95
+#    - p99
+#    - p999
+#    transport:
+#      type: http
+#      apiKey: <api-key>
+
+
+dataCenter:
+  currentDataCenter: us-east-1           # Which data center does this server belong to?
+  cassandraDataCenter: us-east       # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
+  systemDataCenter: us-east-1             # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
+  dataCenterServiceUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8080     # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
+  dataCenterAdminUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8081         # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
+  systemDataCenterServiceUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8080 # Load-balanced highly available base URL for the EmoDB system data center
+
+systemOfRecord:
+  systemTablePlacement: app_global:sys        # Where does the SoR store system information such as table definitions?
+
+  # All valid placement strings for create table operations.
+  validTablePlacements:
+  - "app_global:sys"
+  - "app_global:default"
+  - "catalog_global:cat"
+  - "ugc_global:ugc"
+  - "ugc_us:ugc"
+  - "ugc_eu:ugc"
+
+  # A per-keyspace map of Cassandra connection settings
+  cassandraKeyspaces:
+    app_global:
+      cluster: ci_sor_ugc_default
+      keyspace: app_global
+      dataCenter: us-east
+      healthCheckColumnFamily: sys_delta
+      zooKeeperServiceName: ci_sor_ugc_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+    catalog_global:
+      cluster: ci_sor_cat_default
+      keyspace: catalog_global
+      dataCenter: us-east
+      healthCheckColumnFamily: cat_delta
+      zooKeeperServiceName: ci_sor_cat_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+    ugc_global:
+      cluster: ci_sor_ugc_default
+      keyspace: ugc_global
+      dataCenter: us-east
+      healthCheckColumnFamily: ugc_delta
+      zooKeeperServiceName: ci_sor_ugc_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+
+    ugc_us:
+      cluster: ci_sor_ugc_default
+      keyspace: ugc_us
+      dataCenter: us-east
+      healthCheckColumnFamily: ugc_delta
+      zooKeeperServiceName: ci_sor_ugc_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+
+
+  slowQueryLog:
+    tooManyDeltasThreshold: 20
+    console:
+      type: console
+
+
+databus:
+  # Cassandra connection settings
+  cassandra:
+    cluster: ci_us_east_1_databus_default
+    keyspace: databus
+    dataCenter: us-east
+    healthCheckColumnFamily: subscription
+    zooKeeperServiceName: ci_us_east_1_databus_default-cassandra
+    maxConnectionsPerHost: 30
+    latencyAware: true
+    partitioner: random
+
+
+queueService:
+  # Cassandra connection settings
+  cassandra:
+    cluster: ci_us_east_1_databus_default
+    keyspace: queue
+    dataCenter: us-east
+    healthCheckColumnFamily: manifest
+    zooKeeperServiceName: ci_us_east_1_databus_default-cassandra
+    maxConnectionsPerHost: 30
+    latencyAware: true
+    partitioner: random
+
+
+blobStore:
+  systemTablePlacement: app_global:sys                  # Where does the SoR store system information such as blob store table definitions?
+
+  # All valid placement strings for create table operations.
+  validTablePlacements:
+  - "media_global:ugc"
+  - "media_us:ugc"
+  - "media_eu:ugc"
+
+  # A per-keyspace map of Cassandra connection settings
+  cassandraKeyspaces:
+    media_global:
+      cluster: ci_sor_ugc_default
+      keyspace: media_global
+      dataCenter: us-east
+      healthCheckColumnFamily: ugc_blob
+      zooKeeperServiceName: ci_sor_ugc_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+
+    media_us:
+      cluster: ci_sor_ugc_default
+      keyspace: media_us
+      dataCenter: us-east
+      healthCheckColumnFamily: ugc_blob
+      zooKeeperServiceName: ci_sor_ugc_default-cassandra
+      maxConnectionsPerHost: 30
+      latencyAware: true
+      partitioner: bop
+
+jobs:
+  # Placement for table which holds jobs metadata and results
+  tablePlacement: "app_global:sys"
+
+# Configure the ZooKeeper connection used for SOA service discovery
+zooKeeper:
+  namespace: ci/us-east-1
+
+  # ZooKeeper connection string that looks like "host:port,host:port,...".
+  # It should include all members of the ZooKeeper ensemble.
+  connectString: localhost:2181
+
+
+# Configure the HTTP server that listens for inbound requests
+server:
+  applicationConnectors:
+    - type: http
+      port: 8080
+  adminConnectors:
+    - type: http
+      port: 8081
+
+  gzip:
+    # Most responses are small and not worth compressing.  Reduce CPU.
+    enabled: false
+
+    # If gzip is enabled, don't compress binary data types (ie. BlobStore input/output)
+    compressedMimeTypes:
+    - text/plain
+    - text/html
+    - text/xml
+    - application/json
+    - application/x.json-condition
+    - application/x.json-delta
+
+# Configure the HTTP client that EmoService uses to make outbound requests.
+httpClient:
+  # Timeout after 1 second while connecting.
+  connectionTimeout: 1s
+
+  # Timeout after 10 seconds while reading or writing.
+  timeout: 10s
+
+  # Keep connections open for 10 minutes.
+  timeToLive: 10m
+
+  # Don't track cookies.
+  cookiesEnabled: false
+
+  # Most responses are small and not worth compressing.  Reduce CPU.
+  gzipEnabled: false
+  gzipEnabledForRequests: false
+
+  # Thread pool for JerseyClient's async requests.
+  minThreads: 1
+  maxThreads: 128
+
+  # Re-use connections so we don't run out of ports if many requests are made in rapid succession.
+  keepAlive: 2s
+
+
+# Configure Logback logging
+logging:
+  level: INFO
+  loggers:
+    "org.apache.zookeeper": OFF
+    "org.apache.curator": WARN
