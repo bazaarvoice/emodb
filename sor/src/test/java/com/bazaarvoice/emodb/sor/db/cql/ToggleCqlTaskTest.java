@@ -31,7 +31,7 @@ public class ToggleCqlTaskTest {
         DataReaderDAO astyanaxDelegate = mock(DataReaderDAO.class);
         DataReaderDAO dataReaderDAO = new CqlDataReaderDAO(astyanaxDelegate, mock(PlacementCache.class),
                 mock(MetricRegistry.class));
-        int defaultFetchSize = ((CqlDataReaderDAO) dataReaderDAO).getFetchSize();
+        int defaultFetchSize = ((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize();
         ToggleCqlAstyanaxTask toggleCqlTask =
                 new ToggleCqlAstyanaxTask(mock(TaskRegistry.class), dataReaderDAO);
 
@@ -60,17 +60,22 @@ public class ToggleCqlTaskTest {
         toggleCqlTask.execute(ImmutableMultimap.<String, String>builder().put("driver","astyanax").build(), new PrintWriter(System.out));
         assertTrue(((CqlDataReaderDAO) dataReaderDAO).getDelegateToAstyanax(), "It should be toggled to delegate all data reader dao to astyanax");
         // Verify the fetch size is the same as default of 10
-        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getFetchSize(), defaultFetchSize, "Fetch size should be the default.");
+        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize(), defaultFetchSize, "Fetch size should be the default.");
 
         dataReaderDAO.read(mock(Key.class), ReadConsistency.STRONG);
         dataReaderDAO.readAll(Lists.newArrayList(mock(Key.class)), ReadConsistency.STRONG);
         verify(astyanaxDelegate, times(1)).read(any(Key.class), any(ReadConsistency.class));
         verify(astyanaxDelegate, times(1)).readAll(any(List.class), any(ReadConsistency.class));
 
-        // Try modifying fetch size
+        // Try modifying fetch size and prefetch limit
         int expectedFetchSize = 15;
-        toggleCqlTask.execute(ImmutableMultimap.<String, String>builder().put("fetchSize", Integer.toString(expectedFetchSize)).build(), new PrintWriter(System.out));
-        // Verify the fetch size is changed to 15
-        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getFetchSize(), expectedFetchSize, "Fetch size should be changed.");
+        int expectedPrefetchLimit = 5;
+        toggleCqlTask.execute(ImmutableMultimap.<String, String>builder()
+                .put("fetchSize", Integer.toString(expectedFetchSize))
+                .put("prefetchLimit", Integer.toString(expectedPrefetchLimit))
+                .build(), new PrintWriter(System.out));
+        // Verify the fetch size is changed to 15 and the prefetch limit is changed to 5
+        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize(), expectedFetchSize, "Fetch size should be changed.");
+        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowPrefetchLimit(), expectedPrefetchLimit, "Prefetch limit should be changed.");
     }
 }
