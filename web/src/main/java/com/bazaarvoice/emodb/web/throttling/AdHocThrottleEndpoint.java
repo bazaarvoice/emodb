@@ -55,7 +55,7 @@ public class AdHocThrottleEndpoint {
 
     /**
      * The string form of AdHocThrottleEndpoint is used as a key in a {@link com.bazaarvoice.emodb.common.zookeeper.store.MapStore}.
-     * For this reason the string version must not contain spaces and cannot have the '/' character.
+     * For this reason the string version cannot contain the '/' character.
      */
     @Override
     public String toString() {
