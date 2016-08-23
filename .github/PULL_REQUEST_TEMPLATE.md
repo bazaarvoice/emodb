@@ -18,7 +18,7 @@ unfamiliar with the changes. Add some pictures if it helps.
 
 ### Level 
 
-`Low`, `Medium`, or `High`. Give an indication of what you think is the level of change is introduced by this PR. `High` means a massive change to a core functionality. 
+`Low`, `Medium`, or `High`. Give an indication of what you think is the level of change introduced by this PR. `High` means a massive change to a core functionality. 
 `Low` means a really minor change that shouldn't have any regression effect. 
 
 ### Required Testing
