@@ -1,7 +1,7 @@
 Security Management
 ===================
 
-This document describes the APIs for managing API keys in EmoDB.  Unless you are either an EmoDB team member or running
+This document describes the APIs for managing API keys in EmoDB.  Unless you are either an EmoDB administrator or running
 EmoDB locally on your laptop the document you are likely looking for is [this one] (https://github.com/bazaarvoice/emodb/blob/master/docs/Security.md).
 
 Prerequisites
@@ -14,17 +14,16 @@ Before EmoDB can manage API keys it needs to be configured with a pair of reserv
 
 To configure EmoDB with these keys follow the following steps:
 
-1. Update the EmoDb `config.yaml` with temporary values for these keys:
+1. Update the EmoDB `config.yaml` with temporary values for these keys:
 
 ```
 auth:
   adminApiKey:       "dummy"
   replicationApiKey: "dummy"
-  shovelApiKey:      "dummy"
 ```
 
-2. Choose three keys.  The keys can be any valid string with no white space.  For this example we'll choose
-   _pebbles_, _bambam_, and _dino_ for the administration, replication, and shovel keys respectively.
+2. Choose two keys.  The keys can be any valid string with no white space.  For this example we'll choose
+   _pebbles_ and _bambam_ for the administration and replication keys respectively.
 
 3. Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
    then specify a `cluster` option like in the examples below:
@@ -35,9 +34,6 @@ RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7
 
 $ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key bambam --cluster local_cluster
 h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA
-
-$ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key dino --cluster local_cluster
-ZHQlO7KOqUdOb0FNjLaG335JH6OC5V3tghVkSidteHYYdRTJXoNhJDrHibOi45VlhZKY1PFQ6E5/Zu/vqCmrsg
 ```
 
 4. Update `config.yaml` with the actual values:
@@ -46,7 +42,6 @@ ZHQlO7KOqUdOb0FNjLaG335JH6OC5V3tghVkSidteHYYdRTJXoNhJDrHibOi45VlhZKY1PFQ6E5/Zu/v
 auth:
   adminApiKey:       "RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7NPmLGg"
   replicationApiKey: "h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA"
-  shovelApiKey:      "ZHQlO7KOqUdOb0FNjLaG335JH6OC5V3tghVkSidteHYYdRTJXoNhJDrHibOi45VlhZKY1PFQ6E5/Zu/vqCmrsg"
 ```
 
 At this point _pebbles_ has administrative access to EmoDB.  From this point onward either _pebbles_ or other API keys
@@ -129,11 +124,8 @@ API key deleted
 Permissions
 -----------
 
-Some EmoDB actions do not require any special permissions.  Most non-mutative actions, such as reading from a SoR table,
-fall into this category.  Because of this any valid API key is all that is needed to perform these actions.
-
-However, there are some actions which should not be generally permitted to all users.  For example, if team A creates
-a databus subscription it would be harmful if team B were to poll and ack events from that subscription without team A's
+Permissions are used to control access to EmoDB's resources.  For example, if team A creates a queue for its own
+project's internal use it would be harmful if team B were to poll and ack messages from that queue without team A's
 knowledge or consent.  Permissions can be used to restrict the capabilities of an individual role, and assigning the
 role to one or more API keys transitively limits the capabilities of those API keys.
 
@@ -232,7 +224,7 @@ previous example, _pebbles_ is an administrator and therefore can run this task.
 
 EmoDB does not distinguish between creating a new role and updating an existing role.  An API key can be associated with
 any role name, even one that has not been created.  However, until an administrator explicitly assigns permissions
-to the role it will only be able to perform actions with implicit permissions, such as reading from a SoR table.
+to the role assigning the role to an API key grants it no additional permissions.
 
 The following example creates a role called "ermacs" with the following permissions:
 
