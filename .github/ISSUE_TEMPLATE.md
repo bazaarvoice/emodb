@@ -1,7 +1,7 @@
 ## What is the Issue?
 
-Here is where you should describe your use-case for a new feature that you would like to see added. 
-If this is a bug, then make sure to label the issue as such and describe the problem.  Add some pictures if it helps.
+- For feature requests, please describe your use-case here. 
+- For bugs, make sure to label the issue as such and describe the problem.  Add some pictures if it helps.
 
 ## How to Test and Verify 
 
