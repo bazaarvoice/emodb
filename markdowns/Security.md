@@ -127,4 +127,4 @@ Managing API Keys
 
 API keys are managed by the EmoDB team; if you need a key refer to the previous section on how to get one.  However,
 if you are running EmoDB locally and need to create keys on your local system then please see the
-[Key management documentation] (https://github.com/bazaarvoice/emodb/blob/master/docs/SecurityManagement.md)
+[Key management documentation] (SecurityManagement.md)

@@ -80,7 +80,7 @@ ACID stands for Atomicity, Consistency, Isolation, Durability. This is essential
 
 All of these properties apply to "transactions". It's up to the database to define what is in a transaction. Some databases (MySQL and PostgreSQL among them) allow you to send single transactions that touch multiple records. Emo is not one of these. In Emo, you can only send transactions for single records, but that transaction can obviously apply to arbitrarily many properties of that record.
 
-**Atomicity**: This property means that either the whole transaction applies or none of it does. In Emo, you create, update, and delete documents via [deltas](https://github.com/bazaarvoice/emodb/blob/master/docs/Deltas.md). There is an absolute guarantee that either the whole delta applied or none of it does.
+**Atomicity**: This property means that either the whole transaction applies or none of it does. In Emo, you create, update, and delete documents via [deltas](Deltas.md). There is an absolute guarantee that either the whole delta applied or none of it does.
 
 **Consistency**: This "consistency" is totally different from the one mentioned in CAP, and also from the one I used in the previous section. This one just means that, if you use the database's API, you will not be able to corrupt it. So there can't be any sequence of legal operations that result in broken data or a broken database. This one is also pretty straightforward: since you can only write deltas to Emo, and since none of the deltas will corrupt Emo regardless of the starting state, Emo is "consistent" by this definition.
 

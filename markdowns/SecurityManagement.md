@@ -2,7 +2,7 @@ Security Management
 ===================
 
 This document describes the APIs for managing API keys in EmoDB.  Unless you are either an EmoDB team member or running
-EmoDB locally on your laptop the document you are likely looking for is [this one] (https://github.com/bazaarvoice/emodb/blob/master/docs/Security.md).
+EmoDB locally on your laptop the document you are likely looking for is [this one] (Security.md).
 
 Prerequisites
 -------------
@@ -178,7 +178,7 @@ and so on).  If the user were further restricted by a subset of tables instead o
 complicated cartesian product of all possible combinations.
 
 For this reason an action or resource can use a conditional to determine matching values.  The
-[conditional] (https://github.com/bazaarvoice/emodb/blob/master/docs/Deltas.md#conditional) is exactly the same format
+[conditional] (Deltas.md#conditional) is exactly the same format
 as used by deltas and databus subscriptions.  To create a conditional surround the condition string in an `if()`
 statement.
 

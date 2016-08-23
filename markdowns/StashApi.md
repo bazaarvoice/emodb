@@ -42,7 +42,7 @@ point-in-time snapshot of EmoDB data.  Your application needs to be prepared to 
 by related records being stashed at different times. 
 
 A recommended approach to bootstrap from Stash that gets you up to date with EmoDB is described in the section 
-[Bootstrapping Using Stash] (https://github.com/bazaarvoice/emodb/blob/master/docs/StashApi.md#bootstrapping-using-stash) below.
+[Bootstrapping Using Stash] (StashApi.md#bootstrapping-using-stash) below.
 
 #### A historical daily record
 
@@ -92,7 +92,7 @@ Java Stash Library
 ------------------
 
 If your application uses Java then the simplest way to access Stash data is with the Stash API.  The Stash API is
-included in the [System of Record API] (https://github.com/bazaarvoice/emodb/blob/master/docs/SystemOfRecordApi.md) and
+included in the [System of Record API] (SystemOfRecordApi.md) and
 requires a `DataStore` instance for Stash location; follow the instructions on the System of Record page to include it
 in your project and create a `DataStore`.
 
@@ -210,11 +210,11 @@ Services such as Polloi can use Stash to bootstrap tables.  Bootstrapping from S
 and is therefore limited only by access to S3.  To bootstrap using Stash follow these steps:
 
 1. Create a databus subscription for the tables you are bootstrapping.  See the
-   [Databus API] (https://github.com/bazaarvoice/emodb/blob/master/docs/DatabusApi.md) for details.
+   [Databus API] (DatabusApi.md) for details.
 
 2. Request a replay of the past two days for the subscription.  This will pick up any updates that took place
    since the Stash start time.  See the "Databus Replay" section in the
-   [Databus API] (https://github.com/bazaarvoice/emodb/blob/master/docs/DatabusApi.md).
+   [Databus API] (DatabusApi.md).
 
 3. Use the Stash splits to bootstrap your tables.
 
