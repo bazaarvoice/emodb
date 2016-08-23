@@ -49,17 +49,17 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
         _nodeDiscovery.addListener(new NodeDiscovery.NodeListener<T>() {
             @Override
             public void onNodeAdded(String path, T node) {
-                fireChanged(ZKPaths.getNodeFromPath(path), ChangeType.ADD);
+                fireChanged(getKeyFromPath(path), ChangeType.ADD);
             }
 
             @Override
             public void onNodeRemoved(String path, T node) {
-                fireChanged(ZKPaths.getNodeFromPath(path), ChangeType.REMOVE);
+                fireChanged(getKeyFromPath(path), ChangeType.REMOVE);
             }
 
             @Override
             public void onNodeUpdated(String path, T node) {
-                fireChanged(ZKPaths.getNodeFromPath(path), ChangeType.CHANGE);
+                fireChanged(getKeyFromPath(path), ChangeType.CHANGE);
             }
         });
 
@@ -88,9 +88,69 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
 
     private String toPath(String key) {
         checkArgument(key.indexOf('/') == -1, "Keys may not contain '/'.");
-        String path = ZKPaths.makePath(_zkPath, key);
+        // The key may contain special characters which are invalid in ZooKeeper paths.  Encode them
+        String encodedKey = encodeKey(key);
+        String path = ZKPaths.makePath(_zkPath, encodedKey);
         PathUtils.validatePath(path);
         return path;
+    }
+
+    private String encodeKey(String key) {
+        StringBuilder encodedKey = null;
+        int lastEncodedCharPos = -1;
+        int length = key.length();
+        for (int i=0; i < length; i++) {
+            char c = key.charAt(i);
+            if (c == '.'            // May be interpreted as relative path
+                    || c == '%'     // Collides with encoding scheme
+                    || isUnsupportedCharacter(c)) {
+                if (lastEncodedCharPos == -1) {
+                    // This is the first character that has been encoded
+                    encodedKey = new StringBuilder();
+                }
+                encodedKey.append(key.substring(lastEncodedCharPos + 1, i));
+                encodedKey.append("%").append(String.format("%04x", (int) c));
+                lastEncodedCharPos = i;
+            }
+        }
+
+        if (lastEncodedCharPos == -1) {
+            return key;
+        }
+
+        encodedKey.append(key.substring(lastEncodedCharPos+1));
+        return encodedKey.toString();
+    }
+
+    private boolean isUnsupportedCharacter(char c) {
+        return c > '\u0000' && c < '\u001f'
+                || c > '\u007f' && c < '\u009F'
+                || c > '\ud800' && c < '\uf8ff'
+                || c > '\ufff0' && c < '\uffff';
+    }
+
+    private String decodeKey(String key) {
+        int i = key.indexOf('%');
+        if (i == -1) {
+            return key;
+        }
+
+        StringBuilder decodedKey = new StringBuilder();
+        int endOfLastEncodedChar = 0;
+
+        do {
+            decodedKey.append(key.substring(endOfLastEncodedChar, i));
+            endOfLastEncodedChar = i+5;
+            decodedKey.append((char) Integer.parseInt(key.substring(i+1, endOfLastEncodedChar), 16));
+            i = key.indexOf('%', endOfLastEncodedChar);
+        } while (i != -1);
+
+        decodedKey.append(key.substring(endOfLastEncodedChar));
+        return decodedKey.toString();
+    }
+
+    private String getKeyFromPath(String path) {
+        return decodeKey(ZKPaths.getNodeFromPath(path));
     }
 
     @Override
@@ -98,7 +158,7 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
         // Return an immutable copy since users should only be able to modify the map using set and remove.
         ImmutableMap.Builder<String, T> builder = ImmutableMap.builder();
         for (Map.Entry<String, T> entry : _nodeDiscovery.getNodes().entrySet()) {
-            builder.put(ZKPaths.getNodeFromPath(entry.getKey()), entry.getValue());
+            builder.put(getKeyFromPath(entry.getKey()), entry.getValue());
         }
         return builder.build();
     }
@@ -107,7 +167,7 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
     public Set<String> keySet() {
         ImmutableSet.Builder<String> builder = ImmutableSet.builder();
         for (String key : _nodeDiscovery.getNodes().keySet()) {
-            builder.add(ZKPaths.getNodeFromPath(key));
+            builder.add(getKeyFromPath(key));
         }
         return builder.build();
     }
