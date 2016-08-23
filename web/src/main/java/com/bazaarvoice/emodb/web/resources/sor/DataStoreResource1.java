@@ -14,10 +14,12 @@ import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.api.PurgeStatus;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.Literal;
@@ -102,9 +104,11 @@ public class DataStoreResource1 {
     private static final Pattern UUID_LIKE_PATTERN = Pattern.compile("[0-9a-fA-F]+(-[0-9a-fA-F]+){4}");
 
     private final DataStore _dataStore;
+    private final DataStoreAsync _dataStoreAsync;
 
-    public DataStoreResource1(DataStore dataStore) {
+    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync) {
         _dataStore = dataStore;
+        _dataStoreAsync = dataStoreAsync;
     }
 
     @GET
@@ -207,6 +211,7 @@ public class DataStoreResource1 {
         return SuccessResponse.instance();
     }
 
+
     @POST
     @Path ("_table/{table}/purge")
     @RequiresPermissions ("sor|purge|{table}")
@@ -215,11 +220,22 @@ public class DataStoreResource1 {
             notes = "Returns a SuccessResponse if table is purged",
             response = SuccessResponse.class
     )
-    public SuccessResponse purgeTable(@PathParam ("table") String table,
-                                      @QueryParam ("audit") AuditParam auditParam) {
+    public Map<String, Object> purgeTableAsync(@PathParam ("table") String table,
+                                               @QueryParam ("audit") AuditParam auditParam) {
         Audit audit = getRequired(auditParam, "audit");
-        _dataStore.purgeTableUnsafe(table, audit);
-        return SuccessResponse.instance();
+        String jobID = _dataStoreAsync.purgeTableAsync(table, audit);
+        return ImmutableMap.<String, Object>of("id", jobID);
+    }
+
+    @POST
+    @Path ("_table/{table}/purgestatus")
+    @RequiresPermissions ("sor|purge|{table}")
+    @Timed (name = "bv.emodb.sor.DataStoreResource1.purgeTable", absolute = true)
+    public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam("id") String jobID) {
+        System.out.println(jobID.toString());
+        PurgeStatus purgeStatus = _dataStoreAsync.getPurgeStatus(table, jobID);
+
+        return ImmutableMap.<String, Object>of("status", purgeStatus.getStatus());
     }
 
     @GET

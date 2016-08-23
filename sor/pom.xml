@@ -43,6 +43,11 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-job-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-sor-api</artifactId>
             <version>${project.version}</version>
         </dependency>
