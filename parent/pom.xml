@@ -45,6 +45,7 @@
         <cassandra.driver.version>3.0.2</cassandra.driver.version>
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
         <skipCC>true</skipCC>
+        <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
 
         <!-- maven properties recognized by the bv-super-pom -->
@@ -423,6 +424,17 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.2</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>sonatype-nexus-staging</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>${nexus.autoReleaseAfterClose}</autoReleaseAfterClose>
+                </configuration>
             </plugin>
         </plugins>
     </build>

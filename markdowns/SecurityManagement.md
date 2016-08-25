@@ -1,11 +1,10 @@
 Security Management
 ===================
 
-This document describes the APIs for managing API keys in EmoDB.  Unless you are either an EmoDB team member or running
-EmoDB locally on your laptop the document you are likely looking for is [this one] (Security.md).
-
 Prerequisites
 -------------
+
+If you are running Emo locally, using the provided binaries, the default admin API key is `local_admin`.
 
 Before EmoDB can manage API keys it needs to be configured with a pair of reserved API keys:
 

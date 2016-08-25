@@ -116,6 +116,10 @@ Quick Start
 The following examples assume you have [jq] (https://stedolan.github.io/jq/) or an equivalent (see Recommended
 Software below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
 
+Note that EmoDB comes with a built-in API Key Management system. For local testing, and tutorials, we have enabled "anonymous" access, 
+which allows us to skip sending API Keys. This is done to make examples more readable. 
+See [Security Management] (https://github.com/bazaarvoice/emodb/blob/master/markdown/SecurityManagement.md) for details.  
+
 1.  Create a table in the System of Record.  Specify a "table template" with properties that will be returned with
     every object in the table:
 
