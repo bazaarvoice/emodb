@@ -9,7 +9,7 @@ without need for any credentials (with few exceptions concerning the most destru
 shared service this lead to a situation where any of the following was possible:
 
 1. One team inadvertently corrupts data owned by another team.
-2. A team accidentally runs a script intended for one universe (e.g.; cert) against another universe (e.g.; bazaar).
+2. A team accidentally runs a script intended for one universe (e.g.; QA) against another universe (e.g.; PROD).
 3. Accountability for such operations is lost if the self-reported audits are non-specific to origin.
 
 API Keys
@@ -24,17 +24,7 @@ those resources (e.g.; read-only vs. read-write).
 How to get an API key
 ---------------------
 
-You can get an API key by doing the following:
-
-1. Create a JIRA ticket on `EmoDB` project for an API request.
-
-Please include the following information in your request:
-
-1. Your individual or team email address
-2. A description of who will own the key (typically your team name)
-3. What type of access the key needs (specific resources, read-only vs. read-write, and so on)
-4. What environments you need key for (cert, anon, uat, bazaar).  If you need access to multiple environments you will
-   get a separate key for each environment.
+For API Key administration, see [Security Management] (https://github.com/bazaarvoice/emodb/blob/master/markdowns/SecurityManagement.md)
 
 
 Using your API key
@@ -111,20 +101,7 @@ Although not presented here `BlobStore`, `DataBus`, `QueueService`, and `DedupQu
 `usingCredentials()` method, `Auth` and `Authenticator` classes and can be updated following the same pattern.
 
 
-Transitioning period
----------------------
-
-Rather than force all teams to scramble to get an API Key EmoDB will go through a security transition period.  During
-this period any call made without an API key will permitted if the same call was already permitted before API keys were
-introduced.  This means that during this transition period no client changes are required to keep using EmoDB without
-interruption.  As of this writing no specific date has been set for when this period will end.  However, in preparation
-for when this comes please take the time at your earliest convenience to get your EmoDB API keys and update your code to
-use them.
-
-
 Managing API Keys
 -----------------
 
-API keys are managed by the EmoDB team; if you need a key refer to the previous section on how to get one.  However,
-if you are running EmoDB locally and need to create keys on your local system then please see the
-[Key management documentation] (SecurityManagement.md)
+Please see [Key management documentation] (https://github.com/bazaarvoice/emodb/blob/master/markdowns/SecurityManagement.md)

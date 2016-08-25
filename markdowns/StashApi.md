@@ -19,18 +19,7 @@ the following criteria then Stash may be a good fit for you:
 Where Stash Is
 --------------
 
-Stash data lives in S3 in the following buckets:
-
-Region    | Bucket
-------    | ------
-us-east-1 | emodb-us-east-1
-eu-west-1 | emodb-eu-west-1
-
-Each region contains data from the corresponding region's EmoDB server.  For example, if a table is available in
-eu-west-1 but not in us-east-1 then similarly it will only be in the eu-west-1 Stash version of the table.
-
-Within each bucket the stash for each universe is prefixed by `stash/{universe}`.  For example, the cert stash
-in us-east-1 is located under the S3 prefix `s3://emodb-us-east-1/stash/cert`.
+Stash data can be exported to any hadoop compliant file system of your choice (S3 did it for us).
 
 What Stash Is Not
 -----------------
@@ -55,14 +44,14 @@ is more than seven days old.
 Pre-requisites
 --------------
 
-Since the Stash data lives in S3 your resource must have access to the appropriate bucket and objects:
+For stash in S3, your resource must have access to the appropriate bucket and objects:
 
 Action        | Resource
 --------      | ---------
 s3:ListBucket | arn:aws:s3:::{bucket}
-s3:GetObject  | arn:aws:s3:::{bucket}/stash/{universe}/*
+s3:GetObject  | arn:aws:s3:::{bucket}/{stash_root}/*
 
-For example, if you need to access the cert Stash in us-east-1 then your resource could have the following permissions
+For example, if you need to access  Stash in AWS us-east-1 then your resource could have the following permissions
 in its policy:
 
 ```json
@@ -83,7 +72,7 @@ in its policy:
         "s3:GetObject"
     ],
     "Resource": [
-        "arn:aws:s3:::emodb-us-east-1/stash/cert/*"
+        "arn:aws:s3:::emodb-us-east-1/stash/root/*"
     ]
 }
 ```
@@ -231,8 +220,10 @@ methods to prepare for this circumstance:
 Rolling Your Own Access
 -----------------------
 
+Note that our examples below use AWS S3, but you can configure EmoStash to output to HDFS just the same.
+
 If you are not using Java or choose not to use the Stash API you can access the Stash files directly.  The following
-section details how.
+section details how for AWS S3.
 
 ### Stash S3 Layout
 
