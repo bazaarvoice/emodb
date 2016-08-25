@@ -51,11 +51,11 @@ Quick Start
 
 #### Using binaries:
 
-1. Download the [EmoDB binaries] (https://github.com/bazaarvoice/emodb/releases)
+1. Download the tarball from [EmoDB binaries] (https://github.com/bazaarvoice/emodb/releases)
 
 2. Run the Emodb server locally. This will start zookeeper and cassandra locally.
     
-        $ bin/start-local.sh
+        $ ./start-local.sh
         ...
         INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
         INFO  [2012-05-14 19:12:19,805] org.eclipse.jetty.server.AbstractConnector: Started SocketConnector@0.0.0.0:8081
@@ -111,7 +111,7 @@ Quick Start
         $ cd web-local
         $ ./start-clean.sh
 
-### Examples
+### Quick Tutorial
 
 The following examples assume you have [jq] (https://stedolan.github.io/jq/) or an equivalent (see Recommended
 Software below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
