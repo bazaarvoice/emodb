@@ -34,5 +34,13 @@ http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 ">
                 <include>cassandra.yaml</include>
             </includes>
         </fileSet>
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>/</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>start-local.sh</include>
+            </includes>
+        </fileSet>
     </fileSets>
 </assembly>
