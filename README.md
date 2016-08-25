@@ -20,29 +20,29 @@ persistence and cross-data center replication.
 Documentation
 -------------
 
-[Release Notes] (https://github.com/bazaarvoice/emodb/blob/master/docs/ReleaseNotes.md)
+[Release Notes] (markdowns/ReleaseNotes.md)
 
-[System of Record API] (https://github.com/bazaarvoice/emodb/blob/master/docs/SystemOfRecordApi.md)
+[System of Record API] (markdowns/SystemOfRecordApi.md)
 
-[System of Record Deltas] (https://github.com/bazaarvoice/emodb/blob/master/docs/Deltas.md)
+[System of Record Deltas] (markdowns/Deltas.md)
 
-[Databus API] (https://github.com/bazaarvoice/emodb/blob/master/docs/DatabusApi.md)
+[Databus API] (markdowns/DatabusApi.md)
 
-[BlobStore API] (https://github.com/bazaarvoice/emodb/blob/master/docs/BlobStoreApi.md)
+[BlobStore API] (markdowns/BlobStoreApi.md)
 
-[Queue API] (https://github.com/bazaarvoice/emodb/blob/master/docs/QueueServiceApi.md)
+[Queue API] (markdowns/QueueServiceApi.md)
 
-[Stash API] (https://github.com/bazaarvoice/emodb/blob/master/docs/StashApi.md)
+[Stash API] (markdowns/StashApi.md)
 
-[Hadoop and Hive Support] (https://github.com/bazaarvoice/emodb/blob/master/docs/MapReduce.md)
+[Hadoop and Hive Support] (markdowns/MapReduce.md)
 
-[Operations] (https://github.com/bazaarvoice/emodb/blob/master/docs/Operations.md)
+[Operations] (markdowns/Operations.md)
 
-[EmoDB SDK] (https://github.com/bazaarvoice/emodb/blob/master/docs/Maven.md)
+[EmoDB SDK] (markdowns/Maven.md)
 
-[API Keys] (https://github.com/bazaarvoice/emodb/blob/master/docs/Security.md)
+[API Keys] (markdowns/Security.md)
 
-[Legacy Java Client Support] (https://github.com/bazaarvoice/emodb/blob/master/docs/LegacyJavaClients.md)
+[Legacy Java Client Support] (markdowns/LegacyJavaClients.md)
 
 Quick Start
 -----------

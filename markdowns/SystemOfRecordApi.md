@@ -312,7 +312,7 @@ HTTP:
     DELETE /sor/1/<table>/<key>?audit=<o-rison-map>
 
 All three operations use the same Java API.  The create/update/delete operation is selected by using a different
-instance of Delta.  See [Deltas] (https://github.com/bazaarvoice/emodb/blob/master/docs/Deltas.md).
+instance of Delta.  See [Deltas] (Deltas.md).
 
 Java:
 

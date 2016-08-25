@@ -12,6 +12,7 @@
 # schema and data will not be modified.
 #
 # Once the server is running you can access Emodb using the following commands:
+# Note: For local testing, we have enabled anonymous access. In production you should be using API Keys. Read more about it in "API Keys" section.
 #
 #   curl localhost:8081/ping
 #   curl localhost:8080/sor/1/_table
