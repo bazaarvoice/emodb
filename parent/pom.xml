@@ -46,6 +46,7 @@
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
         <skipCC>true</skipCC>
         <skipDependencyChecks>true</skipDependencyChecks>
+        <autoReleaseAfterClose>true</autoReleaseAfterClose>
 
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
@@ -423,6 +424,18 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>sonatype-nexus-staging</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>${autoReleaseAfterClose}</autoReleaseAfterClose>
+                </configuration>
             </plugin>
         </plugins>
     </build>
