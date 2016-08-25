@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.google.common.base.Function;
 import com.google.common.cache.CacheBuilder;
@@ -30,7 +31,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     private static final String SUBSCRIPTIONS = "subscriptions";
 
     private final SubscriptionDAO _delegate;
-    private final LoadingCache<String, Map<String, Subscription>> _cache;
+    private final LoadingCache<String, Map<String, OwnedSubscription>> _cache;
     private final CacheHandle _cacheHandle;
 
     @Inject
@@ -42,16 +43,16 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         _cache = CacheBuilder.newBuilder().
                 expireAfterAccess(10, TimeUnit.MINUTES).
                 recordStats().
-                build(new CacheLoader<String, Map<String, Subscription>>() {
+                build(new CacheLoader<String, Map<String, OwnedSubscription>>() {
                     @Override
-                    public Map<String, Subscription> load(String ignored) throws Exception {
+                    public Map<String, OwnedSubscription> load(String ignored) throws Exception {
                         return indexByName(_delegate.getAllSubscriptions());
                     }
                 });
         _cacheHandle = cacheRegistry.register("subscriptions", _cache, true);
     }
 
-    private Map<String, Subscription> indexByName(Collection<Subscription> subscriptions) {
+    private Map<String, OwnedSubscription> indexByName(Collection<OwnedSubscription> subscriptions) {
         return Maps.uniqueIndex(subscriptions, new Function<Subscription, String>() {
             @Override
             public String apply(Subscription subscription) {
@@ -61,8 +62,9 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     }
 
     @Override
-    public void insertSubscription(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
-        _delegate.insertSubscription(subscription, tableFilter, subscriptionTtl, eventTtl);
+    public void insertSubscription(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl,
+                                   Duration eventTtl) {
+        _delegate.insertSubscription(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl);
 
         // Synchronously tell every other server in the cluster to forget what it has cached about subscriptions.
         _cacheHandle.invalidate(InvalidationScope.DATA_CENTER, SUBSCRIPTIONS);
@@ -77,12 +79,11 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     }
 
     @Override
-    public Subscription getSubscription(String subscription) {
+    public OwnedSubscription getSubscription(String subscription) {
         return _cache.getUnchecked(SUBSCRIPTIONS).get(subscription);
     }
-
     @Override
-    public Collection<Subscription> getAllSubscriptions() {
+    public Collection<OwnedSubscription> getAllSubscriptions() {
         return _cache.getUnchecked(SUBSCRIPTIONS).values();
     }
 }

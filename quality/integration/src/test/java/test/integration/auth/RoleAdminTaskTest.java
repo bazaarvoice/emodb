@@ -56,7 +56,7 @@ public class RoleAdminTaskTest {
                         null));
 
         _task = new RoleAdminTask(securityManager, _permissionManager, mock(TaskRegistry.class));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
     }
 
     @AfterMethod

@@ -24,6 +24,10 @@ public class Subject {
         return ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getName();
     }
 
+    public String getInternalId() {
+        return ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getInternalId();
+    }
+
     public boolean hasRole(String role) {
         return _securityManager.hasRole(_principals, role);
     }

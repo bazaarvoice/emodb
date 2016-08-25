@@ -97,7 +97,7 @@ public class AdHocThrottleTest extends ResourceTest {
 
     private ResourceTestRule setupDataStoreResourceTestRule() {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(API_KEY, ImmutableList.of("all-sor-role")));
+        authIdentityManager.updateIdentity(new ApiKey(API_KEY, "id", ImmutableList.of("all-sor-role")));
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_dataStore, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         permissionManager.updateForRole(

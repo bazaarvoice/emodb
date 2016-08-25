@@ -29,14 +29,16 @@ import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkMapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkTimestampSerializer;
+import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
-import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
-import com.bazaarvoice.emodb.databus.core.TrustedDatabus;
+import com.bazaarvoice.emodb.databus.auth.FilteredDatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.auth.SystemProcessDatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.job.JobConfiguration;
@@ -69,13 +71,17 @@ import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
+import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
 import com.bazaarvoice.emodb.web.report.ReportsModule;
+import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxy;
+import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxyServiceFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
+import com.bazaarvoice.emodb.web.resources.databus.LocalDatabusClientSubjectProxy;
 import com.bazaarvoice.emodb.web.resources.databus.LongPollingExecutorServices;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
@@ -311,6 +317,7 @@ public class EmoModule extends AbstractModule {
             bind(DatabusConfiguration.class).toInstance(_configuration.getDatabusConfiguration());
             // Used by the databus resource to support long polling
             bind(DatabusResourcePoller.class).asEagerSingleton();
+            bind(OwnerDatabusAuthorizer.class).asEagerSingleton();
             install(new DatabusModule(_serviceMode, _environment.metrics()));
         }
 
@@ -342,32 +349,49 @@ public class EmoModule extends AbstractModule {
             return DatabusRelayClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient);
         }
 
+        @Provides @Singleton
+        MultiThreadedServiceFactory<DatabusClientSubjectProxy> provideSubjectDatabusFactoryServiceFactory(
+                MultiThreadedServiceFactory<AuthDatabus> authDatabusServiceFactory) {
+            // Proxy the AuthDatabus service factory into another service factory that will authorize the caller
+            // indirectly using a Subject's API key.
+            return new DatabusClientSubjectProxyServiceFactory(authDatabusServiceFactory);
+        }
+
         @Provides @Singleton @DatabusHostDiscovery
-        HostDiscovery provideDatabusHostDiscovery(MultiThreadedServiceFactory<AuthDatabus> serviceFactory,
+        HostDiscovery provideDatabusHostDiscovery(MultiThreadedServiceFactory<DatabusClientSubjectProxy> serviceFactory,
                                                   @Global CuratorFramework curator, LifeCycleRegistry lifeCycle) {
             return lifeCycle.manage(new ZooKeeperHostDiscovery(curator, serviceFactory.getServiceName(), _environment.metrics()));
         }
 
         /** Create an SOA Databus client for forwarding non-partition-aware clients to the right server. */
         @Provides @Singleton @PartitionAwareClient
-        DatabusAuthenticator provideDatabusClient(MultiThreadedServiceFactory<AuthDatabus> serviceFactory,
+        DatabusClientSubjectProxy provideDatabusClient(MultiThreadedServiceFactory<DatabusClientSubjectProxy> serviceFactory,
                                      @DatabusHostDiscovery HostDiscovery hostDiscovery,
-                                     Databus databus, @SelfHostAndPort HostAndPort self, MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
-            AuthDatabus client = ServicePoolBuilder.create(AuthDatabus.class)
+                                     DatabusFactory databusFactory, @SelfHostAndPort HostAndPort self, MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
+            DatabusClientSubjectProxy client = ServicePoolBuilder.create(DatabusClientSubjectProxy.class)
                     .withHostDiscovery(hostDiscovery)
                     .withServiceFactory(
-                            new PartitionAwareServiceFactory<>(serviceFactory, new TrustedDatabus(databus), self, healthCheckRegistry))
+                            new PartitionAwareServiceFactory<>(serviceFactory, new LocalDatabusClientSubjectProxy(databusFactory), self, healthCheckRegistry))
                     .withMetricRegistry(metricRegistry)
                     .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
                     .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
             _environment.lifecycle().manage(new ManagedServicePoolProxy(client));
-            return DatabusAuthenticator.proxied(client);
+            return client;
         }
 
         /** Provide ZooKeeper namespaced to Databus data. */
         @Provides @Singleton @DatabusZooKeeper
         CuratorFramework provideDatabusZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "bus");
+        }
+
+        @Provides @Singleton
+        DatabusAuthorizer provideDatabusAuthorizer(OwnerDatabusAuthorizer ownerDatabusAuthorizer,
+                                                   @SystemInternalId String systemInternalId) {
+            return FilteredDatabusAuthorizer.builder()
+                    .withDefaultAuthorizer(ownerDatabusAuthorizer)
+                    .withAuthorizerForOwner(systemInternalId, new SystemProcessDatabusAuthorizer(systemInternalId))
+                    .build();
         }
     }
 

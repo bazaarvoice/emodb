@@ -14,17 +14,23 @@ import static com.google.common.base.Preconditions.checkNotNull;
 @JsonIgnoreProperties (ignoreUnknown = true)
 public class ReplaySubscriptionRequest {
 
+    private String _ownerId;
     private String _subscription;
     @Nullable
     private Date _since;
 
     @JsonCreator
-    public ReplaySubscriptionRequest(@JsonProperty ("subscription") String subscription,
+    public ReplaySubscriptionRequest(@JsonProperty ("ownerId") String ownerId,
+                                     @JsonProperty ("subscription") String subscription,
                                      @JsonProperty ("since") @Nullable Date since) {
+        _ownerId = checkNotNull(ownerId, "ownerId");
         _subscription = checkNotNull(subscription, "subscription");
         _since = since;
     }
 
+    public String getOwnerId() {
+        return _ownerId;
+    }
 
     public String getSubscription() {
         return _subscription;

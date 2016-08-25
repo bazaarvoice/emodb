@@ -6,7 +6,8 @@ import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.Table;
-import com.google.common.collect.Lists;
+import com.google.common.base.Predicate;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
@@ -32,14 +33,14 @@ public class SubscriptionEvaluator {
         _rateLimitedLog = logFactory.from(_log);
     }
 
-    public Collection<Subscription> matches(Collection<Subscription> subscriptions, MatchEventData eventData) {
-        Collection<Subscription> filteredSubscriptions = Lists.newArrayList();
-        for (Subscription subscription : subscriptions) {
-            if (matches(subscription, eventData)) {
-                filteredSubscriptions.add(subscription);
-            }
-        }
-        return filteredSubscriptions;
+    public <S extends Subscription> Iterable<S> matches(Iterable<S> subscriptions, final MatchEventData eventData) {
+        return FluentIterable.from(subscriptions)
+                .filter(new Predicate<Subscription>() {
+                    @Override
+                    public boolean apply(Subscription subscription) {
+                        return matches(subscription, eventData);
+                    }
+                });
     }
 
     public boolean matches(Subscription subscription, ByteBuffer eventData) {
@@ -53,7 +54,7 @@ public class SubscriptionEvaluator {
         return matches(subscription, matchEventData);
     }
 
-    private boolean matches(Subscription subscription, MatchEventData eventData) {
+    public boolean matches(Subscription subscription, MatchEventData eventData) {
         Table table = eventData.getTable();
         try {
             Map<String, Object> json;

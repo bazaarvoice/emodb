@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.auth.identity;
 
+import java.util.Set;
+
 /**
  * Manager for identities.
  */
@@ -19,4 +21,9 @@ public interface AuthIdentityManager<T extends AuthIdentity> {
      * Deletes an identity.
      */
     void deleteIdentity(String id);
+
+    /**
+     * Gets the roles associated with an identity by its internal ID.
+     */
+    Set<String> getRolesByInternalId(String internalId);
 }

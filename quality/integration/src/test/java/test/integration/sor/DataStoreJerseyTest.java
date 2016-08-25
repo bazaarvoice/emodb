@@ -117,13 +117,13 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     private ResourceTestRule setupDataStoreResourceTestRule() {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_TABLE, ImmutableSet.of("table-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_A, ImmutableSet.of("tables-a-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_B, ImmutableSet.of("tables-b-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_FACADE, ImmutableSet.of("facade-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, ImmutableSet.of("reviews-only-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, ImmutableSet.of("standard")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, ImmutableSet.of("update-with-events")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_TABLE, "id0", ImmutableSet.of("table-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_A, "id1", ImmutableSet.of("tables-a-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_B, "id2", ImmutableSet.of("tables-b-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_FACADE, "id3", ImmutableSet.of("facade-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", ImmutableSet.of("reviews-only-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", ImmutableSet.of("standard")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", ImmutableSet.of("update-with-events")));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);

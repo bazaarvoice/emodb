@@ -39,8 +39,8 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new ExceptionResource()),
-            new ApiKey("unused", ImmutableSet.<String>of()),
-            new ApiKey("also-unused", ImmutableSet.<String>of()),
+            new ApiKey("unused", "id0", ImmutableSet.<String>of()),
+            new ApiKey("also-unused", "id1", ImmutableSet.<String>of()),
             "exception");
 
     @Test
