@@ -1,22 +1,25 @@
 Security
 ========
 
-History
--------
+EmoDB is a shared service that is designed for multi-tenancy.  While this is a work in progress (for example, all EmoDB
+tables currently share a common namespace) there need to be security protections to ensure the integrity of the system.
 
-The original version of EmoDB did not provide any form of security; any valid API request would be honored
-without need for any credentials (with few exceptions concerning the most destructive operations).  Since EmoDB is a
-shared service this lead to a situation where any of the following was possible:
+These protections include:
 
-1. One team inadvertently corrupts data owned by another team.
-2. A team accidentally runs a script intended for one universe (e.g.; QA) against another universe (e.g.; PROD).
-3. Accountability for such operations is lost if the self-reported audits are non-specific to origin.
+1. Authentication
+  * Prevent system access by unknown entities
+  * Prevent a team from accidentally performing updates intended for one environment (e.g.; QA) in another environment
+    (e.g; production) by assigning different credentials per environment
+  * Provide an audit trail for all operations
+2. Authorization
+  * Prevent a team from accessing, mutating, or otherwise disturbing resources managed by another team
+  * Allow a team to define the rules for protecting and sharing their resources
 
 API Keys
 --------
 
-To resolve these issues EmoDB has introduced API keys.  Each individual or team can be granted an API key which can be
-narrowly permitted to perform only the actions required by the system.  This includes restricting access to specific
+To provide these protections EmoDB uses API keys.  Each individual or team can be granted an API key which can be
+narrowly permitted to perform only the actions required by the grantee.  This includes restricting access to specific
 resources (e.g.; permitting access only to tables matching "my_team_prefix:*") as well as restricting access levels to
 those resources (e.g.; read-only vs. read-write).
 
@@ -24,8 +27,16 @@ those resources (e.g.; read-only vs. read-write).
 How to get an API key
 ---------------------
 
-For API Key administration, see [Security Management] (https://github.com/bazaarvoice/emodb/blob/master/markdowns/SecurityManagement.md)
+We recommend creating a protocol for the creation and distribution of API keys.  Each API key request should include
+the following:
 
+1. The individual or team email address
+2. A description of who will own the key (typically your team name)
+3. What type of access the key needs (specific resources, read-only vs. read-write, and so on)
+4. What environments will be accessed (QA, integration, production).  If the requester needs access to multiple
+   environments they should get a separate key for each environment.
+
+For more information on API Key administration, see [Security Management] (https://github.com/bazaarvoice/emodb/blob/master/markdowns/SecurityManagement.md)
 
 Using your API key
 ---------------------
@@ -49,20 +60,9 @@ $ curl -s http://localhost:8080/sor/1/review:testcustomer/demo1?APIKey=<your_api
 
 ### Java client
 
-If you are using the Java client then migrating your code using API keys requires only a minor change to your existing
-code.  For example, before API keys you could create a `DataStore` client using a `ServicePoolBuilder` similar to the
-following:
+For the simple case where your entire application uses a single API key use the `usingCredentials()` method in the
+client factory.  For example, the following creates a `DataStore` client using a single API key:
 
-```java
-String emodbHost = "localhost:8080";  // Adjust to point to the EmoDB server.
-DataStore dataStore = ServicePoolBuilder.create(DataStore.class)
-        .withHostDiscoverySource(new DataStoreFixedHostDiscoverySource(emodbHost))
-        .withServiceFactory(DataStoreClientFactory.forCluster("local_default"))
-        .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
-```
-
-For the simple case where your entire application uses a single API key add a `usingCredentials()` call
-to the client factory.  For example the previous example would be updated to the following:
 
 ```java
 String emodbHost = "localhost:8080";  // Adjust to point to the EmoDB server.
@@ -90,18 +90,16 @@ AuthDataStore authDataStore = ServicePoolBuilder.create(AuthDataStore.class)
 // Create a DataStoreAuthenticator from the AuthDataStore service pool
 DataStoreAuthenticator dataStoreAuthenticator = DataStoreAuthenticator.proxied(authDataStore)
 
-String apiKey = getApiKey();
+String apiKey1 = "<your_first_api_key>";
+String apiKey2 = "<your_second_api_key>";
+
 // Convert back to a DataStore view
-DataStore dataStore = dataStoreAuthenticator.usingCredentials(apiKey);
+DataStore dataStore1 = dataStoreAuthenticator.usingCredentials(apiKey1);
+DataStore dataStore2 = dataStoreAuthenticator.usingCredentials(apiKey2);
 ```
 
-From this point the `DataStore` API is unchanged and all calls to the data store will automatically include your API key.
+Both `dataStore1` and `dataStore2` use the same underlying client but calls to each will be authenticated using
+their respective API keys.
 
 Although not presented here `BlobStore`, `DataBus`, `QueueService`, and `DedupQueueService` all have a corresponding
-`usingCredentials()` method, `Auth` and `Authenticator` classes and can be updated following the same pattern.
-
-
-Managing API Keys
------------------
-
-Please see [Key management documentation] (https://github.com/bazaarvoice/emodb/blob/master/markdowns/SecurityManagement.md)
+`usingCredentials()` method, `Auth` and `Authenticator` classes and can be used following the same pattern.
