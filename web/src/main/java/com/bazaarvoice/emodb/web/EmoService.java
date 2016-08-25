@@ -22,6 +22,7 @@ import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.DedupQueueServiceAuthenticator;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
 import com.bazaarvoice.emodb.web.cli.AllTablesReportCommand;
 import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
@@ -225,8 +226,9 @@ public class EmoService extends Application<EmoConfiguration> {
 
         DataStore dataStore = _injector.getInstance(DataStore.class);
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
+        DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
         // Start the System Of Record service
-        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore));
+        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync));
     }
 
     private void evaluateBlobStore()
