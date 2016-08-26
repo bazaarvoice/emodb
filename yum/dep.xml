@@ -24,6 +24,22 @@ http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 ">
             <includes>
                 <include>emodb-web*.jar</include>
             </includes>
+            <excludes>
+                <exclude>*javadoc.jar</exclude>
+                <exclude>*sources.jar</exclude>
+            </excludes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.basedir}/../web/target</directory>
+            <outputDirectory>/bin</outputDirectory>
+            <fileMode>755</fileMode>
+            <includes>
+                <include>emodb-web*.jar</include>
+            </includes>
+            <excludes>
+                <exclude>*javadoc.jar</exclude>
+                <exclude>*sources.jar</exclude>
+            </excludes>
         </fileSet>
         <fileSet>
             <directory>${project.basedir}/../web-local</directory>
