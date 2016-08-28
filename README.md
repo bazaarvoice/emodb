@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/bazaarvoice/emodb.svg?token=AwBevKKpyg5x21QsyKTV&branch=master)](https://travis-ci.com/bazaarvoice/emodb)
+[![Build Status](https://travis-ci.org/bazaarvoice/emodb.svg?branch=master)](https://travis-ci.org/bazaarvoice/emodb)
 
 EmoDB
 =====
