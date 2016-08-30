@@ -13,6 +13,8 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
+import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
+import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
@@ -124,6 +126,8 @@ public class DataStoreModuleTest {
                 bind(CuratorFramework.class).annotatedWith(GlobalFullConsistencyZooKeeper.class).toInstance(curator);
                 bind(ClusterInfo.class).toInstance(new ClusterInfo("Test Cluster", "Test Metric Cluster"));
                 bind(MetricRegistry.class).asEagerSingleton();
+                bind(JobService.class).toInstance(mock(JobService.class));
+                bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
                 install(new DataStoreModule(serviceMode));
             }

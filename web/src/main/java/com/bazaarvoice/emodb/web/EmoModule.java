@@ -66,6 +66,7 @@ import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
+import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
@@ -128,6 +129,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataCenter;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
@@ -173,6 +175,7 @@ public class EmoModule extends AbstractModule {
         evaluate(job, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
+        evaluate(dataStore_web, new DataStoreAsyncSetup());
     }
 
     private class CommonModuleSetup extends AbstractModule {
@@ -430,6 +433,12 @@ public class EmoModule extends AbstractModule {
         }
     }
 
+    private class DataStoreAsyncSetup extends AbstractModule {
+        @Override
+        protected void configure() {
+            install(new DataStoreAsyncModule());
+        }
+    }
 
     private class ReportSetup extends AbstractModule  {
         @Override

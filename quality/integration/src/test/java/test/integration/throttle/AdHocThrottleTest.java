@@ -8,9 +8,12 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkMapStore;
+import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
+import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.sor.core.DefaultDataStoreAsync;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
@@ -104,7 +107,7 @@ public class AdHocThrottleTest extends ResourceTest {
                 "all-sor-role", new PermissionUpdateRequest().permit("sor|*|*"));
 
         return setupResourceTestRule(
-                Collections.<Object>singletonList(new DataStoreResource1(_dataStore)),
+                Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)))),
                 Collections.<Object>singletonList(new ConcurrentRequestsThrottlingFilter(_deferringRegulatorSupplier)),
                 authIdentityManager, permissionManager);
     }

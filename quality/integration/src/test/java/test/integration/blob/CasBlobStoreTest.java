@@ -23,6 +23,8 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterModule;
+import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
+import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreModule;
 import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
@@ -122,6 +124,8 @@ public class CasBlobStoreTest {
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
                         .setHistoryTtl(Period.days(2)));
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
+                bind(JobService.class).toInstance(mock(JobService.class));
+                bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setCurrentDataCenter("datacenter1")

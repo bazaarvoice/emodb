@@ -10,6 +10,7 @@
 
 # Build outputs
 target/
+.*dependency-reduced-pom.xml
 
 # OS hidden files
 .DS_Store
