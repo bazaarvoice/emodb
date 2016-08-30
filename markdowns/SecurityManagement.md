@@ -24,7 +24,7 @@ auth:
 2. Choose two keys.  The keys can be any valid string with no white space.  For this example we'll choose
    _pebbles_ and _bambam_ for the administration and replication keys respectively.
 
-3. Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
+3. (Optional) Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
    then specify a `cluster` option like in the examples below:
 
 ```
@@ -46,6 +46,21 @@ auth:
 At this point _pebbles_ has administrative access to EmoDB.  From this point onward either _pebbles_ or other API keys
 with administrative access can manage API keys.
 
+
+### Optionally Securing the Keys in config.yaml
+
+As noted above securing the admin and replication API keys in `config.yaml` is optional; EmoDB would work just as well were
+_pebbles_ and _bambam_ written in plaintext.  The risk in storing these keys in plaintext is that anyone on the EmoDB instance
+with access to the configuration file can read the admin API key and therefore have full administrative access.  Additionally, you likely
+will have a system in place for deploying EmoDB and that system will require `config.yaml` or some other dependency to contain
+the API keys, such a file in a Puppet module or a deployment package stored in S3, and each one of these introduces a new vulnerability
+for your admin API key.
+
+Having said that, be aware that the cryptographic strength of the encrypted API keys is pretty weak.  With the current implementation
+decrypting the keys can be done with only your configuration file and the source code for encrypting and decrypting the keys.  Therefore,
+encrypting the keys should be considered only a base level encryption to prevent casual viewers and resource crawlers from reading the
+configuration file's API keys.  You should still treat the encrypted API keys with the same level of protection as you would with any
+other sensitive credential.
 
 API Key Administration Task
 ---------------------------
