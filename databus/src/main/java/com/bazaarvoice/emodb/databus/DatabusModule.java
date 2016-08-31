@@ -46,6 +46,7 @@ import com.bazaarvoice.emodb.event.api.DedupEventStoreChannels;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
+import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
@@ -87,6 +88,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> DataStore {@link DataProvider}
  * <li> DataStore {@link EventBus}
  * <li> DataStore {@link DataStoreConfiguration}
+ * <li> @{@link SuppressedEventCondition} Supplier&lt;{@link Condition}&gt;
  * </ul>
  * Exports the following:
  * <ul>

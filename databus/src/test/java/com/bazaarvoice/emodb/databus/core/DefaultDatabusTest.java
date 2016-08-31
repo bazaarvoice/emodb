@@ -9,6 +9,8 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.eventbus.EventBus;
 import org.joda.time.Duration;
 import org.testng.annotations.Test;
@@ -27,11 +29,13 @@ public class DefaultDatabusTest {
         // This is just an interim setup to be backwards compatible. Soon we will deprecate the
         // ignoreSuppressedEvents flag.
 
+        Supplier<Condition> ignoreReEtl = Suppliers.ofInstance(
+                Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
         SubscriptionDAO mockSubscriptionDao = mock(SubscriptionDAO.class);
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(MetricRegistry.class));
+                mock(JobHandlerRegistry.class), mock(MetricRegistry.class), ignoreReEtl);
         Condition originalCondition = Conditions.alwaysTrue();
         testDatabus.subscribe("test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7));

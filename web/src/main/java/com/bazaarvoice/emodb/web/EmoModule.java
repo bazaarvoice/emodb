@@ -33,6 +33,7 @@ import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
+import com.bazaarvoice.emodb.databus.SuppressedEventCondition;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
@@ -66,6 +67,8 @@ import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
@@ -80,6 +83,11 @@ import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
 import com.bazaarvoice.emodb.web.resources.databus.LongPollingExecutorServices;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
+import com.bazaarvoice.emodb.web.settings.DatabusSuppressedEventConditionAdminTask;
+import com.bazaarvoice.emodb.web.settings.Setting;
+import com.bazaarvoice.emodb.web.settings.SettingsModule;
+import com.bazaarvoice.emodb.web.settings.SettingsRegistry;
+import com.bazaarvoice.emodb.web.settings.SettingsZooKeeper;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottle;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleControlTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
@@ -103,11 +111,14 @@ import com.bazaarvoice.ostrich.registry.zookeeper.ZooKeeperServiceRegistry;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
 import com.google.inject.AbstractModule;
+import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
@@ -182,6 +193,7 @@ public class EmoModule extends AbstractModule {
 
         @Override
         protected void configure() {
+            install(new SettingsModule());
             bind(Environment.class).toInstance(_environment);
             bind(HealthCheckRegistry.class).to(DropwizardHealthCheckRegistry.class).asEagerSingleton();
             bind(LifeCycleRegistry.class).to(DropwizardLifeCycleRegistry.class).asEagerSingleton();
@@ -211,6 +223,12 @@ public class EmoModule extends AbstractModule {
         MapStore<AdHocThrottle> provideAdHocThrottleMapStore(@Global CuratorFramework curator, LifeCycleRegistry lifeCycle) {
             CuratorFramework webCurator = withComponentNamespace(curator, "web");
             return lifeCycle.manage(new ZkMapStore<>(webCurator, "/adhoc-throttles", new ZkAdHocThrottleSerializer()));
+        }
+
+        /** Provide ZooKeeper namespaced to settings. */
+        @Provides @Singleton @SettingsZooKeeper
+        CuratorFramework provideScannerZooKeeperConnection(@Global CuratorFramework curator) {
+            return withComponentNamespace(curator, "settings");
         }
     }
 
@@ -314,6 +332,11 @@ public class EmoModule extends AbstractModule {
             bind(DatabusConfiguration.class).toInstance(_configuration.getDatabusConfiguration());
             // Used by the databus resource to support long polling
             bind(DatabusResourcePoller.class).asEagerSingleton();
+            // Bind the suppressed event condition setting as the supplier
+            bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(SuppressedEventCondition.class)
+                    .to(Key.get(new TypeLiteral<Setting<Condition>>(){}, SuppressedEventCondition.class));
+            bind(DatabusSuppressedEventConditionAdminTask.class).asEagerSingleton();
+
             install(new DatabusModule(_serviceMode, _environment.metrics()));
         }
 
@@ -371,6 +394,11 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @DatabusZooKeeper
         CuratorFramework provideDatabusZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "bus");
+        }
+
+        @Provides @Singleton @SuppressedEventCondition
+        Setting<Condition> provideSuppressedEventConditionSupplier(SettingsRegistry settingsRegistry) {
+            return settingsRegistry.register("databus.suppressedEventCondition", Condition.class, Conditions.alwaysFalse());
         }
     }
 

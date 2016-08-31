@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.databus.core;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
+import com.bazaarvoice.emodb.databus.SuppressedEventCondition;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -101,15 +102,17 @@ public class DefaultDatabus implements Databus, Managed {
     private final Meter _discardedMeter;
     private final Meter _consolidatedMeter;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
+    private final Supplier<Condition> _suppressedEventCondition;
     private final Ticker _ticker;
 
     @Inject
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
-                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry) {
+                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
+                          @SuppressedEventCondition Supplier<Condition> suppressedEventCondition) {
         this(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator, jobService,
-                jobHandlerRegistry, metricRegistry, Ticker.systemTicker());
+                jobHandlerRegistry, metricRegistry, suppressedEventCondition, Ticker.systemTicker());
     }
 
     @VisibleForTesting
@@ -117,13 +120,14 @@ public class DefaultDatabus implements Databus, Managed {
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
-                          Ticker ticker) {
+                          Supplier<Condition> suppressedEventCondition, Ticker ticker) {
         _eventBus = eventBus;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
         _dataProvider = dataProvider;
         _subscriptionEvaluator = subscriptionEvaluator;
         _jobService = jobService;
+        _suppressedEventCondition = suppressedEventCondition;
         _ticker = ticker;
         _peekedMeter = newEventMeter("peeked", metricRegistry);
         _polledMeter = newEventMeter("polled", metricRegistry);
@@ -295,9 +299,11 @@ public class DefaultDatabus implements Databus, Managed {
         checkArgument(eventTtl.isLongerThan(Duration.ZERO), "EventTtl must be >0");
         TableFilterValidator.checkAllowed(tableFilter);
         if (ignoreSuppressedEvents) {
-            // Skip databus events tagged with "ignore"
-            Condition skipIgnoreTags = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
-            tableFilter = Conditions.and(tableFilter, skipIgnoreTags);
+            // If the suppressed event condition is set (that is, isn't "alwaysFalse()") then add it to the filter
+            Condition suppressedEventCondition = _suppressedEventCondition.get();
+            if (!Conditions.alwaysFalse().equals(suppressedEventCondition)) {
+                tableFilter = Conditions.and(tableFilter, Conditions.not(suppressedEventCondition));
+            }
         }
 
         // except for resetting the ttl, recreating a subscription that already exists has no effect.

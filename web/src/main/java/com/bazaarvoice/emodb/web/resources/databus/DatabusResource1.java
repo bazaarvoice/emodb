@@ -109,7 +109,7 @@ public class DatabusResource1 {
                                      @QueryParam ("ttl") @DefaultValue ("86400") SecondsParam subscriptionTtl,
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
                                      @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam) {
-        // By default, ignore events tagged with "re-etl"
+        // By default, ignore events identified as suppress-able by the databus
         boolean ignoreSuppressedEvents = ignoreSuppressedEventsParam == null ? true : ignoreSuppressedEventsParam.get();
         Condition tableFilter = Conditions.alwaysTrue();
         if (!conditionString.isEmpty()) {

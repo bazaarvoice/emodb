@@ -11,9 +11,11 @@ import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -230,7 +232,8 @@ public class ConsolidationTest {
         JobService jobService = mock(JobService.class);
         JobHandlerRegistry jobHandlerRegistry = mock(JobHandlerRegistry.class);
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
-                jobService, jobHandlerRegistry, new MetricRegistry(), ticker);
+                jobService, jobHandlerRegistry, new MetricRegistry(), Suppliers.ofInstance(Conditions.alwaysFalse()),
+                ticker);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

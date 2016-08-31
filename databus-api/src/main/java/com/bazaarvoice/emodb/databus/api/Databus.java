@@ -22,7 +22,7 @@ public interface Databus {
      * @param tableFilter - Filter based on table or tags
      * @param subscriptionTtl - Duration for the subscription to be alive
      * @param eventTtl - Duration for the events on the subscription to be alive before expiring
-     * @param ignoreSuppressedEvents - Ignore event marked as "re-etl". By default this is set to true
+     * @param ignoreSuppressedEvents - Ignore events identified as suppress-able by the databus. By default this is set to true
      */
     @Deprecated
     void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents);
