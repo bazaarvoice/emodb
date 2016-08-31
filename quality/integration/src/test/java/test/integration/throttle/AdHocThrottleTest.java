@@ -385,6 +385,29 @@ public class AdHocThrottleTest extends ResourceTest {
         assertEquals(createClient().getTableApproximateSize("expired-test"), 5L);
     }
 
+    @Test
+    public void testThrottleWithSpecialCharacters() throws Exception {
+        // Throttle requests a path with numerous characters which could cause problems for ZkMapStore.
+        String path = "/sor/1/test:table/chars \t!%$@\u0080.\u0099";
+
+        // Throttle the endpoint to accept no connections
+        _adHocThrottleManager.addThrottle(
+                new AdHocThrottleEndpoint("GET", path),
+                AdHocThrottle.create(0, DateTime.now().plusDays(1)));
+
+
+        // Wait until we've verified that the map store has been updated
+        for (int i=0; i < 100; i++) {
+            if (_mapStore.get("GET_sor~1~test:table~chars \t!%$@\u0080.\u0099") != null) {
+                break;
+            }
+            Thread.sleep(100);
+        }
+        assertNotNull(_mapStore.get("GET_sor~1~test:table~chars \t!%$@\u0080.\u0099"));
+
+        verifyThrottled(createClient()).get("test:table", "chars \t!%$@\u0080.\u0099");
+    }
+
     private DataStore createClient() {
         return DataStoreAuthenticator.proxied(new DataStoreClient(URI.create("/sor/1"), new JerseyEmoClient(_resourceTestRule.client())))
                 .usingCredentials(API_KEY);
