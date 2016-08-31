@@ -1,0 +1,19 @@
+---
+layout: default
+---
+
+    <article id="main">
+  <header class="documentation container">
+    <h2 class="post-title">{{ page.title }}</h2>
+    <p class="post-meta">{{ page.date | date: "%b %-d, %Y" }}{% if page.author %} • {{ page.author }}{% endif %}{% if page.meta %} • {{ page.meta }}{% endif %}</p>
+    {% if page.previous %}
+      <a href="{{ page.previous.url | prepend: site.baseurl }}" class="post-prev">&larr; Previous post</a> {% endif %}
+    {% if page.next %}
+      <a href="{{ page.next.url | prepend: site.baseurl }}" class="post-next">Next post &rarr;</a> {% endif %}
+  </header>
+
+  <section class="style4 wrapper container">
+    {{ content }}
+  </section>
+</article>
+

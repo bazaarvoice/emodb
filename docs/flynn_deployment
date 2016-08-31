@@ -1,0 +1,3 @@
+#!/bin/bash
+export BVFLYNN_APP_NAME="emodb-gh-pages-twenty"
+bvflynn push -t emodb-dev@bazaarvoice.com 

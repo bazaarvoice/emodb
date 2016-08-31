@@ -1,0 +1,17 @@
+<header id="header">
+    <h1 id="logo"><a href="{{ site.baseurl }}/"><i class="fa fa-home" aria-hidden="true"></i></a>
+    </h1>
+    <nav id="nav">
+        <ul>
+            <li class="submenu">
+                <a href="{{ site.documentation_url | prepend: site.baseurl }}">Documentation</i></a>
+                <ul>
+                    {% for post in site.posts %}
+                    <li class=""><a href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a></li>
+                    {% endfor %}
+                </ul>
+            </li>
+            <li><a href="https://github.com/bazaarvoice/emodb">GitHub</a></li>
+        </ul>
+    </nav>
+</header>
