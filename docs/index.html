@@ -1,0 +1,186 @@
+---
+layout: landing-page
+---
+<!-- Main -->
+<article id="main">
+    <header class="special container">
+        <span class="special container icon">
+            <img class="emologo" src="{{ site.baseurl }}{{ site.images_url }}/emologo.svg" />
+        </span>
+    </header>
+
+    <!-- One -->
+    <section class="wrapper style2 container special-alt">
+        <div class="row half">
+            <div class="12u">
+
+                <header>
+                    <h2>What is <strong>EmoDB</strong>?</h2>
+                </header>
+                <p>EmoDB ("Emo") is a RESTful HTTP data store built on top of Cassandra that stores schemaless JSON objects and, most notably, offers a databus that allows subscribers to watch for changes to those events. It is designed to span multiple data centers, and features massive non-blocking writes, no synchronous cross data center communication, and schema-less json content.</p>
+                <p>At the very core, EmoDB is a distributed database with a built in streaming data platform.</p>
+                <!--<footer>-->
+                <!--<ul class="buttons">-->
+                <!--<li><a href="#features" class="button">Find Out More</a></li>-->
+                <!--</ul>-->
+                <!--</footer>-->
+
+            </div>
+            <!--<div class="4u skel-cell-important">-->
+
+                <!--<ul class="featured-icons">-->
+                    <!--<li><span class="icon fa-clock-o"><span class="label">Feature 1</span></span></li>-->
+                    <!--<li><span class="icon fa-volume-up"><span class="label">Feature 2</span></span></li>-->
+                    <!--<li><span class="icon fa-laptop"><span class="label">Feature 3</span></span></li>-->
+                    <!--<li><span class="icon fa-inbox"><span class="label">Feature 4</span></span></li>-->
+                    <!--<li><span class="icon fa-lock"><span class="label">Feature 5</span></span></li>-->
+                    <!--<li><span class="icon fa-cog"><span class="label">Feature 6</span></span></li>-->
+                <!--</ul>-->
+
+            <!--</div>-->
+        </div>
+    </section>
+
+    <header class="special container">
+        <span class="special container icon"><img class="emologo" src="{{ site.baseurl }}{{ site.images_url }}/emologo.svg" /> </span>
+    </header>
+    <!-- Two -->
+    <section id="features" class="wrapper style1 container special">
+        <div class="row">
+            <div class="3u">
+
+                <section>
+                    <span class="icon featured fa-check"></span>
+                    <header>
+                        <h3>RESTful API</h3>
+                    </header>
+                    <p>All actions are performed with a RESTful API using JSON over HTTP. Client libraries are available independently for many programming languages.</p>
+                </section>
+
+            </div>
+            <div class="3u">
+
+                <section>
+                    <span class="icon featured fa-check"></span>
+                    <header>
+                        <h3>Cross Regional Databus</h3>
+                    </header>
+                    <p>The global databus notifies you only when changes become visible in your local data center giving you another way to achieve a kind of global consistency without requiring a GLOBAL-level write.</p>
+                </section>
+
+            </div>
+            <div class="3u">
+
+                <section>
+                    <span class="icon featured fa-check"></span>
+                    <header>
+                        <h3>Multi-master conflict resolution</h3>
+                    </header>
+                    <p> EmoDB employs a "JSON delta" specification that defines incremental updates to any json document. Each row is thus a collection of deltas that serves as a serializable CRDT for EmoDB's system of record</p>
+                </section>
+
+            </div>
+            <div class="3u">
+
+                <section>
+                    <span class="icon featured fa-check"></span>
+                    <header>
+                        <h3>Built on top of battle-tested Cassandra</h3>
+                    </header>
+                    <p>Bring all your existing operational expertise and tools for Cassandra maintenance.</p>
+                </section>
+
+            </div>
+        </div>
+    </section>
+
+    <header class="special container">
+        <span class="special container icon"><img class="emologo" src="{{ site.baseurl }}{{ site.images_url }}/emologo.svg" /> </span>
+    </header>
+
+    <!-- Three -->
+    <section class="wrapper style3 container special">
+
+        <header class="major">
+            <h2>Why do I need <strong>EmoDB</strong></h2>
+        </header>
+
+        <div class="row">
+            <div class="6u">
+
+                <section>
+                    <a href="#" class="image featured"><img src="{{ site.baseurl }}{{ site.images_url }}/microservices.svg" alt="" /></a>
+                    <header>
+                        <h3>Perfect for SOA / Microservices</h3>
+                    </header>
+                    <p>Microservices bring a lot of goodness to present day development. However, there is a thorny issue of sharing data among services. Service-to-service communication is not scalable, and leads to quadratic complexity. EmoDB's global databus provides out of the box support to any service to simply subscribe to the data it wants. Publishers can simply store data in EmoDB, and cover both real-time and bulk use cases. They can now rest assured that there dataset is disseminated to every nook and cranny of the organization. </p>
+                </section>
+
+            </div>
+            <div class="6u">
+
+                <section>
+                    <a href="#" class="image featured"><img src="{{ site.baseurl }}{{ site.images_url }}/continuous_indexing.svg" alt="" /></a>
+                    <header>
+                        <h3>System of Record as a Knowledge Base</h3>
+                    </header>
+                    <p>By explicitly, separating storage from query, you can store your data assets as entities without optimizing for retrieval. Emo databus allows for listeners to choose their own datastore for the entities they wish to watch and index. The System of Record is a knowledge base with known ontologies, instead of a data lake that usually beccomes a data swamp.</p>
+                </section>
+
+            </div>
+        </div>
+        <div class="row">
+            <div class="6u">
+
+                <section>
+                    <a href="#" class="image featured"><img src="{{ site.baseurl }}{{ site.images_url }}/stash.svg" alt="" /></a>
+                    <header>
+                        <h3>Publish datasets for bulk</h3>
+                    </header>
+                    <p>EmoStash scans point-in-time snapshots daily and exports it to desired file systems (S3, HDFS, etc.) for bulk users to run heavy Map/Reduce batch jobs on the entire dataset.</p>
+                </section>
+
+            </div>
+            <div class="6u">
+
+                <section>
+                    <a href="#" class="image featured"><img src="{{ site.baseurl }}{{ site.images_url }}/emo_on_cassandra.svg" alt="" /></a>
+                    <header>
+                        <h3>Built on Apache Cassandra</h3>
+                    </header>
+                    <p>EmoDB relies on Apache Cassandra for persistence and cross-data center replication. So, it comes with all the operational stability that Cassandra provides. You can take advantage of your existing Cassandra knowledge to maintain and operate EmoDB cluster.</p>
+                </section>
+
+            </div>
+        </div>
+
+        <!--<footer class="major">-->
+        <!--<ul class="buttons">-->
+        <!--<li><a href="#" class="button">See More</a></li>-->
+        <!--</ul>-->
+        <!--</footer>-->
+
+    </section>
+
+    <header class="special container">
+        <span class="special container icon"><img class="emologo" src="{{ site.baseurl }}{{ site.images_url }}/emologo.svg" /> </span>
+    </header>
+
+</article>
+
+<!-- CTA -->
+<section id="cta">
+    <div class="inner">
+        <header>
+            <h2>Ready to do <strong>something</strong>?</h2>
+            <p>Check out the documentation for more information.</p>
+        </header>
+        <footer>
+            <ul class="buttons">
+                <li><a href="quickstart" class="button special">Quick Tutorial</a></li>
+                <li><a href="{{ site.documentation_url | prepend: site.baseurl }}" class="button">Documentation</a></li>
+            </ul>
+        </footer>
+    </div>
+</section>
+

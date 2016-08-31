@@ -1,0 +1,44 @@
+# Site
+title:              EmoDB
+bio:                'Store your feelings here!'
+description:        > # this means to ignore newlines until "reading_time:"
+                    A distributed database with a built in streaming data platform.
+reading_time:       true
+words_per_minute:   50
+logo:               'images/emodblogo.svg'
+background:         'assets/img/placeholder-big.jpg'
+tiled_bg:           false   # Set this true if you want to tile your background image, otherwise it will be covered
+locale:             en_US
+baseurl:            "/emodb" # the subpath of your site, e.g. /blog/
+examples_url:       /examples
+documentation_url:  /documentation
+images_url:         /images
+
+# Build settings
+permalink:          /:title/ ##Figure out what this does
+markdown: kramdown
+kramdown:
+  input: GFM
+highlighter: rouge
+sass:
+  sass_dir:         _sass
+  style:            compressed
+
+# mathjax:            true
+
+# Social
+email:              emodb-dev@bazaarvoice.com
+github:             https://github.com/bazaarvoice/emodb
+
+# Gems
+gems:
+  - jekyll-sitemap
+  - jekyll-gist
+  - rouge
+  - kramdown
+
+jekyll-mentions:
+    base_url: https://github.com
+
+# Exclude list
+exclude: [README, old__README.txt, Gemfile, Gemfile.lock, node_modules, gulpfile.js, package.json, _site, src, vendor, CNAME, LICENSE, Rakefile, config.ru, vendor, Procfile, start_local.sh, flynn_deployment]
