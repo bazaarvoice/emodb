@@ -19,40 +19,36 @@ Before EmoDB can manage API keys it needs to be configured with a pair of reserv
 
 1. Administrator: This API key has full admin access to EmoDB.
 2. Replication: This API key is used to authenticate internal databus replication calls made by EmoDB between data centers.
+{:.workflow}
 
 To configure EmoDB with these keys follow the following steps:
 
-1. Update the EmoDB `config.yaml` with temporary values for these keys:
+1.  Update the EmoDB `config.yaml` with temporary values for these keys:
 
-```
-auth:
-  adminApiKey:       "dummy"
-  replicationApiKey: "dummy"
-```
+        auth:
+          adminApiKey:       "dummy"
+          replicationApiKey: "dummy"
 
 2. Choose two keys.  The keys can be any valid string with no white space.  For this example we'll choose
-   _pebbles_ and _bambam_ for the administration and replication keys respectively.
+   __pebbles__ and __bambam__ for the administration and replication keys respectively.
 
 3. Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
    then specify a `cluster` option like in the examples below:
 
-```
-$ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key pebbles --cluster local_cluster
-RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7NPmLGg
+       $ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key pebbles --cluster local_cluster
+        RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7NPmLGg
 
-$ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key bambam --cluster local_cluster
-h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA
-```
+       $ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key bambam --cluster local_cluster
+       h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA
 
 4. Update `config.yaml` with the actual values:
 
-```
-auth:
-  adminApiKey:       "RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7NPmLGg"
-  replicationApiKey: "h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA"
-```
+       auth:
+         adminApiKey:       "RS9uq2Ukyj5WDijFLvWc/L2YYz6/MugvyAUfRknzhgJNyqe94IPU1wNpMF5WmXRrT1qEUDmVYoDE9Ku7NPmLGg"
+         replicationApiKey: "h6jqPR3/sMoY59wwUZaaJTWobLzqyqQhN0zPX69F7JE29flOaJj0kYBKZDH+mZJGP7M87ZUOcP7JVf8l+tMkmA"
+{:.workflow}
 
-At this point _pebbles_ has administrative access to EmoDB.  From this point onward either _pebbles_ or other API keys
+At this point __pebbles__ has administrative access to EmoDB.  From this point onward either __pebbles__ or other API keys
 with administrative access can manage API keys.
 
 
@@ -65,7 +61,7 @@ an EmoDB administrator.
 ### Create API key
 
 When creating an API key you can assign it one or more roles.  Each role determines what permissions the API key will
-have.  See the [Role AdministrationTask] (#role-administration-task) for more details.
+have.  See the [Role AdministrationTask](#role-administration-task) for more details.
 
 The following example creates a new API key with standard record and databus access:
 
@@ -137,7 +133,7 @@ project's internal use it would be harmful if team B were to poll and ack messag
 knowledge or consent.  Permissions can be used to restrict the capabilities of an individual role, and assigning the
 role to one or more API keys transitively limits the capabilities of those API keys.
 
-A full list of possible permissions can be found in [Permissions.java] (https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/Permissions.java).
+A full list of possible permissions can be found in [Permissions.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/Permissions.java).
 The following section highlights the general format and nuances around SoR and Blob permissions.
 
 ### Permission format
@@ -147,9 +143,10 @@ indicates permission to perform the "poll" action on the databus subscription "s
 
 For _actions_ and _resources_ the value can be one of the following:
 
-1. A single value (e.g: `update`)
-2. A wildcard value.  This can indicate either the entire value, `*`, or a portion, such as `get*`.
-3. A conditional value (more on this later)
+* A single value (e.g: `update`)
+* A wildcard value.  This can indicate either the entire value, `*`, or a portion, such as `get*`.
+* A conditional value (more on this later)
+
 
 #### Context
 
@@ -160,7 +157,7 @@ this is discouraged.  The existing "admin" role already provides this capability
 #### Action
 
 The action restricts what the user can do within the context.  As such each context typically has its own set of actions
-which may not have meaning in other contexts.  For example, `databus|poll` make sense but `blob|poll` does not and
+which may not have meaning in other contexts.  For example, `databus|poll` makes sense but `blob|poll` does not and
 therefore is never utilized by EmoDB.
 
 #### Resource
@@ -178,7 +175,7 @@ and so on).  If the user were further restricted by a subset of tables instead o
 complicated cartesian product of all possible combinations.
 
 For this reason an action or resource can use a conditional to determine matching values.  The
-[conditional] (Deltas.md#conditional) is exactly the same format
+[conditional]({{ site.baseurl }}/deltas/#conditional) is exactly the same format
 as used by deltas and databus subscriptions.  To create a conditional surround the condition string in an `if()`
 statement.
 
@@ -189,6 +186,7 @@ Permission                                           | Effect
 `sor|if(in("update","create_table"))|*`              | Equivalent to having both `sor|update|*` and `sor|create_table|*`
 `sor|if(not("drop_table"))|*`                        | User can perform all actions in the `sor` context except `drop_table`
 `queue|*|if(and(like("team:*"),not("team:edward")))` | User can perform all actions on all queues matching `team:*` except `team:edward`
+{:.chart}
 
 ### Table conditionals
 
@@ -200,33 +198,33 @@ same way as when creating a databus subscription.
 
 For the follow examples assume the SoR table "ermacs_data" has been created in placement "ugc_global:ugc" and was
 created with template `{"team": "ermacs"}`.  (The common prefix of `sor|update|` has been removed from the first
-column for readability.)
+column and in some cases whitespace added for readability.)
 
 
 Resource in "sor" context                                                            | Matches table?   | Why
 --------------------------------------------------------------                       | --------------   | ---
 `ermacs_*`                                                                           | Yes              | Table name starts with prefix "ermacs_"
 `if(intrinsic("~table":"ermacs_data"))`                                              | Yes              | Table name is an exact match
-`if(intrinsic("~table":in("ermacs_data","ermacs_products")))`                        | Yes              | Table name is in the "in" condition
+`if(intrinsic("~table":in("ermacs_data","ermacs_logs")))`                            | Yes              | Table name is in the "in" condition
 `if(intrinsic("~placement":'ugc_global:ugc'))`                                       | Yes              | Table placement is an exact match
 `if(intrinsic("~placement":like("*:ugc")))`                                          | Yes              | Table placement is a like match
 `if({..,"team":"ermacs"})`                                                           | Yes              | Table has attribute "team" set to "ermacs"
 `if({..,"team":"ermacs","other":"attr"))`                                            | No               | Only one matching attribute is present on the table
-`if(and(intrinsic("~table":like("ermacs_*")),intrinsic("~placement":like("*:ugc"))))` | Yes              | Table name and placement both match the respective like conditions
-`if(and(intrinsic("~table":like("ermacs_*")),intrinsic("~placement":like("*:cat"))))` | No               | Only one of the conditions is met; placement does not end with "cat"
-
+`if(and(intrinsic("~table":like("ermacs_*")),` `intrinsic("~placement":like("*:ugc"))))` | Yes              | Table name and placement both match the respective like conditions
+`if(and(intrinsic("~table":like("ermacs_*")),` `intrinsic("~placement":like("*:cat"))))` | No               | Only one of the conditions is met; placement does not end with "cat"
+{:.chart}
 
 Role Administration Task
 ------------------------
 
 EmoDB has several pre-defined roles that are always available.  You can see these roles and what permissions they
-have in [DefaultRoles.java] (https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java)
+have in [DefaultRoles.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java)
 
 The role administration task allows you to create new roles with custom permissions.  These roles can then be associated
 with one or more API keys to provide fine controls over what actions the API key can perform.
 
 As with the API keys, role administration requires an API key which has administrative access.  Continuing from the
-previous example, _pebbles_ is an administrator and therefore can run this task.
+previous example, __pebbles__ is an administrator and therefore can run this task.
 
 ### Create or update custom role
 
@@ -250,7 +248,7 @@ ermacs has 3 permissions
 ```
 
 The following example demonstrates using a "revoke" parameter to remove a previously granted permission.  Note that the
-permission must match exactly, no wildcards or conditionals are evaluated when permitting or revoking permissions:
+permission must match exactly; no wildcards or conditionals are evaluated when permitting or revoking permissions:
 
 ```
 $ curl -XPOST 'localhost:8081/tasks/role?action=update&APIKey=pebbles&role=ermacs&revoke=sor|*|if(and({..,"team":"ermacs"},intrinsic("~placement","ugc_global:ugc")))'
@@ -306,7 +304,7 @@ Anonymous Access
 
 If you choose you can configure EmoDB to allow anonymous access.  An anonymous user has full permission to perform
 most standard operations in the data store, blob, databus, and queue services (see
-[DefaultRoles.java] (https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java#L126)
+[DefaultRoles.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java#L126)
 for full anonymous permissions).  While we don't recommend running EmoDB with anonymous access enabled it does
 lower the bar for quickly getting going with EmoDB.  To enable anonymous access set the following attribute in
 your `config.yaml` file:

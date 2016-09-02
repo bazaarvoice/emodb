@@ -43,8 +43,7 @@ DataStore dataStore = ServicePoolBuilder.create(DataStore.class)
 ServicePoolProxies.close(dataStore);
 ```
 
-Robust Java client using ZooKeeper, [SOA] (https://github.com/bazaarvoice/ostrich) and [Dropwizard]
-(http://www.dropwizard.io):
+Robust Java client using ZooKeeper, [SOA](https://github.com/bazaarvoice/ostrich) and [Dropwizard](http://www.dropwizard.io):
 
 ```java
 @Override
@@ -77,6 +76,16 @@ protected void initialize(Configuration configuration, Environment environment) 
     ... use "dataStore" to access the System of Record ...
 }
 ```
+
+REST calls
+----------
+
+The Java client library is a convenience; EmoDB exposes a RESTful API for use by any client.  Examples for both the Java
+and REST calls are provided below.
+
+Note that the REST API requires [API keys]({{ site.baseurl }}/security) and that the Java client includes these
+in all requests automatically.  For clarity the API key header is not included each REST example below, but in a
+properly secured system you would need to add it to each request.
 
 Table Management
 ----------------
@@ -111,8 +120,9 @@ HTTP:
 
 Java:
 
-    void createTable(String table, TableOptions options, Map<String, ?> template, Audit audit);
-
+```java
+void createTable(String table, TableOptions options, Map<String, ?> template, Audit audit);
+```
 
 Request Body:
 
@@ -125,32 +135,28 @@ Request Parameters:
     `com.bazaarvoice.emodb.sor.api.Names.isLegalTableName()`: lowercase, [a-z0-9-.:@_], 255 characters or less.
     Choose the granularity of your tables carefully since it determines the size of your EmoDB Hadoop-based map/reduce
     jobs.  Each map/reduce job takes as input one or more entire table.  The System of Record does not provide a
-    mechanism for iterating over a smaller defined slice of a table.  In general, good practice is to create a table
+    mechanism for iterating related records other than a table.  In general, good practice is to create a table
     for every combination of data type and client, for example "review:testcustomer".  By convention, use colons `:`
     to separate fields in your table names.
-
-*   `audit` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing
+*   `audit` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing
     information that can be used to trace changes to an object and debug applications that use EmoDB.
-    If your client is written in Java, you may use the [rison] (https://github.com/bazaarvoice/rison)
-    project to implement the O-Rison encoding.  For other languages, see http://mjtemplate.org/examples/rison.html.
-    There are a few [pre-defined keys] (https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/sor/api/Audit.java)
+    If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
+    project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/sor/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
     are no intrinsic limits on the size of the audit map, but in practice it is limited by the maximum
     length of the URL.
-*   `options` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing options
+*   `options` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing options
     that affect the internal storage of documents in the table.  For now, the only option is "placement" which
-    must be either "ugc_global:ugc" (for user generated data) or "catalog_global:cat" (for client metadata and product
-    catalog data).
+    must be one of the configured placements.
 
 Example `placement` Values :
 
-*   `ugc_global:ugc` - Use this placement for user generated data replicated globally.
-
-*   `catalog_global:cat` - Use this placement for client metadata and product catalog data.
-
-*   `app_global:default` - Use this placement for arbitrary data from generally low traffic applications.
+*   `ugc_global:ugc` - Sample placement for user generated data replicated globally.
+*   `catalog_global:cat` - Sample placement for client metadata and product catalog data.
+*   `app_global:default` - Sample placement for arbitrary data from generally low traffic applications.
 
 Example:
 
@@ -163,11 +169,12 @@ Example:
 
 Java Example:
 
-    Map<String, Object> template = ImmutableMap.of("type", "review", "client", "testcustomer");
-    TableOptions options = new TableOptionsBuilder().setPlacement("ugc_global:ugc").build();
-    Audit audit = new AuditBuilder().setProgram("example-app").setLocalHost().build();
-    dataStore.createTable("review:testcustomer", options, template, audit);
-
+```java
+Map<String, Object> template = ImmutableMap.of("type", "review", "client", "testcustomer");
+TableOptions options = new TableOptionsBuilder().setPlacement("ugc_global:ugc").build();
+Audit audit = new AuditBuilder().setProgram("example-app").setLocalHost().build();
+dataStore.createTable("review:testcustomer", options, template, audit);
+```
 
 ### Get Table:
 
@@ -179,7 +186,9 @@ HTTP:
 
 Java:
 
-    Map<String, Object> getTableTemplate(String table);
+```java
+Map<String, Object> getTableTemplate(String table);
+```
 
 Request URL Parameters:
 
@@ -209,17 +218,13 @@ Tables may only be dropped from the one "system" data center.  Attempts to drop 
 be rejected.  All data centers must up and available when tables are created so the data store can ensure that table
 metadata has replicated to all servers before the table can be used.
 
-Authorization:
-
-See [API Keys](Security.md) documentation for information on authorizing this request.
-
 Request Parameters:
 
-*   `audit` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing
+*   `audit` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing
     information that can be used to trace changes to an object and debug applications that use EmoDB.
-    If your client is written in Java, you may use the [rison] (https://github.com/bazaarvoice/rison)
-    project to implement the O-Rison encoding.  For other languages, see http://mjtemplate.org/examples/rison.html.
-    There are a few [pre-defined keys] (https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
+    project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
@@ -244,7 +249,9 @@ HTTP:
 
 Java:
 
-    Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
+```java
+Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
+```
 
 URL Parameters:
 
@@ -280,6 +287,7 @@ Request limit attribute | Response | Wall clock time | Breakdown
 1000                    | 350825   |     97 ms       | 1000 exact + 349825 approximate remaining records
 10000                   | 350353   |    679 ms       | 10000 exact + 340353 approximate remaining records
 null                    | 349154   | 16,895 ms       | Exactly 349154 records
+{:.chart}
 
 HTTP:
 
@@ -287,7 +295,9 @@ HTTP:
 
 Java:
 
-    long getTableApproximateSize(String table, int limit)
+```java
+long getTableApproximateSize(String table, int limit)
+```
 
 URL Parameters:
 
@@ -313,8 +323,6 @@ HTTP:
 
     <json>
 
-    void update(String table, String key, UUID changeId, Delta delta, Audit audit);
-
 Create or modify or delete a document in the system of record:
 
 HTTP:
@@ -331,18 +339,19 @@ HTTP:
     DELETE /sor/1/<table>/<key>?audit=<o-rison-map>
 
 All three operations use the same Java API.  The create/update/delete operation is selected by using a different
-instance of Delta.  See [Deltas] (Deltas.md).
+instance of Delta.  See [Deltas]({{ site.baseurl }}/deltas).
 
 Java:
 
-    void update(String table, String key, UUID changeId, Delta delta, Audit audit);
+```java
+void update(String table, String key, UUID changeId, Delta delta, Audit audit);
+```
 
 Request Body:
 
 *   `PUT` - The body of the request must be a valid JSON object.
-
 *   `POST` - The body of the request must be a valid JSON delta string in the format generated by
-    `Delta.toString()`.  From Java, use the [Deltas] (https://github.com/bazaarvoice/emodb/blob/master/sor-api/src/main/java/com/bazaarvoice/emodb/sor/delta/Deltas.java)
+    `Delta.toString()`.  From Java, use the [Deltas](https://github.com/bazaarvoice/emodb/blob/master/sor-api/src/main/java/com/bazaarvoice/emodb/sor/delta/Deltas.java)
     class to create instances of `Delta`.
 
 Request HTTP Headers:
@@ -352,26 +361,23 @@ Request HTTP Headers:
 
 Request URL Parameters:
 
-*   `audit` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing
+*   `audit` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing
     information that can be used to trace changes to an object and debug applications that use EmoDB.
-    If your client is written in Java, you may use the [rison] (https://github.com/bazaarvoice/rison)
-    project to implement the O-Rison encoding.  For other languages, see http://mjtemplate.org/examples/rison.html.
-    There are a few [pre-defined keys] (https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
+    project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
     are no intrinsic limits on the size of the audit map, but in practice it is limited by the maximum
     length of the URL.
-
 *   `changeId` - optional - A time UUID corresponding to when the change should take effect, formatted
     as a string.  If `changeId` is not provided, a time UUID will be generated as of the time of the HTTP
-    request.  Use the [`TimeUUIDs.newUUID()`] (https://github.com/bazaarvoice/emodb/tree/master/sor-api/src/main/java/com/bazaarvoice/emodb/sor/uuid/TimeUUIDs.java)
-    method to generate time UUIDs.
-
-*   `tags=re-etl&tags=alpine...` - optional - Tags to attach to this update. These tags describe and give a context to the changes you are making. Readers can then
+    request.  Use the `TimeUUIDs.newUUID()` method [here](https://github.com/bazaarvoice/emodb/tree/master/sor-api/src/main/java/com/bazaarvoice/emodb/sor/uuid/TimeUUIDs.java)
+    to generate time UUIDs.
+*   `tags=re-etl&tags=projectx...` - optional - Tags to attach to this update. These tags describe and give a context to the changes you are making. Readers can then
      filter on the desired tags. Tags should be no longer than 8 characters and no more than 3 tags are allowed.  
      In practice, this is useful if the databus listeners would like to prioritize events from the same table based on various tags.
-
 *   `debug=true` - optional - Include in the response the time UUID of the saved delta.
 
 Examples:
@@ -405,43 +411,45 @@ Examples:
 
 Java Examples:
 
-    // Create
-    Map<String, Object> json = ImmutableMap.<String, Object>builder()
-            .put("author", "Bob")
-            .put("title", "Best Ever!")
-            .put("rating", 5)
-            .build();
-    Audit audit = new AuditBuilder()
-            .setProgram("example-app")
-            .setComment("initial submission")
-            .setLocalHost()
-            .build();
-    dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), Deltas.literal(json), audit);
+```java
+// Create
+Map<String, Object> json = ImmutableMap.<String, Object>builder()
+        .put("author", "Bob")
+        .put("title", "Best Ever!")
+        .put("rating", 5)
+        .build();
+Audit audit = new AuditBuilder()
+        .setProgram("example-app")
+        .setComment("initial submission")
+        .setLocalHost()
+        .build();
+dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), Deltas.literal(json), audit);
 
-    // Update
-    Delta delta = Deltas.mapBuilder()
-            .put("status", "APPROVED")
-            .build();
-    Audit audit = new AuditBuilder()
-            .setProgram("example-app")
-            .setComment("moderation complete")
-            .setLocalHost()
-            .build();
-    dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), delta, audit);
+// Update
+Delta delta = Deltas.mapBuilder()
+        .put("status", "APPROVED")
+        .build();
+Audit audit = new AuditBuilder()
+        .setProgram("example-app")
+        .setComment("moderation complete")
+        .setLocalHost()
+        .build();
+dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), delta, audit);
 
-    // Delete
-    Audit audit = new AuditBuilder()
-            .setProgram("example-app")
-            .setComment("purge client")
-            .setLocalHost()
-            .build();
-    dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), Deltas.delete(), audit);
+// Delete
+Audit audit = new AuditBuilder()
+        .setProgram("example-app")
+        .setComment("purge client")
+        .setLocalHost()
+        .build();
+dataStore.update("review:testcustomer", "demo1", TimeUUIDs.newUUID(), Deltas.delete(), audit);
+```
 
 ### Updates and Event Tags:
 
 EmoDB allows for tagging updates (including deletes) with up to 3 event tags of up to 8 chars each. Event tags are primarily used for adding tags to databus events
 generated by the updates. Databus listeners may subscribe to these event tags.
-Please note that these tags are only available on the corresponding databus events generated, and are not a part of the document.
+Please note that these tags are only available on the corresponding databus events generated and are not a part of the document.
 
 ### Get
 
@@ -453,7 +461,9 @@ HTTP:
 
 Java:
 
-    Map<String, Object> get(String table, String key);
+```java
+Map<String, Object> get(String table, String key);
+```
 
 URL Parameters:
 
@@ -480,7 +490,9 @@ Example:
 
 Java Example:
 
-    Map<String, Object> json = dataStore.get("review:testcustomer", "demo1");
+```java
+Map<String, Object> json = dataStore.get("review:testcustomer", "demo1");
+```
 
 ### Multi-Get
 
@@ -493,7 +505,9 @@ HTTP:
 
 Java:
 
-    Map<String, Object> get(List<Coordinate> coordinates, ReadConsistency consistency);
+```java
+Map<String, Object> get(List<Coordinate> coordinates, ReadConsistency consistency);
+```
 
 URL Parameters:
 
@@ -502,7 +516,7 @@ URL Parameters:
 
 Example:
 
-    $ curl -s "http://localhost:8080/sor/1/_multiget?&APIKey=<ApiKey>&id=review:testcustomer/demo1&id=review:testcustomer" | jsonpp
+    $ curl -s "http://localhost:8080/sor/1/_multiget?id=review:testcustomer/demo1&id=review:testcustomer/demo2" | jsonpp
     [{
       "~deleted": false,
       "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
@@ -521,22 +535,25 @@ Example:
     {
       "~deleted": false,
       "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
-      "~id": "demo1",
+      "~id": "demo2",
       "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
-      "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
+      "~signature": "96976f792cc1a52ebf39e8962f6a24d0",
       "~table": "review:testcustomer",
       "~version": 2,
-      "author": "Bob",
+      "author": "Alice",
       "client": "TestCustomer",
       "rating": 5,
       "status": "APPROVED",
-      "title": "Best Ever!",
+      "title": "Amazing!",
       "type": "review"
     }]
 
 Java Example:
 
-    Iterator<Map<String, Object>> jsonIterator = dataStore.multiget(List<Coordinate> coordinates);
+```java
+Iterator<Map<String, Object>> jsonIterator = dataStore.multiGet(
+        ImmutableList.of(Coordinate.of("review:testcustomer", "demo1"), Coordinate.of("review:testcustomer", "demo2")));
+```
 
 ### Get Timeline
 
@@ -601,7 +618,9 @@ HTTP:
 
 Java:
 
-    Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+```java
+Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+```
 
 URL Parameters:
 
@@ -630,18 +649,17 @@ Example:
       }
     ]
 
-In combination with the [Databus API] (DatabusApi.md), the scan operation can be used to seed and update an external
+In combination with the [Databus API]({{ site.baseurl }}/databus), the scan operation can be used to seed and update an external
 replica of a table in the system of record:
 
 1.  Create a databus subscription for the table.
-
 1.  Scan all rows in the table, copying the data to the external replica.
-
 1.  Process databus events starting from when the scan was initiated.
+{:.workflow}
 
 Performance note: there is a substantial performance overhead to performing a scan.  It was designed to support
 occasional bulk extract of all data in a table.  For efficient search across entities it's usually a better idea to
-query a secondary index such as Polloi.
+create a secondary index initialized using EmoDB scans and kept up to date by listening to databus updates.
 
 A scan may fail if the client loses its connection to the EmoDB server before all results have been returned.  To
 work around this issue and automatically re-create the connection to the server when it gets lost, use the methods in
@@ -678,9 +696,12 @@ HTTP:
 
 Java:
 
-    Collection<String> getSplits(String table, int desiredRecordsPerSplit);
+```java
+Collection<String> getSplits(String table, int desiredRecordsPerSplit);
 
-    Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit,
+                                       ReadConsistency consistency);
+```
 
 URL Parameters for `getSplits()`:
 
@@ -755,10 +776,20 @@ EmoDB will return the data from the _US facade_ of "local_data". Alternatively, 
 Another vital use case for us is that if we want to anonymize/sanitize sensitive data from one placement to other placements, we can simply copy "anonymized" data from the _master_ table to its _facades_ in other placements. Applications would just need to access the same table, and based on the 
 data center they reside in, they just get the right data back.
 
-Note that facades are *not* to be confused as replicas. A table and its facade can have completely different data sets. It is up to the consumer to populate their facades with whatever data they deem fit. 
+Note that facades are *not* to be confused as replicas. A table and its facade can have completely different data sets.
+It is up to the consumer to populate their facades with whatever data they deem fit.  That said, keeping the facade's content
+roughly synchronized with source table causes the least confusion for the table's consumers.
 
-To summarize, an EmoDB facade is a special table that has the same name as an existing table, but in a different placement. For example, if a table "review:eu-customer" exists in ugc_eu keyspace, then Emodb allows for creating a `facade` in ugc_us keyspace with the same table name. 
-Now, when emodb gets a request for this table in US datacenter, it will be directed to the facade of the table available in ugc_us keyspace.
+For these reasons there are several restrictions for facades:
+
+* A facade can only be created for an existing table.
+* A facade cannot be created in the same placement as the source table.
+* A facade cannot be created in any placement which shares any data center with the source table OR any other facades
+  of the same table.  In other words, there must be a single unambiguous record store for each data center where the table
+  is available, be it the table itself or one of its facades.
+
+To summarize, an EmoDB facade is a special table that has the same name as an existing table, but in a different placement. For example, if a table "review:eu-customer" exists in ugc_eu keyspace, then EmoDB allows for creating a `facade` in ugc_us keyspace with the same table name.
+Now, when EmoDB gets a request for this table in US data center, it will be directed to the facade of the table available in ugc_us keyspace.
 
 ### Create Facade
 
@@ -770,7 +801,9 @@ HTTP:
 
 Java:
 
-    void createTable(String table, FacadeOptions options, Audit audit);  
+```java
+void createFacade(String table, FacadeOptions options, Audit audit);
+```
 
 Example:
 
@@ -797,7 +830,9 @@ HTTP:
 
 Java:
 
-    void updateAllForFacade(Iterable<Update> updates);
+```java
+void updateAllForFacade(Iterable<Update> updates);
+```
 
 Example:
 
@@ -807,10 +842,6 @@ Example:
     {
       "success": true
     }
-
-Authorization:
-
-See [API Keys](Security.md) documentation for information on authorizing this request.
 
 ### Drop a facade
 
@@ -823,7 +854,3 @@ HTTP:
 Java:
 
     // No support for dropping a facade
-
-Authorization:
-
-See [API Keys](Security.md) documentation for information on authorizing this request.

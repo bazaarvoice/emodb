@@ -14,7 +14,7 @@ Any database should explicitly state the guarantees it gives you.
 
 **Super-short version**:
 
-* Emo offers full read-after-write consistency in the local datacenter by default. For full consistency across all datacenters, you can write with consistency level "GLOBAL". 
+* Emo offers full read-after-write consistency in the local data center by default. For full consistency across all data centers you can write with consistency level "GLOBAL". 
 * Emo is ACID compliant
 * The Databus gives you an alternative to "GLOBAL" writes for dealing with data changes consistently across regions.
 
@@ -34,7 +34,7 @@ Rather than talking about the "consistency" in the CAP theorem (linearizability)
 
 Likewise, rather than talk about "availability", which includes both reads and writes, I'll focus on read-availability and write-availability, which again are most likely what you care about.
 
-Finally, even though Emo is a _global_ multi-master database, I'm guessing that approximately 100% of the time, you care about single-datacenter semantics, so I'll start there, and come back to the global question at the end.
+Finally, even though Emo is a _global_ multi-master database, I'm guessing that approximately 100% of the time, you care about single-data center semantics, so I'll start there, and come back to the global question at the end.
 
 ### Emo's consistency promises
 
@@ -66,7 +66,7 @@ Say you have a data item `{"x":0}`, and two concurrent processes both read that 
 
 Most databases either provide row locks or Optimistic Concurrency Control (OCC), in which the document has a version, and you assert that the version hasn't changed since your read when you do a write. Either one allows causal consistency, but OCC gives better latency since you don't have to acquire locks. Retrofitting the example for OCC, the document looks like `{"x": 0, "version": 1}`. If they both read before either writes, they will both write asserting that the "current" version is 1, but only one such write can succeed, since the winner increments the version to 2. The loser recognizes that the write failed and retries, reading at version 2 and successfully writing version 3.
 
-Emo actually does you one better by supporting **arbitrary conditions** on your writes. In our example, we could have a hundred other attributes besides `x` in the documents with a hundred other processes operating concurrently on different values. Under OCC, all writes would increment the version of the document, causing conflicts even though the operations are orthogonal. With emo, both of our incrementers can write with the assertion that `x==0` before their write. One will obviously fail and retry, but they are unaffected by other writers to other attributes.
+Emo actually does you one better by supporting **arbitrary conditions** on your writes. In our example, we could have a hundred other attributes besides `x` in the documents with a hundred other processes operating concurrently on different values. Under OCC, all writes would increment the version of the document, causing conflicts even though the operations are orthogonal. With Emo, both of our incrementers can write with the assertion that `x==0` before their write. One will obviously fail and retry, but they are unaffected by other writers to other attributes.
 
 As a final note, Emo _also_ has a version on each document that auto-increments with every write, so you can just stick with OCC if that's your jam. Also, there is a signature on each document (a hash of all the fields), which allows you to simply assert that the document is entirely unchanged since your read (even if there were no-op updates that incremented the version).
 
@@ -74,9 +74,9 @@ Some OCC systems give you errors when your write is conflicting. Others require 
 
 ### Global consistency
 
-As you hopefully know, Emo is designed to span multiple datacenters, and the design easily permits to easily expand to arbitrarily many others. Generally speaking, you think about write and read consistency in one datacenter only. It's not too common for someone to hit "submit" on the us-east-1 version of your app and then "reload" on the eu-west-1 version, expecting to immediately see the result. Emo will generally make such updates visible across regions within a few seconds.
+As you hopefully know, Emo is designed to span multiple data centers, and the design permits you to easily expand to arbitrarily many others. Generally speaking, you think about write and read consistency in one data center only. It's not too common for someone to hit "submit" on the us-east-1 version of your app and then "reload" on the eu-west-1 version, expecting to immediately see the result. Emo will generally make such updates visible across regions within a few seconds.
 
-However, if you do, for some reason, require true, global, read-after-write consistency, Emo supports a final write consistency level, GLOBAL. This will cause your write not to respond until all datacenters have committed your write to a quorum of nodes. This will likely be slow, and may appear to fail fairly often (remember how insisting on consistency affects write-availability?), so I am mainly mentioning it for completeness.
+However, if you do, for some reason, require true, global, read-after-write consistency, Emo supports a final write consistency level, GLOBAL. This will cause your write not to respond until all data centers have committed your write to a quorum of nodes. This will likely be slow, and may appear to fail fairly often (remember how insisting on consistency affects write-availability?), so I am mainly mentioning it for completeness.
 
 ACID
 ----

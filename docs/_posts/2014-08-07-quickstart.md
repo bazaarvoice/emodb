@@ -16,8 +16,8 @@ Quick Start
 
 1. Download the [EmoDB binaries](https://github.com/bazaarvoice/emodb/releases)
 
-2. Run the Emodb server locally. This will start zookeeper and cassandra locally.
-    
+2. Run the EmoDB server locally. This will start ZooKeeper and Cassandra locally.
+
         $ bin/start-local.sh
         ...
         INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
@@ -30,25 +30,25 @@ Quick Start
         pong
 
         $ curl -s "http://localhost:8081/healthcheck"
-        * deadlocks: OK
-        * emo-cassandra: OK
-          127.0.0.1(127.0.0.1):9160 879us
+        {"deadlocks":{"healthy":true},"ugc_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
 
 4.  To erase the EmoDB data, simply delete the data folder:
 
         $ rm -rf bin/data/
         $ bin/start-local.sh
+{:.workflow}
 
 
 ### Quick Tutorial
 
-The following examples assume you have [jq](https://stedolan.github.io/jq/) or an equivalent (see Recommended
-Software below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
+Normally you would start by creating roles and API keys to provide controlled access to EmoDB.  However, for the sake
+of keeping the tutorial simple we'll make all requests as the administrator, which in the default configuration provided
+by `start-local.sh` uses API key "local_admin".
 
 1.  Create a table in the System of Record.  Specify a "table template" with properties that will be returned with
     every object in the table:
 
-        $ curl -s -XPUT -H "Content-Type: application/json" \
+        $ curl -s -XPUT -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
                 "http://localhost:8080/sor/1/_table/review:testcustomer?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning',host:aws-tools-02" \
                 --data-binary '{"type":"review","client":"TestCustomer"}' | jq .
         {
@@ -57,7 +57,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 2.  Verify that the table was created as expected.  The result should be the table template.
 
-        $ curl -s "http://localhost:8080/sor/1/_table/review:testcustomer" | jq .
+        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/_table/review:testcustomer" | jq .
         {
           "client": "TestCustomer",
           "type": "review"
@@ -65,7 +65,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 3.  Via the Databus, subscribe to changes on all tables containing reviews:
 
-        $ curl -s -XPUT -H "Content-Type: application/x.json-condition" \
+        $ curl -s -XPUT -H "Content-Type: application/x.json-condition" -H "X-BV-API-Key: local_admin" \
             "http://localhost:8080/bus/1/demo-app" \
             --data-binary '{..,"type":"review"}' | jq .
         {
@@ -74,7 +74,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 4.  Store a document in the System of Record:
 
-        $ curl -s -XPUT -H "Content-Type: application/json" \
+        $ curl -s -XPUT -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
             "http://localhost:8080/sor/1/review:testcustomer/demo1?audit=comment:'initial+submission',host:aws-submit-09" \
             --data-binary '{"author":"Bob","title":"Best Ever!","rating":5}' | jq .
         {
@@ -83,7 +83,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 5.  Update the document in the System of Record:
 
-        $ curl -s -H "Content-Type: application/x.json-delta" \
+        $ curl -s -H "Content-Type: application/x.json-delta" -H "X-BV-API-Key: local_admin" \
             "http://localhost:8080/sor/1/review:testcustomer/demo1?audit=comment:'moderation+complete',host:aws-cms-01" \
             --data-binary '{..,"status":"APPROVED"}' | jq .
         {
@@ -92,7 +92,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 6.  See what the document looks like after the update:
 
-        $ curl -s "http://localhost:8080/sor/1/review:testcustomer/demo1" | jq .
+        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/review:testcustomer/demo1" | jq .
         {
           "~deleted": false,
           "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
@@ -111,7 +111,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 7.  Look at the first 10 documents in the table, sorted arbitrarily:
 
-        $ curl -s "http://localhost:8080/sor/1/review:testcustomer" | jq .
+        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/review:testcustomer" | jq .
         [
           {
             "~deleted": false,
@@ -134,7 +134,7 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
     updates to the same entity may be consolidated.  The current complete object is returned with each event.  The result will
     look something like:
 
-        $ curl -s "http://localhost:8080/bus/1/demo-app/poll?ttl=30" | jq .
+        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/bus/1/demo-app/poll?ttl=30" | jq .
         [
           {
             "eventKey":"e9f5b640-caf8-11e1-96fe-0013e8cdbb13#review:testcustomer#demo1",
@@ -150,16 +150,18 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
 
 9.  Acknowledge one of the Databus events to indicate we don't need it any more (copy the ID from the previous response):
 
-        $ curl -s -XPOST -H "Content-Type: application/json" \
+        $ curl -s -XPOST -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
             "http://localhost:8080/bus/1/demo-app/ack" \
             --data-binary '["e9f5b640-caf8-11e1-96fe-0013e8cdbb13#review:testcustomer#demo1"]' | jq .
         {
           "success": true
         }
 
-10.  Look at the timeline showing all System of Record changes to the object (modulo compaction):   
-        
-        $ curl -s "http://localhost:8080/sor/1/review:testcustomer/demo1/timeline?audit=true" | jq .
+
+10. Look at the timeline showing all System of Record changes to the object (modulo compaction):
+
+        $ curl -s -H "X-BV-API-Key: local_admin" \
+            "http://localhost:8080/sor/1/review:testcustomer/demo1/timeline?audit=true" | jq .
         [
           {
             "timestamp": "2012-07-11T01:37:13.351+0000",
@@ -182,18 +184,17 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
             }
           }
         ]
-        
-        
+{:.workflow}
 
 Recommended Software
 --------------------
 
-For debugging, it's useful to have a JSON pretty printer.  On a Mac with [Homebrew] (http://mxcl.github.com/homebrew/)
+For debugging it's useful to have a JSON pretty printer.  On a Mac with [Homebrew](http://brew.sh/)
 installed:
 
     brew install jq
     
-Alternatively, you can use jsonpp
+Alternatively, you can use `jsonpp`
     
     brew install jsonpp
 
@@ -201,5 +202,5 @@ Alternatively, use Python's `json.tool`:
 
     alias jsonpp='python -mjson.tool'
 
-Many of the examples include `jq` or `jsonpp`.  Running the examples without `jsonpp` will work just fine, but the results may
-be more difficult to read.
+Many of the examples include `jq` or `jsonpp`.  Running the examples without pretty printing will work just fine, but
+the results may be more difficult to read.

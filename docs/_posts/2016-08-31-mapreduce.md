@@ -20,7 +20,7 @@ Before you read any further...
 The EmoDB map-reduce libraries can source from either the EmoDB application or from Stash (S3 or HDFS, depending where your stash is exported to). Although both are documented
 here you are _strongly_ encouraged to use Stash when possible for the following reasons:
 
-* It helps by reducing load on EmoDb servers that are serving real-time consumers.
+* It helps by reducing load on EmoDB servers that are serving real-time consumers.
 * It helps your hadoop jobs because S3 access is faster and not subject to potential rate limiting by EmoDB.
 
 
@@ -44,7 +44,7 @@ Assuming your project uses Maven then it would look something like this:
 <dependency>
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-sor-hadoop</artifactId>
-    <version>2.41</version>
+    <version>${emodb.version}</version>
 </dependency>
 ```
 
@@ -102,22 +102,23 @@ For each source table use `EmoInputFormat.addInputTable()`.  Table names are URI
 Part        | Value
 ----        | -----
 scheme      | "emodb" or "emostash" for EmoDB application or Stash source respectively
-host        | Combination of universe and region, such as "ci.us-east-1" for the us-east-1 ci universe.
+host        | Combination of universe and region, such as "qa.us-east-1" for the us-east-1 qa universe.
 path        | Table name
+{:.chart}
 
 For example, the following adds the review Stash tables for several customers:
 
 ```java
-EmoInputFormat.addInputTable(job, "emostash://cert.us-east-1/review:testcustomer1");
-EmoInputFormat.addInputTable(job, "emostash://cert.us-east-1/review:testcustomer2");
-EmoInputFormat.addInputTable(job, "emostash://cert.us-east-1/review:testcustomer3");
+EmoInputFormat.addInputTable(job, "emostash://qa.us-east-1/review:testcustomer1");
+EmoInputFormat.addInputTable(job, "emostash://qa.us-east-1/review:testcustomer2");
+EmoInputFormat.addInputTable(job, "emostash://qa.us-east-1/review:testcustomer3");
 ```
 
 For short and simple examples see the following classes:
 
-* [RowCount.java] (https://github.com/bazaarvoice/emodb/blob/master/mapreduce/sor-hadoop/src/main/java/com/bazaarvoice/emodb/hadoop/examples/RowCount.java)
+* [RowCount.java](https://github.com/bazaarvoice/emodb/blob/master/mapreduce/sor-hadoop/src/main/java/com/bazaarvoice/emodb/hadoop/examples/RowCount.java)
   * Counts the number of records in each input table
-* [RowDump.java] (https://github.com/bazaarvoice/emodb/blob/master/mapreduce/sor-hadoop/src/main/java/com/bazaarvoice/emodb/hadoop/examples/RowDump.java)
+* [RowDump.java](https://github.com/bazaarvoice/emodb/blob/master/mapreduce/sor-hadoop/src/main/java/com/bazaarvoice/emodb/hadoop/examples/RowDump.java)
   * Dumps the JSON contents of all input tables
 
 
@@ -192,7 +193,7 @@ The following creates a Hive table for "review:testcustomer":
 ```
 hive> CREATE EXTERNAL TABLE review_testcustomer
     > (json string)
-    > ROW FORMAT DELIMITED LOCATION 'emostash://cert.us-east-1/review%3Atestcustomer';
+    > ROW FORMAT DELIMITED LOCATION 'emostash://qa.us-east-1/review%3Atestcustomer';
 OK
 Time taken: 1.227 seconds
 
@@ -269,7 +270,7 @@ hive> CREATE EXTERNAL TABLE review_testcustomer
     > ROW FORMAT SERDE 'com.bazaarvoice.emodb.hive.EmoSerDe'
     > STORED AS INPUTFORMAT 'com.bazaarvoice.emodb.hadoop.mapred.EmoInputFormat'
     >         OUTPUTFORMAT 'org.apache.hadoop.mapred.SequenceFileOutputFormat'
-    > LOCATION 'emostash://cert.us-east-1/review%3Atestcustomer';
+    > LOCATION 'emostash://qa.us-east-1/review%3Atestcustomer';
 OK
 Time taken: 0.029 seconds
 
@@ -317,3 +318,4 @@ signature       | STRING    | The EmoDB signature ("~signature")
 first_update_at | TIMESTAMP | The first time this row was updated in EmoDB ("~firstUpdateAt")
 last_update_at  | TIMESTAMP | The most recent time this row was updated in EmoDB ("~lastUpdateAt")
 json            | STRING    | The entire row as a JSON string
+{:.chart}
