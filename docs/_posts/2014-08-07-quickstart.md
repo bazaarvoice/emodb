@@ -39,16 +39,25 @@ Quick Start
 {:.workflow}
 
 
+### API keys
+
+EmoDB's REST API requires [API keys]({{ site.baseurl }}/security).  For clarity the API key header is not included each
+example below, but in a properly secured system you would need to add it to each request.
+
+For the purposes of a quick tutorial you can use the default administrator password when using `start-local.sh`, "local_admin",
+by adding the following parameters to each `curl` command in the tutorial:
+
+    -H "X-BV-API-Key: local_admin"
+
 ### Quick Tutorial
 
-Normally you would start by creating roles and API keys to provide controlled access to EmoDB.  However, for the sake
-of keeping the tutorial simple we'll make all requests as the administrator, which in the default configuration provided
-by `start-local.sh` uses API key "local_admin".
+The following examples assume you have [jq](https://stedolan.github.io/jq/) or an equivalent (see
+[Recommended Software](#recommended-software) below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
 
 1.  Create a table in the System of Record.  Specify a "table template" with properties that will be returned with
     every object in the table:
 
-        $ curl -s -XPUT -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
+        $ curl -s -XPUT -H "Content-Type: application/json" \
                 "http://localhost:8080/sor/1/_table/review:testcustomer?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning',host:aws-tools-02" \
                 --data-binary '{"type":"review","client":"TestCustomer"}' | jq .
         {
@@ -57,7 +66,7 @@ by `start-local.sh` uses API key "local_admin".
 
 2.  Verify that the table was created as expected.  The result should be the table template.
 
-        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/_table/review:testcustomer" | jq .
+        $ curl -s "http://localhost:8080/sor/1/_table/review:testcustomer" | jq .
         {
           "client": "TestCustomer",
           "type": "review"
@@ -65,7 +74,7 @@ by `start-local.sh` uses API key "local_admin".
 
 3.  Via the Databus, subscribe to changes on all tables containing reviews:
 
-        $ curl -s -XPUT -H "Content-Type: application/x.json-condition" -H "X-BV-API-Key: local_admin" \
+        $ curl -s -XPUT -H "Content-Type: application/x.json-condition" \
             "http://localhost:8080/bus/1/demo-app" \
             --data-binary '{..,"type":"review"}' | jq .
         {
@@ -74,7 +83,7 @@ by `start-local.sh` uses API key "local_admin".
 
 4.  Store a document in the System of Record:
 
-        $ curl -s -XPUT -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
+        $ curl -s -XPUT -H "Content-Type: application/json" \
             "http://localhost:8080/sor/1/review:testcustomer/demo1?audit=comment:'initial+submission',host:aws-submit-09" \
             --data-binary '{"author":"Bob","title":"Best Ever!","rating":5}' | jq .
         {
@@ -83,7 +92,7 @@ by `start-local.sh` uses API key "local_admin".
 
 5.  Update the document in the System of Record:
 
-        $ curl -s -H "Content-Type: application/x.json-delta" -H "X-BV-API-Key: local_admin" \
+        $ curl -s -H "Content-Type: application/x.json-delta" \
             "http://localhost:8080/sor/1/review:testcustomer/demo1?audit=comment:'moderation+complete',host:aws-cms-01" \
             --data-binary '{..,"status":"APPROVED"}' | jq .
         {
@@ -92,7 +101,7 @@ by `start-local.sh` uses API key "local_admin".
 
 6.  See what the document looks like after the update:
 
-        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/review:testcustomer/demo1" | jq .
+        $ curl -s "http://localhost:8080/sor/1/review:testcustomer/demo1" | jq .
         {
           "~deleted": false,
           "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
@@ -111,7 +120,7 @@ by `start-local.sh` uses API key "local_admin".
 
 7.  Look at the first 10 documents in the table, sorted arbitrarily:
 
-        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/sor/1/review:testcustomer" | jq .
+        $ curl -s "http://localhost:8080/sor/1/review:testcustomer" | jq .
         [
           {
             "~deleted": false,
@@ -134,7 +143,7 @@ by `start-local.sh` uses API key "local_admin".
     updates to the same entity may be consolidated.  The current complete object is returned with each event.  The result will
     look something like:
 
-        $ curl -s -H "X-BV-API-Key: local_admin" "http://localhost:8080/bus/1/demo-app/poll?ttl=30" | jq .
+        $ curl -s "http://localhost:8080/bus/1/demo-app/poll?ttl=30" | jq .
         [
           {
             "eventKey":"e9f5b640-caf8-11e1-96fe-0013e8cdbb13#review:testcustomer#demo1",
@@ -150,7 +159,7 @@ by `start-local.sh` uses API key "local_admin".
 
 9.  Acknowledge one of the Databus events to indicate we don't need it any more (copy the ID from the previous response):
 
-        $ curl -s -XPOST -H "Content-Type: application/json" -H "X-BV-API-Key: local_admin" \
+        $ curl -s -XPOST -H "Content-Type: application/json" \
             "http://localhost:8080/bus/1/demo-app/ack" \
             --data-binary '["e9f5b640-caf8-11e1-96fe-0013e8cdbb13#review:testcustomer#demo1"]' | jq .
         {
@@ -160,8 +169,7 @@ by `start-local.sh` uses API key "local_admin".
 
 10. Look at the timeline showing all System of Record changes to the object (modulo compaction):
 
-        $ curl -s -H "X-BV-API-Key: local_admin" \
-            "http://localhost:8080/sor/1/review:testcustomer/demo1/timeline?audit=true" | jq .
+        $ curl -s "http://localhost:8080/sor/1/review:testcustomer/demo1/timeline?audit=true" | jq .
         [
           {
             "timestamp": "2012-07-11T01:37:13.351+0000",
