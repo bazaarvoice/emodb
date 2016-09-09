@@ -1132,3 +1132,32 @@
 		display: inline-block;
 		width: 5em;
 	}
+
+    table.chart {
+        border-spacing: 0.1em;
+        border-collapse: separate;
+    }
+
+    table.chart th {
+        font-weight: bold;
+        padding: 0.3em;
+    }
+
+    table.chart tr:nth-child(even) {
+        background-color: #f3f6fa;
+    }
+
+    table.chart td {
+        padding-right: 0.4em;
+        padding-left: 0.4em;
+    }
+
+    ol.workflow {
+        list-style-type: decimal;
+        margin-left: 1em;
+    }
+
+    ol.workflow li {
+        padding-bottom: 0.5em;
+        padding-left: 0.5em;
+}

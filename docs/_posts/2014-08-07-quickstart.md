@@ -16,8 +16,8 @@ Quick Start
 
 1. Download the [EmoDB binaries](https://github.com/bazaarvoice/emodb/releases)
 
-2. Run the Emodb server locally. This will start zookeeper and cassandra locally.
-    
+2. Run the EmoDB server locally. This will start ZooKeeper and Cassandra locally.
+
         $ bin/start-local.sh
         ...
         INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
@@ -30,20 +30,29 @@ Quick Start
         pong
 
         $ curl -s "http://localhost:8081/healthcheck"
-        * deadlocks: OK
-        * emo-cassandra: OK
-          127.0.0.1(127.0.0.1):9160 879us
+        {"deadlocks":{"healthy":true},"ugc_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
 
 4.  To erase the EmoDB data, simply delete the data folder:
 
         $ rm -rf bin/data/
         $ bin/start-local.sh
+{:.workflow}
 
+
+### API keys
+
+EmoDB's REST API requires [API keys]({{ site.baseurl }}/security).  For clarity the API key header is not included each
+example below, but in a properly secured system you would need to add it to each request.
+
+For the purposes of a quick tutorial you can use the default administrator password when using `start-local.sh`, "local_admin",
+by adding the following parameters to each `curl` command in the tutorial:
+
+    -H "X-BV-API-Key: local_admin"
 
 ### Quick Tutorial
 
-The following examples assume you have [jq](https://stedolan.github.io/jq/) or an equivalent (see Recommended
-Software below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
+The following examples assume you have [jq](https://stedolan.github.io/jq/) or an equivalent (see
+[Recommended Software](#recommended-software) below).  It is optional-- `jq .` just formats the JSON responses to make them easier to read.
 
 1.  Create a table in the System of Record.  Specify a "table template" with properties that will be returned with
     every object in the table:
@@ -157,8 +166,9 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
           "success": true
         }
 
-10.  Look at the timeline showing all System of Record changes to the object (modulo compaction):   
-        
+
+10. Look at the timeline showing all System of Record changes to the object (modulo compaction):
+
         $ curl -s "http://localhost:8080/sor/1/review:testcustomer/demo1/timeline?audit=true" | jq .
         [
           {
@@ -182,18 +192,17 @@ Software below).  It is optional-- `jq .` just formats the JSON responses to mak
             }
           }
         ]
-        
-        
+{:.workflow}
 
 Recommended Software
 --------------------
 
-For debugging, it's useful to have a JSON pretty printer.  On a Mac with [Homebrew] (http://mxcl.github.com/homebrew/)
+For debugging it's useful to have a JSON pretty printer.  On a Mac with [Homebrew](http://brew.sh/)
 installed:
 
     brew install jq
     
-Alternatively, you can use jsonpp
+Alternatively, you can use `jsonpp`
     
     brew install jsonpp
 
@@ -201,5 +210,5 @@ Alternatively, use Python's `json.tool`:
 
     alias jsonpp='python -mjson.tool'
 
-Many of the examples include `jq` or `jsonpp`.  Running the examples without `jsonpp` will work just fine, but the results may
-be more difficult to read.
+Many of the examples include `jq` or `jsonpp`.  Running the examples without pretty printing will work just fine, but
+the results may be more difficult to read.

@@ -18,7 +18,7 @@ cross-data center environments.
 The BlobStore exposes a RESTful API.  You can access the API directly over HTTP or via a Java client library.
 
 BlobStore IDs must be ASCII alphanumeric with a few punctuation characters such as '-', '_'.  It is often convenient to
-pick IDs by generating random 128-bit random UUIDs (java.util.UUID.randomUUID().toString()).
+pick IDs by generating random 128-bit random UUIDs (`java.util.UUID.randomUUID().toString()`).
 
 All data for a single blob must fit (on disk) on a single machine in the Cassandra cluster.
 
@@ -53,8 +53,7 @@ BlobStore blobStore = ServicePoolBuilder.create(BlobStore.class)
 ServicePoolProxies.close(blobStore);
 ```
 
-Robust Java client using ZooKeeper, [SOA] (https://github.com/bazaarvoice/ostrich) and [Dropwizard]
-(http://dropwizard.codahale.com/):
+Robust Java client using ZooKeeper, [SOA](https://github.com/bazaarvoice/ostrich) and [Dropwizard](http://dropwizard.codahale.com/):
 
 ```java
 @Override
@@ -88,6 +87,13 @@ protected void initialize(Configuration configuration, Environment environment) 
 }
 ```
 
+REST calls
+----------
+
+As with all parts of EmoDB the REST API requires [API keys]({{ site.baseurl }}/security) and the Java client includes these
+in all requests automatically.  For clarity the API key header is not included each REST example below, but in a
+properly secured system you would need to add it to each request.
+
 Quick Start
 -----------
 
@@ -95,9 +101,9 @@ Quick Start
 
 #### Using binaries:
 
-1. Download the [EmoDB binaries] (https://github.com/bazaarvoice/emodb/releases)
+1. Download the [EmoDB binaries](https://github.com/bazaarvoice/emodb/releases).
 
-2. Run the Emodb server locally. This will start zookeeper and cassandra locally.
+2. Run the EmoDB server locally. This will start zookeeper and cassandra locally.
     
         $ bin/start-local.sh
         ...
@@ -111,18 +117,17 @@ Quick Start
         pong
 
         $ curl -s "http://localhost:8081/healthcheck"
-        * deadlocks: OK
-        * emo-cassandra: OK
-          127.0.0.1(127.0.0.1):9160 879us
+        {"deadlocks":{"healthy":true},"media_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
 
 4.  To erase the EmoDB data, simply delete the data folder:
 
         $ rm -rf bin/data/
         $ bin/start-local.sh
+{:.workflow}
 
 #### Using source code:
 
-1. Download the [EmoDB source code] (https://github.com/bazaarvoice/emodb):
+1. Download the [EmoDB source code](https://github.com/bazaarvoice/emodb):
 
         $ git clone git@github.com:bazaarvoice/emodb.git emodb
 
@@ -146,18 +151,17 @@ Quick Start
         pong
 
         $ curl -s "http://localhost:8081/healthcheck"
-        * deadlocks: OK
-        * emo-cassandra: OK
-          127.0.0.1(127.0.0.1):9160 879us
+        {"deadlocks":{"healthy":true},"media_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
 
 5.  To erase the EmoDB data and restart with a clean slate:
 
         $ cd web-local
         $ ./start-clean.sh
+{:.workflow}
 
 ### Examples
 
-The following examples assume you have [jq] (https://stedolan.github.io/jq/) or have aliased `alias jq='python -mjson.tool'`.
+The following examples assume you have [jq](https://stedolan.github.io/jq/) or have aliased `alias jq='python -mjson.tool'`.
 It is optional--`jq .` just formats the JSON responses to make them easier to read.
 
 1.  Create a table in the BlobStore.  Specify "table attributes" with properties that will be returned with every
@@ -227,6 +231,7 @@ It is optional--`jq .` just formats the JSON responses to make them easier to re
                 "sha1": "ad76f54fda208edf6693927b6b427bd4a3687f68"
             }
         ]
+{:.workflow}
 
 Table Management
 ----------------
@@ -243,7 +248,9 @@ HTTP:
 
 Java:
 
-    void createTable(String table, TableOptions options, Map<String, String> attributes, Audit audit);
+```java
+void createTable(String table, TableOptions options, Map<String, String> attributes, Audit audit);
+```
 
 A table is a bucket containing blobs.  Creating a table is relatively cheap, and you can create as many tables as you
 want.  In general, pick the granularity of your tables to match the granularity of your Hadoop jobs.  Each Hadoop job
@@ -268,24 +275,19 @@ Request Parameters:
     mechanism for iterating over a smaller defined slice of a table.  In general, good practice is to create a table
     for every combination of data type and client, for example "photo:testcustomer".  By convention, use colons `:`
     to separate fields in your table names.
-
-*   `audit` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing
+*   `audit` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing
     information that can be used to trace changes to an object and debug applications that use EmoDB.
-    If your client is written in Java, you may use the [rison] (https://github.com/bazaarvoice/rison)
-    project to implement the O-Rison encoding.  For other languages, see http://mjtemplate.org/examples/rison.html.
-    There are a few [pre-defined keys] (https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
+    project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
     are no intrinsic limits on the size of the audit map, but in practice it is limited by the maximum
     length of the URL.
-*   `options` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing options
+*   `options` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing options
     that affect the internal storage of documents in the table.  For now, the only option is "placement" which
-    must be "media_global:ugc".
-
-Placement Values:
-
-*   `media_global:ugc` - Use this placement for user generated media.
+    must be a valid blob placement.
 
 Example:
 
@@ -298,11 +300,12 @@ Example:
 
 Java Example:
 
-    Map<String, String> template = ImmutableMap.of("type", "photo", "client", "testcustomer");
-    TableOptions options = new TableOptionsBuilder().setPlacement("media_global:ugc").build();
-    Audit audit = new AuditBuilder().setProgram("example-app").setLocalHost().build();
-    dataStore.createTable("photo:testcustomer", options, template, audit);
-
+```java
+Map<String, String> template = ImmutableMap.of("type", "photo", "client", "testcustomer");
+TableOptions options = new TableOptionsBuilder().setPlacement("media_global:ugc").build();
+Audit audit = new AuditBuilder().setProgram("example-app").setLocalHost().build();
+dataStore.createTable("photo:testcustomer", options, template, audit);
+```
 
 ### Get Table:
 
@@ -314,7 +317,9 @@ HTTP:
 
 Java:
 
-    Map<String, String> getTableAttributes(String table);
+```java
+Map<String, String> getTableAttributes(String table);
+```
 
 Example:
 
@@ -340,17 +345,13 @@ Tables may only be dropped from the one "system" data center.  Attempts to drop 
 be rejected.  All data centers must up and available when tables are created so the data store can ensure that table
 metadata has replicated to all servers before the table can be used.
 
-Authorization:
-
-See [API Keys](Security.md) documentation for information on authorizing this request.
-
 Request Parameters:
 
-*   `audit` - required - An [O-Rison-encoded] (http://mjtemplate.org/examples/rison.html) map containing
+*   `audit` - required - An [O-Rison-encoded](https://github.com/Nanonid/rison) map containing
     information that can be used to trace changes to an object and debug applications that use EmoDB.
-    If your client is written in Java, you may use the [rison] (https://github.com/bazaarvoice/rison)
-    project to implement the O-Rison encoding.  For other languages, see http://mjtemplate.org/examples/rison.html.
-    There are a few [pre-defined keys] (https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
+    If your client is written in Java, you may use the [rison](https://github.com/bazaarvoice/rison)
+    project to implement the O-Rison encoding.  For other languages, see [here](https://github.com/Nanonid/rison).
+    There are a few [pre-defined keys](https://github.com/bazaarvoice/emodb/blob/master/common/api/src/main/java/com/bazaarvoice/emodb/common/api/Audit.java)
     in Audit.java that clients are encouraged to use.  You may pass an empty map of audit information
     (encoded as an empty string), but this is discouraged.  After applying the O-Rison encoding, don't
     forget that, as with all url query parameters, the audit argument must be UTF-8 URI-encoded.  There
@@ -375,7 +376,9 @@ HTTP:
 
 Java:
 
-    Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
+```java
+Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
+```
 
 URL Parameters:
 
@@ -419,7 +422,9 @@ HTTP:
 
 Java:
 
-    void put(String table, String blobId, InputStream in, Map<String, String> attributes, @Nullable Duration ttl);
+```java
+void put(String table, String blobId, InputStream in, Map<String, String> attributes, @Nullable Duration ttl);
+```
 
 ### Get
 
@@ -431,7 +436,9 @@ HTTP:
 
 Java:
 
-    Blob get(String table, String blobId) throws BlobNotFoundException;
+```java
+Blob get(String table, String blobId) throws BlobNotFoundException;
+```
 
 ### Head
 
@@ -443,7 +450,9 @@ HTTP:
 
 Java:
 
-    BlobMetadata getMetadata(String table, String blobId) throws BlobNotFoundException;
+```java
+BlobMetadata getMetadata(String table, String blobId) throws BlobNotFoundException;
+```
 
 ### Delete
 
@@ -455,7 +464,9 @@ HTTP:
 
 Java:
 
-    void delete(String table, String blobId);
+```java
+void delete(String table, String blobId);
+```
 
 ### Scan
 
@@ -473,7 +484,9 @@ HTTP:
 
 Java:
 
-    Iterator<BlobMetadata> scanMetadata(String table, @Nullable String fromBlobIdExclusive, long limit);
+```java
+Iterator<BlobMetadata> scanMetadata(String table, @Nullable String fromBlobIdExclusive, long limit);
+```
 
 URL Parameters:
 

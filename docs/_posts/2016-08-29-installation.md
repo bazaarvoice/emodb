@@ -20,7 +20,7 @@ setup required and some guidelines on setting up your first "real world" EmoDB c
   documented elsewhere or simply too unique to each environment to create a one-size-fits-all document.  This document
   will refer you to much better documentation for the former and provide general guidelines for the latter.
 * There are a great many possible configurations possible with EmoDB, such as the number of data centers and placements
-  you choose to start with, and choosing the configuration really come down to what works best for your situation.
+  you choose to start with, and which is the "right" configuration really depends on your situation.
   This document describes just one possible configuration, but you are encouraged to expand from there to whatever best
   fits your needs.
 
@@ -35,13 +35,13 @@ synchronization.  EmoDB is dependent on there being a ZooKeeper cluster availabl
 standing you'll need to do that first.  You can learn more about ZooKeeper and administering your own cluster
 [here](https://zookeeper.apache.org/doc/trunk/).
 
-Note that in a multi-data-center deployment you should have a unique ZooKeeper cluster in each data center for the
+Note that in a multi-data center deployment you should have a unique ZooKeeper cluster in each data center for the
 respective EmoDB cluster to use.  Routing all EmoDB clusters through a single ZooKeeper is not necessary and would
 be detrimental due to the latency each non-local EmoDB cluster would incur.
 
 ### [Cassandra](https://cassandra.apache.org/)
 
-EmoDB uses Cassandra to provide a robust data store with high availability, reliability, and cross-data-center
+EmoDB uses Cassandra to provide a robust data store with high availability, reliability, and cross-data center
 replication.  There are myriad ways of configuring and deploying Cassandra, and what's worked best for us may not
 be what works best for you.  Whether you already have a Cassandra infrastructure in place, deploy from open
 source, or go with an enterprise provider like DataStax, you'll have to go with the solution which makes the most
@@ -75,10 +75,10 @@ With that in mind, there are a few suggestions and requirements for your Cassand
 
 A typical starter EmoDB deployment uses two Cassandra rings:  one for the SoR and Blob Store, and one for the Databus
 and Queue services.  As previously noted, the SoR and Blob Store Cassandra ring must use a byte-ordered partitioner.
-If your EmoDB cluster spans multiple data centers each data center should have its own unique
+If your EmoDB cluster spans multiple data centers then each data center should have its own unique
 Databus and Queue ring, since Databus and Queue contents are specific to the local EmoDB cluster.
 
-Although EmoDB only requires one Sor and Blob Store ring there are cases where multiple rings are desirable.
+Although EmoDB only requires one SoR and Blob Store ring there are cases where multiple rings are desirable.
 Here are some examples:
 
 * A simple separation is to create one ring for the SoR and a separate ring for the Blob store.  Your
@@ -122,7 +122,7 @@ there if necessary.
 ### Configuring Placements
 
 Once you've chosen your Cassandra ring topology and placements it's time to configure them in EmoDB.  There are two files
-that to be configured, `config-ddl.yaml` and `config.yaml`.  The former gives a Cassandra-centric description your
+that need to be configured, `config-ddl.yaml` and `config.yaml`.  The former gives a Cassandra-centric description your
 placement's toplogy.  The latter is a general DropWizard configuration file for the EmoDB application as a whole.
 There are many configuration options here, but for now we're going to focus only on the portions related to configuring
 the Cassandra placements in the SoR.  There are similar sections for configuring the Blob Store, Databus, and Queue
@@ -139,7 +139,7 @@ will have their content available in and replicated to both data centers, while 
 only have their content available in the US data center.  The "social" ring is similarly configured.
 
 Note that "data_global" contains two placements, "data_global:logs" and "data_global:app".  Both placements are in the
-same Cassandra ring and have the same replication strategy, so why not to combine them into a single placement?
+same Cassandra ring and have the same replication strategy, so why not combine them into a single placement?
 There are several reasons why you may create multiple placements in the same keyspace.
 
 * If you choose to enable Emo Stash then which tables are exported is configured at the placement level.  You may
