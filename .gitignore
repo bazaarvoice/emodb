@@ -15,3 +15,7 @@ target/
 # OS hidden files
 .DS_Store
 *dependency-reduced-pom.xml
+
+# Site Files
+_site
+.sass-cache
