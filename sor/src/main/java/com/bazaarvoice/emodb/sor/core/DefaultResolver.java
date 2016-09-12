@@ -46,6 +46,7 @@ public class DefaultResolver implements Resolver {
         this(intrinsics);
         _intrinsics.setVersion(compaction.getCount());
         _intrinsics.setFirstUpdateAt(compaction.getFirst());
+        _intrinsics.setLastMutateAt(compaction.getFirst());
         _intrinsics.setLastUpdateAt(compaction.getFirst());
         _compactionCutoffId = compaction.getCutoff();
         _compactionCutoffSignature = compaction.getCutoffSignature();
@@ -57,6 +58,7 @@ public class DefaultResolver implements Resolver {
             _lastAppliedTags = compaction.getLastTags();
             _intrinsics.setDeleted(_content == Resolved.UNDEFINED);
             _intrinsics.setSignature(parseHash(_compactionCutoffSignature));
+            _intrinsics.setLastMutateAt(compaction.getLastContentMutation());
             _intrinsics.setLastUpdateAt(compaction.getCutoff());
         }
     }
@@ -68,6 +70,8 @@ public class DefaultResolver implements Resolver {
         // Evaluate the delta.
         Object updated = DeltaEvaluator.eval(delta, _content, _intrinsics);
 
+        boolean contentChanged = !Objects.equal(_content, updated);
+
         // The caller may want to know if a particular delta modified the object.
         // If it didn't, the caller can suppress databus events for it. Note: a
         // delta may be made redundant by its preceding deltas but not vice versa.
@@ -75,10 +79,10 @@ public class DefaultResolver implements Resolver {
         // For performance, databus dedups the redundant deltas.
         // If the delta is redundant, but has a different tag, then consider it *not* redundant
         // as it is possible that a caller listening to different tags may never be notified of a delta.
-        if (Objects.equal(_content, updated) && _lastAppliedTags.equals(tags)) {
+        if (!contentChanged && _lastAppliedTags.equals(tags)) {
             _redundantChangeIds.add(changeId);
         } else if (_lastMutationId == null || !changeId.equals(_compactionCutoffId)) {
-            // Record this as the most recent change which mutated the content
+            // Record this as the most recent change which mutated the content and/or tags
             _lastMutationId = changeId;
         }
 
@@ -97,6 +101,13 @@ public class DefaultResolver implements Resolver {
             _intrinsics.setFirstUpdateAt(changeId);
         }
         _intrinsics.setLastUpdateAt(changeId);
+
+        // When evaluating whether to update the "lastMutateAt" intrinsic we also have check whether the existing
+        // value is null.  In the corner case where the first delta for a record is a deletion we still want
+        // to set the intrinsic value to the initial delta.
+        if (contentChanged || _intrinsics.getLastMutateAt() == null) {
+            _intrinsics.setLastMutateAt(changeId);
+        }
     }
 
     @Override

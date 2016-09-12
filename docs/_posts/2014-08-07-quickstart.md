@@ -107,6 +107,7 @@ The following examples assume you have [jq](https://stedolan.github.io/jq/) or a
           "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
           "~id": "demo1",
           "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
+          "~lastMutateAt": "2012-06-22T20:12:09.679Z",
           "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
           "~table": "review:testcustomer",
           "~version": 2,
@@ -127,6 +128,7 @@ The following examples assume you have [jq](https://stedolan.github.io/jq/) or a
             "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
             "~id": "demo1",
             "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
+            "~lastMutateAt": "2012-06-22T20:12:09.679Z",
             "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
             "~table": "review:testcustomer",
             "~version": 2,
@@ -148,8 +150,9 @@ The following examples assume you have [jq](https://stedolan.github.io/jq/) or a
           {
             "eventKey":"e9f5b640-caf8-11e1-96fe-0013e8cdbb13#review:testcustomer#demo1",
             "content":{
-              "~deleted":false,"~lastUpdateAt":"2012-07-11T01:37:02.372Z","~id":"demo1",
-              "~lastUpdateAt":"2012-07-11T01:37:13.351Z","~table":"review:testcustomer",
+              "~deleted":false,"~firstUpdateAt":"2012-07-11T01:37:02.372Z","~id":"demo1",
+              "~lastUpdateAt":"2012-07-11T01:37:13.351Z","~lastMutateAt":"2012-07-11T01:37:13.351Z",
+              "~table":"review:testcustomer",
               "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1","~version":2,
               "author":"Bob","client":"TestCustomer","rating":5,
               "status":"APPROVED", "title":"Best Ever!","type":"review"

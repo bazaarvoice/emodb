@@ -861,7 +861,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         List<Change> expected = ImmutableList.of(
                 new ChangeBuilder(TimeUUIDs.newUUID())
                         .with(Deltas.literal("hello world"))
-                        .with(new Compaction(5, TimeUUIDs.newUUID(), TimeUUIDs.newUUID(), "1234567890abcdef", null))
+                        .with(new Compaction(5, TimeUUIDs.newUUID(), TimeUUIDs.newUUID(), "1234567890abcdef", null, null))
                         .build());
         when(_server.getTimeline("table-name", "row-key", true, false, null, null, true, 10, ReadConsistency.STRONG))
                 .thenReturn(expected.iterator());

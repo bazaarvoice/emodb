@@ -143,11 +143,28 @@ public class ConditionEvaluatorTest {
     }
 
     @Test
+    public void testIntrinsicLastMutateAtNull() {
+        Intrinsics intrinsics = mock(Intrinsics.class);
+        when(intrinsics.getLastMutateAt()).thenReturn(null);
+        assertTrue(eval(Conditions.intrinsic(Intrinsic.LAST_MUTATE_AT, (Object) null), null, intrinsics));
+        assertFalse(eval(Conditions.intrinsic(Intrinsic.LAST_MUTATE_AT, "2012-07-08T22:21:36.866Z"), null, intrinsics));
+    }
+
+    @Test
     public void testIntrinsicLastUpdateAtNull() {
         Intrinsics intrinsics = mock(Intrinsics.class);
         when(intrinsics.getLastUpdateAt()).thenReturn(null);
         assertTrue(eval(Conditions.intrinsic(Intrinsic.LAST_UPDATE_AT, (Object) null), null, intrinsics));
         assertFalse(eval(Conditions.intrinsic(Intrinsic.LAST_UPDATE_AT, "2012-07-08T22:21:36.866Z"), null, intrinsics));
+    }
+
+    @Test
+    public void testIntrinsicLastMutateAt() {
+        Intrinsics intrinsics = mock(Intrinsics.class);
+        when(intrinsics.getLastMutateAt()).thenReturn("2012-07-08T22:21:36.866Z");
+        assertTrue(eval(Conditions.intrinsic(Intrinsic.LAST_MUTATE_AT, "2012-07-08T22:21:36.866Z"), null, intrinsics));
+        assertFalse(eval(Conditions.intrinsic(Intrinsic.LAST_MUTATE_AT, "2012-07-08T22:29:31.588Z"), null, intrinsics));
+        assertFalse(eval(Conditions.intrinsic(Intrinsic.LAST_MUTATE_AT, (Object) null), null, intrinsics));
     }
 
     @Test

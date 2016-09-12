@@ -74,7 +74,7 @@ public class CompactorTest {
         Delta delta2 = Deltas.literal(ImmutableMap.of("key", "value"));
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
         // Old style compaction
-        Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3);
+        Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3, t3);
         final List<Map.Entry<UUID, Compaction>> compactions2 = ImmutableList.of(
                 Maps.immutableEntry(t5, compaction2));
         final List<Map.Entry<UUID,Change>> deltas2 = ImmutableList.of(
@@ -178,14 +178,14 @@ public class CompactorTest {
         SystemClock.tick();
 
         // Compaction records after the first compaction
-        Compaction compaction1 = new Compaction(2, t1, t2, "0123456789abcdef", t2);
+        Compaction compaction1 = new Compaction(2, t1, t2, "0123456789abcdef", t2, t2);
         final List<Map.Entry<UUID, Compaction>> compactions1 = ImmutableList.of(
                 Maps.immutableEntry(t4, compaction1));
 
         // Compaction and delta records after the second compaction
         Delta delta2 = Deltas.literal(ImmutableMap.of("key", "value"));
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
-        Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3);
+        Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3, t3);
         final List<Map.Entry<UUID, Compaction>> compactions2 = ImmutableList.of(
                 Maps.immutableEntry(t5, compaction2));
         final List<Map.Entry<UUID,Change>> deltas2 = ImmutableList.of(

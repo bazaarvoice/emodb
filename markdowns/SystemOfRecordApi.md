@@ -448,6 +448,7 @@ Example:
       "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
       "~id": "demo1",
       "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
+      "~lastMutateAt": "2012-06-22T20:12:09.679Z",
       "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
       "~table": "review:testcustomer",
       "~version": 2,
@@ -489,6 +490,7 @@ Example:
       "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
       "~id": "demo1",
       "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
+      "~lastMutateAt": "2012-06-22T20:12:09.679Z",
       "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
       "~table": "review:testcustomer",
       "~version": 2,
@@ -504,6 +506,7 @@ Example:
       "~firstUpdateAt": "2012-06-22T20:11:53.473Z",
       "~id": "demo1",
       "~lastUpdateAt": "2012-06-22T20:12:09.679Z",
+      "~lastMutateAt": "2012-06-22T20:12:09.679Z",
       "~signature": "7db2ef78f7830acaaa53f242a5e5ffa1",
       "~table": "review:testcustomer",
       "~version": 2,
@@ -608,6 +611,7 @@ Example:
         "~deleted": false,
         "~firstUpdateAt": "2012-07-30T21:33:28.908Z",
         "~lastUpdateAt": "2012-07-30T21:33:33.194Z"
+        "~lastMutateAt": "2012-07-30T21:33:33.194Z"
       }
     ]
 

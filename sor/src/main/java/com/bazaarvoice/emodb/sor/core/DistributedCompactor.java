@@ -148,6 +148,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
                     resolved.getIntrinsics().getFirstUpdateAtUuid(),
                     resolved.getIntrinsics().getLastUpdateAtUuid(),
                     resolved.getIntrinsics().getSignature(),
+                    resolved.getIntrinsics().getLastMutateAtUuid(),
                     resolved.getLastMutation(),
                     // Compacted Delta
                     resolved.getConstant(), resolved.getLastTags());

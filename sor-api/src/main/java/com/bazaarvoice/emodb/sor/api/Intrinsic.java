@@ -19,10 +19,12 @@ public abstract class Intrinsic {
     public static final String DELETED = "~deleted";
     public static final String FIRST_UPDATE_AT = "~firstUpdateAt";
     public static final String LAST_UPDATE_AT = "~lastUpdateAt";
+    public static final String LAST_MUTATE_AT = "~lastMutateAt";
     public static final String PLACEMENT = "~placement";
 
     public static final Set<String> DATA_FIELDS =
-            ImmutableSet.of(ID, TABLE, VERSION, SIGNATURE, DELETED, FIRST_UPDATE_AT, LAST_UPDATE_AT, PLACEMENT);
+            ImmutableSet.of(ID, TABLE, VERSION, SIGNATURE, DELETED, FIRST_UPDATE_AT, LAST_UPDATE_AT,
+                    LAST_MUTATE_AT, PLACEMENT);
 
     // Audit Fields
 
@@ -61,4 +63,9 @@ public abstract class Intrinsic {
     public static Date getLastUpdateAt(Map<String, ?> content) {
         return JsonHelper.parseTimestamp((String) content.get(LAST_UPDATE_AT));
     }
+
+    public static Date getLastMutateAt(Map<String, ?> content) {
+        return JsonHelper.parseTimestamp((String) content.get(LAST_MUTATE_AT));
+    }
+
 }

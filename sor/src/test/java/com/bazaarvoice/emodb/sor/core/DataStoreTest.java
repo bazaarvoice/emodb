@@ -11,38 +11,32 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.core.test.DiscardingExecutorService;
-import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.google.common.eventbus.EventBus;
 import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
-import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class DataStoreTest {
@@ -52,19 +46,9 @@ public class DataStoreTest {
     private static final String KEY2 = "key2";
 
     @Test
-    public void testInMemoryDataStore() throws Exception {
-        doTest(new InMemoryDataStore(new MetricRegistry()));
-    }
+    public void testDeltas() throws Exception {
+        DataStore store = new InMemoryDataStore(new MetricRegistry());
 
-    @Test
-    public void testInMemoryDataStoreWithoutCompaction() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
-        doTest(new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry()));
-    }
-
-    private void doTest(DataStore store) throws Exception {
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         assertFalse(store.getTableExists(TABLE));
         store.createTable(TABLE, options, Collections.<String,Object >emptyMap(), newAudit("create table"));
@@ -94,6 +78,7 @@ public class DataStoreTest {
                 put("~signature", Intrinsic.getSignature(content1)).
                 put("~firstUpdateAt", content1.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content1.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content1.get(Intrinsic.LAST_MUTATE_AT)).
                 put("name", "Bob").
                 put("state", "APPROVED").
                 build();
@@ -113,6 +98,7 @@ public class DataStoreTest {
                 put("~signature", Intrinsic.getSignature(content2)).
                 put("~firstUpdateAt", content2.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content2.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content2.get(Intrinsic.LAST_MUTATE_AT)).
                 put("name", "Joe").
                 build());
 
@@ -137,6 +123,7 @@ public class DataStoreTest {
                 put("~signature", Intrinsic.getSignature(content2Deleted)).
                 put("~firstUpdateAt", content2.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content2Deleted.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content2Deleted.get(Intrinsic.LAST_MUTATE_AT)).
                 build();
         assertEquals(content2Deleted, content2DeletedExpected);
         assertTrue(Intrinsic.getSignature(content2Deleted).matches("[0-9a-f]{32}"));
@@ -187,6 +174,190 @@ public class DataStoreTest {
         assertEquals(timeline.get(1).getTags(), ImmutableList.of());
         assertEquals(timeline.get(2).getComment(), "finish moderation");
         assertEquals(timeline.get(2).getTags(), ImmutableList.of("tag1", "tag2"));
+    }
+
+    @Test
+    public void testRecordTimestamps() throws Exception {
+        DataStore store = new InMemoryDataStore(new MetricRegistry());
+
+        TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
+        assertFalse(store.getTableExists(TABLE));
+        store.createTable(TABLE, options, Collections.<String,Object >emptyMap(), newAudit("create table"));
+        assertTrue(store.getTableExists(TABLE));
+
+        // Record does not exist initially, so all dates should not be present
+        Map<String, Object> record = store.get(TABLE, KEY1);
+        assertTrue(Intrinsic.isDeleted(record));
+        assertNull(Intrinsic.getFirstUpdateAt(record));
+        assertNull(Intrinsic.getLastUpdateAt(record));
+        assertNull(Intrinsic.getLastMutateAt(record));
+
+        Audit audit = newAudit("test");
+
+        Date now = new Date(System.currentTimeMillis() - 5000);
+        // Normally using uuidForTimestamp is a bad idea, but for this test we need precise control over the UUID timestamps.
+        // So long as no two are created with the same time we'll be ok.
+        UUID changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value0").build(), audit, WriteConsistency.STRONG);
+        record = store.get(TABLE, KEY1);
+
+        // Record just created; all three timestamps should equal the initial timestamp
+        Date firstUpdateDate = now;
+        Date lastMutateDate = firstUpdateDate;
+        Date lastUpdateDate = firstUpdateDate;
+        verifyContentAndTimestamps(record, "value0", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Make a non-mutative change
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value0").build(), audit, WriteConsistency.STRONG);
+        record = store.get(TABLE, KEY1);
+        // Only the last update date should have changed
+        lastUpdateDate = now;
+        verifyContentAndTimestamps(record, "value0", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Make a mutative change
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        record = store.get(TABLE, KEY1);
+        // Both last update and mutate dates should have changed
+        lastMutateDate = lastUpdateDate = now;
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Compact the record twice; once to create the compaction record and once again to delete deltas
+        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        SystemClock.tick();
+        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        // Verify that we have no deltas and one compaction with compacted delta
+        assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
+        assertEquals(getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
+
+        // Don't change the record, but verify that the old values are still present
+        record = store.get(TABLE, KEY1);
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Repeat the compaction process, but this time the most recent delta is non-mutative
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        SystemClock.tick();
+        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        // Verify that we have no deltas and one compaction with compacted delta
+        assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
+        assertEquals(getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
+        // Only last update date should have changed
+        record = store.get(TABLE, KEY1);
+        lastUpdateDate = now;
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Make a non-mutative change
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        record = store.get(TABLE, KEY1);
+        // Only the last update date should have changed
+        lastUpdateDate = now;
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastMutateDate, lastUpdateDate);
+
+        // Make a mutative change
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value2").build(), audit, WriteConsistency.STRONG);
+        record = store.get(TABLE, KEY1);
+        // Both last update and mutate dates should have changed
+        lastMutateDate = lastUpdateDate = now;
+        verifyContentAndTimestamps(record, "value2", firstUpdateDate, lastMutateDate, lastUpdateDate);
+    }
+
+    @Test
+    public void testRecordTimestampsWithEventTags() throws Exception {
+        DataStore store = new InMemoryDataStore(new MetricRegistry());
+
+        TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
+        assertFalse(store.getTableExists(TABLE));
+        store.createTable(TABLE, options, Collections.<String,Object >emptyMap(), newAudit("create table"));
+        assertTrue(store.getTableExists(TABLE));
+
+        // Record does not exist initially, so all dates should not be present
+        Map<String, Object> record = store.get(TABLE, KEY1);
+        assertTrue(Intrinsic.isDeleted(record));
+        assertNull(Intrinsic.getFirstUpdateAt(record));
+        assertNull(Intrinsic.getLastUpdateAt(record));
+        assertNull(Intrinsic.getLastMutateAt(record));
+
+        Audit audit = newAudit("test");
+
+        Date now = new Date(System.currentTimeMillis() - 5000);
+        // Normally using uuidForTimestamp is a bad idea, but for this test we need precise control over the UUID timestamps.
+        // So long as no two are created with the same time we'll be ok.
+        UUID changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value0").build(), audit, WriteConsistency.STRONG);
+        Date firstUpdateDate = now;
+        // Perform a mutative update
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        Date lastContentMutateDate = now;
+        // Perform a non-mutative update
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        // Perform another non-mutative update, this time with different event tags
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.updateAll(
+                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG)),
+                ImmutableSet.of("tag1"));
+        Date lastMutateDate = now;
+        // Perform a final non-mutative update with the same event tags
+        now = new Date(now.getTime() + 1000);
+        changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
+        store.updateAll(
+                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG)),
+                ImmutableSet.of("tag1"));
+        Date lastUpdateDate = now;
+
+        // Verify the content and timestamps
+        record = store.get(TABLE, KEY1);
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastContentMutateDate, lastUpdateDate);
+
+        // Perform a compaction
+        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        // Get the compaction
+        List<Compaction> compactions = getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG));
+        assertEquals(compactions.size(), 1);
+        Compaction compaction = compactions.get(0);
+        // Verify the timestamps within the compaction
+        assertEquals(TimeUUIDs.getTimeMillis(compaction.getFirst()), firstUpdateDate.getTime());
+        assertEquals(TimeUUIDs.getTimeMillis(compaction.getCutoff()), lastUpdateDate.getTime());
+        assertEquals(TimeUUIDs.getTimeMillis(compaction.getLastMutation()), lastMutateDate.getTime());
+        assertEquals(TimeUUIDs.getTimeMillis(compaction.getLastContentMutation()), lastContentMutateDate.getTime());
+
+        // Re-verify the content and timestamps
+        record = store.get(TABLE, KEY1);
+        verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastContentMutateDate, lastUpdateDate);
+    }
+
+    private void verifyContentAndTimestamps(Map<String, Object> record, String expectedValue, Date expectedFirstUpdateDate,
+                                            Date expectedLastMutateDate, Date expectedLastUpdateDate) {
+        assertEquals(record.get("key"), expectedValue);
+        if (expectedFirstUpdateDate == null) {
+            assertNull(Intrinsic.getFirstUpdateAt(record));
+        } else {
+            assertEquals(Intrinsic.getFirstUpdateAt(record), expectedFirstUpdateDate);
+        }
+        if (expectedLastMutateDate == null) {
+            assertNull(Intrinsic.getLastMutateAt(record));
+        } else {
+            assertEquals(Intrinsic.getLastMutateAt(record), expectedLastMutateDate);
+        }
+        if (expectedLastUpdateDate == null) {
+            assertNull(Intrinsic.getLastUpdateAt(record));
+        } else {
+            assertEquals(Intrinsic.getLastUpdateAt(record), expectedLastUpdateDate);
+        }
     }
 
     private Audit newAudit(String comment) {

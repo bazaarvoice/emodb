@@ -402,6 +402,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (lastUpdateAt != null) {
             result.put(Intrinsic.LAST_UPDATE_AT, lastUpdateAt);
         }
+        String lastMutateAt = intrinsics.getLastMutateAt();
+        if (lastMutateAt != null) {
+            result.put(Intrinsic.LAST_MUTATE_AT, lastMutateAt);
+        }
         return result;
     }
 

@@ -24,4 +24,6 @@ public class IntrinsicsOnly {
     public Date firstUpdateAt;
     @JsonProperty (Intrinsic.LAST_UPDATE_AT)
     public Date lastUpdateAt;
+    @JsonProperty (Intrinsic.LAST_MUTATE_AT)
+    public Date lastMutateAt;
 }

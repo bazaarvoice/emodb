@@ -211,6 +211,7 @@ CREATE FUNCTION emo_table AS 'com.bazaarvoice.emodb.hive.udf.EmoTable';
 CREATE FUNCTION emo_coordinate AS 'com.bazaarvoice.emodb.hive.udf.EmoCoordinate';
 CREATE FUNCTION emo_first_update_at AS 'com.bazaarvoice.emodb.hive.udf.EmoFirstUpdateAt';
 CREATE FUNCTION emo_last_update_at AS 'com.bazaarvoice.emodb.hive.udf.EmoLastUpdateAt';
+CREATE FUNCTION emo_last_mutate_at AS 'com.bazaarvoice.emodb.hive.udf.EmoLastMutateAt';
 CREATE FUNCTION emo_text AS 'com.bazaarvoice.emodb.hive.udf.EmoText';
 CREATE FUNCTION emo_boolean AS 'com.bazaarvoice.emodb.hive.udf.EmoBoolean';
 CREATE FUNCTION emo_int AS 'com.bazaarvoice.emodb.hive.udf.EmoInt';

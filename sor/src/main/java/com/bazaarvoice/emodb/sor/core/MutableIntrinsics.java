@@ -18,6 +18,7 @@ class MutableIntrinsics implements Intrinsics {
     private boolean _deleted;
     private UUID _firstUpdateAt;
     private UUID _lastUpdateAt;
+    private UUID _lastMutateAt;
 
     static MutableIntrinsics create(Key key) {
         return new MutableIntrinsics(key);
@@ -96,6 +97,19 @@ class MutableIntrinsics implements Intrinsics {
     @Override
     public String getLastUpdateAt() {
         return asISOTimestamp(_lastUpdateAt);
+    }
+
+    UUID getLastMutateAtUuid() {
+        return _lastMutateAt;
+    }
+
+    void setLastMutateAt(UUID lastMutateAt) {
+        _lastMutateAt = lastMutateAt;
+    }
+
+    @Override
+    public String getLastMutateAt() {
+        return asISOTimestamp(_lastMutateAt);
     }
 
     @Override

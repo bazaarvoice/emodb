@@ -16,6 +16,7 @@ public class EmoFunctions {
                     .put("emo_coordinate", EmoCoordinate.class)
                     .put("emo_first_update_at", EmoFirstUpdateAt.class)
                     .put("emo_last_update_at", EmoLastUpdateAt.class)
+                    .put("emo_last_mutate_at", EmoLastMutateAt.class)
                     .put("emo_text", EmoText.class)
                     .put("emo_boolean", EmoBoolean.class)
                     .put("emo_int", EmoInt.class)
