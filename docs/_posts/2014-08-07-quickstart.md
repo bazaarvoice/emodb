@@ -2,7 +2,7 @@
 layout: post
 title: "EmoDB Quick Tutorial"
 date: 2016-05-24
-excerpt: "Guarantees of EmoDB"
+excerpt: "Quick Start Guide"
 tags: [Quickstart, EmoDB]
 type: [blog]
 ---

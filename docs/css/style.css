@@ -58,6 +58,10 @@
 		margin: 0 0 2em 0;
 	}
 
+	p.documentation, h3.documentation {
+		margin: 0 0 0 0;
+	}
+
 	h1, h2, h3, h4, h5, h6 {
 		color: inherit;
 		font-weight: 300;
@@ -319,33 +323,6 @@
 		top: -0.2em;
 	}
 
-	.icon.circle.fa-twitter {
-		background: #70aecd;
-		color: white;
-	}
-
-	.icon.circle.fa-twitter:hover {
-		background: #7fb7d2;
-	}
-
-	.icon.circle.fa-facebook {
-		background: #7490c3;
-		color: white;
-	}
-
-	.icon.circle.fa-facebook:hover {
-		background: #829bc9;
-	}
-
-	.icon.circle.fa-google-plus {
-		background: #db6b67;
-		color: white;
-	}
-
-	.icon.circle.fa-google-plus:hover {
-		background: #df7b77;
-	}
-
 	.icon.circle.fa-github {
 		background: #dcad8b;
 		color: white;
@@ -355,13 +332,13 @@
 		background: #e1b89b;
 	}
 
-	.icon.circle.fa-dribbble {
-		background: #da83ae;
+	.icon.circle.fa-envelope {
+		background: #5a71dc;
 		color: white;
 	}
 
-	.icon.circle.fa-dribbble:hover {
-		background: #df93b8;
+	.icon.circle.fa-envelope:hover {
+		background: #5c89f6;
 	}
 
 	.icon.featured {
