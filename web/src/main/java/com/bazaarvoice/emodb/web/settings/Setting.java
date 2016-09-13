@@ -2,8 +2,6 @@ package com.bazaarvoice.emodb.web.settings;
 
 import com.google.common.base.Supplier;
 
-import javax.annotation.Nullable;
-
 /**
  * Interface for a dynamic EmoDB setting.  Unlike system configuration which defines immutable attributes of the
  * system a setting should affect system behavior but also be adjustable, usually through an administration task.
@@ -43,5 +41,5 @@ public interface Setting<T> extends Supplier<T> {
      * center after the method returns; remote data centers will eventually see the updated value, typically in less
      * than one minute.
      */
-    void set(@Nullable T value);
+    void set(T value);
 }

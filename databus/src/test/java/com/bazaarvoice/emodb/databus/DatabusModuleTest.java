@@ -106,7 +106,7 @@ public class DatabusModuleTest {
                         .toInstance(ImmutableList.of(new ClusterInfo("Test Cluster", "Test Metric Cluster")));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
-                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(SuppressedEventCondition.class)
+                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
 
                 MetricRegistry metricRegistry = new MetricRegistry();

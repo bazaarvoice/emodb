@@ -94,7 +94,7 @@ public class DatabusClient implements AuthDatabus {
     }
 
     @Override
-    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents) {
+    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         checkNotNull(subscription, "subscription");
         checkNotNull(tableFilter, "tableFilter");
         try {
@@ -102,7 +102,7 @@ public class DatabusClient implements AuthDatabus {
                     .segment(subscription)
                     .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, SECONDS_PER_DAY * 30))
                     .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, SECONDS_PER_DAY * 30))
-                    .queryParam("ignoreSuppressedEvents", Boolean.toString(ignoreSuppressedEvents))
+                    .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
                     .build();
             _client.resource(uri)
                     .type(JSON_CONDITION_MEDIA_TYPE)

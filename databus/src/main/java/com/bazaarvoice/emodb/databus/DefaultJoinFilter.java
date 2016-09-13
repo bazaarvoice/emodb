@@ -11,12 +11,13 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for identifying the condition for suppressing events on the databus when
- * <code>ignoreSuppressedEvents</code> is enabled for a subscription.
+ * Guice binding annotation for identifying the configured condition to be joined to all databus subscriptions by
+ * default.  A subscriber may choose to decline adding the assisted filter to his subscription by enabling
+ * <code>includeDefaultJoinFilter</code> upon subscription.
  *
  * @see com.bazaarvoice.emodb.databus.api.Databus#subscribe(String, com.bazaarvoice.emodb.sor.condition.Condition, org.joda.time.Duration, org.joda.time.Duration, boolean)
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
-public @interface SuppressedEventCondition {
+public @interface DefaultJoinFilter {
 }

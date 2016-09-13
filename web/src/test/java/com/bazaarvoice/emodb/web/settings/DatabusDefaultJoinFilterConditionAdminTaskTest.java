@@ -18,15 +18,15 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
-public class DatabusSuppressedEventConditionAdminTaskTest {
+public class DatabusDefaultJoinFilterConditionAdminTaskTest {
 
     @Test
     public void testGetCurrentValue() throws Exception {
         Setting<Condition> setting = mock(Setting.class);
-        when(setting.get()).thenReturn(Conditions.alwaysFalse());
+        when(setting.get()).thenReturn(Conditions.alwaysTrue());
         TaskRegistry taskRegistry = mock(TaskRegistry.class);
 
-        DatabusSuppressedEventConditionAdminTask task = new DatabusSuppressedEventConditionAdminTask(setting, taskRegistry);
+        DatabusDefaultJoinFilterConditionAdminTask task = new DatabusDefaultJoinFilterConditionAdminTask(setting, taskRegistry);
 
         StringWriter out = new StringWriter();
         ImmutableMultimap<String, String> params = ImmutableMultimap.of();
@@ -34,41 +34,42 @@ public class DatabusSuppressedEventConditionAdminTaskTest {
 
         verify(taskRegistry).addTask(task);
         verify(setting, never()).set(any(Condition.class));
-        assertEquals(out.toString(), "alwaysFalse()\n");
+        assertEquals(out.toString(), "alwaysTrue()\n");
     }
 
     @Test
     public void testUpdateValue() throws Exception {
         Setting<Condition> setting = mock(Setting.class);
-        when(setting.get()).thenReturn(Conditions.alwaysFalse());
+        when(setting.get()).thenReturn(Conditions.alwaysTrue());
         TaskRegistry taskRegistry = mock(TaskRegistry.class);
 
-        DatabusSuppressedEventConditionAdminTask task = new DatabusSuppressedEventConditionAdminTask(setting, taskRegistry);
+        DatabusDefaultJoinFilterConditionAdminTask task = new DatabusDefaultJoinFilterConditionAdminTask(setting, taskRegistry);
 
         StringWriter out = new StringWriter();
-        ImmutableMultimap<String, String> params = ImmutableMultimap.of("value", "{..,\"~tags\":contains(\"re-etl\")}");
+        ImmutableMultimap<String, String> params = ImmutableMultimap.of("value", "not({..,\"~tags\":contains(\"re-etl\")})");
         task.execute(params, new PrintWriter(out));
 
         verify(taskRegistry).addTask(task);
-        verify(setting).set(Conditions.mapBuilder().matches("~tags", Conditions.contains("re-etl")).build());
+        verify(setting).set(Conditions.not(
+                Conditions.mapBuilder().matches("~tags", Conditions.contains("re-etl")).build()));
 
         // Simplify result by collapsing whitespace
         String actual = out.toString().replaceAll("\\s", " ").replaceAll("\\s{1,}", " ");
-        String expected = "Prior value: alwaysFalse() Updated value: {..,\"~tags\":contains(\"re-etl\")} ";
+        String expected = "Prior value: alwaysTrue() Updated value: not({..,\"~tags\":contains(\"re-etl\")}) ";
         assertEquals(actual, expected);
     }
 
     @Test
     public void testSetMultipleValuesFails() throws Exception {
         Setting<Condition> setting = mock(Setting.class);
-        when(setting.get()).thenReturn(Conditions.alwaysFalse());
+        when(setting.get()).thenReturn(Conditions.alwaysTrue());
         TaskRegistry taskRegistry = mock(TaskRegistry.class);
 
-        DatabusSuppressedEventConditionAdminTask task = new DatabusSuppressedEventConditionAdminTask(setting, taskRegistry);
+        DatabusDefaultJoinFilterConditionAdminTask task = new DatabusDefaultJoinFilterConditionAdminTask(setting, taskRegistry);
 
         StringWriter out = new StringWriter();
         ImmutableMultimap<String, String> params = ImmutableMultimap.of(
-                "value", "{..,\"~tags\":contains(\"tag1\")}", "value", "{..,\"~tags\":contains(\"tag1\")}");
+                "value", "not({..,\"~tags\":contains(\"tag1\")})", "value", "not({..,\"~tags\":contains(\"tag1\")})");
 
         task.execute(params, new PrintWriter(out));
 
@@ -84,10 +85,10 @@ public class DatabusSuppressedEventConditionAdminTaskTest {
         when(setting.get()).thenReturn(Conditions.alwaysFalse());
         TaskRegistry taskRegistry = mock(TaskRegistry.class);
 
-        DatabusSuppressedEventConditionAdminTask task = new DatabusSuppressedEventConditionAdminTask(setting, taskRegistry);
+        DatabusDefaultJoinFilterConditionAdminTask task = new DatabusDefaultJoinFilterConditionAdminTask(setting, taskRegistry);
 
         StringWriter out = new StringWriter();
-        ImmutableMultimap<String, String> params = ImmutableMultimap.of("value", "{..,\"typo\":here}");
+        ImmutableMultimap<String, String> params = ImmutableMultimap.of("value", "not({..,\"typo\":here})");
         task.execute(params, new PrintWriter(out));
 
         verify(taskRegistry).addTask(task);

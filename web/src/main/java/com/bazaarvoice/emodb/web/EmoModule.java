@@ -29,11 +29,11 @@ import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkMapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkTimestampSerializer;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
-import com.bazaarvoice.emodb.databus.SuppressedEventCondition;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
@@ -83,7 +83,7 @@ import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
 import com.bazaarvoice.emodb.web.resources.databus.LongPollingExecutorServices;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
-import com.bazaarvoice.emodb.web.settings.DatabusSuppressedEventConditionAdminTask;
+import com.bazaarvoice.emodb.web.settings.DatabusDefaultJoinFilterConditionAdminTask;
 import com.bazaarvoice.emodb.web.settings.Setting;
 import com.bazaarvoice.emodb.web.settings.SettingsModule;
 import com.bazaarvoice.emodb.web.settings.SettingsRegistry;
@@ -333,9 +333,9 @@ public class EmoModule extends AbstractModule {
             // Used by the databus resource to support long polling
             bind(DatabusResourcePoller.class).asEagerSingleton();
             // Bind the suppressed event condition setting as the supplier
-            bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(SuppressedEventCondition.class)
-                    .to(Key.get(new TypeLiteral<Setting<Condition>>(){}, SuppressedEventCondition.class));
-            bind(DatabusSuppressedEventConditionAdminTask.class).asEagerSingleton();
+            bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
+                    .to(Key.get(new TypeLiteral<Setting<Condition>>(){}, DefaultJoinFilter.class));
+            bind(DatabusDefaultJoinFilterConditionAdminTask.class).asEagerSingleton();
 
             install(new DatabusModule(_serviceMode, _environment.metrics()));
         }
@@ -396,9 +396,9 @@ public class EmoModule extends AbstractModule {
             return withComponentNamespace(curator, "bus");
         }
 
-        @Provides @Singleton @SuppressedEventCondition
-        Setting<Condition> provideSuppressedEventConditionSupplier(SettingsRegistry settingsRegistry) {
-            return settingsRegistry.register("databus.suppressedEventCondition", Condition.class, Conditions.alwaysFalse());
+        @Provides @Singleton @DefaultJoinFilter
+        Setting<Condition> provideDefaultJoinFilterConditionSupplier(SettingsRegistry settingsRegistry) {
+            return settingsRegistry.register("databus.defaultJoinFilterCondition", Condition.class, Conditions.alwaysTrue());
         }
     }
 

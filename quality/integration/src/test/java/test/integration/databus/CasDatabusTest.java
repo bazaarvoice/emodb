@@ -13,12 +13,12 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
-import com.bazaarvoice.emodb.databus.SuppressedEventCondition;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterModule;
@@ -142,7 +142,7 @@ public class CasDatabusTest {
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
-                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(SuppressedEventCondition.class)
+                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;

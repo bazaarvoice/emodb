@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
-import static org.testng.Assert.assertNull;
 import static org.testng.Assert.fail;
 
 public class SettingsManagerTest {
@@ -68,14 +67,14 @@ public class SettingsManagerTest {
 
     @Test
     public void testDoubleRegistration() {
-        Setting<String> setting = _settingsManager.register("test2", String.class, null);
+        Setting<String> setting = _settingsManager.register("test2", String.class, "string");
 
         // Re-register with same parameters
-        assertSame(_settingsManager.register("test2", String.class, null), setting);
+        assertSame(_settingsManager.register("test2", String.class, "string"), setting);
 
         // Re-register with different parameters
         try {
-            _settingsManager.register("test2", Boolean.class, null);
+            _settingsManager.register("test2", Boolean.class, true);
             fail("type changed");
         } catch (IllegalStateException e) {
             // Ok
@@ -90,27 +89,23 @@ public class SettingsManagerTest {
 
     @Test
     public void testCaching() {
-        Setting<String> setting = _settingsManager.register("test3", String.class, null);
-        assertNull(setting.get());
+        Setting<String> setting = _settingsManager.register("test3", String.class, "original");
+        assertEquals(setting.get(), "original");
 
         // Update the value in the backend without going through the settings API
         _dataStore.update("__system:settings", "test3", TimeUUIDs.newUUID(),
-                Deltas.mapBuilder().put("json", "\"newvalue\"").build(),
+                Deltas.mapBuilder().put("json", "\"newvalue\"").put("settingVersion", 1).build(),
                 new AuditBuilder().setComment("test").build());
 
         for (int sec : new Integer[] {0, 1, 59, 60, 120}) {
             when(_ticker.read()).thenReturn(START_TIME_NS + TimeUnit.SECONDS.toNanos(sec));
-            if (sec < 60) {
-                assertNull(setting.get());
-            } else {
-                assertEquals(setting.get(), "newvalue");
-            }
+            assertEquals(setting.get(), sec < 60 ? "original" : "newvalue");
         }
     }
 
     @Test
     public void testUpdateNotification() throws Exception {
-        Setting<String> setting = _settingsManager.register("test4", String.class, null);
+        Setting<String> setting = _settingsManager.register("test4", String.class, "original");
         setting.set("foo");
         verify(_lastUpdated).set(TimeUnit.NANOSECONDS.toMillis(START_TIME_NS));
     }
@@ -121,12 +116,12 @@ public class SettingsManagerTest {
         ArgumentCaptor<ValueStoreListener> captor = ArgumentCaptor.forClass(ValueStoreListener.class);
         verify(_lastUpdated).addListener(captor.capture());
 
-        Setting<String> setting = _settingsManager.register("test5", String.class, null);
-        assertNull(setting.get());
+        Setting<String> setting = _settingsManager.register("test5", String.class, "original");
+        assertEquals(setting.get(), "original");
         // Change the value
         setting.set("foo");
-        // Time hasn't advanced, so should still be null
-        assertNull(setting.get());
+        // Time hasn't advanced, so should still be original
+        assertEquals(setting.get(), "original");
 
         // Don't advance time, but call the value store listener
         captor.getValue().valueChanged();

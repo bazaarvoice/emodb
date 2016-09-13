@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.settings;
 
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.databus.SuppressedEventCondition;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.deser.ParseException;
@@ -14,20 +14,20 @@ import com.google.inject.Inject;
  *
  * View the current condition:
  * <code>
- *     $ curl -XPOST "localhost:8081/tasks/databus-suppressed-event-condition"
+ *     $ curl -XPOST "localhost:8081/tasks/databus-default-join-filter-condition"
  * </code>
  *
  * Update the condition condition:
  * <code>
- *     $ curl -XPOST 'localhost:8081/tasks/databus-suppressed-event-condition?value=\{..,"~tags":contains("re-etl")\}'
+ *     $ curl -XPOST 'localhost:8081/tasks/databus-default-join-filter-condition?value=\{..,"~tags":contains("re-etl")\}'
  * </code>
  */
-public class DatabusSuppressedEventConditionAdminTask extends SettingAdminTask<Condition> {
+public class DatabusDefaultJoinFilterConditionAdminTask extends SettingAdminTask<Condition> {
 
     @Inject
-    public DatabusSuppressedEventConditionAdminTask(@SuppressedEventCondition Setting<Condition> setting,
-                                                    TaskRegistry taskRegistry) {
-        super("databus-suppressed-event-condition", setting);
+    public DatabusDefaultJoinFilterConditionAdminTask(@DefaultJoinFilter Setting<Condition> setting,
+                                                      TaskRegistry taskRegistry) {
+        super("databus-default-join-filter-condition", setting);
         taskRegistry.addTask(this);
     }
 

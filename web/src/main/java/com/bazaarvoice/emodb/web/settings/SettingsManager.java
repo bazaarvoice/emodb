@@ -29,7 +29,6 @@ import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.lang.reflect.Type;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +52,13 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     private final String VALUE_ATTRIBUTE = "json";
 
     /**
+     * Proactively store a settings version.  If the format for stored settings changes or the persisted
+     * attributes change then having a version system in-place helps with backwards compatibility.
+     */
+    private final String VERSION_ATTRIBUTE = "settingVersion";
+    private final int CURRENT_SETTING_VERSION = 1;
+
+    /**
      * Changes made in the local data center are propagated immediately using the <code>_lastUpdated</code>
      * value store.  However, if the settings are changed in a remote data center then we do not receive active
      * notification.  For this reason the settings are cached in memory for a limited amount of time before they
@@ -61,8 +67,8 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     private final static Duration DEFAULT_CACHE_INVALIDATION_TIME = Duration.standardMinutes(1);
 
     private final ValueStore<Long> _lastUpdated;
-    private final Map<String, SettingImpl> _availableSettings = Maps.newConcurrentMap();
-    private final LoadingCache<SettingImpl<?>, SettingValue<?>> _settingsCache;
+    private final Map<String, RegisteredSetting<?>> _registeredSettings = Maps.newConcurrentMap();
+    private final LoadingCache<SettingMetadata<?>, Object> _settingsCache;
     private final DataStore _dataStore;
     private final Supplier<String> _settingsTable;
     private final String _settingsTablePlacement;
@@ -99,15 +105,21 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
         _settingsCache = CacheBuilder.newBuilder()
                 .ticker(ticker)
                 .expireAfterWrite(cacheInvalidationTime.getMillis(), TimeUnit.MILLISECONDS)
-                .build(new CacheLoader<SettingImpl<?>, SettingValue<?>>() {
+                .build(new CacheLoader<SettingMetadata<?>, Object>() {
                     @Override
-                    public SettingValue<?> load(SettingImpl<?> setting) throws Exception {
-                        Map<String, Object> valueMap = _dataStore.get(_settingsTable.get(), setting.getName(), ReadConsistency.STRONG);
+                    public Object load(SettingMetadata<?> metadata) throws Exception {
+                        Map<String, Object> valueMap = _dataStore.get(
+                                _settingsTable.get(), metadata.getName(), ReadConsistency.STRONG);
+
                         if (Intrinsic.isDeleted(valueMap)) {
-                            return SettingValue.absent();
+                            return metadata.getDefaultValue();
                         }
-                        String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
-                        return SettingValue.present(JsonHelper.fromJson(rawValue, setting.getTypeReference()));
+                        int version = Objects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
+                        if (version == CURRENT_SETTING_VERSION) {
+                            String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
+                            return JsonHelper.fromJson(rawValue, metadata.getTypeReference());
+                        }
+                        throw new IllegalStateException("Setting stored with unparseable version: " + version);
                     }
                 });
 
@@ -127,30 +139,64 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     }
 
     @Override
-    public <T> Setting<T> register(String name, Class<T> clazz, @Nullable T defaultValue) {
+    public <T> Setting<T> register(String name, Class<T> clazz, T defaultValue) {
         return register(name, asTypeReference(clazz), defaultValue);
     }
 
     @Override
-    public <T> Setting<T> register(String name, TypeReference<T> typeReference, @Nullable T defaultValue) {
+    public <T> Setting<T> register(String name, TypeReference<T> typeReference, T defaultValue) {
         checkNotNull(name, "name");
         checkNotNull(typeReference, "typeReference");
-        SettingImpl<T> newSetting = new SettingImpl<>(name, typeReference, defaultValue);
-        SettingImpl<?> existingSetting = _availableSettings.putIfAbsent(name, newSetting);
-        if (existingSetting != null) {
-            checkState(existingSetting.metadataEquals(newSetting),
+        checkNotNull(defaultValue, "defaultValue");
+
+        SettingMetadata<T> metadata = new SettingMetadata<>(name, typeReference, defaultValue);
+        Setting<T> setting = createSetting(metadata);
+        RegisteredSetting newSetting = new RegisteredSetting<>(metadata, setting);
+
+        RegisteredSetting<?> registered = _registeredSettings.putIfAbsent(name, newSetting);
+        if (registered != null) {
+            checkState(registered.metadata.equals(metadata),
                     "Setting %s already registered with incompatible parameters", name);
             //noinspection unchecked
-            return (SettingImpl<T>) existingSetting;
+            return (Setting<T>) registered.setting;
         }
-        return newSetting;
+        return setting;
     }
 
-    private void set(String setting, Object value) {
-        Delta delta =  Deltas.mapBuilder().put(VALUE_ATTRIBUTE, JsonHelper.asJson(value)).build();
+    private <T> Setting<T> createSetting(final SettingMetadata<T> metadata) {
+        return new Setting<T>() {
+            @Override
+            public String getName() {
+                return metadata.getName();
+            }
+
+            @Override
+            public T get() {
+                return SettingsManager.this.get(metadata);
+            }
+
+            @Override
+            public void set(T value) {
+                SettingsManager.this.set(metadata, value);
+            }
+        };
+    }
+
+    private <T> T get(SettingMetadata<T> metadata) {
+        //noinspection unchecked
+        return (T) _settingsCache.getUnchecked(metadata);
+    }
+
+    private <T> void set(SettingMetadata<T> metadata, T value) {
+        checkNotNull(value, "value");
+
+        Delta delta =  Deltas.mapBuilder()
+                .put(VALUE_ATTRIBUTE, JsonHelper.asJson(value))
+                .put(VERSION_ATTRIBUTE, CURRENT_SETTING_VERSION)
+                .build();
 
         // Write the delta to the store
-        _dataStore.update(_settingsTable.get(), setting, TimeUUIDs.newUUID(), delta,
+        _dataStore.update(_settingsTable.get(), metadata.getName(), TimeUUIDs.newUUID(), delta,
                 new AuditBuilder().setLocalHost().setComment("Updated setting").build(), WriteConsistency.STRONG);
 
         // Notify all nodes in the local cluster to refresh immediately; remote clusters will eventually see the update
@@ -172,10 +218,11 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     public <T> Setting<T> getSetting(String name, TypeReference<T> typeReference) {
         checkNotNull(name, "name");
         checkNotNull(typeReference, "typeReference");
-        SettingImpl<?> setting = _availableSettings.get(name);
-        if (setting != null && setting.getTypeReference().getType().equals(typeReference.getType())) {
+
+        RegisteredSetting<?> registered = _registeredSettings.get(name);
+        if (registered != null && registered.metadata.getTypeReference().getType().equals(typeReference.getType())) {
             //noinspection unchecked
-            return (Setting<T>) setting;
+            return (Setting<T>) registered.setting;
         }
         return null;
     }
@@ -183,8 +230,8 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     @Override
     public Map<String, Object> getAll() {
         Map<String, Object> settings = Maps.newHashMap();
-        for (SettingImpl<?> setting : _availableSettings.values()) {
-            settings.put(setting.getName(), setting.get());
+        for (RegisteredSetting<?> registered : _registeredSettings.values()) {
+            settings.put(registered.metadata.getName(), registered.setting.get());
         }
         return settings;
     }
@@ -199,80 +246,14 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
         };
     }
 
-    private final class SettingImpl<T> implements Setting<T> {
+    // Simple internal class pairing a setting and its metadata
+    private final class RegisteredSetting<T> {
+        SettingMetadata<T> metadata;
+        Setting<T> setting;
 
-        private final String _name;
-        private final TypeReference<T> _typeReference;
-        private final T _defaultValue;
-
-        private SettingImpl(String name, TypeReference<T> typeReference, T defaultValue) {
-            _name = name;
-            _typeReference = typeReference;
-            _defaultValue = defaultValue;
-        }
-
-        @Override
-        public String getName() {
-            return _name;
-        }
-
-        private TypeReference<T> getTypeReference() {
-            return _typeReference;
-        }
-
-        @Override
-        public T get() {
-            //noinspection unchecked
-            SettingValue<T> value = (SettingValue<T>) _settingsCache.getUnchecked(this);
-            if (value.isPresent()) {
-                return value.getValue();
-            }
-            return _defaultValue;
-        }
-
-        @Override
-        public void set(@Nullable T value) {
-            SettingsManager.this.set(_name, value);
-        }
-
-        /**
-         * Returns true if the provided setting instance monitors the same exact setting as this instance.
-         * Practically the same as {@link Object#equals(Object)} but named differently to avoid confusion
-         * since this is comparing the metadata for the setting and not the setting's current value.
-         */
-        public boolean metadataEquals(SettingImpl<?> setting) {
-            return _name.equals(setting._name) &&
-                    _typeReference.getType().equals(setting._typeReference.getType()) &&
-                    Objects.equal(_defaultValue, setting._defaultValue);
-        }
-    }
-
-    /**
-     * Class similar to Optional except supports null values.
-     */
-    private final static class SettingValue<T> {
-        private final boolean _present;
-        private final T _value;
-
-        private static <T> SettingValue<T> absent() {
-            return new SettingValue<>(false, null);
-        }
-
-        private static <T> SettingValue<T> present(@Nullable T value) {
-            return new SettingValue<>(true, value);
-        }
-
-        private SettingValue(boolean present, T value) {
-            _present = present;
-            _value = value;
-        }
-
-        private boolean isPresent() {
-            return _present;
-        }
-
-        private T getValue() {
-            return _value;
+        private RegisteredSetting(SettingMetadata<T> metadata, Setting<T> setting) {
+            this.metadata = metadata;
+            this.setting = setting;
         }
     }
 }
