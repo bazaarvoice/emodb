@@ -210,7 +210,7 @@ public class DataStoreTest {
         // Make a non-mutative change
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
-        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value0").build(), audit, WriteConsistency.STRONG);
+        store.update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG);
         record = store.get(TABLE, KEY1);
         // Only the last update date should have changed
         lastUpdateDate = now;
@@ -240,7 +240,7 @@ public class DataStoreTest {
         // Repeat the compaction process, but this time the most recent delta is non-mutative
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
-        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        store.update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG);
         store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
         SystemClock.tick();
         store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
@@ -255,7 +255,7 @@ public class DataStoreTest {
         // Make a non-mutative change
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
-        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        store.update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG);
         record = store.get(TABLE, KEY1);
         // Only the last update date should have changed
         lastUpdateDate = now;
@@ -297,25 +297,27 @@ public class DataStoreTest {
         Date firstUpdateDate = now;
         // Perform a mutative update
         now = new Date(now.getTime() + 1000);
+        // This will be the last time the content is mutated in this test; save the date
+        Date lastContentMutateDate = now;
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
         store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
-        Date lastContentMutateDate = now;
         // Perform a non-mutative update
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
-        store.update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG);
+        store.update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG);
         // Perform another non-mutative update, this time with different event tags
         now = new Date(now.getTime() + 1000);
+        // This will be the last time the content or tags are mutated in this test; save the date
+        Date lastMutateDate = now;
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
         store.updateAll(
-                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG)),
+                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG)),
                 ImmutableSet.of("tag1"));
-        Date lastMutateDate = now;
         // Perform a final non-mutative update with the same event tags
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
         store.updateAll(
-                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.mapBuilder().put("key", "value1").build(), audit, WriteConsistency.STRONG)),
+                ImmutableList.of(new Update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG)),
                 ImmutableSet.of("tag1"));
         Date lastUpdateDate = now;
 

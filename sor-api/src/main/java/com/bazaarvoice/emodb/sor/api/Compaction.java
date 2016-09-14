@@ -46,7 +46,11 @@ public final class Compaction {
     /**
      * Like {@link #_lastContentMutation} except this is the UUID of the most consistent delta which changed the
      * resolved object or its metadata (namely, the event tags).  Any delta between this and the cutoff do not need to
-     * be posted to the databus because they are redundant to the subscriber.
+     * be posted to the databus because they are redundant to the subscriber.  For example, assume an update is made
+     * at time t1 with tags ["alpha"].  Later, at time t2 a no-op update <code>..</code> is made with tags ["beta"].
+     * This second update would change <code>_lastMutation</code> but not <code>_lastContentMutation</code>.  Finally,
+     * a third no-op delta at time t3 with the same tags as the previous update, ["beta"], would change neither
+     * <code>_lastMutation</code> nor <code>_lastContentMutation</code>.
      */
     private final UUID _lastMutation;
 
