@@ -229,6 +229,7 @@ public class CasDataStoreTest {
                 put("~signature", Intrinsic.getSignature(content1)).
                 put("~firstUpdateAt", content1.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content1.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content1.get(Intrinsic.LAST_MUTATE_AT)).
                 put("name", "Bob").
                 put("state", "APPROVED").
                 build();
@@ -247,6 +248,7 @@ public class CasDataStoreTest {
                 put("~signature", Intrinsic.getSignature(content2)).
                 put("~firstUpdateAt", content2.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content2.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content2.get(Intrinsic.LAST_MUTATE_AT)).
                 put("name", "Joe").
                 build());
 
@@ -270,6 +272,7 @@ public class CasDataStoreTest {
                 put("~signature", Intrinsic.getSignature(content4)).
                 put("~firstUpdateAt", content4.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content4.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content4.get(Intrinsic.LAST_MUTATE_AT)).
                 put("name", "Alice").
                 put("state", "APPROVED").
                 put("delta1", "value1").
@@ -310,6 +313,7 @@ public class CasDataStoreTest {
                 put("~signature", Intrinsic.getSignature(content2Deleted)).
                 put("~firstUpdateAt", content2.get(Intrinsic.FIRST_UPDATE_AT)).
                 put("~lastUpdateAt", content2Deleted.get(Intrinsic.LAST_UPDATE_AT)).
+                put("~lastMutateAt", content2Deleted.get(Intrinsic.LAST_MUTATE_AT)).
                 build();
         assertEquals(content2Deleted, content2DeletedExpected);
         assertTrue((Intrinsic.getLastUpdateAt(content2Deleted)).compareTo(Intrinsic.getLastUpdateAt(content2)) >= 0);

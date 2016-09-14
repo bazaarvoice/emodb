@@ -50,4 +50,9 @@ public class AuthorizationIntrinsics implements Intrinsics {
     public String getLastUpdateAt() {
         throw new UnsupportedOperationException("Cannot evaluate last update time in table authorization context");
     }
+
+    @Override
+    public String getLastMutateAt() {
+        throw new UnsupportedOperationException("Cannot evaluate last mutate time in table authorization context");
+    }
 }

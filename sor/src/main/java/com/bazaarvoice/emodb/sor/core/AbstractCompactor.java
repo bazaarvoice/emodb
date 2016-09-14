@@ -91,6 +91,7 @@ public abstract class AbstractCompactor {
                     compaction.getFirst(),
                     compaction.getCutoff(),
                     compaction.getCutoffSignature(),
+                    compaction.getLastContentMutation(),
                     compaction.getLastMutation(),
                     pendingCompaction.getStartingDelta(), compaction.getLastTags());
             resolver = new DefaultResolver(intrinsics, compactionInfo);

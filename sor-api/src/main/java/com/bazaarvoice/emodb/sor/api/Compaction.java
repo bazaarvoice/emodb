@@ -38,8 +38,19 @@ public final class Compaction {
     private Set<String> _lastTags;
 
     /**
-     * UUID of the most recent consistent delta which changed the resolved object deleted by compaction.
-     * Any delta between this and the cutoff are redundant.
+     * UUID of the most recent consistent delta which changed the resolved object deleted by compaction.  Any delta
+     * between this and the cutoff resolve to the same content, excluding intrinsics such as version and signature.
+     */
+     private final UUID _lastContentMutation;
+
+    /**
+     * Like {@link #_lastContentMutation} except this is the UUID of the most consistent delta which changed the
+     * resolved object or its metadata (namely, the event tags).  Any delta between this and the cutoff do not need to
+     * be posted to the databus because they are redundant to the subscriber.  For example, assume an update is made
+     * at time t1 with tags ["alpha"].  Later, at time t2 a no-op update <code>..</code> is made with tags ["beta"].
+     * This second update would change <code>_lastMutation</code> but not <code>_lastContentMutation</code>.  Finally,
+     * a third no-op delta at time t3 with the same tags as the previous update, ["beta"], would change neither
+     * <code>_lastMutation</code> nor <code>_lastContentMutation</code>.
      */
     private final UUID _lastMutation;
 
@@ -47,16 +58,19 @@ public final class Compaction {
                       @Nullable UUID first,
                       @Nullable UUID cutoff,
                       @Nullable String cutoffSignature,
+                      @Nullable UUID lastContentMutation,
                       @Nullable UUID lastMutation) {
-        this(count, first, cutoff, cutoffSignature, lastMutation, null, null);
+        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, null, null);
     }
 
     public Compaction(long count,
                       @Nullable UUID first,
                       @Nullable UUID cutoff,
                       @Nullable String cutoffSignature,
-                      @Nullable UUID lastMutation, Delta compactedDelta) {
-        this(count, first, cutoff, cutoffSignature, lastMutation, compactedDelta, null);
+                      @Nullable UUID lastContentMutation,
+                      @Nullable UUID lastMutation,
+                      Delta compactedDelta) {
+        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, compactedDelta, null);
     }
 
     @JsonCreator
@@ -64,6 +78,7 @@ public final class Compaction {
                       @JsonProperty("first") @Nullable UUID first,
                       @JsonProperty("cutoff") @Nullable UUID cutoff,
                       @JsonProperty("cutoffSignature") @Nullable String cutoffSignature,
+                      @JsonProperty("lastContentMutation") @Nullable UUID lastContentMutation,
                       @JsonProperty("lastMutation") @Nullable UUID lastMutation,
                       @JsonProperty("compactedDelta") @Nullable Delta compactedDelta,
                       @JsonProperty("lastTags") @Nullable Set<String> lastTags) {
@@ -74,6 +89,9 @@ public final class Compaction {
         _first = first;
         _cutoff = cutoff;
         _cutoffSignature = cutoffSignature;
+        // For historical reasons there may exist grandfathered-in compactions where the last mutation was recorded
+        // but not the last content mutation.  In these cases substitute the last mutation if available
+        _lastContentMutation = lastContentMutation != null ? lastContentMutation : lastMutation;
         _lastMutation = lastMutation;
         _compactedDelta = compactedDelta;
         _lastTags = lastTags == null ? ImmutableSet.<String>of() : lastTags;
@@ -86,6 +104,10 @@ public final class Compaction {
 
     public UUID getFirst() {
         return _first;
+    }
+
+    public UUID getLastContentMutation() {
+        return _lastContentMutation;
     }
 
     public UUID getLastMutation() {
@@ -129,11 +151,12 @@ public final class Compaction {
                 Objects.equal(_first, that.getFirst()) &&
                 Objects.equal(_cutoff, that.getCutoff()) &&
                 Objects.equal(_cutoffSignature, that.getCutoffSignature()) &&
-                Objects.equal(_lastMutation, that.getLastMutation());
+                Objects.equal(_lastMutation, that.getLastMutation()) &&
+                Objects.equal(_lastContentMutation, that.getLastContentMutation());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_count, _first, _cutoff, _cutoffSignature, _lastMutation);
+        return Objects.hashCode(_count, _first, _cutoff, _cutoffSignature, _lastMutation, _lastContentMutation);
     }
 }

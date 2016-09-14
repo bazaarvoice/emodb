@@ -53,7 +53,7 @@ public class ChangeJsonTest {
         UUID first = TimeUUIDs.newUUID();
         UUID cutoff = TimeUUIDs.newUUID();
         String cutoffSignature = "00000000000000000000000000000000";
-        Compaction compaction = new Compaction(3, first, cutoff, cutoffSignature, cutoff);
+        Compaction compaction = new Compaction(3, first, cutoff, cutoffSignature, cutoff, cutoff);
         Change expected = new ChangeBuilder(changeId).with(delta).with(compaction).build();
 
         SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
@@ -64,7 +64,7 @@ public class ChangeJsonTest {
                 "\"timestamp\":\"" + dateFmt.format(TimeUUIDs.getDate(changeId)) + "\"," +
                 "\"id\":\"" + changeId + "\"," +
                 "\"delta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\"," +
-                "\"compaction\":{\"count\":3,\"first\":\"" + first + "\",\"cutoff\":\"" + cutoff + "\",\"cutoffSignature\":\"00000000000000000000000000000000\",\"lastMutation\":\"" + cutoff + "\",\"lastTags\":[]}," +
+                "\"compaction\":{\"count\":3,\"first\":\"" + first + "\",\"cutoff\":\"" + cutoff + "\",\"cutoffSignature\":\"00000000000000000000000000000000\",\"lastContentMutation\":\"" + cutoff + "\",\"lastMutation\":\"" + cutoff + "\",\"lastTags\":[]}," +
                 "\"tags\":[]}");
 
         Change actual = JsonHelper.fromJson(string, Change.class);
@@ -79,7 +79,7 @@ public class ChangeJsonTest {
         UUID first = TimeUUIDs.newUUID();
         UUID cutoff = TimeUUIDs.newUUID();
         String cutoffSignature = "00000000000000000000000000000000";
-        Compaction compaction = new Compaction(3, first, cutoff, cutoffSignature, cutoff, delta);
+        Compaction compaction = new Compaction(3, first, cutoff, cutoffSignature, cutoff, cutoff, delta);
         Change expected = new ChangeBuilder(changeId).with(delta).with(compaction).build();
 
         SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
@@ -90,7 +90,7 @@ public class ChangeJsonTest {
                 "\"timestamp\":\"" + dateFmt.format(TimeUUIDs.getDate(changeId)) + "\"," +
                 "\"id\":\"" + changeId + "\"," +
                 "\"delta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\"," +
-                "\"compaction\":{\"count\":3,\"first\":\"" + first + "\",\"cutoff\":\"" + cutoff + "\",\"cutoffSignature\":\"00000000000000000000000000000000\",\"lastMutation\":\"" + cutoff + "\",\"compactedDelta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\",\"lastTags\":[]}," +
+                "\"compaction\":{\"count\":3,\"first\":\"" + first + "\",\"cutoff\":\"" + cutoff + "\",\"cutoffSignature\":\"00000000000000000000000000000000\",\"lastContentMutation\":\"" + cutoff + "\",\"lastMutation\":\"" + cutoff + "\",\"compactedDelta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\",\"lastTags\":[]}," +
                 "\"tags\":[]}");
 
         Change actual = JsonHelper.fromJson(string, Change.class);

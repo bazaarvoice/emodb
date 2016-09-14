@@ -82,6 +82,8 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
             return intrinsics.getFirstUpdateAt();
         } else if (Intrinsic.LAST_UPDATE_AT.equals(name)) {
             return intrinsics.getLastUpdateAt();
+        } else if (Intrinsic.LAST_MUTATE_AT.equals(name)) {
+            return intrinsics.getLastMutateAt();
         } else if (Intrinsic.PLACEMENT.equals(name)) {
             return intrinsics.getTablePlacement();
         } else {

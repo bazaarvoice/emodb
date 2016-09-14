@@ -14,5 +14,7 @@ public interface Intrinsics {
 
     String getLastUpdateAt();
 
+    String getLastMutateAt();
+
     String getTablePlacement();
 }

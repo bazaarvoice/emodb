@@ -42,6 +42,11 @@ class TableFilterIntrinsics implements Intrinsics {
     }
 
     @Override
+    public String getLastMutateAt() {
+        throw new UnsupportedOperationException(Intrinsic.LAST_MUTATE_AT);
+    }
+
+    @Override
     public String getTablePlacement() {
         return _table.getOptions().getPlacement();
     }
