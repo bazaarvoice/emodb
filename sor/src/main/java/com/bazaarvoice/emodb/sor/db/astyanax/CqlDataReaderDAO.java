@@ -86,6 +86,15 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private static final int RECORD_CACHE_SIZE = 20;
     private static final int RECORD_SOFT_CACHE_SIZE = 10;
 
+    /**
+     * Depending on the placement and type of data being queried (delta, audit, or delta history) the names of the
+     * columns being queried can change.  However, by quering the columns in a fixed well-known order in each
+     * {@link QueryBuilder#select()} the results can be efficiently read by position rather than name.
+     */
+    private static final int ROW_KEY_RESULT_SET_COLUMN = 0;
+    private static final int CHANGE_ID_RESULT_SET_COLUMN = 1;
+    private static final int VALUE_RESULT_SET_COLUMN = 2;
+
     private final DataReaderDAO _astyanaxReaderDAO;
     private final ChangeEncoder _changeEncoder;
     private final PlacementCache _placementCache;
@@ -93,9 +102,23 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final Timer _readBatchTimer;
 
     private volatile boolean _alwaysDelegateToAstyanax = false;
-    private volatile boolean _asyncCqlRandomSeeks = false;
+
+    /**
+     * Fetch sizes determine the number of rows the CQL driver will stream into memory for a given query.  For example,
+     * if a query contains 1,000 matching rows and the fetch size is 100 then it will be streamed from Cassandra in
+     * batches of 100 rows.  This helps limit the memory requirements for queries with extremely large result sets.
+     */
     private volatile int _singleRowFetchSize = DEFAULT_SINGLE_ROW_FETCH_SIZE;
     private volatile int _multiRowFetchSize = DEFAULT_MULTI_ROW_FETCH_SIZE;
+
+    /**
+     * Prefetch limits determine the point at which more results are asynchronously fetched for an open query.  For
+     * example, assume a query has a fetch size of 500.  After fetching and iterating over the first 500 rows the CQL
+     * driver synchronously fetches the next 500 rows in the result set.  This results in a synchronous delay iterating
+     * to the 501st row.  With a prefetch limit of 200, for example, the next 500 rows are asynchronously fetched once
+     * the first 300 rows have been iterated from the last fetch and there are 200 rows remaining in memory.  This
+     * decreases or possibly eliminates the fetch delay at the cost of requiring more room in memory for result rows.
+     */
     private volatile int _singleRowPrefetchLimit = DEFAULT_SINGLE_ROW_PREFETCH_LIMIT;
     private volatile int _multiRowPrefetchLimit = DEFAULT_MULTI_ROW_PREFETCH_LIMIT;
 
@@ -152,12 +175,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // Return an iterator that will loop over the placements and perform a query for each placement and
         // return the resulting decoded rows.
         return touch(Iterators.concat(Iterators.transform(placementMap.asMap().entrySet().iterator(),
-                new Function<Map.Entry<DeltaPlacement, Collection<Key>>, Iterator<Record>>() {
-                    @Override
-                    public Iterator<Record> apply(Map.Entry<DeltaPlacement, Collection<Key>> entry) {
-                        return readBatch(entry.getKey(), entry.getValue(), consistency);
-                    }
-                })));
+                entry -> readBatch(entry.getKey(), entry.getValue(), consistency))));
     }
 
     @Override
@@ -214,9 +232,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         TableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = QueryBuilder.select().column(tableDDL.getRowKeyColumnName())
-                .column(tableDDL.getChangeIdColumnName()).column(tableDDL.getValueColumnName())
-                .from(tableDDL.getTableMetadata())
+        Statement statement = selectFrom(tableDDL)
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
@@ -279,7 +295,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
     /**
      * Creates a Record instance for a given key and list of rows.  All rows must be from the same Cassandra row;
-     * in other words, it is expected that row.getBytesUnsafe(0) returns the same value for each row in rows.
+     * in other words, it is expected that row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN) returns the same value for
+     * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
         Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(rows.iterator());
@@ -293,13 +310,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * Converts a list of rows into Change instances.
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
-        return Iterators.transform(iter, new Function<Row, Map.Entry<UUID, Change>>() {
-            @Override
-            public Map.Entry<UUID, Change> apply(Row column) {
-                Change change = _changeEncoder.decodeChange(column.getUUID(1), column.getBytesUnsafe(2));
-                return Maps.immutableEntry(column.getUUID(1), change);
-            }
-        });
+        return Iterators.transform(iter, row ->
+            Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
     }
 
     /**
@@ -310,10 +322,10 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             @Override
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
-                    Row column = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(column.getBytesUnsafe(2));
+                    Row row = iter.next();
+                    Compaction compaction = _changeEncoder.decodeCompaction(getValue(row));
                     if (compaction != null) {
-                        return Maps.immutableEntry(column.getUUID(1), compaction);
+                        return Maps.immutableEntry(getChangeId(row), compaction);
                     }
                 }
                 return endOfData();
@@ -325,14 +337,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * Converts the rows from the provided iterator into raw metadata.
      */
     private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
-        return Iterators.transform(iter, new Function<Row, RecordEntryRawMetadata>() {
-            @Override
-            public RecordEntryRawMetadata apply(Row column) {
-                return new RecordEntryRawMetadata()
-                        .withTimestamp(TimeUUIDs.getTimeMillis(column.getUUID(1)))
-                        .withSize(column.getBytesUnsafe(2).remaining());
-            }
-        });
+        return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
+                .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
+                .withSize(getValue(row).remaining()));
     }
 
     /** Read a batch of keys that all belong to the same placement (ColumnFamily). */
@@ -348,7 +355,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         }
 
         // Sort the keys by their byte array encoding to get some locality w/queries.
-        Collections.sort(rowKeys, Ordering.natural().onResultOf(entryKeyFunction()));
+        Collections.sort(rowKeys, Ordering.natural().onResultOf(entry -> entry.getKey()));
 
         // Group them into batches.  Cassandra may have to seek each row so prefer smaller batches.
         List<List<Map.Entry<ByteBuffer, Key>>> batches = Lists.partition(rowKeys, MAX_RANDOM_ROWS_BATCH);
@@ -360,15 +367,12 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // fetch the missing columns.
 
         return Iterators.concat(Iterators.transform(batches.iterator(),
-                new Function<List<Map.Entry<ByteBuffer, Key>>, Iterator<Record>>() {
-                    @Override
-                    public Iterator<Record> apply(List<Map.Entry<ByteBuffer, Key>> rowKeys) {
-                        Timer.Context timerCtx = _readBatchTimer.time();
-                        try {
-                            return rowQuery(rowKeys, consistency, placement);
-                        } finally {
-                            timerCtx.stop();
-                        }
+                rowKeySubset -> {
+                    Timer.Context timerCtx = _readBatchTimer.time();
+                    try {
+                        return rowQuery(rowKeySubset, consistency, placement);
+                    } finally {
+                        timerCtx.stop();
                     }
                 }));
     }
@@ -388,9 +392,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         TableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = QueryBuilder.select().column(tableDDL.getRowKeyColumnName())
-                .column(tableDDL.getChangeIdColumnName()).column(tableDDL.getValueColumnName())
-                .from(tableDDL.getTableMetadata())
+        Statement statement = selectFrom(tableDDL)
                 .where(in(tableDDL.getRowKeyColumnName(), keys))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
@@ -398,14 +400,11 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         return Iterators.concat(
                 // First iterator reads the row groups found and transforms them to Records
-                Iterators.transform(rowGroups, new Function<Iterable<Row>, Record>() {
-                    @Override
-                    public Record apply(Iterable<Row> rows) {
-                        ByteBuffer keyBytes = getRawKeyFromRowGroup(rows);
-                        Key key = rawKeyMap.remove(keyBytes);
-                        assert key != null : "Query returned row with a key out of bound";
-                        return newRecordFromCql(key, rows);
-                    }
+                Iterators.transform(rowGroups, rows -> {
+                    ByteBuffer keyBytes = getRawKeyFromRowGroup(rows);
+                    Key key = rawKeyMap.remove(keyBytes);
+                    assert key != null : "Query returned row with a key out of bound";
+                    return newRecordFromCql(key, rows);
                 }),
                 // Second iterator returns an empty Record for each key queried but not found.
                 new AbstractIterator<Record>() {
@@ -426,6 +425,30 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     }
 
     /**
+     * Returns a select statement builder for a {@link TableDDL} with the columns ordered in the order set by
+     * {@link #ROW_KEY_RESULT_SET_COLUMN}, {@link #CHANGE_ID_RESULT_SET_COLUMN}, and {@link #VALUE_RESULT_SET_COLUMN}.
+     */
+    private Select selectFrom(TableDDL tableDDL) {
+        return QueryBuilder.select()
+                .column(tableDDL.getRowKeyColumnName())     // ROW_KEY_RESULT_SET_COLUMN
+                .column(tableDDL.getChangeIdColumnName())   // CHANGE_ID_RESULT_SET_COLUMN
+                .column(tableDDL.getValueColumnName())      // VALUE_RESULT_SET_COLUMN
+                .from(tableDDL.getTableMetadata());
+    }
+
+    private ByteBuffer getKey(Row row) {
+        return row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN);
+    }
+
+    private UUID getChangeId(Row row) {
+        return row.getUUID(CHANGE_ID_RESULT_SET_COLUMN);
+    }
+
+    private ByteBuffer getValue(Row row) {
+        return row.getBytesUnsafe(VALUE_RESULT_SET_COLUMN);
+    }
+
+    /**
      * A few notes on this method:
      * <ol>
      *     <li>All rows in the row group have the same key, so choosing the first row is safe.</li>
@@ -437,8 +460,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private ByteBuffer getRawKeyFromRowGroup(Iterable<Row> rowGroup) {
         Iterator<Row> iter = rowGroup.iterator();
         // Sanity check
-        checkArgument(iter.hasNext(), "Row group should never contain zero rows");
-        return iter.next().getBytesUnsafe(0);
+        assert iter.hasNext() : "Row group should never contain zero rows";
+        return getKey(iter.next());
     }
 
     private <T> Iterator<T> touch(Iterator<T> iter) {
@@ -446,15 +469,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // is sufficient for the iterator implementations used by this DAO class...
         iter.hasNext();
         return iter;
-    }
-
-    private Function<Map.Entry<ByteBuffer, Key>, ByteBuffer> entryKeyFunction() {
-        return new Function<Map.Entry<ByteBuffer, Key>, ByteBuffer>() {
-            @Override
-            public ByteBuffer apply(Map.Entry<ByteBuffer, Key> entry) {
-                return entry.getKey();
-            }
-        };
     }
 
     @Timed(name = "bv.emodb.sor.CqlDataReaderDAO.scan", absolute = true)
@@ -532,9 +546,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         TableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = QueryBuilder.select().column(tableDDL.getRowKeyColumnName())
-                .column(tableDDL.getChangeIdColumnName()).column(tableDDL.getValueColumnName())
-                .from(tableDDL.getTableMetadata())
+        Statement statement = selectFrom(tableDDL)
                 .where(gt(token(tableDDL.getRowKeyColumnName()), startToken))
                 .and(lte(token(tableDDL.getRowKeyColumnName()), endToken))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
@@ -557,12 +569,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * Converts rows from a single C* row to a Record.
      */
     private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table) {
-        return Iterators.transform(rowGroups, new Function<Iterable<Row>, Record>() {
-            @Override
-            public Record apply(Iterable<Row> rowGroup) {
+        return Iterators.transform(rowGroups, rowGroup -> {
                 String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
                 return newRecordFromCql(new Key(table, key), rowGroup);
-            }
         });
     }
 
@@ -583,31 +592,21 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         List<ScanRange> ranges = scanRange.unwrapped();
 
         return touch(FluentIterable.from(ranges)
-                .transformAndConcat(new Function<ScanRange, Iterable<MultiTableScanResult>>() {
-                    @Override
-                    public Iterable<MultiTableScanResult> apply(final ScanRange rowRange) {
-                        return new Iterable<MultiTableScanResult>() {
-                            @Override
-                            public Iterator<MultiTableScanResult> iterator() {
-                                return scanMultiTableRows(
-                                        tables, placement, rowRange.asByteBufferRange(), limit, query.isIncludeDeletedTables(),
-                                        query.isIncludeMirrorTables(), consistency);
-                            }
-                        };
-                    }
-                })
+                .transformAndConcat(rowRange -> scanMultiTableRows(
+                        tables, placement, rowRange.asByteBufferRange(), limit, query.isIncludeDeletedTables(),
+                        query.isIncludeMirrorTables(), consistency))
                 .iterator());
 
     }
 
     /** Decodes rows returned by scanning across tables. */
-    private Iterator<MultiTableScanResult> scanMultiTableRows(
+    private Iterable<MultiTableScanResult> scanMultiTableRows(
             final TableSet tables, final DeltaPlacement placement, final ByteBufferRange rowRange,
             final LimitCounter limit, final boolean includeDroppedTables, final boolean includeMirrorTables,
             final ReadConsistency consistency) {
 
         // Avoiding pinning multiple decoded rows into memory at once.
-        return limit.limit(new AbstractIterator<MultiTableScanResult>() {
+        return () -> limit.limit(new AbstractIterator<MultiTableScanResult>() {
             private PeekingIterator<Iterable<Row>> _iter = Iterators.peekingIterator(
                     rowScan(placement, rowRange, consistency));
 
@@ -619,10 +618,12 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             @Override
             protected MultiTableScanResult computeNext() {
                 while (_iter.hasNext()) {
-                    Iterable<Row> rowGroup = _iter.next();
+                    // Get the next rows from the grouping iterator.  All rows in the returned Iterable
+                    // are from the same Cassandra wide row (in other words, they share the same key).
+                    Iterable<Row> rows = _iter.next();
 
-                    // Convert the results into a Record object
-                    ByteBuffer rowKey = getRawKeyFromRowGroup(rowGroup);
+                    // Convert the rows into a Record object
+                    ByteBuffer rowKey = getRawKeyFromRowGroup(rows);
 
                     long tableUuid = AstyanaxStorage.getTableUuid(rowKey);
                     if (_lastTableUuid != tableUuid) {
@@ -646,7 +647,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), rowGroup);
+                    Record record = newRecordFromCql(new Key(_table, key), rows);
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
@@ -728,14 +729,14 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         @Override
         protected Object getKeyForRow(Row row) {
-            // Key is always the first column, which is the delta row key
-            return row.getBytesUnsafe(0);
+            return CqlDataReaderDAO.this.getKey(row);
         }
 
         @Override
         protected ResultSet queryRowGroupRowsAfter(Row row) {
-            Range<RangeTimeUUID> columnRange = Range.greaterThan(new RangeTimeUUID(row.getUUID(1)));
-            return columnScan(_placement, _placement.getDeltaTableDDL(), row.getBytesUnsafe(0), columnRange, true, Integer.MAX_VALUE, _consistency);
+            Range<RangeTimeUUID> columnRange = Range.greaterThan(new RangeTimeUUID(getChangeId(row)));
+            return columnScan(_placement, _placement.getDeltaTableDDL(), getKey(row),
+                    columnRange, true, Integer.MAX_VALUE, _consistency);
         }
     }
 
@@ -746,9 +747,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private ResultSet columnScan(DeltaPlacement placement, TableDDL tableDDL, ByteBuffer rowKey, Range<RangeTimeUUID> columnRange,
                                  boolean ascending, int limit, ConsistencyLevel consistency) {
 
-        Select.Where where = QueryBuilder.select().column(tableDDL.getRowKeyColumnName())
-                .column(tableDDL.getChangeIdColumnName()).column(tableDDL.getValueColumnName())
-                .from(tableDDL.getTableMetadata())
+        Select.Where where = selectFrom(tableDDL)
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey));
 
         if (columnRange.hasLowerBound()) {
@@ -842,13 +841,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * Transforms the provided Row iterator into a {@link Change} iterator.
      */
     private Iterator<Change> decodeColumns(Iterator<Row> iter) {
-        return Iterators.transform(iter,
-                new Function<Row, Change>() {
-                    @Override
-                    public Change apply(Row row) {
-                        return _changeEncoder.decodeChange(row.getUUID(1), row.getBytesUnsafe(2));
-                    }
-                });
+        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), getValue(row)));
     }
 
     /**

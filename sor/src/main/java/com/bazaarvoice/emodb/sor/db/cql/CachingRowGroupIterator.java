@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.datastax.driver.core.Row;
+import com.google.common.base.Predicates;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
@@ -66,76 +67,75 @@ public class CachingRowGroupIterator extends AbstractIterator<Iterable<Row>> {
 
         softCache.add(softlyReferenced(softCacheGroup));
 
-        return new Iterable<Row>() {
-            @Override
-            public Iterator<Row> iterator() {
+        return () -> {
+            Iterator<Row> secondaryIterator =  new AbstractIterator<Row>() {
+                private Iterator<SoftReference<List<Row>>> _softGroupsIterator = softCache.iterator();
+                private Iterator<Row> _currentGroupIterator = null;
+                private Iterator<Row> _sourceIterator = null;
 
-                Iterator<Row> secondaryIterator =  new AbstractIterator<Row>() {
-                    private Iterator<SoftReference<List<Row>>> _softGroupsIterator = softCache.iterator();
-                    private Iterator<Row> _currentGroupIterator = null;
-                    private Iterator<Row> _sourceIterator = null;
+                private Row _lastCacheRow = cache.get(cache.size()-1);
 
-                    private Row _lastCacheRow = cache.get(cache.size()-1);
-
-                    @Override
-                    protected Row computeNext() {
-                        if (_sourceIterator != null) {
-                            // A previous softly-cached row had been lost and the remaining rows are now being served
-                            // from the source.
-                            return getNextFromSourceIterator();
-                        }
-
-                        // Check if we are currently traversing a soft cache group
-                        Row row = getNextRowFromCurrentGroupIterator();
-                        if (row != null) {
-                            return row;
-                        }
-
-                        // Try to load the next group from the soft cache
-                        if (!_softGroupsIterator.hasNext()) {
-                            return endOfData();
-                        }
-
-                        SoftReference<List<Row>> softGroupRef = _softGroupsIterator.next();
-                        List<Row> softGroup = softGroupRef.get();
-
-                        if (softGroup != null) {
-                            // Soft group has not been garbage-collected; start iterating over it.  Note this will
-                            // make the group contain a hard reference until it is fully iterated.
-                            _currentGroupIterator = softGroup.iterator();
-                            // The soft group always contains at least one record, so this will never return null
-                            return getNextRowFromCurrentGroupIterator();
-                        }
-
-                        // The soft row was garbage collected.  Only option now is to reload the remainder from
-                        // the backend.
-
-                        _sourceIterator = rowGroup.reloadRowsAfter(_lastCacheRow);
+                @Override
+                protected Row computeNext() {
+                    if (_sourceIterator != null) {
+                        // A previous softly-cached row had been lost and the remaining rows are now being served
+                        // from the source.
                         return getNextFromSourceIterator();
                     }
 
-                    private Row getNextRowFromCurrentGroupIterator() {
-                        if (_currentGroupIterator == null) {
-                            return null;
-                        } else if (!_currentGroupIterator.hasNext()) {
-                            _currentGroupIterator = null;
-                            return null;
-                        }
-                        // Record the last row returned in case the next row has been garbage collected
-                        _lastCacheRow = _currentGroupIterator.next();
-                        return _lastCacheRow;
+                    // Check if we are currently traversing a soft cache group
+                    Row row = getNextRowFromCurrentGroupIterator();
+                    if (row != null) {
+                        return row;
                     }
 
-                    private Row getNextFromSourceIterator() {
-                        if (!_sourceIterator.hasNext()) {
-                            return endOfData();
-                        }
-                        return _sourceIterator.next();
+                    // Try to load the next group from the soft cache
+                    if (!_softGroupsIterator.hasNext()) {
+                        return endOfData();
                     }
-                };
 
-                return Iterators.concat(cache.iterator(), secondaryIterator);
-            }
+                    SoftReference<List<Row>> softGroupRef = _softGroupsIterator.next();
+                    List<Row> softGroup = softGroupRef.get();
+
+                    if (softGroup != null) {
+                        // Soft group has not been garbage-collected; start iterating over it.  Note this will
+                        // make the group contain a hard reference until it is fully iterated.
+                        _currentGroupIterator = softGroup.iterator();
+                        // The soft group always contains at least one record, so this will never return null
+                        return getNextRowFromCurrentGroupIterator();
+                    }
+
+                    // The soft row was garbage collected.  Only option now is to reload the remainder from
+                    // the backend.  Start by dereferencing all of the remaining cached row groups that can no
+                    // longer be used, though keep the current row group to signal future iterations to reload
+                    // remaining rows.
+                    Iterators.removeIf(_softGroupsIterator, Predicates.alwaysTrue());
+
+                    _sourceIterator = rowGroup.reloadRowsAfter(_lastCacheRow);
+                    return getNextFromSourceIterator();
+                }
+
+                private Row getNextRowFromCurrentGroupIterator() {
+                    if (_currentGroupIterator == null) {
+                        return null;
+                    } else if (!_currentGroupIterator.hasNext()) {
+                        _currentGroupIterator = null;
+                        return null;
+                    }
+                    // Record the last row returned in case the next row has been garbage collected
+                    _lastCacheRow = _currentGroupIterator.next();
+                    return _lastCacheRow;
+                }
+
+                private Row getNextFromSourceIterator() {
+                    if (!_sourceIterator.hasNext()) {
+                        return endOfData();
+                    }
+                    return _sourceIterator.next();
+                }
+            };
+
+            return Iterators.concat(cache.iterator(), secondaryIterator);
         };
     }
 
