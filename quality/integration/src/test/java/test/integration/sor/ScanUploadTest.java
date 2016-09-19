@@ -191,7 +191,11 @@ public class ScanUploadTest {
             }
         } finally {
             if (server != null) {
-                server.stop();
+                try {
+                    server.stop();
+                } catch (Exception e) {
+                    _log.warn("Failed to stop server", e);
+                }
             }
         }
     }
