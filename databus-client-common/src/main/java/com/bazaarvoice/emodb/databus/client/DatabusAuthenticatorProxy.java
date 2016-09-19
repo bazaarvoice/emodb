@@ -104,8 +104,8 @@ class DatabusAuthenticatorProxy implements Databus {
     }
 
     @Override
-    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents) {
-        _authDatabus.subscribe(_apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, ignoreSuppressedEvents);
+    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
+        _authDatabus.subscribe(_apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }
 
     @Override

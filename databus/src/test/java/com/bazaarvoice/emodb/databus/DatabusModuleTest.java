@@ -15,12 +15,16 @@ import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.Placements;
 import com.bazaarvoice.emodb.table.db.consistency.DatabusClusterInfo;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
@@ -102,6 +106,8 @@ public class DatabusModuleTest {
                         .toInstance(ImmutableList.of(new ClusterInfo("Test Cluster", "Test Metric Cluster")));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
+                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
+                        .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);

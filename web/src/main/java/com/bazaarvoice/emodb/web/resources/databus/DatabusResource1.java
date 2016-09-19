@@ -108,14 +108,20 @@ public class DatabusResource1 {
                                      String conditionString,
                                      @QueryParam ("ttl") @DefaultValue ("86400") SecondsParam subscriptionTtl,
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
-                                     @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam) {
-        // By default, ignore events tagged with "re-etl"
-        boolean ignoreSuppressedEvents = ignoreSuppressedEventsParam == null ? true : ignoreSuppressedEventsParam.get();
+                                     @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam,
+                                     @QueryParam ("includeDefaultJoinFilter") BooleanParam includeDefaultJoinFilterParam) {
+        // By default, include the default join filter condition
+        // Note:  Historically this feature used to be called "ignoreSuppressedEvents".  To provide backwards
+        //        compatibility both parameter names are accepted though precedence is given to the newer parameter.
+        boolean includeDefaultJoinFilter =
+                includeDefaultJoinFilterParam != null ? includeDefaultJoinFilterParam.get() :
+                        (ignoreSuppressedEventsParam != null ? ignoreSuppressedEventsParam.get() : true);
+
         Condition tableFilter = Conditions.alwaysTrue();
         if (!conditionString.isEmpty()) {
             tableFilter = new ConditionParam(conditionString).get();
         }
-        _databus.subscribe(subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), ignoreSuppressedEvents);
+        _databus.subscribe(subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), includeDefaultJoinFilter);
         return SuccessResponse.instance();
     }
 

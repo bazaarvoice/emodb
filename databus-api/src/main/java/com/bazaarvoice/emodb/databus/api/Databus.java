@@ -16,16 +16,19 @@ public interface Databus {
     void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl);
 
     /**
-     * NOTE: This call will be depracated.
+     * NOTE: This call will be deprecated.
      * Subscribe for table events based on the Condition
      * @param subscription - Name of the subscription
      * @param tableFilter - Filter based on table or tags
      * @param subscriptionTtl - Duration for the subscription to be alive
      * @param eventTtl - Duration for the events on the subscription to be alive before expiring
-     * @param ignoreSuppressedEvents - Ignore event marked as "re-etl". By default this is set to true
+     * @param includeDefaultJoinFilter - Add the default join filter condition to the table filter.  This will
+     *                                 filter all events identified as suppress-able by the system, rewriting tableFilter
+     *                                 as <code>and(tableFilter, defaultJoinFilter)</code>.  By default this is
+     *                                 set to true
      */
     @Deprecated
-    void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents);
+    void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter);
 
     void unsubscribe(String subscription);
 

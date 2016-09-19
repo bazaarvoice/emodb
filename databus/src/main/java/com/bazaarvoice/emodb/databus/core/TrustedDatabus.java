@@ -77,8 +77,8 @@ public class TrustedDatabus implements AuthDatabus {
     }
 
     @Override
-    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents) {
-        _databus.subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, ignoreSuppressedEvents);
+    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
+        _databus.subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }
 
     public void purge(@Credential String apiKey, String subscription) {

@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
@@ -101,15 +102,17 @@ public class DefaultDatabus implements Databus, Managed {
     private final Meter _discardedMeter;
     private final Meter _consolidatedMeter;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
+    private final Supplier<Condition> _defaultJoinFilterCondition;
     private final Ticker _ticker;
 
     @Inject
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
-                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry) {
+                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
+                          @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition) {
         this(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator, jobService,
-                jobHandlerRegistry, metricRegistry, Ticker.systemTicker());
+                jobHandlerRegistry, metricRegistry, defaultJoinFilterCondition, Ticker.systemTicker());
     }
 
     @VisibleForTesting
@@ -117,13 +120,14 @@ public class DefaultDatabus implements Databus, Managed {
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
-                          Ticker ticker) {
+                          Supplier<Condition> defaultJoinFilterCondition, Ticker ticker) {
         _eventBus = eventBus;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
         _dataProvider = dataProvider;
         _subscriptionEvaluator = subscriptionEvaluator;
         _jobService = jobService;
+        _defaultJoinFilterCondition = defaultJoinFilterCondition;
         _ticker = ticker;
         _peekedMeter = newEventMeter("peeked", metricRegistry);
         _polledMeter = newEventMeter("polled", metricRegistry);
@@ -287,17 +291,24 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents) {
+    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl,
+                          boolean includeDefaultJoinFilter) {
         // This call should be depracated soon.
         checkLegalSubscriptionName(subscription);
         checkNotNull(tableFilter, "tableFilter");
         checkArgument(subscriptionTtl.isLongerThan(Duration.ZERO), "SubscriptionTtl must be >0");
         checkArgument(eventTtl.isLongerThan(Duration.ZERO), "EventTtl must be >0");
         TableFilterValidator.checkAllowed(tableFilter);
-        if (ignoreSuppressedEvents) {
-            // Skip databus events tagged with "ignore"
-            Condition skipIgnoreTags = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
-            tableFilter = Conditions.and(tableFilter, skipIgnoreTags);
+        if (includeDefaultJoinFilter) {
+            // If the default join filter condition is set (that is, isn't "alwaysTrue()") then add it to the filter
+            Condition defaultJoinFilterCondition = _defaultJoinFilterCondition.get();
+            if (!Conditions.alwaysTrue().equals(defaultJoinFilterCondition)) {
+                if (tableFilter.equals(Conditions.alwaysTrue())) {
+                    tableFilter = defaultJoinFilterCondition;
+                } else {
+                    tableFilter = Conditions.and(tableFilter, defaultJoinFilterCondition);
+                }
+            }
         }
 
         // except for resetting the ttl, recreating a subscription that already exists has no effect.

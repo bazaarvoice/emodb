@@ -4,8 +4,10 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Ticker;
 import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
@@ -48,7 +50,7 @@ public class DatabusSizeCachingTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
-                mock(MetricRegistry.class)) {
+                mock(MetricRegistry.class), Suppliers.ofInstance(Conditions.alwaysFalse())) {
             @Override
             protected Ticker getEventSizeCacheTicker() {
                 return ticker;
