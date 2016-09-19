@@ -137,8 +137,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             Resolved resolved = resolver.resolved();
 
             // Note: We should *not* delete the compaction that the new compaction is based upon, and defer
-            // its deletes upon a later compaction. The deletes of all compactions are taken care of simultaneously
-            // while looking for most effective compaction in {@link AbstractCompactor#findEffectiveCompaction}.
+            // its delete once the new compaction is also behind FCT.
 
             // Write a new compaction record and re-write the preceding delta with the content resolved to this point.
             compactionKey = TimeUUIDs.newUUID();
