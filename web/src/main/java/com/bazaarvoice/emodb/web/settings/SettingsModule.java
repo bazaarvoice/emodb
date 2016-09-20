@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
 import com.google.inject.PrivateModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.name.Named;
@@ -61,8 +62,11 @@ public class SettingsModule extends PrivateModule {
 
     @Provides @Singleton
     SettingsManager provideSettings(@Named("lastUpdatedStore") ValueStore<Long> lastUpdated,
-                             DataStore dataStore, @SystemTablePlacement String placement,
-                             LifeCycleRegistry lifeCycleRegistry) {
+                                    Provider<DataStore> dataStore, @SystemTablePlacement String placement,
+                                    LifeCycleRegistry lifeCycleRegistry) {
+        // Note:  To prevent potential circular dependencies while constructing SettingsManager a Provider for the
+        //        DataStore must be injected, deferring resolution of the DataStore until after all related
+        //        objects are constructed.
         return new SettingsManager(lastUpdated, dataStore, SETTINGS_TABLE, placement, lifeCycleRegistry);
     }
 }

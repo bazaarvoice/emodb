@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Ticker;
+import com.google.inject.util.Providers;
 import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
 import org.testng.annotations.BeforeMethod;
@@ -42,7 +43,7 @@ public class SettingsManagerTest {
         _ticker = mock(Ticker.class);
         when(_ticker.read()).thenReturn(START_TIME_NS);
 
-        _settingsManager = new SettingsManager(_lastUpdated, _dataStore, "__system:settings",
+        _settingsManager = new SettingsManager(_lastUpdated, Providers.of(_dataStore), "__system:settings",
                 "app_global:sys", mock(LifeCycleRegistry.class), Duration.standardMinutes(1), _ticker);
     }
 
