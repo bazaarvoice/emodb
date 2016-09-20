@@ -21,6 +21,10 @@ import java.util.UUID;
  * <p>
  * Replication can be stopped and started to simulate replication lag in
  * unit tests.
+ * </p>
+ * <p>
+ *     Replication can be replayed out of order too ...
+ * </p>
  */
 public class ReplicatingDataWriterDAO implements DataWriterDAO {
 
@@ -100,11 +104,20 @@ public class ReplicatingDataWriterDAO implements DataWriterDAO {
         }
     }
 
+    public void onlyReplicateDeletesUponCompaction() {
+        for (PausableDataWriterDAO remote : _remotes) {
+            remote.onlyReplicateDeletesUponCompaction();
+        }
+    }
+
+    public void replicateCompactionDeltas() {
+        for (PausableDataWriterDAO remote : _remotes) {
+            remote.replicateCompactionDeltas();
+        }
+    }
+
     private UpdateListener noop() {
-        return new UpdateListener() {
-            @Override
-            public void beforeWrite(Collection<RecordUpdate> updates) {
-            }
+        return updates -> {
         };
     }
 }

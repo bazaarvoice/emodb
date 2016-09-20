@@ -49,7 +49,7 @@ public abstract class AbstractCompactor {
     }
 
     protected Map.Entry<UUID, Compaction> findEffectiveCompaction(Iterator<Map.Entry<UUID, Compaction>> compactionIter,
-                                                                Collection<UUID> otherCompactionIds) {
+                                                                Collection<UUID> otherCompactionIds, long compactionConsistencyTimeStamp) {
         Compaction best = null;
         UUID bestId = null;
         Map.Entry<UUID, Compaction> bestEntry = null;
@@ -69,6 +69,13 @@ public abstract class AbstractCompactor {
                 otherCompactionIds.add(changeId);
             }
         }
+
+        // Check if bestEntry is behind FCT. If so, we can get rid of others.
+        if (bestEntry != null && TimeUUIDs.getTimeMillis(bestEntry.getKey()) >= compactionConsistencyTimeStamp) {
+            // Since the bestEntry is ahead of FCT, we keep all the other compactions and defer their deletion
+            otherCompactionIds.clear();
+        }
+
         return bestEntry;
     }
 

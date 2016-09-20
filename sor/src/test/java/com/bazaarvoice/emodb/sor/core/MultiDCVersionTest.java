@@ -118,7 +118,7 @@ public class MultiDCVersionTest {
 
         allDCs.startReplication();
 
-        // restore replication and verify that each data center gets two compaction records and changeId3 was re-added DC1
+        // restore replication and verify that each data center gets two compaction records and changeId3 was re-added to DC1
         assertEquals(getCompactions(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 2);
         assertEquals(getCompactions(dc2.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 2);
         assertTrue(cutoffExists(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)), changeId3));
@@ -126,7 +126,9 @@ public class MultiDCVersionTest {
         // now perform a get that should detect the multiple records and compact them (MultiDCDataStores uses the sameThreadExecutor by default)
         Map<String, Object> actualRow = dc1.get(TABLE, KEY, ReadConsistency.STRONG);
         compactions1 = getCompactions(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));
-        assertEquals(compactions1.size(), 1);
+        // We will have two compactions since we defer the delete of the base compaction until the owning compaction is behind the FCT
+        assertEquals(compactions1.size(), 2);
+
         assertCompactionEquals(compactions1.get(0), 3/*add back cutoof delta*/+1, changeId1, changeId4);
 
         // Make sure the content and version is as expected
@@ -151,7 +153,7 @@ public class MultiDCVersionTest {
         dc1.get(TABLE, KEY, ReadConsistency.STRONG);
         Map<UUID, Compaction> compactionMap1 =
                 getCompactionsWithId(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));
-        assertEquals(compactionMap1.size(), 1);
+        assertEquals(compactionMap1.size(), 2);
         assertEquals(compactionMap1.keySet().toArray(new UUID[0])[0], compactionId1); // still has the old Id.
         // Verify the deltas are not yet deleted
         assertNotNull(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).get(changeId3));
@@ -161,6 +163,10 @@ public class MultiDCVersionTest {
         dc1.get(TABLE, KEY, ReadConsistency.STRONG);
         // Verify the deltas are deleted this time around
         assertNull(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).get(changeId3));
+        // Verify there is only one compaction record
+        compactionMap1 =
+                getCompactionsWithId(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));
+        assertEquals(compactionMap1.size(), 1);
     }
 
     private void assertCompactionEquals(Compaction actual, int count, UUID first, UUID cutoff) {

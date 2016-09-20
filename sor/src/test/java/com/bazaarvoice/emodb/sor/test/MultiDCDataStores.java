@@ -96,6 +96,18 @@ public class MultiDCDataStores {
         }
     }
 
+    public void onlyReplicateDeletesUponCompactions() {
+        for (ReplicatingDataWriterDAO dao : _replDaos) {
+            dao.onlyReplicateDeletesUponCompaction();
+        }
+    }
+
+    public void replicateCompactionDeltas() {
+        for (ReplicatingDataWriterDAO dao : _replDaos) {
+            dao.replicateCompactionDeltas();
+        }
+    }
+
     public MultiDCDataStores setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
         for (InMemoryDataDAO dao : _inMemoryDaos) {
             dao.setFullConsistencyDelayMillis(fullConsistencyDelayMillis);

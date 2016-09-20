@@ -41,8 +41,8 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
 
     /**
      * This method creates pending compactions if there are deltas behind the Full Consistency Timestamp (FCT).
-     * To avoid corruption in a distributed system, we defer the deletes of "compaction-owned" deltas until the said
-     * compaction is behind FCT.
+     * To avoid corruption in a distributed system, we defer the deletes of "compaction-owned" deltas or compactions
+     * until the owning compaction is behind FCT.
      * Also, we try to avoid any further compactions, if there is already an outstanding compaction, which is not behind FCT yet.
      * This is because if we keep compacting and not delete deltas, then we can get in a situation when compactions will kept
      * getting "eaten" by newer compactions and their owned deltas will never get deleted.
@@ -55,7 +55,8 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         DeltasArchive deltasArchive = new DeltasArchive();
 
         // Loop through the compaction records and find the one that is most up-to-date.  Obsolete ones may be deleted.
-        Map.Entry<UUID, Compaction> compactionEntry = findEffectiveCompaction(record.passOneIterator(), keysToDelete);
+        Map.Entry<UUID, Compaction> compactionEntry = findEffectiveCompaction(record.passOneIterator(), keysToDelete, compactionConsistencyTimeStamp);
+
         // Check to see if this is a legacy compaction
         if (compactionEntry != null && compactionEntry.getValue().getCompactedDelta() == null) {
             // Legacy compaction found. Can't use this compactor.
@@ -135,11 +136,8 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             // Merge the N oldest deltas and write the result into the new compaction.
             Resolved resolved = resolver.resolved();
 
-            // Delete old compaction record.
-            if (compaction != null) {
-                keysToDelete.add(compactionKey);
-                compactionKeysToDelete.add(compactionKey);
-            }
+            // Note: We should *not* delete the compaction that the new compaction is based upon, and defer
+            // its delete once the new compaction is also behind FCT.
 
             // Write a new compaction record and re-write the preceding delta with the content resolved to this point.
             compactionKey = TimeUUIDs.newUUID();

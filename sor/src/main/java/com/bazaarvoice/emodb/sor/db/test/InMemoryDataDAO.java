@@ -58,12 +58,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /** In-memory implementation of {@link DataWriterDAO}, for testing. */
 public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
 
-    protected final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
+    public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
     private final Map<String, NavigableMap<String, Map<UUID, Change>>> _auditChanges = Maps.newHashMap();
     private int _fullConsistencyDelayMillis = Integer.MAX_VALUE;
     private Long _fullConsistencyTimestamp;
     private int _columnBatchSize = 50;
-    protected AuditStore _auditStore;
+    public AuditStore _auditStore;
 
     public InMemoryDataDAO() {
         _auditStore = new InMemoryAuditStore();
@@ -288,10 +288,47 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
         }
     }
 
+    public synchronized void deleteDeltasOnly(Table table, String key, UUID compactionKey, Compaction compaction,
+                                                       UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+        checkNotNull(table, "table");
+        checkNotNull(key, "key");
+        checkNotNull(compactionKey, "compactionKey");
+        checkNotNull(compaction, "compaction");
+        checkNotNull(changeId, "changeId");
+        checkNotNull(delta, "delta");
+        checkNotNull(changesToDelete, "changesToDelete");
+
+        Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
+
+        // delete the old deltas & compaction records
+        deleteDeltas(changesToDelete, changes);
+
+    }
+
+    public synchronized void addCompactionOnly(Table table, String key, UUID compactionKey, Compaction compaction,
+                                                       UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+        checkNotNull(table, "table");
+        checkNotNull(key, "key");
+        checkNotNull(compactionKey, "compactionKey");
+        checkNotNull(compaction, "compaction");
+        checkNotNull(changeId, "changeId");
+        checkNotNull(delta, "delta");
+        checkNotNull(changesToDelete, "changesToDelete");
+
+        Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
+
+        // add the compaction record and update the last content of the last delta
+        addCompaction(compactionKey, compaction, changeId, delta, changes);
+
+        // Add delta histories
+        if (historyList != null && !historyList.isEmpty()) {
+            _auditStore.putDeltaAudits(table.getName(), key, historyList);
+        }
+
+    }
+
     protected void addCompaction(UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Map<UUID, Change> changes) {
         changes.put(compactionKey, ChangeBuilder.just(compactionKey, compaction));
-        // Do not mutate and existing delta (Deltas are immutable)
-        //changes.put(changeId, ChangeBuilder.just(changeId, delta));
     }
 
     protected void deleteDeltas(Collection<UUID> changesToDelete, Map<UUID, Change> changes) {

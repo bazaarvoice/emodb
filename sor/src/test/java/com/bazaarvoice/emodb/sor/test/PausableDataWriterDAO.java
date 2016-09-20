@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.Lists;
@@ -24,7 +25,9 @@ public class PausableDataWriterDAO implements DataWriterDAO {
 
     private final DataWriterDAO _delegate;
     private final Queue<Runnable> _writeQueue = Lists.newLinkedList();
+    private final Queue<Runnable> _addCompactQueue = Lists.newLinkedList();
     private boolean _paused;
+    private boolean _onlyReplicateDeletesUponCompaction;
 
     public PausableDataWriterDAO(DataWriterDAO delegate) {
         _delegate = delegate;
@@ -42,23 +45,20 @@ public class PausableDataWriterDAO implements DataWriterDAO {
 
     @Override
     public void updateAll(final Iterator<RecordUpdate> updates, final UpdateListener listener) {
-        write(new Runnable() {
-            @Override
-            public void run() {
-                _delegate.updateAll(updates, listener);
-            }
-        });
+        write(() -> _delegate.updateAll(updates, listener));
     }
 
     @Override
     public void compact(final Table table, final String key, @Nullable final UUID compactionKey, @Nullable final Compaction compaction, @Nullable final UUID changeId, @Nullable final Delta delta,
                         final Collection<UUID> changesToDelete, final List<History> historyList, final WriteConsistency consistency) {
-        write(new Runnable() {
-            @Override
-            public void run() {
-                _delegate.compact(table, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);
-            }
-        });
+        if (_onlyReplicateDeletesUponCompaction) {
+            ((InMemoryDataDAO)_delegate).deleteDeltasOnly(table, key, compactionKey, compaction, changeId, delta,
+                    changesToDelete, historyList, consistency);
+            _addCompactQueue.add(() -> ((InMemoryDataDAO)_delegate).addCompactionOnly(table, key, compactionKey,
+                    compaction, changeId, delta, changesToDelete, historyList, consistency));
+            return;
+        }
+        write(() -> _delegate.compact(table, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency));
     }
 
     @Override
@@ -87,6 +87,23 @@ public class PausableDataWriterDAO implements DataWriterDAO {
      */
     public synchronized void pause() {
         _paused = true;
+    }
+
+    /**
+     * Only replicate deletes due to compactions. Replicating compactions will be queued for later
+     */
+    public synchronized void onlyReplicateDeletesUponCompaction() {
+        _onlyReplicateDeletesUponCompaction = true;
+    }
+
+    /**
+     * Executes queued compaction deltas and unpauses compaction delta replication.
+     */
+    public synchronized void replicateCompactionDeltas() {
+        _onlyReplicateDeletesUponCompaction = false;
+        while (!_addCompactQueue.isEmpty()) {
+            _addCompactQueue.remove().run();
+        }
     }
 
     /**
