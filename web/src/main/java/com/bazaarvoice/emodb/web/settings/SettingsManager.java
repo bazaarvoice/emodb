@@ -24,6 +24,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import io.dropwizard.lifecycle.Managed;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
@@ -69,31 +70,35 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     private final ValueStore<Long> _lastUpdated;
     private final Map<String, RegisteredSetting<?>> _registeredSettings = Maps.newConcurrentMap();
     private final LoadingCache<SettingMetadata<?>, Object> _settingsCache;
-    private final DataStore _dataStore;
+    private final Supplier<DataStore> _dataStore;
     private final Supplier<String> _settingsTable;
     private final String _settingsTablePlacement;
     private final Ticker _ticker;
     private ValueStoreListener _listener;
 
+    /**
+     * Injection constructor.  Because of circular dependency issues between the SettingsRegistry interface and the
+     * DataStore the latter is injected using its provider.
+     */
     @Inject
-    public SettingsManager(ValueStore<Long> lastUpdated, DataStore dataStore, String settingsTable,
+    public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
                            String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry) {
-        this(lastUpdated, dataStore, settingsTable, settingsTablePlacement, lifeCycleRegistry,
+        this(lastUpdated, dataStoreProvider, settingsTable, settingsTablePlacement, lifeCycleRegistry,
                 DEFAULT_CACHE_INVALIDATION_TIME, Ticker.systemTicker());
     }
 
-    public SettingsManager(ValueStore<Long> lastUpdated, DataStore dataStore, String settingsTable,
+    public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
                            String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry,
                            Duration cacheInvalidationTime, Ticker ticker) {
         _lastUpdated = lastUpdated;
-        _dataStore = dataStore;
+        _dataStore = Suppliers.memoize(dataStoreProvider::get);
         _settingsTablePlacement = settingsTablePlacement;
         _ticker = ticker;
 
         _settingsTable = Suppliers.memoize(() -> {
             // Create the settings table if it does not exist
-            if (!_dataStore.getTableExists(settingsTable)) {
-                _dataStore.createTable(
+            if (!_dataStore.get().getTableExists(settingsTable)) {
+                _dataStore.get().createTable(
                         settingsTable,
                         new TableOptionsBuilder().setPlacement(_settingsTablePlacement).build(),
                         ImmutableMap.<String, Object>of(),
@@ -108,7 +113,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
                 .build(new CacheLoader<SettingMetadata<?>, Object>() {
                     @Override
                     public Object load(SettingMetadata<?> metadata) throws Exception {
-                        Map<String, Object> valueMap = _dataStore.get(
+                        Map<String, Object> valueMap = _dataStore.get().get(
                                 _settingsTable.get(), metadata.getName(), ReadConsistency.STRONG);
 
                         if (Intrinsic.isDeleted(valueMap)) {
@@ -196,7 +201,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
                 .build();
 
         // Write the delta to the store
-        _dataStore.update(_settingsTable.get(), metadata.getName(), TimeUUIDs.newUUID(), delta,
+        _dataStore.get().update(_settingsTable.get(), metadata.getName(), TimeUUIDs.newUUID(), delta,
                 new AuditBuilder().setLocalHost().setComment("Updated setting").build(), WriteConsistency.STRONG);
 
         // Notify all nodes in the local cluster to refresh immediately; remote clusters will eventually see the update
