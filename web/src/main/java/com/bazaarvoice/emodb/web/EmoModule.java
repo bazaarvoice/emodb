@@ -29,11 +29,11 @@ import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkMapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkTimestampSerializer;
-import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
@@ -130,6 +130,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -202,6 +203,7 @@ public class EmoModule extends AbstractModule {
             bind(MetricRegistry.class).toInstance(_environment.metrics());
             bind(ServerFactory.class).toInstance(_configuration.getServerFactory());
             bind(DataCenterConfiguration.class).toInstance(_configuration.getDataCenterConfiguration());
+            bind(Clock.class).toInstance(Clock.systemUTC());
         }
 
         /** Connect to ZooKeeper. */

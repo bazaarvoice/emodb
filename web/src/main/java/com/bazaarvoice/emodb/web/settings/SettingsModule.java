@@ -14,6 +14,8 @@ import com.google.inject.Singleton;
 import com.google.inject.name.Named;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.time.Clock;
+
 /**
  * Guice module which configures globally accessible server settings.
  *  * <p>
@@ -23,6 +25,7 @@ import org.apache.curator.framework.CuratorFramework;
  * <li> {@link LifeCycleRegistry}
  * <li> {@link DataStoreConfiguration}
  * <li> @SettingsZooKeeper {@link CuratorFramework}
+ * <li> {@link Clock}
  * </ul>
  * Exports the following:
  * <ul>
@@ -63,10 +66,11 @@ public class SettingsModule extends PrivateModule {
     @Provides @Singleton
     SettingsManager provideSettings(@Named("lastUpdatedStore") ValueStore<Long> lastUpdated,
                                     Provider<DataStore> dataStore, @SystemTablePlacement String placement,
-                                    LifeCycleRegistry lifeCycleRegistry) {
+                                    LifeCycleRegistry lifeCycleRegistry, Clock clock) {
         // Note:  To prevent potential circular dependencies while constructing SettingsManager a Provider for the
         //        DataStore must be injected, deferring resolution of the DataStore until after all related
         //        objects are constructed.
-        return new SettingsManager(lastUpdated, dataStore, SETTINGS_TABLE, placement, lifeCycleRegistry);
+        return new SettingsManager(
+                lastUpdated, dataStore, SETTINGS_TABLE, placement, lifeCycleRegistry, clock);
     }
 }

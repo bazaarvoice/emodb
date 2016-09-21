@@ -23,6 +23,8 @@ import com.google.inject.Injector;
 import org.apache.curator.framework.CuratorFramework;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertNotNull;
 
@@ -57,6 +59,7 @@ public class QueueModuleTest {
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
+                bind(Clock.class).toInstance(mock(Clock.class));
 
                 install(new QueueModule(metricRegistry));
             }

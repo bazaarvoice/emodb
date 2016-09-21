@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.settings;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
@@ -17,7 +18,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
+import java.time.Clock;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -73,7 +74,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     private final Supplier<DataStore> _dataStore;
     private final Supplier<String> _settingsTable;
     private final String _settingsTablePlacement;
-    private final Ticker _ticker;
+    private final Clock _clock;
     private ValueStoreListener _listener;
 
     /**
@@ -82,18 +83,18 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
      */
     @Inject
     public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
-                           String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry) {
+                           String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry, Clock clock) {
         this(lastUpdated, dataStoreProvider, settingsTable, settingsTablePlacement, lifeCycleRegistry,
-                DEFAULT_CACHE_INVALIDATION_TIME, Ticker.systemTicker());
+                DEFAULT_CACHE_INVALIDATION_TIME, clock);
     }
 
     public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
                            String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry,
-                           Duration cacheInvalidationTime, Ticker ticker) {
+                           Duration cacheInvalidationTime, Clock clock) {
         _lastUpdated = lastUpdated;
         _dataStore = Suppliers.memoize(dataStoreProvider::get);
         _settingsTablePlacement = settingsTablePlacement;
-        _ticker = ticker;
+        _clock = clock;
 
         _settingsTable = Suppliers.memoize(() -> {
             // Create the settings table if it does not exist
@@ -108,7 +109,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
         });
 
         _settingsCache = CacheBuilder.newBuilder()
-                .ticker(ticker)
+                .ticker(ClockTicker.getTicker(_clock))
                 .expireAfterWrite(cacheInvalidationTime.getMillis(), TimeUnit.MILLISECONDS)
                 .build(new CacheLoader<SettingMetadata<?>, Object>() {
                     @Override
@@ -206,7 +207,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
 
         // Notify all nodes in the local cluster to refresh immediately; remote clusters will eventually see the update
         try {
-            _lastUpdated.set(TimeUnit.NANOSECONDS.toMillis(_ticker.read()));
+            _lastUpdated.set(_clock.millis());
         } catch (Exception e) {
             // This local invalidation was optimistic; log that it failed but otherwise move on.  The local cluster
             // will read the updated value eventually.

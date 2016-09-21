@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.queue.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.json.JsonValidator;
 import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.event.api.EventData;
@@ -19,7 +20,6 @@ import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
-import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -30,6 +30,7 @@ import com.google.common.collect.Multimap;
 import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -48,7 +49,8 @@ abstract class AbstractQueueService implements BaseQueueService {
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
-                                   JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType) {
+                                   JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
+                                   Clock clock) {
         _eventStore = eventStore;
         _jobService = jobService;
         _moveQueueJobType = moveQueueJobType;
@@ -57,7 +59,7 @@ abstract class AbstractQueueService implements BaseQueueService {
         _queueSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
-                .ticker(getQueueSizeCacheTicker())
+                .ticker(ClockTicker.getTicker(clock))
                 .build(new CacheLoader<SizeCacheKey, Map.Entry<Long, Long>>() {
                     @Override
                     public Map.Entry<Long, Long> load(SizeCacheKey key)
@@ -90,11 +92,6 @@ abstract class AbstractQueueService implements BaseQueueService {
                         };
                     }
                 });
-    }
-
-    /** Ticker used to manage time in the queue size cache.  Override for unit testing. */
-    protected Ticker getQueueSizeCacheTicker() {
-        return Ticker.systemTicker();
     }
 
     @Override

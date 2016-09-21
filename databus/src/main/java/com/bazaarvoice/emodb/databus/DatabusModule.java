@@ -62,6 +62,7 @@ import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -89,6 +90,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> DataStore {@link EventBus}
  * <li> DataStore {@link DataStoreConfiguration}
  * <li> @{@link DefaultJoinFilter} Supplier&lt;{@link Condition}&gt;
+ * <li> {@link Clock}
  * </ul>
  * Exports the following:
  * <ul>

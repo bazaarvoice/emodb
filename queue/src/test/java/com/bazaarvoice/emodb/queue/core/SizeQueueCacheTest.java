@@ -4,11 +4,10 @@ import com.bazaarvoice.emodb.event.api.BaseEventStore;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.job.api.JobType;
-import com.google.common.base.Ticker;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -32,23 +31,13 @@ public class SizeQueueCacheTest {
     @Test
     public void testSizeCache() {
 
-        final AtomicLong timeNanos = new AtomicLong(TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis()));
-
-        final Ticker ticker = new Ticker() {
-            @Override
-            public long read() {
-                return timeNanos.get();
-            }
-        };
+        final long start = System.currentTimeMillis();
+        final Clock clock = mock(Clock.class);
+        when(clock.millis()).thenReturn(start);
 
         BaseEventStore mockEventStore = mock(BaseEventStore.class);
         AbstractQueueService queueService = new AbstractQueueService(mockEventStore, mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(JobType.class)){
-            @Override
-            protected Ticker getQueueSizeCacheTicker() {
-                return ticker;
-            }
-        };
+                mock(JobHandlerRegistry.class), mock(JobType.class), clock){};
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
@@ -71,15 +60,15 @@ public class SizeQueueCacheTest {
         verify(mockEventStore, times(1)).getSizeEstimate("testsubscription", 500L);
 
         // verify that it does *not* interact if the accuracy is decreased limit=50 over the next 14 seconds
-        for (int i=0; i < 14; i++) {
-            timeNanos.addAndGet(TimeUnit.SECONDS.toNanos(1));
+        for (int i=1; i <= 14; i++) {
+            when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(i));
             size = queueService.getMessageCountUpTo("testsubscription", 50L);
             assertEquals(size, 4800L, "Size should still be 4800");
             verifyNoMoreInteractions(mockEventStore);
         }
 
         // Simulate one more second elapsed, making the total 15
-        timeNanos.addAndGet(TimeUnit.SECONDS.toNanos(1));
+        when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(15));
 
         size = queueService.getMessageCountUpTo("testsubscription", 50L);
         assertEquals(size, 5000L, "Size should be 5000");

@@ -10,13 +10,13 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Ticker;
 import com.google.inject.util.Providers;
 import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
@@ -29,22 +29,22 @@ import static org.testng.Assert.fail;
 
 public class SettingsManagerTest {
 
-    private final static long START_TIME_NS = 1472766259192000000L;
+    private final static long START_TIME_MS = 1472766259192L;
 
     private DataStore _dataStore;
     private ValueStore<Long> _lastUpdated;
-    private Ticker _ticker;
+    private Clock _clock;
     private SettingsManager _settingsManager;
 
     @BeforeMethod
     public void setUp() {
         _dataStore = new InMemoryDataStore(new MetricRegistry());
         _lastUpdated = mock(ValueStore.class);
-        _ticker = mock(Ticker.class);
-        when(_ticker.read()).thenReturn(START_TIME_NS);
+        _clock = mock(Clock.class);
+        when(_clock.millis()).thenReturn(START_TIME_MS);
 
         _settingsManager = new SettingsManager(_lastUpdated, Providers.of(_dataStore), "__system:settings",
-                "app_global:sys", mock(LifeCycleRegistry.class), Duration.standardMinutes(1), _ticker);
+                "app_global:sys", mock(LifeCycleRegistry.class), Duration.standardMinutes(1), _clock);
     }
 
     @Test
@@ -58,7 +58,7 @@ public class SettingsManagerTest {
         // Update value
         setting.set("newvalue");
         // Need to advance time by 1 minute to enforce value returned is not cached
-        when(_ticker.read()).thenReturn(START_TIME_NS + TimeUnit.MINUTES.toNanos(1));
+        when(_clock.millis()).thenReturn(START_TIME_MS + TimeUnit.MINUTES.toMillis(1));
         assertEquals(setting.get(), "newvalue");
         assertEquals(_dataStore.get("__system:settings", "test1").get("json"), "\"newvalue\"");
 
@@ -99,7 +99,7 @@ public class SettingsManagerTest {
                 new AuditBuilder().setComment("test").build());
 
         for (int sec : new Integer[] {0, 1, 59, 60, 120}) {
-            when(_ticker.read()).thenReturn(START_TIME_NS + TimeUnit.SECONDS.toNanos(sec));
+            when(_clock.millis()).thenReturn(START_TIME_MS + TimeUnit.SECONDS.toMillis(sec));
             assertEquals(setting.get(), sec < 60 ? "original" : "newvalue");
         }
     }
@@ -108,7 +108,7 @@ public class SettingsManagerTest {
     public void testUpdateNotification() throws Exception {
         Setting<String> setting = _settingsManager.register("test4", String.class, "original");
         setting.set("foo");
-        verify(_lastUpdated).set(TimeUnit.NANOSECONDS.toMillis(START_TIME_NS));
+        verify(_lastUpdated).set(START_TIME_MS);
     }
 
     @Test
