@@ -15,7 +15,6 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
-import com.google.common.base.Ticker;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractService;
@@ -31,6 +30,7 @@ import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
@@ -54,12 +54,13 @@ public class ScanUploadSchedulingService extends LeaderService {
     public ScanUploadSchedulingService(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                                        final ScanUploader scanUploader, final List<ScheduledDailyScanUpload> scheduledScans,
                                        final ScanCountListener scanCountListener, LifeCycleRegistry lifecycle,
-                                       LeaderServiceTask leaderServiceTask, final MetricRegistry metricRegistry) {
+                                       LeaderServiceTask leaderServiceTask, final MetricRegistry metricRegistry,
+                                       final Clock clock) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener);
+                        return new DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener, clock);
                     }
                 });
 
@@ -76,24 +77,20 @@ public class ScanUploadSchedulingService extends LeaderService {
         private final List<ScheduledDailyScanUpload> _scheduledScans;
         private final ScanCountListener _scanCountListener;
         private final Set<ScheduledDailyScanUpload> _pendingScans = Sets.newHashSet();
-        private Ticker _ticker = Ticker.systemTicker();
+        private final Clock _clock;
         private ScheduledExecutorService _service;
 
         public DelegateSchedulingService(ScanUploader scanUploader, List<ScheduledDailyScanUpload> scheduledScans,
-                                         ScanCountListener scanCountListener) {
+                                         ScanCountListener scanCountListener, Clock clock) {
             _scanUploader = scanUploader;
             _scheduledScans = scheduledScans;
             _scanCountListener = scanCountListener;
+            _clock = clock;
         }
 
         @VisibleForTesting
         void setExecutorService(ScheduledExecutorService service) {
             _service = service;
-        }
-
-        @VisibleForTesting
-        void setTicker(Ticker ticker) {
-            _ticker = ticker;
         }
 
         @Override
@@ -292,7 +289,7 @@ public class ScanUploadSchedulingService extends LeaderService {
         }
 
         private DateTime now() {
-            return new DateTime(TimeUnit.NANOSECONDS.toMillis(_ticker.read()));
+            return new DateTime(_clock.millis());
         }
     }
 

@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.hamcrest.BaseMatcher;
@@ -24,6 +23,9 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -66,8 +68,7 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
-        Ticker ticker = mock(Ticker.class);
-        when(ticker.read()).thenReturn(TimeUnit.MILLISECONDS.toNanos(now.getMillis()));
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         // Schedule a scan for 1 hour in the past and 1 hour in the future
         DateTime oneHourAgo = now.minusHours(1);
@@ -89,10 +90,9 @@ public class ScanUploadSchedulingServiceTest {
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener, clock);
 
         service.setExecutorService(executorService);
-        service.setTicker(ticker);
         service.initializeScans();
 
         // Verify the two scans were scheduled
@@ -128,8 +128,7 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
-        Ticker ticker = mock(Ticker.class);
-        when(ticker.read()).thenReturn(TimeUnit.MILLISECONDS.toNanos(now.getMillis()));
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         // 4 scans, only the first two of which should be considered missed
         DateTime oneMinuteAgo = now.minusMinutes(1);
@@ -149,10 +148,9 @@ public class ScanUploadSchedulingServiceTest {
         }
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener, clock);
 
         service.setExecutorService(executorService);
-        service.setTicker(ticker);
         service.initializeScans();
 
         // All 4 scans and their pending scan updates were scheduled.  Don't concern over exact times,
@@ -191,13 +189,11 @@ public class ScanUploadSchedulingServiceTest {
         ScanUploader scanUploader = mock(ScanUploader.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
-        Ticker ticker = mock(Ticker.class);
-        when(ticker.read()).thenReturn(TimeUnit.MILLISECONDS.toNanos(now.getMillis()));
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
 
-        service.setTicker(ticker);
         service.startScheduledScan(scanUpload, now);
 
         String expectedScanId = DateTimeFormat.forPattern("'test'-yyyyMMddHHmmss").withZoneUTC().print(now);
@@ -238,13 +234,10 @@ public class ScanUploadSchedulingServiceTest {
 
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
+
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener);
-
-        Ticker ticker = mock(Ticker.class);
-        when(ticker.read()).thenReturn(TimeUnit.MILLISECONDS.toNanos(now.getMillis()));
-
-        service.setTicker(ticker);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
 
         try {
             service.startScheduledScan(scanUpload, now);
@@ -266,8 +259,7 @@ public class ScanUploadSchedulingServiceTest {
 
         ScheduledExecutorService participationExecutorService = spy(Executors.newScheduledThreadPool(1));
 
-        Ticker ticker = mock(Ticker.class);
-        when(ticker.read()).thenReturn(TimeUnit.MILLISECONDS.toNanos(now.getMillis()));
+        Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         // Start one hour in the future
         String startTime = DateTimeFormat.forPattern("HH:mmZ").withZoneUTC().print(now.plusHours(1));
@@ -277,10 +269,9 @@ public class ScanUploadSchedulingServiceTest {
                 ImmutableList.of("catalog_global:cat"), 5, true);
 
         ScanParticipationService service = new ScanParticipationService(
-                ImmutableList.of(upload), stashStateListener, lifecycle);
+                ImmutableList.of(upload), stashStateListener, lifecycle, clock);
 
         service.setScheduledExecutorService(participationExecutorService);
-        service.setTicker(ticker);
 
         try {
             service.start();

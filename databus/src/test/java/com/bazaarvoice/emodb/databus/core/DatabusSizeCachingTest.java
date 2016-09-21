@@ -8,12 +8,11 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Ticker;
 import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -37,25 +36,15 @@ public class DatabusSizeCachingTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testSizeCache() {
-        final AtomicLong timeNanos = new AtomicLong(TimeUnit.MILLISECONDS.toNanos(System.currentTimeMillis()));
-
-        final Ticker ticker = new Ticker() {
-            @Override
-            public long read() {
-                return timeNanos.get();
-            }
-        };
+        final Clock clock = mock(Clock.class);
+        long start = System.currentTimeMillis();
+        when(clock.millis()).thenReturn(start);
 
         DatabusEventStore mockEventStore = mock(DatabusEventStore.class);
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
-                mock(MetricRegistry.class), Suppliers.ofInstance(Conditions.alwaysFalse())) {
-            @Override
-            protected Ticker getEventSizeCacheTicker() {
-                return ticker;
-            }
-        };
+                mock(MetricRegistry.class), Suppliers.ofInstance(Conditions.alwaysFalse()), clock);
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
@@ -78,15 +67,15 @@ public class DatabusSizeCachingTest {
         verify(mockEventStore, times(1)).getSizeEstimate("testsubscription", 500L);
 
         // verify that it does *not* interact if the accuracy is decreased limit=50 over the next 14 seconds
-        for (int i=0; i < 14; i++) {
-            timeNanos.addAndGet(TimeUnit.SECONDS.toNanos(1));
+        for (int i=1; i <= 14; i++) {
+            when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(i));
             size = testDatabus.getEventCountUpTo("testsubscription", 50L);
             assertEquals(size, 4800L, "Size should still be 4800");
             verifyNoMoreInteractions(mockEventStore);
         }
 
         // Simulate one more second elapsed, making the total 15
-        timeNanos.addAndGet(TimeUnit.SECONDS.toNanos(1));
+        when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(15));
 
         size = testDatabus.getEventCountUpTo("testsubscription", 50L);
         assertEquals(size, 5000L, "Size should be 5000");

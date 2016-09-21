@@ -6,9 +6,12 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.google.inject.Inject;
 
+import java.time.Clock;
+
 public class DefaultDedupQueueService extends AbstractQueueService implements DedupQueueService {
     @Inject
-    public DefaultDedupQueueService(DedupEventStore eventStore, JobService jobService, JobHandlerRegistry jobHandlerRegistry) {
-        super(eventStore, jobService, jobHandlerRegistry, MoveDedupQueueJob.INSTANCE);
+    public DefaultDedupQueueService(DedupEventStore eventStore, JobService jobService, JobHandlerRegistry jobHandlerRegistry,
+                                    Clock clock) {
+        super(eventStore, jobService, jobHandlerRegistry, MoveDedupQueueJob.INSTANCE, clock);
     }
 }

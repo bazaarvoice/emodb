@@ -15,6 +15,8 @@ import com.google.common.eventbus.EventBus;
 import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -35,7 +37,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(MetricRegistry.class), ignoreReEtl);
+                mock(JobHandlerRegistry.class), mock(MetricRegistry.class), ignoreReEtl, Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
         testDatabus.subscribe("test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7));

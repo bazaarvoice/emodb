@@ -36,6 +36,7 @@ import com.google.inject.TypeLiteral;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -56,6 +57,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> @{@link DedupQueueHostDiscovery} {@link HostDiscovery}
  * <li> @{@link QueueZooKeeper} {@link CuratorFramework}
  * <li> @{@link Global} {@link CuratorFramework}
+ * <li> {@link Clock}
  * </ul>
  * Exports the following:
  * <ul>

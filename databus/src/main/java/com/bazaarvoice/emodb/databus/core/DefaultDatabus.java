@@ -1,9 +1,10 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.ChannelNames;
+import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -35,8 +36,8 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
@@ -58,6 +59,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -104,23 +106,14 @@ public class DefaultDatabus implements Databus, Managed {
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
     private final Supplier<Condition> _defaultJoinFilterCondition;
     private final Ticker _ticker;
+    private final Clock _clock;
 
     @Inject
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
-                          @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition) {
-        this(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator, jobService,
-                jobHandlerRegistry, metricRegistry, defaultJoinFilterCondition, Ticker.systemTicker());
-    }
-
-    @VisibleForTesting
-    public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
-                          SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
-                          SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
-                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
-                          Supplier<Condition> defaultJoinFilterCondition, Ticker ticker) {
+                          @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition, Clock clock) {
         _eventBus = eventBus;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
@@ -128,7 +121,8 @@ public class DefaultDatabus implements Databus, Managed {
         _subscriptionEvaluator = subscriptionEvaluator;
         _jobService = jobService;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
-        _ticker = ticker;
+        _ticker = ClockTicker.getTicker(clock);
+        _clock = clock;
         _peekedMeter = newEventMeter("peeked", metricRegistry);
         _polledMeter = newEventMeter("polled", metricRegistry);
         _renewedMeter = newEventMeter("renewed", metricRegistry);
@@ -141,7 +135,7 @@ public class DefaultDatabus implements Databus, Managed {
         _eventSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
-                .ticker(getEventSizeCacheTicker())
+                .ticker(_ticker)
                 .build(new CacheLoader<SizeCacheKey, Map.Entry<Long, Long>>() {
                     @Override
                     public Map.Entry<Long, Long> load(SizeCacheKey key)
@@ -223,11 +217,6 @@ public class DefaultDatabus implements Databus, Managed {
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.databus", "DefaultDatabus", name);
-    }
-
-    /** Ticker used to manage time in the event size cache.  Override for unit testing. */
-    protected Ticker getEventSizeCacheTicker() {
-        return Ticker.systemTicker();
     }
 
     @Override
@@ -406,7 +395,7 @@ public class DefaultDatabus implements Databus, Managed {
         Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
         boolean repeatable = claimTtl != null && claimTtl.getMillis() > 0;
 
-        long stop = _ticker.read() + TimeUnit.MILLISECONDS.toNanos(MAX_POLL_TIME.getMillis());
+        Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
         int padding = 0;
         do {
             int remaining = limit - items.size();
@@ -534,7 +523,7 @@ public class DefaultDatabus implements Databus, Managed {
             // timeout the request.  This helps move through large amounts of redundant deltas relatively quickly while
             // also putting a bound on the total amount of work done by a single call to poll().
             padding = 10;
-        } while (repeatable && _ticker.read() < stop);
+        } while (repeatable && stopwatch.elapsed(TimeUnit.MILLISECONDS) <  MAX_POLL_TIME.getMillis());
 
         // Sort the items to match the order of their events in an attempt to get first-in-first-out.
         Collections.sort(items);
@@ -548,7 +537,7 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     private boolean isRecent(UUID changeId) {
-        return TimeUnit.NANOSECONDS.toMillis(_ticker.read()) - TimeUUIDs.getTimeMillis(changeId) < STALE_UNKNOWN_AGE.getMillis();
+        return _clock.millis() - TimeUUIDs.getTimeMillis(changeId) < STALE_UNKNOWN_AGE.getMillis();
     }
 
     @Override

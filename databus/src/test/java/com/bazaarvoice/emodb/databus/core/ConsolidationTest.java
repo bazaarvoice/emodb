@@ -16,7 +16,6 @@ import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
-import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +26,9 @@ import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -195,15 +197,9 @@ public class ConsolidationTest {
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
 
         // Use a custom ticker to force exiting the loop because there is no more data and not because of a timeout
-        final long now = Ticker.systemTicker().read();
-        Ticker ticker = new Ticker() {
-            @Override
-            public long read() {
-                return now;  // Current time never changes
-            }
-        };
+        Clock clock = Clock.fixed(Instant.now(), ZoneId.systemDefault());
 
-        DefaultDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content), ticker);
+        DefaultDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content), clock);
 
         // Use a limit of 2 to force multiple calls to the event store.
         List<Event> events = databus.poll("test-subscription", Duration.standardSeconds(30), 2);
@@ -221,10 +217,10 @@ public class ConsolidationTest {
     }
 
     private DefaultDatabus newDatabus(DatabusEventStore eventStore, DataProvider dataProvider) {
-        return newDatabus(eventStore, dataProvider, Ticker.systemTicker());
+        return newDatabus(eventStore, dataProvider, Clock.systemUTC());
     }
 
-    private DefaultDatabus newDatabus(DatabusEventStore eventStore, DataProvider dataProvider, Ticker ticker) {
+    private DefaultDatabus newDatabus(DatabusEventStore eventStore, DataProvider dataProvider, Clock clock) {
         LifeCycleRegistry lifeCycle = mock(LifeCycleRegistry.class);
         EventBus eventBus = mock(EventBus.class);
         SubscriptionDAO subscriptionDao = mock(SubscriptionDAO.class);
@@ -233,7 +229,7 @@ public class ConsolidationTest {
         JobHandlerRegistry jobHandlerRegistry = mock(JobHandlerRegistry.class);
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, new MetricRegistry(), Suppliers.ofInstance(Conditions.alwaysFalse()),
-                ticker);
+                clock);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

@@ -40,6 +40,7 @@ import org.apache.curator.utils.EnsurePath;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
 import java.util.Collection;
 
 import static org.mockito.Matchers.eq;
@@ -111,6 +112,7 @@ public class DatabusModuleTest {
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
+                bind(Clock.class).toInstance(mock(Clock.class));
 
                 install(new DatabusModule(serviceMode, metricRegistry));
             }

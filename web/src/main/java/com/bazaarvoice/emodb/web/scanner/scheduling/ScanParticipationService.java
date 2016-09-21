@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.web.scanner.scheduling;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ticker;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
@@ -11,6 +10,7 @@ import io.dropwizard.lifecycle.Managed;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -28,12 +28,13 @@ public class ScanParticipationService implements Managed {
     private final List<Future<?>> _participationFutures = Lists.newArrayList();
     private ScheduledExecutorService _service;
     private boolean _shutdownServiceOnStop;
-    private Ticker _ticker = Ticker.systemTicker();
+    private final Clock _clock;
 
     @Inject
     public ScanParticipationService(List<ScheduledDailyScanUpload> scheduledScans, final StashStateListener stashStateListener,
-                                    LifeCycleRegistry lifeCycleRegistry) {
+                                    LifeCycleRegistry lifeCycleRegistry, Clock clock) {
         _scheduledScans = scheduledScans;
+        _clock = clock;
 
         // Create a runnable which announces scan participation when called
         _notificationRunnable = new Runnable() {
@@ -49,11 +50,6 @@ public class ScanParticipationService implements Managed {
     @VisibleForTesting
     public void setScheduledExecutorService(ScheduledExecutorService service) {
         _service = service;
-    }
-
-    @VisibleForTesting
-    public void setTicker(Ticker ticker) {
-        _ticker = ticker;
     }
 
     @Override
@@ -72,7 +68,7 @@ public class ScanParticipationService implements Managed {
 
     private Future<?> scheduleParticipationNotification(ScheduledDailyScanUpload scheduledScan) {
         // Get the next execution time for the scheduled scan
-        DateTime now = new DateTime(TimeUnit.NANOSECONDS.toMillis(_ticker.read()));
+        DateTime now = new DateTime(_clock.millis());
         DateTime nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(now);
 
         // Schedule to run once daily starting at the next execution time
