@@ -32,7 +32,7 @@ To configure EmoDB with these keys follow the following steps:
 2. Choose two keys.  The keys can be any valid string with no white space.  For this example we'll choose
    __pebbles__ and __bambam__ for the administration and replication keys respectively.
 
-3. Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
+3. (Optional) Secure the keys.  Run the following DropWizard command.  If the cluster will be different than the one in `config.yaml`
    then specify a `cluster` option like in the examples below:
 
        $ java -jar emodb-web-x.x.jar encrypt-configuration-api-key config.yaml --api-key pebbles --cluster local_cluster
@@ -51,6 +51,21 @@ To configure EmoDB with these keys follow the following steps:
 At this point __pebbles__ has administrative access to EmoDB.  From this point onward either __pebbles__ or other API keys
 with administrative access can manage API keys.
 
+
+### Optionally Securing the Keys in config.yaml
+
+As noted above securing the admin and replication API keys in `config.yaml` is optional; EmoDB would work just as well were
+__pebbles__ and __bambam__ written in plaintext.  The risk in storing these keys in plaintext is that anyone on the EmoDB instance
+with access to the configuration file can read the admin API key and therefore have full administrative access.  Additionally, you likely
+will have a system in place for deploying EmoDB and that system will require `config.yaml` or some other dependency to contain
+the API keys, such as a file in a Puppet module or a deployment package stored in S3, and each one of these introduces a new vulnerability
+for your admin API key.
+
+Having said that, be aware that the cryptographic strength of the encrypted API keys is pretty weak.  With the current implementation
+decrypting the keys can be done with only your configuration file and the source code for encrypting and decrypting the keys.  Therefore,
+encrypting the keys should be considered only a base level encryption to prevent casual viewers and resource crawlers from reading the
+configuration file's API keys.  You should still treat the encrypted API keys with the same level of protection as you would with any
+other sensitive credential.
 
 API Key Administration Task
 ---------------------------

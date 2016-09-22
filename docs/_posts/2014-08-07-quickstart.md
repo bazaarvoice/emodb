@@ -39,6 +39,40 @@ Quick Start
 {:.workflow}
 
 
+#### Using source code:
+
+1. Download the [EmoDB source code](https://github.com/bazaarvoice/emodb):
+
+        $ git clone git@github.com:bazaarvoice/emodb.git emodb
+
+2.  Build the source and run the tests:
+
+        $ cd emodb
+        $ mvn clean install
+
+3.  Run the EmoDB server locally:
+
+        $ cd web-local
+        $ ./start.sh
+        ...
+        INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
+        INFO  [2012-05-14 19:12:19,805] org.eclipse.jetty.server.AbstractConnector: Started SocketConnector@0.0.0.0:8081
+        # Use Ctrl-C to kill the server when you are done.
+
+4.  Check that the server responds to requests (from another window):
+
+        $ curl -s "http://localhost:8081/ping"
+        pong
+
+        $ curl -s "http://localhost:8081/healthcheck"
+        {"deadlocks":{"healthy":true},"ugc_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
+
+5.  To erase the EmoDB data and restart with a clean slate:
+
+        $ cd web-local
+        $ ./start-clean.sh
+{:.workflow}
+
 ### API keys
 
 EmoDB's REST API requires [API keys]({{ site.baseurl }}/security).  For clarity the API key header is not included each
