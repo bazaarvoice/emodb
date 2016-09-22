@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.InternalAuthorizer;
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
@@ -16,6 +17,7 @@ import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.PermissionResolver;
 import org.joda.time.Duration;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -63,13 +65,13 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
 
     @Inject
     public OwnerDatabusAuthorizer(InternalAuthorizer internalAuthorizer, final PermissionResolver permissionResolver,
-                                  MetricRegistry metricRegistry) {
-        this(internalAuthorizer, permissionResolver, metricRegistry, DEFAULT_PERMISSION_CHECK_CACHE_SIZE,
+                                  MetricRegistry metricRegistry, Clock clock) {
+        this(internalAuthorizer, permissionResolver, metricRegistry, clock, DEFAULT_PERMISSION_CHECK_CACHE_SIZE,
                 DEFAULT_PERMISSION_CHECK_CACHE_TIMEOUT, DEFAULT_READ_PERMISSION_CACHE_SIZE);
     }
 
     public OwnerDatabusAuthorizer(InternalAuthorizer internalAuthorizer, final PermissionResolver permissionResolver,
-                                  MetricRegistry metricRegistry, int permissionCheckCacheSize,
+                                  MetricRegistry metricRegistry, Clock clock, int permissionCheckCacheSize,
                                   Duration permissionCheckCacheTimeout, int readPermissionCacheSize) {
         _internalAuthorizer = checkNotNull(internalAuthorizer, "internalAuthorizer");
         _permissionResolver = checkNotNull(permissionResolver, "permissionResolver");
@@ -83,6 +85,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
                     .maximumSize(permissionCheckCacheSize)
                     .expireAfterWrite(permissionCheckCacheTimeout.getMillis(), TimeUnit.MILLISECONDS)
                     .recordStats()
+                    .ticker(ClockTicker.getTicker(clock))
                     .build(new CacheLoader<OwnerTableCacheKey, Boolean>() {
                         @Override
                         public Boolean load(OwnerTableCacheKey key) throws Exception {
@@ -116,6 +119,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
         if (readPermissionCacheSize > 0) {
             _readPermissionCache = CacheBuilder.newBuilder()
                     .maximumSize(readPermissionCacheSize)
+                    .ticker(ClockTicker.getTicker(clock))
                     .build(new CacheLoader<String, Permission>() {
                         @Override
                         public Permission load(String table) throws Exception {

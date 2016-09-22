@@ -73,11 +73,12 @@ public class DefaultFanoutTest {
         _dataProvider = mock(DataProvider.class);
         _databusAuthorizer = mock(DatabusAuthorizer.class);
 
-        SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(_dataProvider, rateLimitedLogFactory);
+        SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(
+                _dataProvider, _databusAuthorizer, rateLimitedLogFactory);
 
         _defaultFanout = new DefaultFanout("test", mock(EventSource.class), eventSink, true, Duration.standardSeconds(1),
                 _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
-                _databusAuthorizer, new MetricRegistry());
+                new MetricRegistry());
     }
 
     @Test

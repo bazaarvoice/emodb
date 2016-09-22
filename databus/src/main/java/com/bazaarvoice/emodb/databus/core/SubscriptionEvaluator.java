@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.databus.core;
 
-import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.Table;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
@@ -25,25 +24,23 @@ public class SubscriptionEvaluator {
 
     private final DataProvider _dataProvider;
     private final RateLimitedLog _rateLimitedLog;
+    private final DatabusAuthorizer _databusAuthorizer;
 
     @Inject
     public SubscriptionEvaluator(DataProvider dataProvider,
+                                 DatabusAuthorizer databusAuthorizer,
                                  RateLimitedLogFactory logFactory) {
         _dataProvider = dataProvider;
+        _databusAuthorizer = databusAuthorizer;
         _rateLimitedLog = logFactory.from(_log);
     }
 
-    public <S extends Subscription> Iterable<S> matches(Iterable<S> subscriptions, final MatchEventData eventData) {
+    public Iterable<OwnedSubscription> matches(Iterable<OwnedSubscription> subscriptions, final MatchEventData eventData) {
         return FluentIterable.from(subscriptions)
-                .filter(new Predicate<Subscription>() {
-                    @Override
-                    public boolean apply(Subscription subscription) {
-                        return matches(subscription, eventData);
-                    }
-                });
+                .filter(subscription -> matches(subscription, eventData));
     }
 
-    public boolean matches(Subscription subscription, ByteBuffer eventData) {
+    public boolean matches(OwnedSubscription subscription, ByteBuffer eventData) {
         MatchEventData matchEventData;
         try {
             matchEventData = getMatchEventData(eventData);
@@ -54,7 +51,7 @@ public class SubscriptionEvaluator {
         return matches(subscription, matchEventData);
     }
 
-    public boolean matches(Subscription subscription, MatchEventData eventData) {
+    public boolean matches(OwnedSubscription subscription, MatchEventData eventData) {
         Table table = eventData.getTable();
         try {
             Map<String, Object> json;
@@ -64,7 +61,8 @@ public class SubscriptionEvaluator {
                 json = Maps.newHashMap(table.getAttributes());
                 json.put(UpdateRef.TAGS_NAME, eventData.getTags());
             }
-            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new TableFilterIntrinsics(table));
+            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new TableFilterIntrinsics(table)) &&
+                    subscriberHasPermission(subscription, table);
         } catch (Exception e) {
             _rateLimitedLog.error(e, "Unable to evaluate condition for subscription " + subscription.getName() +
                     " on table {}: {}", table.getName(), subscription.getTableFilter());
@@ -75,6 +73,10 @@ public class SubscriptionEvaluator {
     public MatchEventData getMatchEventData(ByteBuffer eventData) throws UnknownTableException {
         UpdateRef ref = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
         return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getTags());
+    }
+
+    private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
+        return _databusAuthorizer.owner(subscription.getOwnerId()).canReceiveEventsFromTable(table.getName());
     }
 
     protected class MatchEventData {

@@ -257,12 +257,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         Collection<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
 
         // Ignore subscriptions not accessible by the owner.
-        subscriptions = Collections2.filter(subscriptions, new Predicate<OwnedSubscription>() {
-            @Override
-            public boolean apply(OwnedSubscription subscription) {
-                return _databusAuthorizer.owner(ownerId).canAccessSubscription(subscription);
-            }
-        });
+        subscriptions = Collections2.filter(subscriptions,
+                (subscription) -> _databusAuthorizer.owner(ownerId).canAccessSubscription(subscription));
 
         // Sort them by name.  They're stored sorted in Cassandra so this should be a no-op, but
         // do the sort anyway so we're not depending on internals of the subscription DAO.
@@ -618,20 +614,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 "Since timestamp is outside the replay TTL.");
         String source = ChannelNames.getMasterReplayChannel();
         final OwnedSubscription destination = getSubscriptionByName(subscription);
-        final DatabusAuthorizer.DatabusAuthorizerByOwner authorizer = _databusAuthorizer.owner(destination.getOwnerId());
 
-        _eventStore.copy(source, subscription, new Predicate<ByteBuffer>() {
-            @Override
-            public boolean apply(ByteBuffer eventDataBytes) {
-                try {
-                    SubscriptionEvaluator.MatchEventData eventData = _subscriptionEvaluator.getMatchEventData(eventDataBytes);
-                    return _subscriptionEvaluator.matches(destination, eventData)
-                            && authorizer.canReceiveEventsFromTable(eventData.getTable().getName());
-                } catch (UnknownTableException e) {
-                    return false;
-                }
-            }
-        }, since);
+        _eventStore.copy(source, subscription,
+                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
+                since);
     }
 
     @Override

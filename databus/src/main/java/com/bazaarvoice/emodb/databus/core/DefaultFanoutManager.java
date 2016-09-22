@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
-import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.databus.repl.ReplicationEventSource;
@@ -44,19 +43,16 @@ public class DefaultFanoutManager implements FanoutManager {
     private final LeaderServiceTask _dropwizardTask;
     private final RateLimitedLogFactory _logFactory;
     private final SubscriptionEvaluator _subscriptionEvaluator;
-    private final DatabusAuthorizer _databusAuthorizer;
     private final MetricRegistry _metricRegistry;
 
     @Inject
     public DefaultFanoutManager(final EventStore eventStore, final SubscriptionDAO subscriptionDao,
-                                SubscriptionEvaluator subscriptionEvaluator,
-                                DatabusAuthorizer databusAuthorizer, DataCenters dataCenters,
+                                SubscriptionEvaluator subscriptionEvaluator, DataCenters dataCenters,
                                 @DatabusZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort self,
                                 LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory, MetricRegistry metricRegistry) {
         _eventStore = checkNotNull(eventStore, "eventStore");
         _subscriptionDao = checkNotNull(subscriptionDao, "subscriptionDao");
         _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
-        _databusAuthorizer = checkNotNull(databusAuthorizer, "databusAuthorizer");
         _dataCenters = checkNotNull(dataCenters, "dataCenters");
         _curator = checkNotNull(curator, "curator");
         _selfId = checkNotNull(self, "self").toString();
@@ -101,7 +97,7 @@ public class DefaultFanoutManager implements FanoutManager {
                     public Service get() {
                         return new DefaultFanout(name, eventSource, eventSink, replicateOutbound, sleepWhenIdle,
                                 subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
-                                _databusAuthorizer, _metricRegistry);
+                                _metricRegistry);
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);

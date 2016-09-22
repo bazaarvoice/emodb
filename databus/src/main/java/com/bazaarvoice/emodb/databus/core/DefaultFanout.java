@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.databus.ChannelNames;
-import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
@@ -50,7 +49,6 @@ public class DefaultFanout extends AbstractScheduledService {
     private final DataCenter _currentDataCenter;
     private final RateLimitedLog _rateLimitedLog;
     private final SubscriptionEvaluator _subscriptionEvaluator;
-    private final DatabusAuthorizer _databusAuthorizer;
     private final Meter _eventsRead;
     private final Meter _eventsWrittenLocal;
     private final Meter _eventsWrittenOutboundReplication;
@@ -64,7 +62,6 @@ public class DefaultFanout extends AbstractScheduledService {
                          DataCenter currentDataCenter,
                          RateLimitedLogFactory logFactory,
                          SubscriptionEvaluator subscriptionEvaluator,
-                         DatabusAuthorizer databusAuthorizer,
                          MetricRegistry metricRegistry) {
         _name = checkNotNull(name, "name");
         _eventSource = checkNotNull(eventSource, "eventSource");
@@ -74,7 +71,6 @@ public class DefaultFanout extends AbstractScheduledService {
         _subscriptionsSupplier = checkNotNull(subscriptionsSupplier, "subscriptionsSupplier");
         _currentDataCenter = checkNotNull(currentDataCenter, "currentDataCenter");
         _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
-        _databusAuthorizer = checkNotNull(databusAuthorizer, "databusAuthorizer");
 
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
@@ -146,9 +142,7 @@ public class DefaultFanout extends AbstractScheduledService {
 
             // Copy to subscriptions in the current data center.
             for (OwnedSubscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
-                if (_databusAuthorizer.owner(subscription.getOwnerId()).canReceiveEventsFromTable(matchEventData.getTable().getName())) {
-                    eventsByChannel.put(subscription.getName(), eventData);
-                }
+                eventsByChannel.put(subscription.getName(), eventData);
             }
 
             // Copy to queues for eventual delivery to remote data centers.
