@@ -74,8 +74,10 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
@@ -130,6 +132,11 @@ public class ScanUploadModule extends PrivateModule {
 
         bind(String.class).annotatedWith(ScanStatusTable.class).toInstance(_config.getScanStatusTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
+
+        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingScanRangeQueueName"))
+                .toInstance(_config.getPendingScanRangeQueueName());
+        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeScanRangeQueueName"))
+                .toInstance(_config.getCompleteScanRangeQueueName());
 
         bind(ScanWriterGenerator.class).asEagerSingleton();
         install(new FactoryModuleBuilder()
@@ -354,10 +361,14 @@ public class ScanUploadModule extends PrivateModule {
         private final String _apiKey;
         private final Environment _environment;
         private final MetricRegistry _metricRegistry;
+        private final String _pendingScanRangeQueueName;
+        private final String _completeScanRangeQueueName;
 
         @Inject
         public QueueScanWorkflowProvider(@Global CuratorFramework curator, @ServerCluster String cluster,
                                          Client client, @Named ("ScannerAPIKey") String apiKey,
+                                         @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                         @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName,
                                          Environment environment, MetricRegistry metricRegistry) {
             _curator = curator;
             _cluster = cluster;
@@ -365,6 +376,8 @@ public class ScanUploadModule extends PrivateModule {
             _apiKey = apiKey;
             _environment = environment;
             _metricRegistry = metricRegistry;
+            _pendingScanRangeQueueName = pendingScanRangeQueueName.or("emodb-pending-scan-ranges");
+            _completeScanRangeQueueName = completeScanRangeQueueName.or("emodb-complete-scan-ranges");
         }
 
         @Override
@@ -383,28 +396,28 @@ public class ScanUploadModule extends PrivateModule {
             QueueService service = QueueServiceAuthenticator.proxied(authService)
                     .usingCredentials(_apiKey);
 
-            return new QueueScanWorkflow(service, "emodb-pending-scan-ranges", "emodb-complete-scan-ranges");
+            return new QueueScanWorkflow(service, _pendingScanRangeQueueName, _completeScanRangeQueueName);
         }
     }
 
     /** Provider used internally when SQS queues are configured */
     public static class SQSScanWorkflowProvider implements Provider<ScanWorkflow> {
-        private final String _cluster;
         private final AmazonSQS _amazonSQS;
+        private final String _pendingScanRangeQueueName;
+        private final String _completeScanRangeQueueName;
 
         @Inject
-        public SQSScanWorkflowProvider(@ServerCluster String cluster, AmazonSQS amazonSQS) {
-            _cluster = cluster;
+        public SQSScanWorkflowProvider(@ServerCluster String cluster, AmazonSQS amazonSQS,
+                                       @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                       @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
             _amazonSQS = amazonSQS;
+            _pendingScanRangeQueueName = pendingScanRangeQueueName.or(String.format("emodb-pending-scan-ranges-%s", cluster));
+            _completeScanRangeQueueName = completeScanRangeQueueName.or(String.format("emodb-complete-scan-ranges-%s", cluster));
         }
 
         @Override
         public ScanWorkflow get() {
-            String pendingQueue = String.format("emodb-pending-scan-ranges-%s", _cluster);
-            String completeQueue = String.format("emodb-complete-scan-ranges-%s", _cluster);
-
-            return new SQSScanWorkflow(_amazonSQS, pendingQueue, completeQueue);
+            return new SQSScanWorkflow(_amazonSQS, _pendingScanRangeQueueName, _completeScanRangeQueueName);
         }
     }
-
 }

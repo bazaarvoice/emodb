@@ -68,6 +68,16 @@ public class ScannerConfiguration {
     @JsonProperty ("scheduledScan")
     private ScheduledScanConfiguration _scheduledScan = new ScheduledScanConfiguration();
 
+    @Valid
+    @NotNull
+    @JsonProperty ("pendingScanRangeQueueName")
+    private Optional<String> _pendingScanRangeQueueName = Optional.absent();
+
+    @Valid
+    @NotNull
+    @JsonProperty ("completeScanRangeQueueName")
+    private Optional<String> _completeScanRangeQueueName = Optional.absent();
+
     public boolean isUseSQSQueues() {
         return _useSQSQueues;
     }
@@ -143,6 +153,24 @@ public class ScannerConfiguration {
 
     public ScannerConfiguration setScheduledScan(ScheduledScanConfiguration scheduledScan) {
         _scheduledScan = scheduledScan;
+        return this;
+    }
+
+    public Optional<String> getPendingScanRangeQueueName() {
+        return _pendingScanRangeQueueName;
+    }
+
+    public ScannerConfiguration setPendingScanRangeQueueName(Optional<String> pendingScanRangeQueueName) {
+        _pendingScanRangeQueueName = pendingScanRangeQueueName;
+        return this;
+    }
+
+    public Optional<String> getCompleteScanRangeQueueName() {
+        return _completeScanRangeQueueName;
+    }
+
+    public ScannerConfiguration setCompleteScanRangeQueueName(Optional<String> completeScanRangeQueueName) {
+        _completeScanRangeQueueName = completeScanRangeQueueName;
         return this;
     }
 }
