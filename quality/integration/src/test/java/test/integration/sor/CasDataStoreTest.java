@@ -36,12 +36,16 @@ import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.ServiceRegistry;
 import com.codahale.metrics.health.HealthCheck;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -50,6 +54,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
@@ -142,6 +147,11 @@ public class CasDataStoreTest {
                         .toInstance(ZKNamespaces.usingChildNamespace(curator, "applications/emodb-sor"));
                 bind(CuratorFramework.class).annotatedWith(GlobalFullConsistencyZooKeeper.class)
                         .toInstance(ZKNamespaces.usingChildNamespace(curator, "applications/emodb-fct"));
+
+                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)
+                        .toInstance(Suppliers.ofInstance(true));
+                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class)
+                        .toInstance(Suppliers.ofInstance(true));
 
                 bind(ServerFactory.class).toInstance(new SimpleServerFactory());
 

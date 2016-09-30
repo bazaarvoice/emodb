@@ -22,21 +22,20 @@ import com.google.inject.Inject;
  *     $ curl -XPOST 'localhost:8081/tasks/databus-default-join-filter-condition?value=\{..,"~tags":contains("re-etl")\}'
  * </code>
  */
-public class DatabusDefaultJoinFilterConditionAdminTask extends SettingAdminTask<Condition> {
+public class DatabusDefaultJoinFilterConditionAdminTask extends SettingAdminTask {
 
     @Inject
     public DatabusDefaultJoinFilterConditionAdminTask(@DefaultJoinFilter Setting<Condition> setting,
                                                       TaskRegistry taskRegistry) {
-        super("databus-default-join-filter-condition", setting);
+        super("databus-default-join-filter-condition", setting, DatabusDefaultJoinFilterConditionAdminTask::toCondition);
         taskRegistry.addTask(this);
     }
 
-    @Override
-    protected Condition toValue(String valueParam) throws InvalidValueException {
+    private static Condition toCondition(String valueParam) {
         try {
             return Conditions.fromString(valueParam);
         } catch (ParseException e) {
-            throw new InvalidValueException(e.getMessage());
+            throw new IllegalArgumentException(e.getMessage());
         }
     }
 }

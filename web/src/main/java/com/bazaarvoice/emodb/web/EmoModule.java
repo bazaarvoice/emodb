@@ -71,6 +71,8 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
@@ -87,7 +89,7 @@ import com.bazaarvoice.emodb.web.settings.DatabusDefaultJoinFilterConditionAdmin
 import com.bazaarvoice.emodb.web.settings.Setting;
 import com.bazaarvoice.emodb.web.settings.SettingsModule;
 import com.bazaarvoice.emodb.web.settings.SettingsRegistry;
-import com.bazaarvoice.emodb.web.settings.SettingsZooKeeper;
+import com.bazaarvoice.emodb.web.settings.SorCqlDriverTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottle;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleControlTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
@@ -226,12 +228,6 @@ public class EmoModule extends AbstractModule {
             CuratorFramework webCurator = withComponentNamespace(curator, "web");
             return lifeCycle.manage(new ZkMapStore<>(webCurator, "/adhoc-throttles", new ZkAdHocThrottleSerializer()));
         }
-
-        /** Provide ZooKeeper namespaced to settings. */
-        @Provides @Singleton @SettingsZooKeeper
-        CuratorFramework provideScannerZooKeeperConnection(@Global CuratorFramework curator) {
-            return withComponentNamespace(curator, "settings");
-        }
     }
 
     private class WebSetup extends AbstractModule {
@@ -279,6 +275,12 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             bind(DataStoreConfiguration.class).toInstance(_configuration.getDataStoreConfiguration());
+            bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class)
+                    .to(Key.get(new TypeLiteral<Setting<Boolean>>(){}, CqlForMultiGets.class));
+            bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)
+                    .to(Key.get(new TypeLiteral<Setting<Boolean>>(){}, CqlForScans.class));
+            bind(SorCqlDriverTask.class).asEagerSingleton();
+
             install(new DataStoreModule(_serviceMode));
         }
 
@@ -311,6 +313,16 @@ public class EmoModule extends AbstractModule {
                     .withHostDiscovery(new FixedHostDiscovery(endPoint))
                     .withServiceFactory(clientFactory)
                     .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
+        }
+
+        @Provides @Singleton @CqlForMultiGets
+        Setting<Boolean> provideUseCqlForMultiGetSetting(SettingsRegistry settingsRegistry) {
+            return settingsRegistry.register("sor.cassandra.cql.useCqlForMultiGets", Boolean.class, true);
+        }
+
+        @Provides @Singleton @CqlForScans
+        Setting<Boolean> provideUseCqlForScansSetting(SettingsRegistry settingsRegistry) {
+            return settingsRegistry.register("sor.cassandra.cql.useCqlForScans", Boolean.class, true);
         }
     }
 

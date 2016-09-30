@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.settings;
+package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.google.inject.BindingAnnotation;
 
@@ -11,9 +11,12 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for the ZooKeeper curator namespaced for system settings.
+ * Guice annotation for the setting which controls whether to use the CQL driver for scan queries, such as:
+ * <code>
+ *     select * from cat_delta where token(rowkey) > ? and token(rowkey) =< ?;
+ * </code>
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
-public @interface SettingsZooKeeper {
+public @interface CqlForScans {
 }

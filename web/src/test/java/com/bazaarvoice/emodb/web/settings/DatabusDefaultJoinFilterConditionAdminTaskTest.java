@@ -34,7 +34,7 @@ public class DatabusDefaultJoinFilterConditionAdminTaskTest {
 
         verify(taskRegistry).addTask(task);
         verify(setting, never()).set(any(Condition.class));
-        assertEquals(out.toString(), "alwaysTrue()\n");
+        assertEquals(out.toString(), "value\n\talwaysTrue()\n");
     }
 
     @Test
@@ -55,7 +55,7 @@ public class DatabusDefaultJoinFilterConditionAdminTaskTest {
 
         // Simplify result by collapsing whitespace
         String actual = out.toString().replaceAll("\\s", " ").replaceAll("\\s{1,}", " ");
-        String expected = "Prior value: alwaysTrue() Updated value: not({..,\"~tags\":contains(\"re-etl\")}) ";
+        String expected = "value Prior value: alwaysTrue() Updated value: not({..,\"~tags\":contains(\"re-etl\")}) ";
         assertEquals(actual, expected);
     }
 
@@ -76,7 +76,7 @@ public class DatabusDefaultJoinFilterConditionAdminTaskTest {
         verify(taskRegistry).addTask(task);
         // Setting should be un-changed
         verify(setting, never()).set(any(Condition.class));
-        assertEquals(out.toString(), "Only one \"value\" parameter can be provided\n");
+        assertEquals(out.toString(), "value\n\tOnly one \"value\" parameter can be provided\n");
     }
 
     @Test
@@ -94,6 +94,6 @@ public class DatabusDefaultJoinFilterConditionAdminTaskTest {
         verify(taskRegistry).addTask(task);
         verify(setting, never()).set(any(Condition.class));
         // Actual text of Condition parse error may vary in the future; make a minimal check for the expected error text
-        assertTrue(out.toString().startsWith("Expected a valid value"));
+        assertTrue(out.toString().contains("Expected a valid value"));
     }
 }

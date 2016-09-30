@@ -39,10 +39,12 @@ import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.cql.ToggleCqlAstyanaxTask;
 import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
+import com.bazaarvoice.emodb.sor.db.cql.SorCqlSettingsTask;
 import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
@@ -139,6 +141,8 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> {@link TaskRegistry}
  * <li> Curator {@link CuratorFramework}
  * <li> Jersey {@link Client}
+ * <li> @{@link CqlForMultiGets} Supplier&lt;Boolean&gt;
+ * <li> @{@link CqlForScans} Supplier&lt;Boolean&gt;
  * </ul>
  * Exports the following:
  * <ul>
@@ -244,7 +248,7 @@ public class DataStoreModule extends PrivateModule {
 
         // Administration tasks
         bind(RowKeyTask.class).asEagerSingleton();
-        bind(ToggleCqlAstyanaxTask.class).asEagerSingleton();
+        bind(SorCqlSettingsTask.class).asEagerSingleton();
 
         // Data tools used to generate reports
         bind(DataTools.class).to(DefaultDataStore.class);

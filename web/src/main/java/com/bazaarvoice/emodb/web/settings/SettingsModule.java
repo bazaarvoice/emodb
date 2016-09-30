@@ -1,9 +1,7 @@
 package com.bazaarvoice.emodb.web.settings;
 
+import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
-import com.bazaarvoice.emodb.common.zookeeper.store.ZkTimestampSerializer;
-import com.bazaarvoice.emodb.common.zookeeper.store.ZkValueStore;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
@@ -11,8 +9,6 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.name.Named;
-import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Clock;
 
@@ -22,10 +18,8 @@ import java.time.Clock;
  * Requires the following external references:
  * <ul>
  * <li> {@link DataStore}
- * <li> {@link LifeCycleRegistry}
  * <li> {@link DataStoreConfiguration}
- * <li> @SettingsZooKeeper {@link CuratorFramework}
- * <li> {@link Clock}
+ * <li> {@link CacheRegistry}
  * </ul>
  * Exports the following:
  * <ul>
@@ -57,20 +51,17 @@ public class SettingsModule extends PrivateModule {
         return config.getSystemTablePlacement();
     }
 
-    @Provides @Singleton @Named("lastUpdatedStore")
-    ValueStore<Long> provideLastUpdatedValueStore(@SettingsZooKeeper CuratorFramework curator,
-                                                  LifeCycleRegistry lifeCycleRegistry) {
-        return lifeCycleRegistry.manage(new ZkValueStore<>(curator, "settings", new ZkTimestampSerializer()));
+    @Provides @Singleton @SettingsCacheRegistry
+    CacheRegistry provideSettingsCacheRegistry(CacheRegistry cacheRegistry) {
+        return cacheRegistry.withNamespace("settings");
     }
 
     @Provides @Singleton
-    SettingsManager provideSettings(@Named("lastUpdatedStore") ValueStore<Long> lastUpdated,
-                                    Provider<DataStore> dataStore, @SystemTablePlacement String placement,
-                                    LifeCycleRegistry lifeCycleRegistry, Clock clock) {
+    SettingsManager provideSettings(@SettingsCacheRegistry CacheRegistry cacheRegistry,
+                                    Provider<DataStore> dataStore, @SystemTablePlacement String placement) {
         // Note:  To prevent potential circular dependencies while constructing SettingsManager a Provider for the
         //        DataStore must be injected, deferring resolution of the DataStore until after all related
         //        objects are constructed.
-        return new SettingsManager(
-                lastUpdated, dataStore, SETTINGS_TABLE, placement, lifeCycleRegistry, clock);
+        return new SettingsManager(dataStore, SETTINGS_TABLE, placement, cacheRegistry);
     }
 }

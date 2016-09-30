@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
 import com.google.common.base.Objects;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -14,33 +15,38 @@ import java.io.PrintWriter;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * To toggle from CQL -> Astyanax or vice-versa:
- * Other options: Fetch size, batch fetch size, prefetch limit, batch prefetch limit
+ * Update CQL driver settings.  Current configurable settings are:
+ * Fetch size, batch fetch size, prefetch limit, batch prefetch limit
+ *
  * <pre>
- *   curl -s -XPOST "http://localhost:8081/tasks/cql-toggle?driver=cql"
- *   curl -s -XPOST "http://localhost:8081/tasks/cql-toggle?driver=astyanax&fetchSize=15&prefetchLimit=5"
+ *   curl -s -XPOST "http://localhost:8081/tasks/sor-cql-settings?fetchSize=15&prefetchLimit=5"
  * </pre>
  * To view the state of DataReaderDao:
  * <pre>
- *   curl -s -XPOST "http://localhost:8081/tasks/cql-toggle"
+ *   curl -s -XPOST "http://localhost:8081/tasks/sor-cql-settings"
  * </pre>
  */
-public class ToggleCqlAstyanaxTask extends Task {
+public class SorCqlSettingsTask extends Task {
 
     private final CqlDataReaderDAO _cqlDataReaderDAO;
+    private final Supplier<Boolean> _useCqlForMultiGets;
+    private final Supplier<Boolean> _useCqlForScans;
 
     @Inject
-    public ToggleCqlAstyanaxTask(TaskRegistry taskRegistry, DataReaderDAO cqlDataReaderDAO) {
-        super("cql-toggle");
+    public SorCqlSettingsTask(TaskRegistry taskRegistry, DataReaderDAO cqlDataReaderDAO,
+                              @CqlForMultiGets Supplier<Boolean> useCqlForMultiGets,
+                              @CqlForScans Supplier<Boolean> useCqlForScans) {
+        super("sor-cql-settings");
         checkArgument(cqlDataReaderDAO instanceof CqlDataReaderDAO, "We should be using CQL now");
         //noinspection ConstantConditions
         _cqlDataReaderDAO = (CqlDataReaderDAO) cqlDataReaderDAO;
+        _useCqlForMultiGets = useCqlForMultiGets;
+        _useCqlForScans = useCqlForScans;
         taskRegistry.addTask(this);
     }
 
     @Override
     public void execute(ImmutableMultimap<String, String> parameters, PrintWriter out) throws Exception {
-        String driver = Iterables.getFirst(parameters.get("driver"), null);
         String fetchValue = Iterables.getFirst(parameters.get("fetchSize"), "-1");
         String batchFetchValue = Iterables.getFirst(parameters.get("batchFetchSize"), "-1");
         String prefetchLimitValue = Iterables.getFirst(parameters.get("prefetchLimit"), "-1");
@@ -54,16 +60,7 @@ public class ToggleCqlAstyanaxTask extends Task {
             return;
         }
 
-        // Toggle Astyanax/Cql
-        if (driver == null) {
-            // Do nothing
-        } else if (driver.equals("astyanax")) {
-            _cqlDataReaderDAO.setAlwaysDelegateToAstyanax(true);
-        } else if (driver.equals("cql")) {
-            _cqlDataReaderDAO.setAlwaysDelegateToAstyanax(false);
-        } else {
-            out.printf("The only two options are astyanax and cql.");
-        }
+        // TODO: At some point these should be revised to use the newer "settings" capabilities
 
         // Update fetch sizes and prefetch limits if needed
         if (fetchSize > 0 || prefetchLimit >= 0) {
@@ -85,8 +82,9 @@ public class ToggleCqlAstyanaxTask extends Task {
             _cqlDataReaderDAO.setMultiRowFetchSizeAndPrefetchLimit(batchFetchSize, batchPrefetchLimit);
         }
 
-        out.printf("Data Reader DAO is set to: %s | FETCH_SIZE : %d | BATCH_FETCH_SIZE: %d | PREFETCH_LIMIT=%d | BATCH_PREFETCH_LIMIT=%d%n",
-                _cqlDataReaderDAO.getDelegateToAstyanax() ? "Astyanax" : "CQL", _cqlDataReaderDAO.getSingleRowFetchSize(),
+
+        out.printf("Use CQL for multi-gets/scans = %s/%s | FETCH_SIZE : %d | BATCH_FETCH_SIZE: %d | PREFETCH_LIMIT=%d | BATCH_PREFETCH_LIMIT=%d%n",
+                _useCqlForMultiGets.get(), _useCqlForScans.get(), _cqlDataReaderDAO.getSingleRowFetchSize(),
                 _cqlDataReaderDAO.getMultiRowFetchSize(), _cqlDataReaderDAO.getSingleRowPrefetchLimit(),
                 _cqlDataReaderDAO.getMultiRowPrefetchLimit());
     }

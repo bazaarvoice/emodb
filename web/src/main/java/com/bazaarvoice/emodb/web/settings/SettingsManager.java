@@ -1,11 +1,10 @@
 package com.bazaarvoice.emodb.web.settings;
 
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
+import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
+import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
-import com.bazaarvoice.emodb.common.zookeeper.store.ValueStoreListener;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -25,15 +24,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import io.dropwizard.lifecycle.Managed;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
-import java.time.Clock;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -43,7 +38,7 @@ import static com.google.common.base.Preconditions.checkState;
  * registered setting is stored as a row in the table.  Values are cached for a set time (one minute by default)
  * so reading the values from the returned settings typically do no incur a round trip to Cassandra.
  */
-public class SettingsManager implements SettingsRegistry, Settings, Managed {
+public class SettingsManager implements SettingsRegistry, Settings {
 
     private final Logger _log = LoggerFactory.getLogger(getClass());
 
@@ -60,41 +55,23 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
     private final String VERSION_ATTRIBUTE = "settingVersion";
     private final int CURRENT_SETTING_VERSION = 1;
 
-    /**
-     * Changes made in the local data center are propagated immediately using the <code>_lastUpdated</code>
-     * value store.  However, if the settings are changed in a remote data center then we do not receive active
-     * notification.  For this reason the settings are cached in memory for a limited amount of time before they
-     * must be re-fetched from source.
-     */
-    private final static Duration DEFAULT_CACHE_INVALIDATION_TIME = Duration.standardMinutes(1);
-
-    private final ValueStore<Long> _lastUpdated;
     private final Map<String, RegisteredSetting<?>> _registeredSettings = Maps.newConcurrentMap();
-    private final LoadingCache<SettingMetadata<?>, Object> _settingsCache;
+    private final LoadingCache<String, Object> _settingsCache;
     private final Supplier<DataStore> _dataStore;
     private final Supplier<String> _settingsTable;
     private final String _settingsTablePlacement;
-    private final Clock _clock;
-    private ValueStoreListener _listener;
+    private final CacheHandle _cacheHandle;
 
     /**
      * Injection constructor.  Because of circular dependency issues between the SettingsRegistry interface and the
      * DataStore the latter is injected using its provider.
      */
     @Inject
-    public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
-                           String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry, Clock clock) {
-        this(lastUpdated, dataStoreProvider, settingsTable, settingsTablePlacement, lifeCycleRegistry,
-                DEFAULT_CACHE_INVALIDATION_TIME, clock);
-    }
+    public SettingsManager(Provider<DataStore> dataStoreProvider, String settingsTable,
+                           String settingsTablePlacement, @SettingsCacheRegistry CacheRegistry settingsCacheRegistry) {
 
-    public SettingsManager(ValueStore<Long> lastUpdated, Provider<DataStore> dataStoreProvider, String settingsTable,
-                           String settingsTablePlacement, LifeCycleRegistry lifeCycleRegistry,
-                           Duration cacheInvalidationTime, Clock clock) {
-        _lastUpdated = lastUpdated;
         _dataStore = Suppliers.memoize(dataStoreProvider::get);
         _settingsTablePlacement = settingsTablePlacement;
-        _clock = clock;
 
         _settingsTable = Suppliers.memoize(() -> {
             // Create the settings table if it does not exist
@@ -109,39 +86,34 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
         });
 
         _settingsCache = CacheBuilder.newBuilder()
-                .ticker(ClockTicker.getTicker(_clock))
-                .expireAfterWrite(cacheInvalidationTime.getMillis(), TimeUnit.MILLISECONDS)
-                .build(new CacheLoader<SettingMetadata<?>, Object>() {
+                .build(new CacheLoader<String, Object>() {
                     @Override
-                    public Object load(SettingMetadata<?> metadata) throws Exception {
+                    public Object load(String name) throws Exception {
+                        RegisteredSetting<?> registeredSetting = _registeredSettings.get(name);
+                        checkNotNull(registeredSetting, "Cache value lookup for unregistered setting: %s", name);
+                        SettingMetadata<?> metadata = registeredSetting.metadata;
+
                         Map<String, Object> valueMap = _dataStore.get().get(
                                 _settingsTable.get(), metadata.getName(), ReadConsistency.STRONG);
 
                         if (Intrinsic.isDeleted(valueMap)) {
                             return metadata.getDefaultValue();
                         }
+                        Object value;
                         int version = Objects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
                         if (version == CURRENT_SETTING_VERSION) {
                             String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
-                            return JsonHelper.fromJson(rawValue, metadata.getTypeReference());
+                            value = JsonHelper.fromJson(rawValue, metadata.getTypeReference());
+                        } else {
+                            throw new IllegalStateException("Setting stored with unparseable version: " + version);
                         }
-                        throw new IllegalStateException("Setting stored with unparseable version: " + version);
+
+                        _log.info("Setting {} updated: {}", name, value);
+                        return value;
                     }
                 });
 
-        lifeCycleRegistry.manage(this);
-    }
-
-    @Override
-    public void start() throws Exception {
-        // Register a listener for locally-sourced settings updates to immediately invalidate the settings cache
-        _listener = _settingsCache::invalidateAll;
-        _lastUpdated.addListener(_listener);
-    }
-
-    @Override
-    public void stop() throws Exception {
-        _lastUpdated.removeListener(_listener);
+        _cacheHandle = settingsCacheRegistry.register("settings", _settingsCache, true);
     }
 
     @Override
@@ -190,7 +162,7 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
 
     private <T> T get(SettingMetadata<T> metadata) {
         //noinspection unchecked
-        return (T) _settingsCache.getUnchecked(metadata);
+        return (T) _settingsCache.getUnchecked(metadata.getName());
     }
 
     private <T> void set(SettingMetadata<T> metadata, T value) {
@@ -203,16 +175,10 @@ public class SettingsManager implements SettingsRegistry, Settings, Managed {
 
         // Write the delta to the store
         _dataStore.get().update(_settingsTable.get(), metadata.getName(), TimeUUIDs.newUUID(), delta,
-                new AuditBuilder().setLocalHost().setComment("Updated setting").build(), WriteConsistency.STRONG);
+                new AuditBuilder().setLocalHost().setComment("Updated setting").build(), WriteConsistency.GLOBAL);
 
-        // Notify all nodes in the local cluster to refresh immediately; remote clusters will eventually see the update
-        try {
-            _lastUpdated.set(_clock.millis());
-        } catch (Exception e) {
-            // This local invalidation was optimistic; log that it failed but otherwise move on.  The local cluster
-            // will read the updated value eventually.
-            _log.warn("Failed to invalidated settings cache", e);
-        }
+        // Notify all instances that the setting value has changed
+        _cacheHandle.invalidate(InvalidationScope.GLOBAL, metadata.getName());
     }
 
     @Override
