@@ -82,11 +82,12 @@ public class SorCqlSettingsTask extends Task {
             _cqlDataReaderDAO.setMultiRowFetchSizeAndPrefetchLimit(batchFetchSize, batchPrefetchLimit);
         }
 
+        out.printf("Use CQL for multi-gets/scans = %s/%s.  To change these values use the \"sor-cql-driver\" task.%n%n",
+                _useCqlForMultiGets.get(), _useCqlForScans.get());
 
-        out.printf("Use CQL for multi-gets/scans = %s/%s | FETCH_SIZE : %d | BATCH_FETCH_SIZE: %d | PREFETCH_LIMIT=%d | BATCH_PREFETCH_LIMIT=%d%n",
-                _useCqlForMultiGets.get(), _useCqlForScans.get(), _cqlDataReaderDAO.getSingleRowFetchSize(),
-                _cqlDataReaderDAO.getMultiRowFetchSize(), _cqlDataReaderDAO.getSingleRowPrefetchLimit(),
-                _cqlDataReaderDAO.getMultiRowPrefetchLimit());
+        out.printf("FETCH_SIZE : %d | BATCH_FETCH_SIZE: %d | PREFETCH_LIMIT=%d | BATCH_PREFETCH_LIMIT=%d%n",
+                _cqlDataReaderDAO.getSingleRowFetchSize(), _cqlDataReaderDAO.getMultiRowFetchSize(),
+                _cqlDataReaderDAO.getSingleRowPrefetchLimit(), _cqlDataReaderDAO.getMultiRowPrefetchLimit());
     }
 
     private Integer parseInt(String value, String description, PrintWriter out) {
