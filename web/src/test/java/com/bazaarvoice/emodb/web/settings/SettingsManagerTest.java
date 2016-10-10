@@ -1,24 +1,24 @@
 package com.bazaarvoice.emodb.web.settings;
 
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
+import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
-import com.bazaarvoice.emodb.common.zookeeper.store.ValueStoreListener;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Supplier;
+import com.google.common.cache.Cache;
 import com.google.inject.util.Providers;
-import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import java.time.Clock;
-import java.util.concurrent.TimeUnit;
-
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -29,41 +29,29 @@ import static org.testng.Assert.fail;
 
 public class SettingsManagerTest {
 
-    private final static long START_TIME_MS = 1472766259192L;
-
     private DataStore _dataStore;
-    private ValueStore<Long> _lastUpdated;
-    private Clock _clock;
+    private CacheRegistry _cacheRegistry;
+    private CacheHandle _cacheHandle;
     private SettingsManager _settingsManager;
 
     @BeforeMethod
     public void setUp() {
         _dataStore = new InMemoryDataStore(new MetricRegistry());
-        _lastUpdated = mock(ValueStore.class);
-        _clock = mock(Clock.class);
-        when(_clock.millis()).thenReturn(START_TIME_MS);
+        _cacheRegistry = mock(CacheRegistry.class);
+        _cacheHandle = mock(CacheHandle.class);
+        when(_cacheRegistry.register(eq("settings"), any(Cache.class), eq(true))).thenReturn(_cacheHandle);
 
-        _settingsManager = new SettingsManager(_lastUpdated, Providers.of(_dataStore), "__system:settings",
-                "app_global:sys", mock(LifeCycleRegistry.class), Duration.standardMinutes(1), _clock);
+        _settingsManager = new SettingsManager(Providers.of(_dataStore), "__system:settings",
+                "app_global:sys", _cacheRegistry);
     }
 
     @Test
-    public void testSetting() {
+    public void testSettingFromDefault() {
         Setting<String> setting = _settingsManager.register("test1", String.class, "def");
         assertEquals(setting.getName(), "test1");
         assertEquals(setting.get(), "def");
         // Default is not being read from data store
         assertTrue(Intrinsic.isDeleted(_dataStore.get("__system:settings", "test1")));
-
-        // Update value
-        setting.set("newvalue");
-        // Need to advance time by 1 minute to enforce value returned is not cached
-        when(_clock.millis()).thenReturn(START_TIME_MS + TimeUnit.MINUTES.toMillis(1));
-        assertEquals(setting.get(), "newvalue");
-        assertEquals(_dataStore.get("__system:settings", "test1").get("json"), "\"newvalue\"");
-
-        // Verify setting exists in manager
-        assertSame(_settingsManager.getSetting("test1", String.class), setting);
     }
 
     @Test
@@ -89,34 +77,7 @@ public class SettingsManagerTest {
     }
 
     @Test
-    public void testCaching() {
-        Setting<String> setting = _settingsManager.register("test3", String.class, "original");
-        assertEquals(setting.get(), "original");
-
-        // Update the value in the backend without going through the settings API
-        _dataStore.update("__system:settings", "test3", TimeUUIDs.newUUID(),
-                Deltas.mapBuilder().put("json", "\"newvalue\"").put("settingVersion", 1).build(),
-                new AuditBuilder().setComment("test").build());
-
-        for (int sec : new Integer[] {0, 1, 59, 60, 120}) {
-            when(_clock.millis()).thenReturn(START_TIME_MS + TimeUnit.SECONDS.toMillis(sec));
-            assertEquals(setting.get(), sec < 60 ? "original" : "newvalue");
-        }
-    }
-
-    @Test
-    public void testUpdateNotification() throws Exception {
-        Setting<String> setting = _settingsManager.register("test4", String.class, "original");
-        setting.set("foo");
-        verify(_lastUpdated).set(START_TIME_MS);
-    }
-
-    @Test
-    public void testCacheInvalidation() throws Exception {
-        _settingsManager.start();
-        ArgumentCaptor<ValueStoreListener> captor = ArgumentCaptor.forClass(ValueStoreListener.class);
-        verify(_lastUpdated).addListener(captor.capture());
-
+    public void testCacheInvalidation() {
         Setting<String> setting = _settingsManager.register("test5", String.class, "original");
         assertEquals(setting.get(), "original");
         // Change the value
@@ -124,8 +85,11 @@ public class SettingsManagerTest {
         // Time hasn't advanced, so should still be original
         assertEquals(setting.get(), "original");
 
-        // Don't advance time, but call the value store listener
-        captor.getValue().valueChanged();
+        // Don't advance time, but invalidate the cache
+        verify(_cacheHandle).invalidate(InvalidationScope.GLOBAL, "test5");
+        ArgumentCaptor<Cache> captor = ArgumentCaptor.forClass(Cache.class);
+        verify(_cacheRegistry).register(eq("settings"), captor.capture(), eq(true));
+        captor.getValue().invalidate("test5");
 
         // Cache should have been invalidated, so new value is now returned
         assertEquals(setting.get(), "foo");

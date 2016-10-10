@@ -15,6 +15,8 @@ import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.db.cql.CachingRowGroupIterator;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.RowGroupResultSetIterator;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
@@ -35,9 +37,10 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
-import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.FluentIterable;
@@ -101,7 +104,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
 
-    private volatile boolean _alwaysDelegateToAstyanax = false;
+    // Support AB testing of various uses of the CQL driver versus the older but (at this point) more vetted Astyanax driver.
+    private volatile Supplier<Boolean> _useCqlForMultiGets = Suppliers.ofInstance(true);
+    private volatile Supplier<Boolean> _useCqlForScans = Suppliers.ofInstance(true);
 
     /**
      * Fetch sizes determine the number of rows the CQL driver will stream into memory for a given query.  For example,
@@ -135,15 +140,25 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return MetricRegistry.name("bv.emodb.sor", "CqlDataReaderDAO", name);
     }
 
+    // Since AB testing of CQL driver is temporary until proven out don't change the constructor to support this feature.
+    // Inject the AB testing flags independently.  This will make backing these settings out easier in the future.
+
+    @Inject
+    public void setUseCqlforMultiGets(@CqlForMultiGets Supplier<Boolean> useCqlForMultiGets) {
+        _useCqlForMultiGets = checkNotNull(useCqlForMultiGets, "useCqlForMultiGets");
+    }
+
+    @Inject
+    public void setUseCqlforScans(@CqlForScans Supplier<Boolean> useCqlForScans) {
+        _useCqlForScans = checkNotNull(useCqlForScans, "useCqlForScans");
+    }
+
     /**
      * This CQL based read method works for a row with 64 deltas of 3 MB each. The same read with the AstyanaxDataReaderDAO
      * would give Thrift frame errors.
      */
     @Override
     public Record read(Key key, ReadConsistency consistency) {
-        if (_alwaysDelegateToAstyanax) {
-            return _astyanaxReaderDAO.read(key, consistency);
-        }
         checkNotNull(key, "key");
         checkNotNull(consistency, "consistency");
 
@@ -157,7 +172,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
     @Override
     public Iterator<Record> readAll(Collection<Key> keys, final ReadConsistency consistency) {
-        if (_alwaysDelegateToAstyanax) {
+        if (!_useCqlForMultiGets.get()) {
             return _astyanaxReaderDAO.readAll(keys, consistency);
         }
 
@@ -184,14 +199,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         return placement.getKeyspace().getClusterName();
-    }
-
-    public void setAlwaysDelegateToAstyanax(boolean delegateToAstyanax) {
-        _alwaysDelegateToAstyanax = delegateToAstyanax;
-    }
-
-    public boolean getDelegateToAstyanax() {
-        return _alwaysDelegateToAstyanax;
     }
 
     public void setSingleRowFetchSizeAndPrefetchLimit(int singleRowFetchSize, int singleRowPrefetchLimit) {
@@ -478,7 +485,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // Note:  The LimitCounter is passed in as an artifact of Astyanax batching and was used as a mechanism to
         // control paging.  The CQL driver natively performs this functionality so it is not used here.  The caller
         // will apply limit boundaries on the results from this method.
-        if (_alwaysDelegateToAstyanax) {
+        if (!_useCqlForScans.get()) {
             return  _astyanaxReaderDAO.scan(tbl, fromKeyExclusive, ignore_limit, consistency);
         }
 
@@ -510,7 +517,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // Note:  The LimitCounter is passed in as an artifact of Astyanax batching and was used as a mechanism to
         // control paging.  The CQL driver natively performs this functionality so it is not used here.  The caller
         // will apply limit boundaries on the results from this method.
-        if (_alwaysDelegateToAstyanax) {
+        if (!_useCqlForScans.get()) {
             return _astyanaxReaderDAO.getSplit(tbl, split, fromKeyExclusive, ignore_limit, consistency);
         }
 
@@ -578,7 +585,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
                                                          final LimitCounter limit, final ReadConsistency consistency) {
-        if (_alwaysDelegateToAstyanax) {
+        if (!_useCqlForScans.get()) {
             return _astyanaxReaderDAO.multiTableScan(query, tables, limit, consistency);
         }
 
@@ -778,10 +785,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Override
     public Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation, UUID start, UUID end,
                                          boolean reversed, long limit, ReadConsistency readConsistency) {
-        if (_alwaysDelegateToAstyanax) {
-            return _astyanaxReaderDAO.readTimeline(key, includeContentData, includeAuditInformation, start, end, reversed, limit, readConsistency);
-        }
-
         checkNotNull(key, "key");
         checkArgument(limit > 0, "Limit must be >0");
         checkNotNull(readConsistency, "consistency");
@@ -823,10 +826,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
     @Override
     public Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency readConsistency) {
-        if (_alwaysDelegateToAstyanax) {
-            return _astyanaxReaderDAO.getExistingAudits(key, start, end, readConsistency);
-        }
-
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
         ByteBuffer rowKey = storage.getRowKey(key.getKey());

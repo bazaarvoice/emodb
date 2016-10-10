@@ -21,12 +21,16 @@ import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -36,6 +40,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.ConfigurationException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
@@ -128,6 +133,8 @@ public class DataStoreModuleTest {
                 bind(MetricRegistry.class).asEagerSingleton();
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
+                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class).toInstance(Suppliers.ofInstance(true));
+                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class).toInstance(Suppliers.ofInstance(true));
 
                 install(new DataStoreModule(serviceMode));
             }
