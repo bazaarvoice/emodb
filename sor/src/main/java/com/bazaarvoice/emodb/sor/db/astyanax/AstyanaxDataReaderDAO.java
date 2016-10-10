@@ -391,19 +391,20 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         // Create at least one split per shard, perhaps more if a shard is large.
         List<CfSplit> splits = Lists.newArrayList();
         Iterator<ByteBufferRange> it = storage.scanIterator(fromKey);
+        Collection<TokenRange> allTokenRanges = describeCassandraTopology(keyspace).values();
         while (it.hasNext()) {
             ByteBufferRange keyRange = it.next();
 
             String start = toTokenString(keyRange.getStart());
             String end = toTokenString(keyRange.getEnd());
 
-            splits.addAll(getCfSplits(keyspace, cf, start, end, desiredRecordsPerSplit));
+            splits.addAll(getCfSplits(keyspace, cf, start, end, desiredRecordsPerSplit, allTokenRanges));
         }
         return splits;
     }
 
     private List<CfSplit> getCfSplits(Keyspace keyspace, ColumnFamily<ByteBuffer, UUID> cf, String start,
-                                    String end, int desiredRecordsPerSplit) {
+                                    String end, int desiredRecordsPerSplit, Iterable<TokenRange> allTokenRanges) {
         // There is a hole in the describeSplitsEx() call where if the call is routed to a Cassandra node which does
         // have a replica of the requested token range then it will return a single split equivalent to the requested
         // range.  To accommodate this each query is routed to a host that is verified to have a replica of the range.
@@ -412,7 +413,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         List<CfSplit> cfSplits = Lists.newArrayList();
 
         // Iterate over the entire ring to find the token ranges which overlap with the provided range
-        for (TokenRange hostTokenRange : describeCassandraTopology(keyspace).values()) {
+        for (TokenRange hostTokenRange : allTokenRanges) {
             ScanRange hostSplitRange = ScanRange.create(
                     parseTokenString(hostTokenRange.getStartToken()),
                     parseTokenString(hostTokenRange.getEndToken()));
@@ -528,6 +529,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
 
         // Get the topology so the splits can be grouped by rack
         Multimap<String, TokenRange> racks = describeCassandraTopology(keyspace.getAstyanaxKeyspace());
+        Collection<TokenRange> allTokenRanges = racks.values();
         ScanRangeSplits.Builder builder = ScanRangeSplits.builder();
 
         for (Map.Entry<String, Collection<TokenRange>> entry : racks.asMap().entrySet()) {
@@ -545,11 +547,13 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                         TokenRange intersectingTokenRange = new TokenRangeImpl(
                                 toTokenString(scanRange.getFrom()), toTokenString(scanRange.getTo()), tokenRange.getEndpoints());
 
-                        addScanRangeSplitsForTokenRange(keyspace, cf, rack, intersectingTokenRange, desiredRecordsPerSplit, builder);
+                        addScanRangeSplitsForTokenRange(keyspace, cf, rack, intersectingTokenRange,
+                                desiredRecordsPerSplit, allTokenRanges, builder);
                     }
                 } else {
                     // Add splits for the entire token range
-                    addScanRangeSplitsForTokenRange(keyspace, cf, rack, tokenRange, desiredRecordsPerSplit, builder);
+                    addScanRangeSplitsForTokenRange(keyspace, cf, rack, tokenRange, desiredRecordsPerSplit,
+                            allTokenRanges, builder);
                 }
             }
         }
@@ -558,13 +562,14 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private void addScanRangeSplitsForTokenRange(CassandraKeyspace keyspace, ColumnFamily<ByteBuffer, UUID> cf, String rack,
-                                                 TokenRange tokenRange, int desiredRecordsPerSplit, ScanRangeSplits.Builder builder) {
+                                                 TokenRange tokenRange, int desiredRecordsPerSplit, Iterable<TokenRange> allTokenRanges,
+                                                 ScanRangeSplits.Builder builder) {
         // Split the token range into sub-ranges with approximately the desired number of records per split
         String rangeStart = tokenRange.getStartToken();
 
         List<CfSplit> splits = getCfSplits(
                 keyspace.getAstyanaxKeyspace(), cf, tokenRange.getStartToken(), tokenRange.getEndToken(),
-                desiredRecordsPerSplit);
+                desiredRecordsPerSplit, allTokenRanges);
 
         for (CfSplit split : splits) {
             ByteBuffer begin = parseTokenString(split.getStartToken());
