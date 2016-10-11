@@ -1,6 +1,7 @@
 package test.integration.queue;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
@@ -57,8 +58,8 @@ public class QueueJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new QueueResource1(_server, QueueServiceAuthenticator.proxied(_proxy))),
-            new ApiKey(APIKEY_QUEUE, "queue", ImmutableSet.of("queue-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
+            new ApiKey(APIKEY_QUEUE, "queue", IdentityState.ACTIVE, ImmutableSet.of("queue-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", IdentityState.ACTIVE, ImmutableSet.of("unauthorized-role")),
             "queue");
 
     @After

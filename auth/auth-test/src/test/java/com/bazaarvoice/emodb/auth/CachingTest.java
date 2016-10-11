@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
@@ -76,7 +77,7 @@ public class CachingTest {
         CacheRegistry cacheRegistry = new DefaultCacheRegistry(new SimpleLifeCycleRegistry(), new MetricRegistry());
         _cacheManager = new GuavaCacheManager(cacheRegistry);
 
-        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>();
+        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>(ApiKey.class);
         _authIdentityCaching = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
         _authIdentityManager = spy(_authIdentityCaching);
 
@@ -84,8 +85,8 @@ public class CachingTest {
         _permissionCaching = new CacheManagingPermissionManager(permissionDAO, _cacheManager);
         _permissionManager = spy(_permissionCaching);
 
-        authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        authIdentityDAO.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("testrole")));
+        authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
+        authIdentityDAO.updateIdentity(new ApiKey("othertestkey", "id1", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
 
         permissionDAO.updateForRole("testrole", new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
@@ -140,7 +141,7 @@ public class CachingTest {
         _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
-        _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("othertestrole")));
+        _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", IdentityState.ACTIVE, ImmutableSet.of("othertestrole")));
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         verify(_authIdentityManager, times(6)).getIdentity("testkey");
@@ -173,7 +174,7 @@ public class CachingTest {
         testGetWithMissingPermissions("othertestkey", "USA", "Austin");
         testGetWithMissingPermissions("othertestkey", "USA", "Austin");
         _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
-        _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("testrole", "othertestrole")));
+        _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", IdentityState.ACTIVE, ImmutableSet.of("testrole", "othertestrole")));
 
         testGetWithMatchingPermissions("othertestkey", "USA", "Austin"); // +1 othertestkey, +1 othertestrole
         testGetWithMatchingPermissions("othertestkey", "USA", "Austin");

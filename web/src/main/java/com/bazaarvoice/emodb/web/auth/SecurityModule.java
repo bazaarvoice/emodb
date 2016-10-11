@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.DeferringAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.CacheManagingPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.DeferringPermissionManager;
@@ -187,11 +188,11 @@ public class SecurityModule extends PrivateModule {
 
         ImmutableList.Builder<ApiKey> reservedIdentities = ImmutableList.builder();
         reservedIdentities.add(
-                new ApiKey(replicationKey, REPLICATION_INTERNAL_ID, ImmutableSet.of(DefaultRoles.replication.toString())),
-                new ApiKey(adminKey, ADMIN_INTERNAL_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
+                new ApiKey(replicationKey, REPLICATION_INTERNAL_ID, IdentityState.ACTIVE, ImmutableSet.of(DefaultRoles.replication.toString())),
+                new ApiKey(adminKey, ADMIN_INTERNAL_ID, IdentityState.ACTIVE, ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
-            reservedIdentities.add(new ApiKey(anonymousKey.get(), ANONYMOUS_INTERNAL_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
+            reservedIdentities.add(new ApiKey(anonymousKey.get(), ANONYMOUS_INTERNAL_ID, IdentityState.ACTIVE, ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
         AuthIdentityManager<ApiKey> deferring = new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());

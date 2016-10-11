@@ -131,13 +131,15 @@ roles: record_update, databus_standard
 issued: 11/13/14 12:01 PM
 ```
 
-### Delete API key
+### Inactivate API key
 
-You can delete an API key with the _delete_ action as in the following example:
+An inactive key can no longer be authenticated for access or authorized for any permissions.  Effectively it is
+deleted, although internally a record of the key exists to prevent re-use.  You can inactivate an API key with the
+_inactivate_ action as in the following example:
 
 ```
-$ curl -XPOST 'localhost:8081/tasks/api-key?action=delete&APIKey=pebbles&key=kp7w6odzin5zki7riqhduadisi7a6wa7cobbfbb379e3z6q5'
-API key deleted
+$ curl -XPOST 'localhost:8081/tasks/api-key?action=inactivate&APIKey=pebbles&key=kp7w6odzin5zki7riqhduadisi7a6wa7cobbfbb379e3z6q5'
+API key inactivated
 ```
 
 Permissions

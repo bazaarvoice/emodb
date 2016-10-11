@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
@@ -46,7 +47,7 @@ public class RoleAdminTaskTest {
 
     @BeforeMethod
     public void setUp() {
-        _authIdentityManager = new InMemoryAuthIdentityManager<>();
+        _authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         _permissionManager = new InMemoryPermissionManager(permissionResolver);
 
@@ -56,7 +57,7 @@ public class RoleAdminTaskTest {
                         null));
 
         _task = new RoleAdminTask(securityManager, _permissionManager, mock(TaskRegistry.class));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", IdentityState.ACTIVE, ImmutableSet.of(DefaultRoles.admin.toString())));
     }
 
     @AfterMethod

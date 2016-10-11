@@ -12,7 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Base unit of identity for a client which can be authenticated in the application.
  */
-abstract public class AuthIdentity {
+abstract public class AuthIdentity implements InternalIdentity {
 
     /**
      * Each identity is associated with an internal ID which is never exposed outside the system.  This is done
@@ -49,13 +49,15 @@ abstract public class AuthIdentity {
     private String _description;
     // Date this identity was issued
     private Date _issued;
+    // State for this identity
+    private IdentityState _state;
 
-
-    protected AuthIdentity(String id, String internalId, Set<String> roles) {
+    protected AuthIdentity(String id, String internalId, IdentityState state, Set<String> roles) {
         checkArgument(!Strings.isNullOrEmpty(id), "id");
         checkArgument(!Strings.isNullOrEmpty(internalId), "internalId");
         _id = id;
         _internalId = internalId;
+        _state = state;
         _roles = ImmutableSet.copyOf(checkNotNull(roles, "roles"));
     }
 
@@ -63,14 +65,17 @@ abstract public class AuthIdentity {
         return _id;
     }
 
+    @Override
     public String getInternalId() {
         return _internalId;
     }
 
+    @Override
     public Set<String> getRoles() {
         return _roles;
     }
 
+    @Override
     public String getOwner() {
         return _owner;
     }
@@ -79,6 +84,7 @@ abstract public class AuthIdentity {
         _owner = owner;
     }
 
+    @Override
     public String getDescription() {
         return _description;
     }
@@ -87,11 +93,21 @@ abstract public class AuthIdentity {
         _description = description;
     }
 
+    @Override
     public Date getIssued() {
         return _issued;
     }
 
     public void setIssued(Date issued) {
         _issued = issued;
+    }
+
+    @Override
+    public IdentityState getState() {
+        return _state;
+    }
+
+    public void setState(IdentityState state) {
+        _state = state;
     }
 }

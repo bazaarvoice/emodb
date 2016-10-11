@@ -1,6 +1,7 @@
 package test.integration.blob;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
@@ -102,11 +103,11 @@ public class BlobStoreJerseyTest extends ResourceTest {
     public ResourceTestRule _resourceTestRule = setupResourceTestRule();
 
     private ResourceTestRule setupResourceTestRule() {
-        final InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB, "id0", ImmutableSet.of("blob-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UNAUTHORIZED, "id1", ImmutableSet.of("unauthorized-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_A, "id2", ImmutableSet.of("blob-role-a")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_B, "id3", ImmutableSet.of("blob-role-b")));
+        final InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB, "id0", IdentityState.ACTIVE, ImmutableSet.of("blob-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UNAUTHORIZED, "id1", IdentityState.ACTIVE, ImmutableSet.of("unauthorized-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_A, "id2", IdentityState.ACTIVE, ImmutableSet.of("blob-role-a")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_BLOB_B, "id3", IdentityState.ACTIVE, ImmutableSet.of("blob-role-b")));
 
         final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), _server);
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);

@@ -4,13 +4,12 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -81,20 +80,20 @@ import static java.lang.String.format;
  * Migrate API key
  * ===============
  *
- * The following example copies all metadata and associated roles from "sample-key" to a new key then
- * deletes "sample-key".
+ * The following example copies all metadata and associated roles from "sample-key" to a new key, removing
+ * the ability for "sample-key" to be authorized or authenticated.
  *
  * <code>
  *     $ curl -XPOST "localhost:8081/tasks/api-key?action=migrate&APIKey=admin-key&key=sample-key"
  * </code>
  *
- * Delete API key
+ * Inactivate API key
  * ==============
  *
- * The following example deletes API key "sample-key".
+ * The following example inactivates API key "sample-key".
  *
  * <code>
- *     $ curl -XPOST "localhost:8081/tasks/api-key?action=delete&APIKey=admin-key&key=sample-key"
+ *     $ curl -XPOST "localhost:8081/tasks/api-key?action=inactivate&APIKey=admin-key&key=sample-key"
  * </code>
  */
 public class ApiKeyAdminTask extends Task {
@@ -106,13 +105,14 @@ public class ApiKeyAdminTask extends Task {
         VIEW,
         UPDATE,
         MIGRATE,
+        INACTIVATE,
         DELETE
     }
 
     private final SecurityManager _securityManager;
     private final AuthIdentityManager<ApiKey> _authIdentityManager;
-    private final HostAndPort _hostAndPort;
     private final Set<String> _reservedRoles;
+    private final SecureRandom _secureRandom;
 
     @Inject
     public ApiKeyAdminTask(SecurityManager securityManager,
@@ -124,8 +124,14 @@ public class ApiKeyAdminTask extends Task {
 
         _securityManager = securityManager;
         _authIdentityManager = authIdentityManager;
-        _hostAndPort = selfHostAndPort;
         _reservedRoles = reservedRoles;
+
+        // Create a randomizer that makes the odds of creating the same API key globally effectively zero
+        _secureRandom = new SecureRandom();
+        _secureRandom.setSeed(System.currentTimeMillis());
+        _secureRandom.setSeed(Thread.currentThread().getId());
+        _secureRandom.setSeed(selfHostAndPort.getHostText().getBytes());
+        _secureRandom.setSeed(selfHostAndPort.getPort());
 
         taskRegistry.addTask(this);
     }
@@ -158,6 +164,9 @@ public class ApiKeyAdminTask extends Task {
                 case MIGRATE:
                     migrateApiKey(parameters, output);
                     break;
+                case INACTIVATE:
+                    inactivateApiKey(parameters, output);
+                    break;
                 case DELETE:
                     deleteApiKey(parameters, output);
                     break;
@@ -179,80 +188,80 @@ public class ApiKeyAdminTask extends Task {
         return BaseEncoding.base32().omitPadding().encode(b);
     }
 
+    /**
+     * When creating or modifying a key the caller can provide an explicit key.  This isn't common and should be
+     * restricted to integration tests where stable keys are desirable.  In production it is better
+     * to let the system create random keys.
+     */
+    private String getUniqueOrProvidedKey(ImmutableMultimap<String, String> parameters, String explicitKeyParam, PrintWriter output) {
+        String key = Iterables.getOnlyElement(parameters.get(explicitKeyParam), null);
+
+        if (key != null) {
+            if (!isProvidedApiKeyValid(key)) {
+                output.println("Error:  Provided key is not valid");
+                return null;
+            }
+            if (isApiKeyInUse(key)) {
+                output.println("Error:  Provided key exists");
+                return null;
+            }
+        } else {
+            key = createUniqueApiKey();
+        }
+
+        return key;
+    }
+
     private void createApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output)
                 throws Exception {
         String owner = getValueFromParams("owner", parameters);
         Set<String> roles = ImmutableSet.copyOf(parameters.get("role"));
         String description = Iterables.getFirst(parameters.get("description"), null);
 
-        // If the caller provided a specific key then only use that one.  This isn't common and should be
-        // restricted to integration tests where stable keys are desirable.  In production it is better
-        // to let the system create random keys.
-        Optional<String> providedKey = Iterables.tryFind(parameters.get("key"), Predicates.alwaysTrue());
-
         checkArgument(Sets.intersection(roles, _reservedRoles).isEmpty(), "Cannot assign reserved role");
 
         // Generate a unique internal ID for this new key
         String internalId = createUniqueInternalId();
 
-        String key;
-        if (providedKey.isPresent()) {
-            key = providedKey.get();
-            if (!isProvidedApiKeyValid(key)) {
-                output.println("Error:  Provided key is not valid");
-                return;
-            }
-            if (!createApiKeyIfAvailable(key, internalId, owner, roles, description)) {
-                output.println("Error:  Provided key exists");
-                return;
-            }
-        } else {
-            key = createRandomApiKey(internalId, owner, roles, description);
+        String key = getUniqueOrProvidedKey(parameters, "key", output);
+        if (key == null) {
+            return;
         }
+
+        createApiKey(key, internalId, owner, roles, description);
 
         output.println("API key: " + key);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
-    private boolean createApiKeyIfAvailable(String key, String internalId, String owner, Set<String> roles, String description) {
-        boolean exists = _authIdentityManager.getIdentity(key) != null;
-
-        if (exists) {
-            return false;
-        }
-
-        ApiKey apiKey = new ApiKey(key, internalId, roles);
+    private void createApiKey(String key, String internalId, String owner, Set<String> roles, String description) {
+        ApiKey apiKey = new ApiKey(key, internalId, IdentityState.ACTIVE, roles);
         apiKey.setOwner(owner);
         apiKey.setDescription(description);
         apiKey.setIssued(new Date());
 
         _authIdentityManager.updateIdentity(apiKey);
-
-        return true;
     }
 
-    private String createRandomApiKey(String internalId, String owner, Set<String> roles, String description) {
-        // Since API keys are stored hashed we create them in a loop to ensure we don't grab one that is already picked
+    private boolean isApiKeyInUse(String key) {
+        return _authIdentityManager.getIdentity(key) != null;
+    }
 
-        String key = null;
-        boolean apiKeyCreated = false;
+    private String createUniqueApiKey() {
+        int attempt = 0;
 
-        while (!apiKeyCreated) {
-            key = generateRandomApiKey();
-            apiKeyCreated = createApiKeyIfAvailable(key, internalId, owner, roles, description);
+        while (attempt++ < 10) {
+            String key = generateRandomApiKey();
+            if (!isApiKeyInUse(key)) {
+                return key;
+            }
         }
 
-        return key;
+        // Instead of trying indefinitely, raise an exception if no unique API key was generated after 10 attempts
+        throw new RuntimeException("Failed to generate unique API key after 10 attempts");
     }
 
-    private String generateRandomApiKey() {
-        // Randomize the API key such that it is practically assured that no two call will create the same API key
-        // at the same time.
-        SecureRandom random = new SecureRandom();
-        random.setSeed(System.currentTimeMillis());
-        random.setSeed(Thread.currentThread().getId());
-        random.setSeed(_hostAndPort.getHostText().getBytes());
-        random.setSeed(_hostAndPort.getPort());
+    private synchronized String generateRandomApiKey() {
 
         // Use base64 encoding but keep the keys alphanumeric (we could use base64URL() to make them at least URL-safe
         // but pure alphanumeric keeps validation simple).
@@ -260,7 +269,7 @@ public class ApiKeyAdminTask extends Task {
         byte[] rawKey = new byte[36];
         String key = "";
         do {
-            random.nextBytes(rawKey);
+            _secureRandom.nextBytes(rawKey);
             String chars = BaseEncoding.base64().omitPadding().encode(rawKey).toLowerCase();
             // Eliminate all '+' an '/' characters
             chars = chars.replaceAll("\\+|/", "");
@@ -284,6 +293,7 @@ public class ApiKeyAdminTask extends Task {
         } else {
             output.println("owner: " + apiKey.getOwner());
             output.println("description: " + apiKey.getDescription());
+            output.println("state: " + apiKey.getState());
             output.println("roles: " + Joiner.on(", ").join(apiKey.getRoles()));
             output.println("issued: " + ISO8601DateFormat.getInstance().format(apiKey.getIssued()));
         }
@@ -306,7 +316,7 @@ public class ApiKeyAdminTask extends Task {
         roles.removeAll(removeRoles);
 
         if (!roles.equals(apiKey.getRoles())) {
-            ApiKey updatedKey = new ApiKey(key, apiKey.getInternalId(), roles);
+            ApiKey updatedKey = new ApiKey(key, apiKey.getInternalId(), apiKey.getState(), roles);
             updatedKey.setOwner(apiKey.getOwner());
             updatedKey.setDescription(apiKey.getDescription());
             updatedKey.setIssued(new Date());
@@ -319,23 +329,48 @@ public class ApiKeyAdminTask extends Task {
 
     private void migrateApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
         String key = getValueFromParams("key", parameters);
-        ApiKey apiKey = _authIdentityManager.getIdentity(key);
-        checkArgument(apiKey != null, "Unknown API key");
+        checkArgument(isApiKeyInUse(key), "Unknown API key");
 
-        // Create a new key with the same information as the existing one
-        //noinspection ConstantConditions
-        String newKey = createRandomApiKey(apiKey.getInternalId(), apiKey.getOwner(), apiKey.getRoles(), apiKey.getDescription());
-        // Delete the existing key
-        _authIdentityManager.deleteIdentity(key);
+        String newKey = getUniqueOrProvidedKey(parameters, "newKey", output);
+        if (newKey == null) {
+            return;
+        }
+
+        _authIdentityManager.migrateIdentity(key, newKey);
 
         output.println("Migrated API key: " + newKey);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
+    private void inactivateApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        String key = getValueFromParams("key", parameters);
+        ApiKey apiKey = _authIdentityManager.getIdentity(key);
+        checkArgument(apiKey != null, "Unknown API key");
+        checkArgument(apiKey.getState().isActive(), "Cannot inactivate API key in state %s", apiKey.getState());
+        apiKey.setState(IdentityState.INACTIVE);
+        _authIdentityManager.updateIdentity(apiKey);
+        output.println("API key inactivated");
+    }
+
     private void deleteApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
         String key = getValueFromParams("key", parameters);
-        _authIdentityManager.deleteIdentity(key);
-        output.println("API key deleted");
+
+        // Normally it is not safe to delete an API key.  Doing so can open vectors for recreating the key or having a
+        // new key whose hash collides with the deleted key.  However, for unit testing purposes there is a need to
+        // actually delete the key from the system.  Historically the "delete" action was used for what is now
+        // "inactivate".  To prevent accidental deletion and protect against users using the older "delete" action an
+        // extra confirmation parameter is required.
+
+        boolean confirmed = parameters.get("confirm").stream().anyMatch("true"::equalsIgnoreCase);
+
+        if (!confirmed) {
+            output.println("Deleting an API key is a potentially unsafe operation that should only be performed in limited circumstances.");
+            output.println("If the intent is to make this API key unusable call this task again with the 'inactivate' action.");
+            output.println("To confirm permanently deleting this API key call this task again with a 'confirm=true' parameter");
+        } else {
+            _authIdentityManager.deleteIdentityUnsafe(key);
+            output.println("API key deleted");
+        }
     }
 
     private String getValueFromParams(String value, ImmutableMultimap<String, String> parameters) {

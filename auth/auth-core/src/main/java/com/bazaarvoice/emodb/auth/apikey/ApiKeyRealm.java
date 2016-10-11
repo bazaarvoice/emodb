@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.auth.apikey;
 
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.InternalIdentity;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousCredentialsMatcher;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
@@ -211,7 +212,9 @@ public class ApiKeyRealm extends AuthorizingRealm {
      */
     private AuthenticationInfo getUncachedAuthenticationInfoForKey(String id) {
         ApiKey apiKey = _authIdentityManager.getIdentity(id);
-        if (apiKey == null) {
+
+        // If the API key exists but cannot be authenticated then return null
+        if (apiKey == null || !apiKey.getState().isActive()) {
             return null;
         }
 
@@ -416,14 +419,15 @@ public class ApiKeyRealm extends AuthorizingRealm {
      * Gets the authorization info for an API key's internal ID from the source (not from cache).
      */
     private AuthorizationInfo getUncachedAuthorizationInfoByInternalId(String internalId) {
-        // Retrieve the roles by internal ID
-        Set<String> roles = _authIdentityManager.getRolesByInternalId(internalId);
-        if (roles == null) {
-            _log.debug("Authorization info requested for non-existent internal id {}", internalId);
+        // Retrieve the internal identity
+        InternalIdentity identity = _authIdentityManager.getInternalIdentity(internalId);
+        if (identity == null || !identity.getState().isActive()) {
+            _log.debug("Authorization info requested for {} internal id {}",
+                    identity == null ? "non-existent" : identity.getState().toString().toLowerCase(), internalId);
             return _nullAuthorizationInfo;
         }
 
-        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(roles));
+        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(identity.getRoles()));
     }
 
     /**
