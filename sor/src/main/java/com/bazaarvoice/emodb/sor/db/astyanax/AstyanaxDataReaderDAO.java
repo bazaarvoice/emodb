@@ -406,7 +406,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     private List<CfSplit> getCfSplits(Keyspace keyspace, ColumnFamily<ByteBuffer, UUID> cf, String start,
                                     String end, int desiredRecordsPerSplit, Iterable<TokenRange> allTokenRanges) {
         // There is a hole in the describeSplitsEx() call where if the call is routed to a Cassandra node which does
-        // have a replica of the requested token range then it will return a single split equivalent to the requested
+        // not have a replica of the requested token range then it will return a single split equivalent to the requested
         // range.  To accommodate this each query is routed to a host that is verified to have a replica of the range.
 
         ScanRange splitRange = ScanRange.create(parseTokenString(start), parseTokenString(end));
@@ -436,10 +436,10 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                             throw Throwables.propagate(e);
                         }
                     }
-
-                    assert intersectionSplits != null : "Exception would have been thrown if no splits had returned successfully";
-                    cfSplits.addAll(intersectionSplits);
                 }
+
+                assert intersectionSplits != null : "Exception would have been thrown if no host had responded successfully";
+                cfSplits.addAll(intersectionSplits);
             }
         }
 
