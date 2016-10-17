@@ -126,16 +126,10 @@ public class GuavaCacheManager extends AbstractCacheManager implements Invalidat
         @Override
         public Object remove(Object key)
                 throws CacheException {
-
-            // at runtime, key will be:
-            // for authorization cache: org.apache.shiro.subject.SimplePrincipalCollection
-            // for authentication cache: com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager
-            // So, we need to access the API key from these objects.
-
-            // We will not invalidate here, because we have our own invalidation scheme
-            // that is based on capturing the invalidation event from the admin task that mutates keys.
-
-            return null;
+            String stringKey = extractStringKey(key);
+            Object oldValue = _cache.getIfPresent(stringKey);
+            _cache.invalidate(key);
+            return oldValue;
         }
 
         @Override

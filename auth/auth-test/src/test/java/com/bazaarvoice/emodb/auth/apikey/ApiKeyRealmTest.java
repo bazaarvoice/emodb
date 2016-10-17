@@ -7,13 +7,18 @@ import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
+import com.bazaarvoice.emodb.auth.shiro.RolePermissionSet;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.core.DefaultCacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.cache.Cache;
+import org.apache.shiro.subject.PrincipalCollection;
+import org.apache.shiro.util.LifecycleUtils;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -22,15 +27,20 @@ import org.mockito.stubbing.Answer;
 import java.util.Collection;
 import java.util.Set;
 
+import static org.mockito.AdditionalMatchers.not;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class ApiKeyRealmTest {
 
+    private AuthIdentityManager<ApiKey> _authIdentityManager;
     private PermissionManager _permissionManager;
 
     private ApiKeyRealm _underTest;
@@ -42,7 +52,7 @@ public class ApiKeyRealmTest {
         InvalidatableCacheManager _cacheManager = new GuavaCacheManager(cacheRegistry);
 
         InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>();
-        AuthIdentityManager<ApiKey> _authIdentityManager = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
+        _authIdentityManager = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
 
         _permissionManager = mock(PermissionManager.class);
         MatchingPermissionResolver permissionResolver = new MatchingPermissionResolver();
@@ -50,6 +60,7 @@ public class ApiKeyRealmTest {
 
         _underTest = new ApiKeyRealm("ApiKeyRealm under test",
                 _cacheManager, _authIdentityManager, _permissionManager, null);
+        LifecycleUtils.init(_underTest);
 
 //        _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
 
@@ -73,7 +84,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void simpleExists() {
-        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1));
@@ -84,7 +95,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void simpleNewExists() {
-        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
@@ -123,7 +134,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void simpleNowEmpty() {
-        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
@@ -140,7 +151,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void pseudoConcurrentNewExists() {
-        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
@@ -148,13 +159,16 @@ public class ApiKeyRealmTest {
         when(p2.toString()).thenReturn("p2");
         when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1), Sets.newHashSet(p2));
         Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
+        assertEquals(cache.size(), 1, "side effect: cache has one element");
+        resultPerms = _underTest.getPermissions("role");
         assertEquals(resultPerms.iterator().next(), p2, "should have the last permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
     }
 
     @Test
     public void pseudoConcurrentNewThenCacheFlush() {
-        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
@@ -164,7 +178,7 @@ public class ApiKeyRealmTest {
                 .thenReturn(Sets.newHashSet(p1))
                 .thenReturn(Sets.newHashSet(p2));
         Collection<Permission> resultPerms = _underTest.getPermissions("role");
-        assertEquals(resultPerms.iterator().next(), p2, "should have the last permission we added");
+        assertEquals(resultPerms.iterator().next(), p1, "should have the last permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
         cache.clear();
         resultPerms = _underTest.getPermissions("role");
@@ -174,7 +188,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void pseudoConcurrentNewAndCacheFlush() {
-        final Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
+        final Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         final Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
@@ -182,17 +196,77 @@ public class ApiKeyRealmTest {
         when(p2.toString()).thenReturn("p2");
         when(_permissionManager.getAllForRole("role"))
                 .thenReturn(Sets.newHashSet(p1))
-                .thenAnswer(new Answer() {
+                .thenAnswer(new Answer<Set<Permission>>() {
                     @Override
-                    public Object answer(InvocationOnMock invocation) {
+                    public Set<Permission> answer(InvocationOnMock invocationOnMock) throws Throwable {
                         cache.clear();
                         return Sets.newHashSet(p2);
                     }
                 })
                 .thenReturn(Sets.newHashSet(p2));
         Permission resultPerm = _underTest.getPermissions("role").iterator().next();
-        assertEquals(resultPerm, p2, "should have the last permission we added");
-        assertNotEquals(resultPerm, p1, "sanity check");
-        assertEquals(cache.size(), 1, "side effect: cache has one element");
+        assertEquals(resultPerm, p1, "should have permission p1");
+        resultPerm = _underTest.getPermissions("role").iterator().next();
+        assertEquals(resultPerm, p2, "should have permission p2");
+        resultPerm = _underTest.getPermissions("role").iterator().next();
+        assertEquals(resultPerm, p2, "should have permission p2");
+        assertNotNull(cache.get("role"), "Cached value for role should have been present");
+        assertEquals(cache.get("role").permissions(), ImmutableSet.of(p2), "Cached values incorrect");
+    }
+
+    @Test
+    public void testPermissionCheckByInternalId() {
+        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
+        _authIdentityManager.updateIdentity(apiKey);
+        Permission rolePermission = mock(Permission.class);
+        Permission positivePermission = mock(Permission.class);
+        Permission negativePermission = mock(Permission.class);
+        when(rolePermission.implies(positivePermission)).thenReturn(true);
+        when(rolePermission.implies(not(eq(positivePermission)))).thenReturn(false);
+        when(_permissionManager.getAllForRole("role0")).thenReturn(ImmutableSet.of(rolePermission));
+
+        // Verify the internal ID is not cached
+        assertNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        // Verify permission was granted
+        assertTrue(_underTest.hasPermissionByInternalId("id0", positivePermission));
+        // Verify the internal ID was cached
+        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        // Verify no API key information was cached
+        assertTrue(_underTest.getAuthenticationCache().keys().isEmpty());
+        // Verify permission is granted using the API key
+        PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
+        assertTrue(_underTest.isPermitted(principals, positivePermission));
+        // Negative tests
+        assertFalse(_underTest.hasPermissionByInternalId("id0", negativePermission));
+        assertFalse(_underTest.isPermitted(principals, negativePermission));
+    }
+
+    @Test
+    public void testCachedPermissionCheckByInternalId() {
+        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
+        _authIdentityManager.updateIdentity(apiKey);
+        Permission rolePermission = mock(Permission.class);
+        Permission positivePermission = mock(Permission.class);
+        when(rolePermission.implies(positivePermission)).thenReturn(true);
+        when(rolePermission.implies(not(eq(positivePermission)))).thenReturn(false);
+        when(_permissionManager.getAllForRole("role0")).thenReturn(ImmutableSet.of(rolePermission));
+
+        // Verify permission is granted using the API key
+        PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
+        assertTrue(_underTest.isPermitted(principals, positivePermission));
+        // Verify the internal ID was cached
+        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        // Verify permission was granted
+        assertTrue(_underTest.hasPermissionByInternalId("id0", positivePermission));
+    }
+
+    @Test
+    public void testCachedPermissionCheckByInvalidInternalId() {
+        // Verify permission is not granted to a non-existing internal ID
+        assertFalse(_underTest.hasPermissionByInternalId("id0", mock(Permission.class)));
+        // Verify the internal ID was cached
+        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        // Test again now that the authentication info is cached
+        assertFalse(_underTest.hasPermissionByInternalId("id0", mock(Permission.class)));
     }
 }

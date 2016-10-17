@@ -38,6 +38,16 @@ public class DefaultDataCenters implements DataCenters {
         refresh();
     }
 
+    /**
+     * DefaultDataCenters doesn't actually directly require DataCenterAnnouncer.  However, it is frequently the case
+     * that classes that depend on DefaultDataCenters will only operate correctly if the DataCenterAnnouncer has been
+     * started first.  The following false dependency forces this injection order when appropriate.
+     */
+    @Inject(optional=true)
+    private void injectDataCenterAnnouncer(DataCenterAnnouncer ignore) {
+        // no-op
+    }
+
     @Override
     public void refresh() {
         _cache = Suppliers.memoizeWithExpiration(new Supplier<CachedInfo>() {
@@ -65,7 +75,7 @@ public class DefaultDataCenters implements DataCenters {
 
     private DataCenter get(String name) {
         DataCenter dataCenter = _cache.get().get(name);
-        checkArgument(dataCenter != null, "Unknown data center: {}", name);
+        checkArgument(dataCenter != null, "Unknown data center: %s", name);
         return dataCenter;
     }
 

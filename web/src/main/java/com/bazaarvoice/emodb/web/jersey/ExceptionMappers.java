@@ -24,7 +24,8 @@ public class ExceptionMappers {
                 new JsonStreamProcessingExceptionMapper(),
                 new StashNotAvailableExceptionMapper(),
                 new DeltaSizeLimitExceptionMapper(),
-                new AuditSizeLimitExceptionMapper());
+                new AuditSizeLimitExceptionMapper(),
+                new UnauthorizedSubscriptionExceptionMapper());
     }
 
     public static Iterable<Class> getMapperTypes() {

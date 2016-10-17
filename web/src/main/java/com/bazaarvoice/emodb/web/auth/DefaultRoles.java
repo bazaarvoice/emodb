@@ -120,6 +120,7 @@ public enum DefaultRoles {
 
     // Reserved role for replication databus traffic between data centers
     replication (
+            ImmutableSet.of(sor_read),
             Permissions.replicateDatabus()),
 
     // Reserved role for anonymous access

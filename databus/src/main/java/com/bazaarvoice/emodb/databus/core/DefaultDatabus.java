@@ -5,16 +5,19 @@ import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
-import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
 import com.bazaarvoice.emodb.databus.api.UnknownMoveException;
 import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
 import com.bazaarvoice.emodb.event.core.SizeCacheKey;
@@ -75,7 +78,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class DefaultDatabus implements Databus, Managed {
+public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     /** How long should poll loop, searching for events before giving up and returning. */
     private static final Duration MAX_POLL_TIME = Duration.millis(100);
 
@@ -94,6 +97,8 @@ public class DefaultDatabus implements Databus, Managed {
     private final DataProvider _dataProvider;
     private final SubscriptionEvaluator _subscriptionEvaluator;
     private final JobService _jobService;
+    private final DatabusAuthorizer _databusAuthorizer;
+    private final String _systemOwnerId;
     private final Meter _peekedMeter;
     private final Meter _polledMeter;
     private final Meter _renewedMeter;
@@ -103,6 +108,7 @@ public class DefaultDatabus implements Databus, Managed {
     private final Meter _redundantMeter;
     private final Meter _discardedMeter;
     private final Meter _consolidatedMeter;
+    private final Meter _unownedSubscriptionMeter;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
     private final Supplier<Condition> _defaultJoinFilterCondition;
     private final Ticker _ticker;
@@ -112,14 +118,18 @@ public class DefaultDatabus implements Databus, Managed {
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
-                          JobHandlerRegistry jobHandlerRegistry, MetricRegistry metricRegistry,
-                          @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition, Clock clock) {
+                          JobHandlerRegistry jobHandlerRegistry, DatabusAuthorizer databusAuthorizer,
+                          @SystemInternalId String systemOwnerId,
+                          @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition,
+                          MetricRegistry metricRegistry, Clock clock) {
         _eventBus = eventBus;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
         _dataProvider = dataProvider;
         _subscriptionEvaluator = subscriptionEvaluator;
         _jobService = jobService;
+        _databusAuthorizer = databusAuthorizer;
+        _systemOwnerId = systemOwnerId;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
         _ticker = ClockTicker.getTicker(clock);
         _clock = clock;
@@ -132,6 +142,7 @@ public class DefaultDatabus implements Databus, Managed {
         _redundantMeter = newEventMeter("redundant", metricRegistry);
         _discardedMeter = newEventMeter("discarded", metricRegistry);
         _consolidatedMeter = newEventMeter("consolidated", metricRegistry);
+        _unownedSubscriptionMeter = newEventMeter("unowned", metricRegistry);
         _eventSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
@@ -161,6 +172,10 @@ public class DefaultDatabus implements Databus, Managed {
                             public MoveSubscriptionResult run(MoveSubscriptionRequest request)
                                     throws Exception {
                                 try {
+                                    // Last chance to verify the subscriptions' owner before doing anything mutative
+                                    checkSubscriptionOwner(request.getOwnerId(), request.getFrom());
+                                    checkSubscriptionOwner(request.getOwnerId(), request.getTo());
+
                                     _eventStore.move(request.getFrom(), request.getTo());
                                 } catch (ReadOnlyQueueException e) {
                                     // The from queue is not owned by this server.
@@ -184,6 +199,9 @@ public class DefaultDatabus implements Databus, Managed {
                             public ReplaySubscriptionResult run(ReplaySubscriptionRequest request)
                                     throws Exception {
                                 try {
+                                    // Last chance to verify the subscription's owner before doing anything mutative
+                                    checkSubscriptionOwner(request.getOwnerId(), request.getSubscription());
+
                                     replay(request.getSubscription(), request.getSince());
                                 } catch (ReadOnlyQueueException e) {
                                     // The subscription is not owned by this server.
@@ -207,7 +225,7 @@ public class DefaultDatabus implements Databus, Managed {
 
     private void createDatabusReplaySubscription() {
         // Create a master databus replay subscription where the events expire every 50 hours (2 days + 2 hours)
-        subscribe(ChannelNames.getMasterReplayChannel(), Conditions.alwaysTrue(),
+        subscribe(_systemOwnerId, ChannelNames.getMasterReplayChannel(), Conditions.alwaysTrue(),
                 Duration.standardDays(3650), DatabusChannelConfiguration.REPLAY_TTL, false);
     }
 
@@ -232,23 +250,19 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public Iterator<Subscription> listSubscriptions(@Nullable String fromSubscriptionExclusive, long limit) {
+    public Iterator<Subscription> listSubscriptions(final String ownerId, @Nullable String fromSubscriptionExclusive, long limit) {
         checkArgument(limit > 0, "Limit must be >0");
 
         // We always have all the subscriptions cached in memory so fetch them all.
-        Collection<Subscription> subscriptions = _subscriptionDao.getAllSubscriptions();
+        Collection<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
 
-        // Ignore internal subscriptions (eg. "__system_bus:canary").
-        subscriptions = Collections2.filter(subscriptions, new Predicate<Subscription>() {
-            @Override
-            public boolean apply(Subscription subscription) {
-                return !subscription.getName().startsWith("__");
-            }
-        });
+        // Ignore subscriptions not accessible by the owner.
+        subscriptions = Collections2.filter(subscriptions,
+                (subscription) -> _databusAuthorizer.owner(ownerId).canAccessSubscription(subscription));
 
         // Sort them by name.  They're stored sorted in Cassandra so this should be a no-op, but
         // do the sort anyway so we're not depending on internals of the subscription DAO.
-        List<Subscription> sorted = new Ordering<Subscription>() {
+        List<? extends Subscription> sorted = new Ordering<Subscription>() {
             @Override
             public int compare(Subscription left, Subscription right) {
                 return left.getName().compareTo(right.getName());
@@ -271,23 +285,26 @@ public class DefaultDatabus implements Databus, Managed {
             sorted = sorted.subList(0, (int) limit);
         }
 
-        return sorted.iterator();
+        //noinspection unchecked
+        return (Iterator<Subscription>) sorted.iterator();
     }
 
     @Override
-    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
-        subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, true);
+    public void subscribe(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
+        subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl, true);
     }
 
     @Override
-    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl,
-                          boolean includeDefaultJoinFilter) {
-        // This call should be depracated soon.
+    public void subscribe(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl,
+                          Duration eventTtl, boolean includeDefaultJoinFilter) {
+        // This call should be deprecated soon.
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
         checkNotNull(tableFilter, "tableFilter");
         checkArgument(subscriptionTtl.isLongerThan(Duration.ZERO), "SubscriptionTtl must be >0");
         checkArgument(eventTtl.isLongerThan(Duration.ZERO), "EventTtl must be >0");
         TableFilterValidator.checkAllowed(tableFilter);
+
         if (includeDefaultJoinFilter) {
             // If the default join filter condition is set (that is, isn't "alwaysTrue()") then add it to the filter
             Condition defaultJoinFilterCondition = _defaultJoinFilterCondition.get();
@@ -303,22 +320,30 @@ public class DefaultDatabus implements Databus, Managed {
         // except for resetting the ttl, recreating a subscription that already exists has no effect.
         // assume that multiple servers that manage the same subscriptions can each attempt to create
         // the subscription at startup.
-        _subscriptionDao.insertSubscription(subscription, tableFilter, subscriptionTtl, eventTtl);
+        _subscriptionDao.insertSubscription(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl);
     }
 
     @Override
-    public void unsubscribe(String subscription) {
+    public void unsubscribe(String ownerId, String subscription) {
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
 
         _subscriptionDao.deleteSubscription(subscription);
         _eventStore.purge(subscription);
     }
 
     @Override
-    public Subscription getSubscription(String name) throws UnknownSubscriptionException {
+    public Subscription getSubscription(String ownerId, String name) throws UnknownSubscriptionException {
         checkLegalSubscriptionName(name);
 
-        Subscription subscription = _subscriptionDao.getSubscription(name);
+        OwnedSubscription subscription = getSubscriptionByName(name);
+        checkSubscriptionOwner(ownerId, subscription);
+
+        return subscription;
+    }
+
+    private OwnedSubscription getSubscriptionByName(String name) {
+        OwnedSubscription subscription = _subscriptionDao.getSubscription(name);
         if (subscription == null) {
             throw new UnknownSubscriptionException(name);
         }
@@ -335,12 +360,14 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public long getEventCount(String subscription) {
-        return getEventCountUpTo(subscription, Long.MAX_VALUE);
+    public long getEventCount(String ownerId, String subscription) {
+        return getEventCountUpTo(ownerId, subscription, Long.MAX_VALUE);
     }
 
     @Override
-    public long getEventCountUpTo(String subscription, long limit) {
+    public long getEventCountUpTo(String ownerId, String subscription, long limit) {
+        checkSubscriptionOwner(ownerId, subscription);
+
         // We get the size from cache as a tuple of size, and the limit used to estimate that size
         // So, the key is the size, and value is the limit used to estimate the size
         SizeCacheKey sizeCacheKey = new SizeCacheKey(subscription, limit);
@@ -361,16 +388,18 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public long getClaimCount(String subscription) {
+    public long getClaimCount(String ownerId, String subscription) {
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
 
         return _eventStore.getClaimCount(subscription);
     }
 
     @Override
-    public List<Event> peek(final String subscription, int limit) {
+    public List<Event> peek(String ownerId, final String subscription, int limit) {
         checkLegalSubscriptionName(subscription);
         checkArgument(limit > 0, "Limit must be >0");
+        checkSubscriptionOwner(ownerId, subscription);
 
         List<Event> events = peekOrPoll(subscription, null, limit);
         _peekedMeter.mark(events.size());
@@ -378,10 +407,11 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public List<Event> poll(final String subscription, final Duration claimTtl, int limit) {
+    public List<Event> poll(String ownerId, final String subscription, final Duration claimTtl, int limit) {
         checkLegalSubscriptionName(subscription);
         checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
+        checkSubscriptionOwner(ownerId, subscription);
 
         List<Event> events = peekOrPoll(subscription, claimTtl, limit);
         _polledMeter.mark(events.size());
@@ -541,36 +571,39 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public void renew(String subscription, Collection<String> eventKeys, Duration claimTtl) {
+    public void renew(String ownerId, String subscription, Collection<String> eventKeys, Duration claimTtl) {
         checkLegalSubscriptionName(subscription);
         checkNotNull(eventKeys, "eventKeys");
         checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.renew(subscription, EventKeyFormat.decodeAll(eventKeys), claimTtl, true);
         _renewedMeter.mark(eventKeys.size());
     }
 
     @Override
-    public void acknowledge(String subscription, Collection<String> eventKeys) {
+    public void acknowledge(String ownerId, String subscription, Collection<String> eventKeys) {
         checkLegalSubscriptionName(subscription);
         checkNotNull(eventKeys, "eventKeys");
+        checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.delete(subscription, EventKeyFormat.decodeAll(eventKeys), true);
         _ackedMeter.mark(eventKeys.size());
     }
 
     @Override
-    public String replayAsync(String subscription) {
-        return replayAsyncSince(subscription, null);
+    public String replayAsync(String ownerId, String subscription) {
+        return replayAsyncSince(ownerId, subscription, null);
     }
 
     @Override
-    public String replayAsyncSince(String subscription, Date since) {
+    public String replayAsyncSince(String ownerId, String subscription, Date since) {
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
 
         JobIdentifier<ReplaySubscriptionRequest, ReplaySubscriptionResult> jobId =
                 _jobService.submitJob(
-                        new JobRequest<>(ReplaySubscriptionJob.INSTANCE, new ReplaySubscriptionRequest(subscription, since)));
+                        new JobRequest<>(ReplaySubscriptionJob.INSTANCE, new ReplaySubscriptionRequest(ownerId, subscription, since)));
 
         return jobId.toString();
     }
@@ -580,18 +613,15 @@ public class DefaultDatabus implements Databus, Managed {
         checkState(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
                 "Since timestamp is outside the replay TTL.");
         String source = ChannelNames.getMasterReplayChannel();
-        final Subscription destination = getSubscription(subscription);
+        final OwnedSubscription destination = getSubscriptionByName(subscription);
 
-        _eventStore.copy(source, subscription, new Predicate<ByteBuffer>() {
-            @Override
-            public boolean apply(ByteBuffer eventData) {
-                return _subscriptionEvaluator.matches(destination, eventData);
-            }
-        }, since);
+        _eventStore.copy(source, subscription,
+                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
+                since);
     }
 
     @Override
-    public ReplaySubscriptionStatus getReplayStatus(String reference) {
+    public ReplaySubscriptionStatus getReplayStatus(String ownerId, String reference) {
         checkNotNull(reference, "reference");
 
         JobIdentifier<ReplaySubscriptionRequest, ReplaySubscriptionResult> jobId;
@@ -613,6 +643,8 @@ public class DefaultDatabus implements Databus, Managed {
             throw new IllegalStateException("Replay request details not found: " + jobId);
         }
 
+        checkSubscriptionOwner(ownerId, request.getSubscription());
+
         switch (status.getStatus()) {
             case FINISHED:
                 return new ReplaySubscriptionStatus(request.getSubscription(), ReplaySubscriptionStatus.Status.COMPLETE);
@@ -626,18 +658,21 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public String moveAsync(String from, String to) {
+    public String moveAsync(String ownerId, String from, String to) {
         checkLegalSubscriptionName(from);
         checkLegalSubscriptionName(to);
+        checkSubscriptionOwner(ownerId, from);
+        checkSubscriptionOwner(ownerId, to);
 
         JobIdentifier<MoveSubscriptionRequest, MoveSubscriptionResult> jobId =
-                _jobService.submitJob(new JobRequest<>(MoveSubscriptionJob.INSTANCE, new MoveSubscriptionRequest(from, to)));
+                _jobService.submitJob(new JobRequest<>(
+                        MoveSubscriptionJob.INSTANCE, new MoveSubscriptionRequest(ownerId, from, to)));
 
         return jobId.toString();
     }
 
     @Override
-    public MoveSubscriptionStatus getMoveStatus(String reference) {
+    public MoveSubscriptionStatus getMoveStatus(String ownerId, String reference) {
         checkNotNull(reference, "reference");
 
         JobIdentifier<MoveSubscriptionRequest, MoveSubscriptionResult> jobId;
@@ -659,6 +694,8 @@ public class DefaultDatabus implements Databus, Managed {
             throw new IllegalStateException("Move request details not found: " + jobId);
         }
 
+        checkSubscriptionOwner(ownerId, request.getFrom());
+
         switch (status.getStatus()) {
             case FINISHED:
                 return new MoveSubscriptionStatus(request.getFrom(), request.getTo(), MoveSubscriptionStatus.Status.COMPLETE);
@@ -672,23 +709,26 @@ public class DefaultDatabus implements Databus, Managed {
     }
 
     @Override
-    public void injectEvent(String subscription, String table, String key) {
+    public void injectEvent(String ownerId, String subscription, String table, String key) {
         // Pick a changeId UUID that's guaranteed to be older than the compaction cutoff so poll()'s calls to
         // AnnotatedContent.isChangeDeltaPending() and isChangeDeltaRedundant() will always return false.
+        checkSubscriptionOwner(ownerId, subscription);
         UpdateRef ref = new UpdateRef(table, key, TimeUUIDs.minimumUuid(), ImmutableSet.<String>of());
         _eventStore.add(subscription, UpdateRefSerializer.toByteBuffer(ref));
     }
 
     @Override
-    public void unclaimAll(String subscription) {
+    public void unclaimAll(String ownerId, String subscription) {
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.unclaimAll(subscription);
     }
 
     @Override
-    public void purge(String subscription) {
+    public void purge(String ownerId, String subscription) {
         checkLegalSubscriptionName(subscription);
+        checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.purge(subscription);
     }
@@ -698,6 +738,25 @@ public class DefaultDatabus implements Databus, Managed {
                 "Subscription name must be a lowercase ASCII string between 1 and 255 characters in length. " +
                         "Allowed punctuation characters are -.:@_ and the subscription name may not start with a single underscore character. " +
                         "An example of a valid subscription name would be 'polloi:review'.");
+    }
+
+    private void checkSubscriptionOwner(String ownerId, String subscription) {
+        // Verify the subscription either doesn't exist or is already owned by the same owner.  In practice this is
+        // predominantly cached by SubscriptionDAO so performance should be good.
+        checkSubscriptionOwner(ownerId, _subscriptionDao.getSubscription(subscription));
+    }
+
+    private void checkSubscriptionOwner(String ownerId, OwnedSubscription subscription) {
+        checkNotNull(ownerId, "ownerId");
+        if (subscription != null) {
+            // Grandfather-in subscriptions created before ownership was introduced.  This should be a temporary issue
+            // since the subscriptions will need to renew at some point or expire.
+            if (subscription.getOwnerId() == null) {
+                _unownedSubscriptionMeter.mark();
+            } else if (!_databusAuthorizer.owner(ownerId).canAccessSubscription(subscription)) {
+                throw new UnauthorizedSubscriptionException("Not subscriber", subscription.getName());
+            }
+        }
     }
 
     /** EventStore sink that doesn't count adjacent events for the same table/key against the peek/poll limit. */

@@ -6,8 +6,8 @@ import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
-import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.databus.repl.ReplicationEventSource;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
@@ -52,7 +52,7 @@ public class DefaultFanoutManager implements FanoutManager {
                                 LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory, MetricRegistry metricRegistry) {
         _eventStore = checkNotNull(eventStore, "eventStore");
         _subscriptionDao = checkNotNull(subscriptionDao, "subscriptionDao");
-        _subscriptionEvaluator = subscriptionEvaluator;
+        _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
         _dataCenters = checkNotNull(dataCenters, "dataCenters");
         _curator = checkNotNull(curator, "curator");
         _selfId = checkNotNull(self, "self").toString();
@@ -83,9 +83,9 @@ public class DefaultFanoutManager implements FanoutManager {
                 return null;
             }
         };
-        final Supplier<Collection<Subscription>> subscriptionsSupplier = new Supplier<Collection<Subscription>>() {
+        final Supplier<Collection<OwnedSubscription>> subscriptionsSupplier = new Supplier<Collection<OwnedSubscription>>() {
             @Override
-            public Collection<Subscription> get() {
+            public Collection<OwnedSubscription> get() {
                 return _subscriptionDao.getAllSubscriptions();
             }
         };
@@ -96,7 +96,8 @@ public class DefaultFanoutManager implements FanoutManager {
                     @Override
                     public Service get() {
                         return new DefaultFanout(name, eventSource, eventSink, replicateOutbound, sleepWhenIdle,
-                                subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator, _metricRegistry);
+                                subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
+                                _metricRegistry);
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);

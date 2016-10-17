@@ -2,12 +2,13 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.databus.ChannelNames;
-import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
@@ -44,7 +45,7 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Function<Multimap<String, ByteBuffer>, Void> _eventSink;
     private final boolean _replicateOutbound;
     private final Duration _sleepWhenIdle;
-    private final Supplier<Collection<Subscription>> _subscriptionsSupplier;
+    private final Supplier<Collection<OwnedSubscription>> _subscriptionsSupplier;
     private final DataCenter _currentDataCenter;
     private final RateLimitedLog _rateLimitedLog;
     private final SubscriptionEvaluator _subscriptionEvaluator;
@@ -57,7 +58,7 @@ public class DefaultFanout extends AbstractScheduledService {
                          Function<Multimap<String, ByteBuffer>, Void> eventSink,
                          boolean replicateOutbound,
                          Duration sleepWhenIdle,
-                         Supplier<Collection<Subscription>> subscriptionsSupplier,
+                         Supplier<Collection<OwnedSubscription>> subscriptionsSupplier,
                          DataCenter currentDataCenter,
                          RateLimitedLogFactory logFactory,
                          SubscriptionEvaluator subscriptionEvaluator,
@@ -114,13 +115,14 @@ public class DefaultFanout extends AbstractScheduledService {
         }
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
-        if (!isRunning()) {
-            return false;
-        }
+        return isRunning() && copyEvents(rawEvents);
+    }
 
-        // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
+    @VisibleForTesting
+    boolean copyEvents(List<EventData> rawEvents) {
+            // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
         // creating a new subscription.
-        Collection<Subscription> subscriptions = _subscriptionsSupplier.get();
+        Collection<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
 
         // Copy the events to all the destination channels.
         List<String> eventKeys = Lists.newArrayListWithCapacity(rawEvents.size());
@@ -139,7 +141,7 @@ public class DefaultFanout extends AbstractScheduledService {
             }
 
             // Copy to subscriptions in the current data center.
-            for (Subscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
+            for (OwnedSubscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
                 eventsByChannel.put(subscription.getName(), eventData);
             }
 

@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.databus.db;
 
-import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import org.joda.time.Duration;
 
@@ -9,12 +9,13 @@ import java.util.Collection;
 
 public interface SubscriptionDAO {
 
-    void insertSubscription(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl);
+    void insertSubscription(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl,
+                            Duration eventTtl);
 
     void deleteSubscription(String subscription);
 
     @Nullable
-    Subscription getSubscription(String subscription);
+    OwnedSubscription getSubscription(String subscription);
 
-    Collection<Subscription> getAllSubscriptions();
+    Collection<OwnedSubscription> getAllSubscriptions();
 }

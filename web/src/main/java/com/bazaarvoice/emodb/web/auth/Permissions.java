@@ -31,6 +31,7 @@ public class Permissions {
     public final static String COMPACT = "compact";
     public final static String POST = "post";
     public final static String POLL = "poll";
+    public final static String ASSUME_OWNERSHIP = "assume_ownership";
     public final static String GET_STATUS = "get_status";
     public final static String SUBSCRIBE = "subscribe";
     public final static String UNSUBSCRIBE = "unsubscribe";
@@ -194,6 +195,10 @@ public class Permissions {
 
     public static String injectDatabus(VerifiableResource subscription) {
         return format("%s|%s|%s", DATABUS, INJECT, escapeSeparators(subscription.toString()));
+    }
+
+    public static String assumeDatabusSubscriptionOwnership(VerifiableResource subscription) {
+        return format("%s|%s|%s", DATABUS, ASSUME_OWNERSHIP, escapeSeparators(subscription.toString()));
     }
 
     public static String unlimitedDatabus(VerifiableResource subscription) {

@@ -38,8 +38,8 @@ public class ReplicationJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupReplicationResourceTestRule(ImmutableList.<Object>of(new ReplicationResource1(_server)),
-            new ApiKey(APIKEY_REPLICATION, ImmutableSet.of("replication-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")));
+            new ApiKey(APIKEY_REPLICATION, "repl", ImmutableSet.of("replication-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")));
 
     protected static ResourceTestRule setupReplicationResourceTestRule(List<Object> resourceList, ApiKey apiKey, ApiKey unauthorizedKey) {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();

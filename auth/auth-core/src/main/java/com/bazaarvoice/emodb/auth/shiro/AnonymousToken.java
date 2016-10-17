@@ -21,6 +21,13 @@ public class AnonymousToken implements AuthenticationToken {
         return token == _instance;
     }
 
+    /**
+     * Efficient check for whether a principal is anonymous by performing instance comparison with the singleton.
+     */
+    public static boolean isAnonymousPrincipal(Object principal) {
+        return principal == ANONYMOUS;
+    }
+
     private AnonymousToken() {
         // empty
     }

@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
@@ -37,24 +38,27 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(MetricRegistry.class), ignoreReEtl, Clock.systemUTC());
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl,
+                mock(MetricRegistry.class), Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
-        testDatabus.subscribe("test-subscription", originalCondition, Duration.standardDays(7),
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7));
         // Skip databus events tagged with "re-etl"
         Condition skipIgnoreTags = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
         Condition expectedConditionToSkipIgnore = Conditions.and(originalCondition, skipIgnoreTags);
-        verify(mockSubscriptionDao).insertSubscription("test-subscription", expectedConditionToSkipIgnore,
+        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", expectedConditionToSkipIgnore,
                 Duration.standardDays(7), Duration.standardDays(7));
+        verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
 
         // reset mocked subscription DAO so it doesn't carry information about old interactions
         reset(mockSubscriptionDao);
         // Test condition is unchanged if includeDefaultJoinFilter is set to false
-        testDatabus.subscribe("test-subscription", originalCondition, Duration.standardDays(7),
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7), false);
-        verify(mockSubscriptionDao).insertSubscription("test-subscription", originalCondition, Duration.standardDays(7),
+        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7));
+        verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
     }
 }

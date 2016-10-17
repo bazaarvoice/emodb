@@ -20,7 +20,8 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
     public ApiKeyAuthenticationInfo(ApiKey apiKey, String realm) {
         checkNotNull(apiKey, "apiKey");
         checkNotNull(realm, "realm");
-        PrincipalWithRoles principal = new PrincipalWithRoles(apiKey.getId(), apiKey.getRoles());
+        // Identify the principal by API key
+        PrincipalWithRoles principal = new PrincipalWithRoles(apiKey.getId(), apiKey.getInternalId(), apiKey.getRoles());
         _principals = new SimplePrincipalCollection(principal, realm);
         // Use the API key as the credentials
         _credentials = apiKey.getId();
@@ -39,5 +40,24 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
     @Override
     public String toString() {
         return format("%s{%s}", getClass().getSimpleName(), ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getName());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ApiKeyAuthenticationInfo)) {
+            return false;
+        }
+
+        ApiKeyAuthenticationInfo that = (ApiKeyAuthenticationInfo) o;
+
+        return _principals.equals(that._principals) && _credentials.equals(that._credentials);
+    }
+
+    @Override
+    public int hashCode() {
+        return _principals.getPrimaryPrincipal().hashCode();
     }
 }

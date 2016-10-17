@@ -1,0 +1,34 @@
+package com.bazaarvoice.emodb.auth.shiro;
+
+
+import org.apache.shiro.authz.Permission;
+
+import java.util.Set;
+
+import static com.google.common.base.Preconditions.checkNotNull;
+
+/**
+ * Trivial implementation of {@link RolePermissionSet} using a Set.
+ */
+public class SimpleRolePermissionSet implements RolePermissionSet {
+
+    private Set<Permission> _permissions;
+
+    public SimpleRolePermissionSet(Set<Permission> permissions) {
+        _permissions = checkNotNull(permissions, "permissions");
+    }
+
+    public Set<Permission> permissions() {
+        return _permissions;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return this == o || (o instanceof RolePermissionSet && ((RolePermissionSet) o).permissions().equals(_permissions));
+    }
+
+    @Override
+    public int hashCode() {
+        return _permissions.hashCode();
+    }
+}
