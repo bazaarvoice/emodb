@@ -17,6 +17,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 
 import javax.annotation.Nullable;
@@ -37,6 +38,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class TableAuthIdentityManager<T extends AuthIdentity> implements AuthIdentityManager<T> {
 
     private final static String ID = "id";
+    private final static String INTERNAL_ID = "internalId";
     private final static String MASKED_ID = "maskedId";
     private final static String HASHED_ID = "hashedId";
 
@@ -80,12 +82,23 @@ public class TableAuthIdentityManager<T extends AuthIdentity> implements AuthIde
             return null;
         }
 
-        // The entry is stored without the original ID, so add it back
-        map.keySet().removeAll(Intrinsic.DATA_FIELDS);
-        map.remove(MASKED_ID);
-        map.put(ID, id);
+        // Make a copy of the map to avoid mutating the method parameter as a side-effect
+        Map<String, Object> identityMap = Maps.newHashMap(map);
 
-        return JsonHelper.convert(map, _authIdentityClass);
+        // Identities have been in use since before internal IDs were introduced.  To grandfather in those keys we'll
+        // use the hash of the identity's ID as the internal ID.
+        if (!identityMap.containsKey(INTERNAL_ID)) {
+            identityMap.put(INTERNAL_ID, Intrinsic.getId(map));
+        }
+
+        // Remove all intrinsics
+        identityMap.keySet().removeAll(Intrinsic.DATA_FIELDS);
+
+        // The entry is stored without the original ID, so add it back
+        identityMap.remove(MASKED_ID);
+        identityMap.put(ID, id);
+
+        return JsonHelper.convert(identityMap, _authIdentityClass);
     }
 
     @Override
