@@ -4,6 +4,7 @@ import com.netflix.astyanax.Keyspace;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostConnectionPool;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
+import com.netflix.astyanax.connectionpool.exceptions.NoAvailableHostsException;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.ThriftKeyspaceImpl;
 import org.apache.cassandra.thrift.Cassandra;
@@ -39,7 +40,7 @@ public final class KeyspaceUtil {
             Host host = _keyspace.getConnectionPool().getPools().stream()
                     .map(HostConnectionPool::getHost)
                     .filter(poolHost -> hostName.equals(poolHost.getHostName()))
-                    .findFirst().orElseThrow(() -> new IllegalArgumentException("No hosts pools found"));
+                    .findFirst().orElseThrow(() -> new NoAvailableHostsException("No hosts pools found"));
 
             return pinToVerifiedHost(host);
         }
@@ -48,10 +49,11 @@ public final class KeyspaceUtil {
          * Returns a view of the provided Keyspace that pins all operations to the provided host.
          */
         public Keyspace toHost(Host host) throws ConnectionException {
-            checkArgument(_keyspace.getConnectionPool().getPools().stream()
+            if (!_keyspace.getConnectionPool().getPools().stream()
                             .map(HostConnectionPool::getHost)
-                            .anyMatch(poolHost -> poolHost.equals(host)),
-                    "Host not found in pool");
+                            .anyMatch(poolHost -> poolHost.equals(host))) {
+                throw new NoAvailableHostsException("Host not found in pool");
+            }
 
             return pinToVerifiedHost(host);
         }
