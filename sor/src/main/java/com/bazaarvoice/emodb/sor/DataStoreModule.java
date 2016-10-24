@@ -27,7 +27,7 @@ import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.DataStoreProxy;
+import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.core.DefaultAuditStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
@@ -106,6 +106,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -265,15 +266,16 @@ public class DataStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton
-    DataStore provideDataStore(@LocalDataStore DataStore localDataStore, @SystemDataStore DataStore systemDataStore,
-                                     DataCenterConfiguration dataCenterConfiguration) {
+    DataStore provideDataStore(@LocalDataStore Provider<DataStore> localDataStoreProvider,
+                               @SystemDataStore Provider<DataStore> systemDataStoreProvider,
+                               DataCenterConfiguration dataCenterConfiguration) {
         // Provides the unannotated version of the DataStore
         // If this is the system data center, return the local DataStore implementation
         // Otherwise return a proxy that delegates to local or remote system DataStores
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return localDataStore;
+            return localDataStoreProvider.get();
         } else {
-            return new DataStoreProxy(localDataStore, systemDataStore);
+            return new DataStoreProviderProxy(localDataStoreProvider, systemDataStoreProvider);
         }
     }
 
