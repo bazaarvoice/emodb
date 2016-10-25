@@ -10,7 +10,9 @@ import com.datastax.driver.core.Host;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.QueryTrace;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.exceptions.TraceRetrievalException;
 import com.google.common.base.Joiner;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -75,12 +77,29 @@ public class CassandraHealthCheck extends HealthCheck {
                 message.append(", ").append(astyanaxResult.getAttemptsCount()).append(" attempts");
             }
 
+            Stopwatch stopwatch = Stopwatch.createStarted();
             ResultSet cqlResult = pingCql(key);
-            Host host = cqlResult.getExecutionInfo().getQueriedHost();
-            QueryTrace trace = cqlResult.getExecutionInfo().getQueryTrace();
+            // Coarsely record the query duration based on local observation.  If possible it will be updated
+            // to a more accurate measurement from the query trace.
+            long queryDurationMicros = stopwatch.stop().elapsed(TimeUnit.MICROSECONDS);
 
-            message.append(" | CQL: ").append(host).append(" -> ").append(trace.getCoordinator()).append(" ")
-                    .append(trace.getDurationMicros()).append("us");
+            Host host = cqlResult.getExecutionInfo().getQueriedHost();
+
+            String coordinator;
+            try {
+                QueryTrace trace = cqlResult.getExecutionInfo().getQueryTrace();
+                coordinator = trace.getCoordinator().toString();
+                // Update the query duration with the more accurate measurement returned from the trace
+                queryDurationMicros = trace.getDurationMicros();
+            } catch (TraceRetrievalException e) {
+                // Sometimes the query succeeds but the trace cannot be retrieved.  Sleeping and querying for the
+                // trace again may work but we're not really interested in making the health check take longer.
+                // Don't raise the exception, just update the message parameters.
+                coordinator = "unknown";
+            }
+
+            message.append(" | CQL: ").append(host).append(" -> ").append(coordinator).append(" ")
+                    .append(queryDurationMicros).append("us");
 
             return Result.healthy(message.toString());
         } catch (Throwable t) {
