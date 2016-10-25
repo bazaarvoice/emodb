@@ -74,7 +74,7 @@ public class AllTablesReportGenerator {
 
                 ReadConsistency consistency = options.isReadOnly() ? ReadConsistency.WEAK : ReadConsistency.STRONG;
                 Iterator<MultiTableScanResult> results =
-                        _dataTools.multiTableScan(scanOptions, tables, LimitCounter.max(), consistency);
+                        _dataTools.multiTableScan(scanOptions, tables, LimitCounter.max(), consistency, null);
 
                 int lastShardId = -1;
                 long lastTableUuid = -1;

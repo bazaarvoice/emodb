@@ -243,7 +243,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             int partCountForFirstShard = 1;
             Batch batch = new Batch(context, partCountForFirstShard);
 
-            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG);
+            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, null);
 
             // Enforce a maximum number of results based on the scan options
             Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
