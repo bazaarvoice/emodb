@@ -31,6 +31,9 @@ public class AuthorizationConfiguration {
     private String _replicationApiKey;
     // If true allow anonymous access, otherwise all restricted resources will require authentication
     private boolean _allowAnonymousAccess;
+    // Compaction control key
+    @NotNull
+    private String _compControlApiKey;
 
     public String getIdentityTable() {
         return _identityTable;
@@ -92,6 +95,15 @@ public class AuthorizationConfiguration {
 
     public AuthorizationConfiguration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
         _allowAnonymousAccess = allowAnonymousAccess;
+        return this;
+    }
+
+    public String getCompControlApiKey() {
+        return _compControlApiKey;
+    }
+
+    public AuthorizationConfiguration setCompControlApiKey(String compControlApiKey) {
+        _compControlApiKey = compControlApiKey;
         return this;
     }
 }

@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -31,6 +32,7 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.bazaarvoice.emodb.web.resources.compactioncontrol.CompactionControlResource1;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
@@ -105,10 +107,17 @@ public class DataStoreResource1 {
 
     private final DataStore _dataStore;
     private final DataStoreAsync _dataStoreAsync;
+    private final CompactionControlSource _compactionControlSource;
 
-    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync) {
+    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync, CompactionControlSource compactionControlSource) {
         _dataStore = dataStore;
         _dataStoreAsync = dataStoreAsync;
+        _compactionControlSource = compactionControlSource;
+    }
+
+    @Path ("_compcontrol")
+    public CompactionControlResource1 getCompactionControlResource() {
+        return new CompactionControlResource1(_compactionControlSource);
     }
 
     @GET

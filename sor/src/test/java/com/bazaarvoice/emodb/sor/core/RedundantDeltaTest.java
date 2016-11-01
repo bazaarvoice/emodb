@@ -13,6 +13,8 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.compactioncontrol.DefaultCompactionControlSource;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.test.DiscardingExecutorService;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
 import com.bazaarvoice.emodb.sor.db.Key;
@@ -65,7 +67,7 @@ public class RedundantDeltaTest {
         InMemoryDataDAO dataDao = new InMemoryDataDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -121,7 +123,7 @@ public class RedundantDeltaTest {
         InMemoryDataDAO dataDao = new InMemoryDataDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -201,7 +203,7 @@ public class RedundantDeltaTest {
         InMemoryDataDAO dataDao = new InMemoryDataDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -220,7 +222,7 @@ public class RedundantDeltaTest {
         InMemoryDataDAO dataDao = new InMemoryDataDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -279,12 +281,12 @@ public class RedundantDeltaTest {
         Counter archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DistributedCompactor", "archivedDeltaSize"));
         Expanded expanded =
                 new DistributedCompactor(archiveDeltaSize, true, metricRegistry)
-                        .expand(record, now, now, MutableIntrinsics.create(key), false, mock(Supplier.class));
+                        .expand(record, now, now, now, MutableIntrinsics.create(key), false, mock(Supplier.class));
 
         assertTrue(expanded.getResolved().isChangeDeltaRedundant(uuid1), "Legacy compaction issue");
 
         expanded = new DistributedCompactor(archiveDeltaSize, true, metricRegistry)
-                        .expand(record, now, now, MutableIntrinsics.create(key), false, mock(Supplier.class));
+                        .expand(record, now, now, now, MutableIntrinsics.create(key), false, mock(Supplier.class));
         assertFalse(expanded.getResolved().isChangeDeltaRedundant(uuid1), "Legacy compaction issue");
 
     }
@@ -296,7 +298,7 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -367,7 +369,7 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));

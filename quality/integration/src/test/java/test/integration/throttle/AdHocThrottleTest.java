@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStoreAsync;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
@@ -107,7 +108,7 @@ public class AdHocThrottleTest extends ResourceTest {
                 "all-sor-role", new PermissionUpdateRequest().permit("sor|*|*"));
 
         return setupResourceTestRule(
-                Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)))),
+                Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)), new InMemoryCompactionControlSource())),
                 Collections.<Object>singletonList(new ConcurrentRequestsThrottlingFilter(_deferringRegulatorSupplier)),
                 authIdentityManager, permissionManager);
     }

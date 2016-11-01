@@ -16,6 +16,7 @@ import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
@@ -25,6 +26,7 @@ import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
@@ -95,7 +97,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#SCANNER}
  * <p>
- *
+ * Requires the following external references:
+ * <ul>
+ * <li> {@link DataCenters}
+ * <li> {@link MetricRegistry}
+ * <li> Jersey {@link Client}
+ * <li> {@link CompactionControlSource}
+ * </ul>
  * Exports the following:
  * <li> {@link ScanUploader}
  * </ul>

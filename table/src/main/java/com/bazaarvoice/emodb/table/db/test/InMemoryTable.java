@@ -42,7 +42,7 @@ public class InMemoryTable implements Table {
 
     @Override
     public TableAvailability getAvailability() {
-        throw new UnsupportedOperationException();
+        return new TableAvailability("testPlacement", _facade);
     }
 
     @Override

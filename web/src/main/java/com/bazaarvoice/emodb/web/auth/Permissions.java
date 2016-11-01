@@ -41,6 +41,7 @@ public class Permissions {
     public final static String RAW_DATABUS = "raw_databus";
     public final static String MANAGE_API_KEYS = "manage_api_keys";
     public final static String MANAGE_ROLES = "manage_roles";
+    public final static String COMPACTION_CONTROL = "comp_control";
 
     // Common resource values
     public final static AnyResource ALL = new AnyResource();
@@ -227,6 +228,10 @@ public class Permissions {
 
     public static String manageRoles() {
         return format("%s|%s", SYSTEM, MANAGE_ROLES);
+    }
+
+    public static String compactionControl() {
+        return format("%s|%s", SYSTEM, COMPACTION_CONTROL);
     }
 
 }

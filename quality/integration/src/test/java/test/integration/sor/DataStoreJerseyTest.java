@@ -38,6 +38,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreStreaming;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.test.ResourceTest;
@@ -140,7 +141,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         permissionManager.updateForRole(
                 "update-with-events", new PermissionUpdateRequest().permit("sor|update|*"));
 
-        return setupResourceTestRule(Collections.<Object>singletonList(new DataStoreResource1(_server, mock(DataStoreAsync.class))), authIdentityManager, permissionManager);
+        return setupResourceTestRule(Collections.<Object>singletonList(new DataStoreResource1(_server, mock(DataStoreAsync.class), new InMemoryCompactionControlSource())), authIdentityManager, permissionManager);
     }
 
     @After

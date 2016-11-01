@@ -164,13 +164,14 @@ public class MultiDCCompactionTest {
         //noinspection unchecked
         Supplier<Record> requeryFn = mock(Supplier.class);
 
-        Expanded expand = compactor.expand(record, fctBeforeT2, fctBeforeT2, MutableIntrinsics.create(key), false, requeryFn);
+        long irrelevantDeleteDeltaTimestamp = Long.MAX_VALUE;
+        Expanded expand = compactor.expand(record, fctBeforeT2, fctBeforeT2, irrelevantDeleteDeltaTimestamp, MutableIntrinsics.create(key), false, requeryFn);
 
         // Verify that no pending compaction is produced since the winning compaction is outside of FCT
         assertNull(expand.getPendingCompaction());
 
         // Change the FCT such that the winning compaction (c2) is before FCT
-        expand = compactor.expand(record, fctAfterT2, fctAfterT2, MutableIntrinsics.create(key), false, requeryFn);
+        expand = compactor.expand(record, fctAfterT2, fctAfterT2, irrelevantDeleteDeltaTimestamp, MutableIntrinsics.create(key), false, requeryFn);
         List<UUID> deletedCompactions = expand.getPendingCompaction().getCompactionKeysToDelete();
         // Verify that compactions other than c2, are deleted
         Assert.assertTrue(deletedCompactions.contains(t1));

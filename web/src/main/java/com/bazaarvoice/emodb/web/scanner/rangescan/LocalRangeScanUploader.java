@@ -3,8 +3,11 @@ package com.bazaarvoice.emodb.web.scanner.rangescan;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricCounterOutputStream;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
+import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
@@ -63,6 +66,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -104,14 +108,17 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     private ScheduledExecutorService _timeoutService;
     private volatile boolean _shutdown = true;
 
+    private final CompactionControlSource _compactionControlSource;
+
     @Inject
-    public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
-        this(dataTools, scanWriterGenerator, lifecycle, metricRegistry, PIPELINE_THREAD_COUNT, PIPELINE_BATCH_SIZE,
+    public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, @DelegateCompactionControl CompactionControlSource compactionControlSource,
+                                  LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
+        this(dataTools, scanWriterGenerator, compactionControlSource, lifecycle, metricRegistry, PIPELINE_THREAD_COUNT, PIPELINE_BATCH_SIZE,
                 WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT);
     }
 
     @VisibleForTesting
-    public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, LifeCycleRegistry lifecycle,
+    public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, CompactionControlSource compactionControlSource, LifeCycleRegistry lifecycle,
                                   final MetricRegistry metricRegistry, int threadCount, int batchSize, Duration waitForAllTransfersCompleteCheckInterval,
                                   Duration waitForAllTransfersCompleteTimeout) {
         _dataTools = dataTools;
@@ -120,6 +127,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         _batchSize = batchSize;
         _waitForAllTransfersCompleteCheckInterval = waitForAllTransfersCompleteCheckInterval;
         _waitForAllTransfersCompleteTimeout = waitForAllTransfersCompleteTimeout;
+
+        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
 
         // Initialize the ObjectMapper
         _mapper = new ObjectMapper();
@@ -167,7 +176,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             throws Exception {
         _shutdown = true;
         _timeoutService.shutdownNow();
-        synchronized(_batchServices) {
+        synchronized (_batchServices) {
             for (ExecutorService service : _batchServices) {
                 service.shutdownNow();
             }
@@ -203,7 +212,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             final ArrayBlockingQueue<Batch> queue = Queues.newArrayBlockingQueue(_threadCount);
 
             // Start threads for concurrently processing batch results
-            for (int t=0; t < _threadCount; t++ ){
+            for (int t = 0; t < _threadCount; t++) {
                 batchService.submit(new Runnable() {
                     @Override
                     public void run() {
@@ -243,7 +252,16 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             int partCountForFirstShard = 1;
             Batch batch = new Batch(context, partCountForFirstShard);
 
-            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, null);
+            // check if there is a stash cut off time.
+            Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(placement);
+            DateTime cutoffTime = null;
+            if (stashTimeInfoMap.size() > 0) {
+                cutoffTime = new DateTime(stashTimeInfoMap.entrySet().stream()
+                        .min((entry1, entry2) -> entry1.getValue().getTimestamp() > entry2.getValue().getTimestamp() ? 1 : -1)
+                        .get().getValue().getTimestamp());
+            }
+
+            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
 
             // Enforce a maximum number of results based on the scan options
             Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
@@ -256,7 +274,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
                     MultiTableScanResult priorResult = batch.getLastResult();
                     boolean continuedInNextBatch =
-                        result.getShardId() == priorResult.getShardId() && result.getTableUuid() == priorResult.getTableUuid();
+                            result.getShardId() == priorResult.getShardId() && result.getTableUuid() == priorResult.getTableUuid();
 
                     if (continuedInNextBatch) {
                         MultiTableScanResult firstResult = batch.getFirstResult();
@@ -483,7 +501,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             context.closeBatch(batch, t);
 
             try {
-                Closeables.close(generator,true);
+                Closeables.close(generator, true);
                 Closeables.close(out, true);
             } catch (IOException e2) {
                 // Won't happen
@@ -703,7 +721,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         }
 
         public void waitForAllBatchesComplete()
-                    throws IOException, InterruptedException {
+                throws IOException, InterruptedException {
             _lock.lock();
             try {
                 if (!_openBatches.isEmpty() && _throwable == null) {
@@ -724,7 +742,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         }
 
         public void propagateExceptionIfPresent()
-            throws IOException {
+                throws IOException {
             if (_throwable != null) {
                 throw new IOException("Asynchronous exception during range scan batch", _throwable);
             }
