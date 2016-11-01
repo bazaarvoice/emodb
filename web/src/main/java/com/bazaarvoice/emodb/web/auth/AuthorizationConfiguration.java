@@ -37,8 +37,13 @@ public class AuthorizationConfiguration {
     // Replication key used for replicating across data centers
     @NotNull
     private String _replicationApiKey;
+
     // Set of roles assigned for anonymous user.  If the set is empty anonymous access is disabled.
     private Set<String> _anonymousRoles = ImmutableSet.of();
+
+    // Compaction control key
+    @NotNull
+    private String _compControlApiKey;
 
     public String getIdentityTable() {
         return _identityTable;
@@ -109,6 +114,15 @@ public class AuthorizationConfiguration {
 
     public AuthorizationConfiguration setAnonymousRoles(Set<String> anonymousRoles) {
         _anonymousRoles = anonymousRoles;
+        return this;
+    }
+
+    public String getCompControlApiKey() {
+        return _compControlApiKey;
+    }
+
+    public AuthorizationConfiguration setCompControlApiKey(String compControlApiKey) {
+        _compControlApiKey = compControlApiKey;
         return this;
     }
 }

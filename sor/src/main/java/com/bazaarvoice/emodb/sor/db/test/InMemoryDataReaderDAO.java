@@ -272,7 +272,6 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
         Map<UUID, Change> changes = safePut(_contentChanges, table.getName(), key);
 
-        // delete the old deltas & compaction records
         deleteDeltas(changesToDelete, changes);
 
         // add the compaction record and update the last content of the last delta

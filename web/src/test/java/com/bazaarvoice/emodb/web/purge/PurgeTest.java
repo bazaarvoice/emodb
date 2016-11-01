@@ -14,6 +14,7 @@ import com.bazaarvoice.emodb.job.service.DefaultJobService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -84,7 +85,7 @@ public class PurgeTest {
                 1, Duration.ZERO, 100, Duration.standardHours(1));
 
         _store = new InMemoryDataStore(new MetricRegistry());
-        _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry));
+        _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry), mock(CompactionControlSource.class));
 
     }
 

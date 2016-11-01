@@ -15,7 +15,9 @@ import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
@@ -24,8 +26,8 @@ import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScheduledScanConfiguration;
@@ -44,18 +46,18 @@ import com.bazaarvoice.emodb.web.scanner.notifications.SNSStashStateListener;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.rangescan.LocalRangeScanUploader;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploader;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreStashRequestDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreScanStatusDAO;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTable;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTablePlacement;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreStashRequestDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTable;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTable;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanParticipationService;
-import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
@@ -75,7 +77,13 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
-import com.google.inject.*;
+import com.google.inject.Inject;
+import com.google.inject.Key;
+import com.google.inject.PrivateModule;
+import com.google.inject.Provider;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -97,7 +105,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#SCANNER}
  * <p>
- *
+ * Requires the following external references:
+ * <ul>
+ * <li> {@link DataCenters}
+ * <li> {@link MetricRegistry}
+ * <li> Jersey {@link Client}
+ * <li> {@link CompactionControlSource}
+ * </ul>
  * Exports the following:
  * <li> {@link ScanUploader}
  * </ul>

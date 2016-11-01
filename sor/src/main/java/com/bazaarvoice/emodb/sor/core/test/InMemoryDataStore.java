@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.sor.core.test;
 
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
@@ -28,6 +29,6 @@ public class InMemoryDataStore extends DefaultDataStore {
     public InMemoryDataStore(EventBus eventBus, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
         super(eventBus, new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), Conditions.alwaysFalse(), metricRegistry);
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
     }
 }

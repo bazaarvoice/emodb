@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.test;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
@@ -60,11 +61,11 @@ public class MultiDCDataStores {
             if (asyncCompacter) {
                 _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new EventBus(), _tableDao,
                         _inMemoryDaos[i].setAuditStore(_auditStores[i]), _replDaos[i], new NullSlowQueryLog(), _auditStores[i],
-                        Optional.<URI>absent(), Conditions.alwaysFalse());
+                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse());
             } else {
                 _stores[i] = new DefaultDataStore(new EventBus(), _tableDao, _inMemoryDaos[i].setAuditStore(_auditStores[i]),
                         _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _auditStores[i],
-                        Optional.<URI>absent(), Conditions.alwaysFalse(), metricRegistry);
+                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
             }
         }
     }

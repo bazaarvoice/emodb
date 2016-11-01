@@ -51,6 +51,7 @@ public class Permissions {
     public final static String GRANT = "grant";
     public final static String CREATE_EXACT = "create_exact";
     public final static String VIEW_BY_KEY = "view_by_key";
+    public final static String COMPACTION_CONTROL = "comp_control";
 
     // Common resource values
     public final static AnyResource ALL = new AnyResource();
@@ -351,5 +352,9 @@ public class Permissions {
      */
     public static String rawDatabus() {
         return format("%s|%s", SYSTEM, RAW_DATABUS);
+    }
+
+    public static String compactionControl() {
+        return format("%s|%s", SYSTEM, COMPACTION_CONTROL);
     }
 }
