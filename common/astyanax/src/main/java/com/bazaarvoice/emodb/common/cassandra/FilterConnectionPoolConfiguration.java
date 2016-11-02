@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
 import com.google.common.base.Optional;
+import io.dropwizard.util.Size;
 
 /**
  * Implementation of ConnectionPoolConfiguration that defers to another instance with the ability to override
@@ -26,6 +27,7 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
     private Optional<Integer> _retryDelaySlice = Optional.absent();
     private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
     private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
+    private Optional<Size> _maxThriftFrameSize = Optional.absent();
 
     public FilterConnectionPoolConfiguration(ConnectionPoolConfiguration config) {
         _config = config;
@@ -173,5 +175,14 @@ public class FilterConnectionPoolConfiguration implements ConnectionPoolConfigur
 
     public void setMaxTimeoutWhenExhausted(int maxTimeoutWhenExhausted) {
         _maxTimeoutWhenExhausted = Optional.of(maxTimeoutWhenExhausted);
+    }
+
+    @Override
+    public Optional<Size> getMaxThriftFrameSize() {
+        return _maxThriftFrameSize.or(_config.getMaxThriftFrameSize());
+    }
+
+    public void setMaxThriftFrameSize(Size maxThriftFrameSize) {
+        _maxThriftFrameSize = Optional.of(maxThriftFrameSize);
     }
 }
