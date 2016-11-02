@@ -40,6 +40,7 @@ import com.netflix.astyanax.connectionpool.impl.Slf4jConnectionPoolMonitorImpl;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
 import com.netflix.astyanax.shallows.EmptyLatencyScoreStrategyImpl;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import io.dropwizard.util.Size;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,6 +123,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
     //    private int _maxOperationsPerConnection = ConnectionPoolConfigurationImpl.DEFAULT_MAX_OPERATIONS_PER_CONNECTION;
     private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
     private SimpleAuthenticationCredentials _authenticationCredentials;
+    private Optional<Size> _maxThriftFrameSize = Optional.absent();
 
     //
     // Post-configuration methods
@@ -240,6 +242,10 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 .setConnectionPoolType(ConnectionPoolType.TOKEN_AWARE)
                 .setDiscoveryType(NodeDiscoveryType.TOKEN_AWARE)
                 .setTargetCassandraVersion("1.2");
+
+        if (_maxThriftFrameSize.isPresent()) {
+            asConfig.setMaxThriftSize((int) _maxThriftFrameSize.get().toBytes());
+        }
 
         return new AstyanaxContext.Builder()
                 .withAstyanaxConfiguration(asConfig)
@@ -759,6 +765,16 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
     public CassandraConfiguration setAuthenticationCredentials(SimpleAuthenticationCredentials authenticationCredentials) {
         _authenticationCredentials = authenticationCredentials;
+        return this;
+    }
+
+    @Override
+    public Optional<Size> getMaxThriftFrameSize() {
+        return _maxThriftFrameSize;
+    }
+
+    public CassandraConfiguration setMaxThriftFrameSize(Optional<Size> maxThriftFrameSize) {
+        _maxThriftFrameSize = maxThriftFrameSize;
         return this;
     }
 }

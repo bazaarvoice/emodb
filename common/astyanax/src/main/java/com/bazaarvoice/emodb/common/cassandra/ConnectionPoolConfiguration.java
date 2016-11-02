@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
 import com.google.common.base.Optional;
+import io.dropwizard.util.Size;
 
 /**
  * Interface for configuring the Cassandra cluster connection pool.  Note that depending on whether the Astyanax or
@@ -24,4 +25,5 @@ public interface ConnectionPoolConfiguration {
     Optional<Integer> getRetryDelaySlice();
     Optional<Integer> getRetryMaxDelaySlice();
     Optional<Integer> getMaxTimeoutWhenExhausted();
+    Optional<Size> getMaxThriftFrameSize();
 }

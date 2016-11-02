@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
 import com.google.common.base.Optional;
+import io.dropwizard.util.Size;
 
 import javax.validation.constraints.NotNull;
 
@@ -37,6 +38,7 @@ public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
     private Optional<Integer> _retryDelaySlice = Optional.absent();
     private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
     private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
+    private Optional<Size> _maxThriftFrameSize = Optional.absent();
 
     public String getHealthCheckColumnFamily() {
         return _healthCheckColumnFamily;
@@ -216,6 +218,16 @@ public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
         return this;
     }
 
+    @Override
+    public Optional<Size> getMaxThriftFrameSize() {
+        return _maxThriftFrameSize;
+    }
+
+    public KeyspaceConfiguration setMaxThriftFrameSize(Optional<Size> maxThriftFrameSize) {
+        _maxThriftFrameSize = maxThriftFrameSize;
+        return this;
+    }
+
     public boolean useSharedConnectionPool() {
         return !(getInitialConnectionsPerHost().isPresent() ||
                 getMaxConnectionsPerHost().isPresent() ||
@@ -231,6 +243,7 @@ public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
                 getRetrySuspendWindow().isPresent() ||
                 getRetryDelaySlice().isPresent() ||
                 getRetryMaxDelaySlice().isPresent() ||
-                getMaxTimeoutWhenExhausted().isPresent());
+                getMaxTimeoutWhenExhausted().isPresent() ||
+                getMaxThriftFrameSize().isPresent());
     }
 }
