@@ -84,8 +84,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private static final int MAX_RANDOM_ROWS_BATCH = 50;
     private static final int DEFAULT_SINGLE_ROW_FETCH_SIZE = 100;
     private static final int DEFAULT_SINGLE_ROW_PREFETCH_LIMIT = 50;
-    private static final int DEFAULT_MULTI_ROW_FETCH_SIZE = 500;
-    private static final int DEFAULT_MULTI_ROW_PREFETCH_LIMIT = 200;
+    private static final int DEFAULT_MULTI_ROW_FETCH_SIZE = 100;
+    private static final int DEFAULT_MULTI_ROW_PREFETCH_LIMIT = 50;
     private static final int RECORD_CACHE_SIZE = 20;
     private static final int RECORD_SOFT_CACHE_SIZE = 10;
 
