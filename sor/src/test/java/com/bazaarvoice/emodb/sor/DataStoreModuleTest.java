@@ -111,7 +111,7 @@ public class DataStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "app_global", new KeyspaceConfiguration().setHealthCheckColumnFamily("ugc_delta"))))));
+                                        "app_global", new KeyspaceConfiguration())))));
 
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()

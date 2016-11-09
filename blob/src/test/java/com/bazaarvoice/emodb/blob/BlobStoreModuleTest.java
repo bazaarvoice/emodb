@@ -104,7 +104,7 @@ public class BlobStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "media_global", new KeyspaceConfiguration().setHealthCheckColumnFamily("ugc_blob"))))));
+                                        "media_global", new KeyspaceConfiguration())))));
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setSystemDataCenter("datacenter1")

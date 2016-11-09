@@ -76,6 +76,9 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
     private String _dataCenter;
 
+    @NotNull
+    private CassandraHealthCheckConfiguration _healthCheck = new CassandraHealthCheckConfiguration();
+
     /**
      * Log changes to the connection pool host list?
      */
@@ -507,6 +510,15 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
     public CassandraConfiguration setDataCenter(String dataCenter) {
         _dataCenter = dataCenter;
+        return this;
+    }
+
+    public CassandraHealthCheckConfiguration getHealthCheck() {
+        return _healthCheck;
+    }
+
+    public CassandraConfiguration setHealthCheck(CassandraHealthCheckConfiguration healthCheck) {
+        _healthCheck = healthCheck;
         return this;
     }
 

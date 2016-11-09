@@ -10,8 +10,6 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
-import com.bazaarvoice.emodb.common.cassandra.health.HealthCheckKeySupplier;
-import com.bazaarvoice.emodb.common.cassandra.health.RandomBytesSupplier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
@@ -76,7 +74,6 @@ import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -93,7 +90,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.Duration;
 
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -182,10 +178,6 @@ public class BlobStoreModule extends PrivateModule {
         // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
         // This needs to be done for just about anything that has only public dependencies.
         bind(AstyanaxStorageProvider.class).asEagerSingleton();
-
-        // Health check configuration.
-        bind(new TypeLiteral<Supplier<ByteBuffer>>(){}).annotatedWith(HealthCheckKeySupplier.class)
-                .to(RandomBytesSupplier.class).asEagerSingleton();
 
         // The DataCenter discovery expects to be able to enumerate BlobStore keyspaces
         if (_serviceMode.specifies(EmoServiceMode.Aspect.dataCenter_announce)) {

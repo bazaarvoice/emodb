@@ -65,13 +65,12 @@ systemOfRecord:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: sor-cassandra
       keyspaces:
-        app_global:
-          healthCheckColumnFamily: default_delta
-        ugc_global:
-          healthCheckColumnFamily: ugc_delta
-        catalog_global:
-          healthCheckColumnFamily: cat_delta
+        app_global: {}
+        ugc_global: {}
+        catalog_global: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -91,9 +90,10 @@ databus:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: databus-cassandra
     keyspaces:
-      databus:
-        healthCheckColumnFamily: subscription
+      databus: {}
 
 
 blobStore:
@@ -120,9 +120,10 @@ blobStore:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: blob-cassandra
       keyspaces:
-        media_global:
-          healthCheckColumnFamily: ugc_blob
+        media_global: {}
 
 
 queueService:
@@ -138,9 +139,10 @@ queueService:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: queue-cassandra
     keyspaces:
-      queue:
-        healthCheckColumnFamily: manifest
+      queue: {}
 
 
 jobs:

@@ -5,8 +5,6 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
-import com.bazaarvoice.emodb.common.cassandra.health.HealthCheckKeySupplier;
-import com.bazaarvoice.emodb.common.cassandra.health.RandomBytesSupplier;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -97,7 +95,6 @@ import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -118,7 +115,6 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -215,10 +211,6 @@ public class DataStoreModule extends PrivateModule {
         // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
         // This needs to be done for just about anything that has only public dependencies.
         bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
-
-        // Health check configuration
-        bind(new TypeLiteral<Supplier<ByteBuffer>>() {}).annotatedWith(HealthCheckKeySupplier.class)
-                .to(RandomBytesSupplier.class).asEagerSingleton();
 
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume

@@ -87,7 +87,7 @@ public class DatabusModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("random")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "random", new KeyspaceConfiguration().setHealthCheckColumnFamily("subscription")))));
+                                        "random", new KeyspaceConfiguration()))));
 
                 bind(CacheRegistry.class).toInstance(rootCacheRegistry);
                 bind(DataCenters.class).toInstance(mock(DataCenters.class));
