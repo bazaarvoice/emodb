@@ -3,8 +3,6 @@ package com.bazaarvoice.emodb.databus;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
-import com.bazaarvoice.emodb.common.cassandra.health.HealthCheckKeySupplier;
-import com.bazaarvoice.emodb.common.cassandra.health.RandomStringSupplier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
@@ -63,7 +61,6 @@ import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Map;
 
@@ -144,10 +141,6 @@ public class DatabusModule extends PrivateModule {
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
-
-        // Health check configuration
-        bind(new TypeLiteral<Supplier<ByteBuffer>>() {
-        }).annotatedWith(HealthCheckKeySupplier.class).to(RandomStringSupplier.class).asEagerSingleton();
 
         // Expose the event store directly for use by debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();

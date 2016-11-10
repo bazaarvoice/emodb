@@ -49,6 +49,8 @@ import org.joda.time.Period;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -111,7 +113,7 @@ public class DataStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "app_global", new KeyspaceConfiguration().setHealthCheckColumnFamily("ugc_delta"))))));
+                                        "app_global", new KeyspaceConfiguration())))));
 
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
@@ -135,6 +137,7 @@ public class DataStoreModuleTest {
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
                 bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class).toInstance(Suppliers.ofInstance(true));
                 bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class).toInstance(Suppliers.ofInstance(true));
+                bind(Clock.class).toInstance(Clock.systemDefaultZone());
 
                 install(new DataStoreModule(serviceMode));
             }

@@ -44,7 +44,7 @@ public class QueueModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("random")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "queue", new KeyspaceConfiguration().setHealthCheckColumnFamily("manifest")))));
+                                        "queue", new KeyspaceConfiguration()))));
 
                 bind(HealthCheckRegistry.class).toInstance(mock(HealthCheckRegistry.class));
                 bind(LeaderServiceTask.class).toInstance(mock(LeaderServiceTask.class));

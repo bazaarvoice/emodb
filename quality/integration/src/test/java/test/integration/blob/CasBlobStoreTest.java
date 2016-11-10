@@ -72,6 +72,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.time.Clock;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -157,6 +158,8 @@ public class CasBlobStoreTest {
                 bind(ServerFactory.class).toInstance(new SimpleServerFactory());
 
                 bind(ServiceRegistry.class).toInstance(mock(ServiceRegistry.class));
+
+                bind(Clock.class).toInstance(Clock.systemDefaultZone());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

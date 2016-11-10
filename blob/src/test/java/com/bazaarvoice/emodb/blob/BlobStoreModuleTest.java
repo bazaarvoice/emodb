@@ -36,6 +36,8 @@ import org.apache.curator.utils.EnsurePath;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
 import static org.mockito.Mockito.mock;
@@ -104,7 +106,7 @@ public class BlobStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "media_global", new KeyspaceConfiguration().setHealthCheckColumnFamily("ugc_blob"))))));
+                                        "media_global", new KeyspaceConfiguration())))));
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setSystemDataCenter("datacenter1")
@@ -125,6 +127,9 @@ public class BlobStoreModuleTest {
 
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
+
+                bind(Clock.class).toInstance(Clock.systemDefaultZone());
+
                 install(new BlobStoreModule(serviceMode, "bv.emodb.blob", metricRegistry));
             }
         });

@@ -3,17 +3,11 @@ package com.bazaarvoice.emodb.common.cassandra;
 import com.google.common.base.Optional;
 import io.dropwizard.util.Size;
 
-import javax.validation.constraints.NotNull;
-
 /**
  * Configuration for a Cassandra keyspace.  The configuration can optionally be used to create a private connection
  * pool by use only by the keyspace.  By default it uses a connection pool shared by all keyspaces in the cluster.
  */
 public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
-
-    /** What column family should we ping for the health check? */
-    @NotNull
-    private String _healthCheckColumnFamily;
 
     private String _keyspaceMetric;
 
@@ -39,15 +33,6 @@ public class KeyspaceConfiguration implements ConnectionPoolConfiguration {
     private Optional<Integer> _retryMaxDelaySlice = Optional.absent();
     private Optional<Integer> _maxTimeoutWhenExhausted = Optional.absent();
     private Optional<Size> _maxThriftFrameSize = Optional.absent();
-
-    public String getHealthCheckColumnFamily() {
-        return _healthCheckColumnFamily;
-    }
-
-    public KeyspaceConfiguration setHealthCheckColumnFamily(String healthCheckColumnFamily) {
-        _healthCheckColumnFamily = healthCheckColumnFamily;
-        return this;
-    }
 
     public String getKeyspaceMetric() {
         return _keyspaceMetric;

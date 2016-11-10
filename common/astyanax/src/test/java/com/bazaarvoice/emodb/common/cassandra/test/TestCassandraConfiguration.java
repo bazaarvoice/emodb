@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.cassandra.test;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.CassandraHealthCheckConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
 import com.google.common.collect.ImmutableMap;
 
@@ -15,7 +16,8 @@ public class TestCassandraConfiguration extends CassandraConfiguration {
         setThriftPort(9160);
         setCqlPort(9164);
         setPartitioner("bop");
+        setHealthCheck(new CassandraHealthCheckConfiguration().setHealthCheckCql("select * from " + healthCheckColumnFamily + " limit 1").setName(keyspace + "-cassandra"));
         setKeyspaces(ImmutableMap.of(
-                keyspace, new KeyspaceConfiguration().setHealthCheckColumnFamily(healthCheckColumnFamily)));
+                keyspace, new KeyspaceConfiguration()));
     }
 }

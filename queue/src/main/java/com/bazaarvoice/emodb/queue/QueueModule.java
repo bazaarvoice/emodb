@@ -2,8 +2,6 @@ package com.bazaarvoice.emodb.queue;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
-import com.bazaarvoice.emodb.common.cassandra.health.HealthCheckKeySupplier;
-import com.bazaarvoice.emodb.common.cassandra.health.RandomStringSupplier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
@@ -35,7 +33,6 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Map;
 
@@ -84,10 +81,6 @@ public class QueueModule extends PrivateModule {
         bind(DedupEventStoreChannels.class).toInstance(DedupEventStoreChannels.isolated("__dedupq_write:", "__dedupq_read:"));
         bind(new TypeLiteral<Supplier<Boolean>>() {}).annotatedWith(DedupEnabled.class).toInstance(Suppliers.ofInstance(true));
         install(new EventStoreModule("bv.emodb.queue", _metricRegistry));
-
-        // Health check configuration
-        bind(new TypeLiteral<Supplier<ByteBuffer>>() {}).annotatedWith(HealthCheckKeySupplier.class).
-                to(RandomStringSupplier.class).asEagerSingleton();
 
         // Bind the Queue instance that the rest of the application will consume
         bind(QueueService.class).to(DefaultQueueService.class).asEagerSingleton();

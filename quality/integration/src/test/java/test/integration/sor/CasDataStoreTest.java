@@ -71,6 +71,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -156,6 +157,8 @@ public class CasDataStoreTest {
                 bind(ServerFactory.class).toInstance(new SimpleServerFactory());
 
                 bind(ServiceRegistry.class).toInstance(mock(ServiceRegistry.class));
+
+                bind(Clock.class).toInstance(Clock.systemDefaultZone());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

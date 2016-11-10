@@ -3,21 +3,18 @@ package com.bazaarvoice.emodb.common.cassandra;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.SelectedHostLoadBalancingPolicy;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
-import com.bazaarvoice.emodb.common.cassandra.health.HealthCheckKeySupplier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.policies.FallthroughRetryPolicy;
-import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -32,19 +29,18 @@ public class CassandraFactory {
     private final LifeCycleRegistry _lifeCycle;
     private final HealthCheckRegistry _healthChecks;
     private final CuratorFramework _curator;
-    private final Supplier<ByteBuffer> _healthCheckKeySupplier;
     private final MetricRegistry _metricRegistry;
+    private final Clock _clock;
 
     @Inject
     public CassandraFactory(LifeCycleRegistry lifeCycle, HealthCheckRegistry healthChecks,
                             @Global CuratorFramework curator,
-                            @HealthCheckKeySupplier Supplier<ByteBuffer> healthCheckKeySupplier,
-                            MetricRegistry metricRegistry) {
+                            MetricRegistry metricRegistry, Clock clock) {
         _lifeCycle = checkNotNull(lifeCycle, "lifeCycle");
         _curator = checkNotNull(curator, "zooKeeperConnection");
         _healthChecks = checkNotNull(healthChecks, "healthChecks");
-        _healthCheckKeySupplier = checkNotNull(healthCheckKeySupplier, "healthCheckKeySupplier");
         _metricRegistry = metricRegistry;
+        _clock = clock;
     }
 
     public Map<String, CassandraKeyspace> build(CassandraConfiguration configuration) {
@@ -59,7 +55,6 @@ public class CassandraFactory {
         for (Map.Entry<String, KeyspaceConfiguration> entry : configuration.getKeyspaces().entrySet()) {
             String keyspaceName = entry.getKey();
             KeyspaceConfiguration keyspaceConfig = entry.getValue();
-            String healthCheckColumnFamily = keyspaceConfig.getHealthCheckColumnFamily();
             AstyanaxCluster astyanaxCluster;
             CqlCluster cqlCluster;
 
@@ -95,12 +90,18 @@ public class CassandraFactory {
             }
 
             CassandraKeyspace keyspace = new CassandraKeyspace(_lifeCycle, keyspaceName, astyanaxCluster, cqlCluster);
-            CassandraHealthCheck healthCheck = newHealthCheck(keyspace, healthCheckColumnFamily);
-            _healthChecks.addHealthCheck(healthCheck.getName(), healthCheck);
-
             keyspaceMap.put(keyspaceName, keyspace);
 
         }
+
+        // Choose any keyspace to use as our health check; the health check query should use fully qualified tables
+        // and can run using any keyspace.
+
+        CassandraHealthCheckConfiguration healthCheckConfig = configuration.getHealthCheck();
+        CassandraKeyspace healthCheckKeyspace = keyspaceMap.values().iterator().next();
+        CassandraHealthCheck healthCheck = newHealthCheck(healthCheckKeyspace, healthCheckConfig.getHealthCheckCql());
+        _healthChecks.addHealthCheck(healthCheckConfig.getName(), healthCheck);
+
         return keyspaceMap;
     }
 
@@ -124,7 +125,7 @@ public class CassandraFactory {
         return new HintsPollerCQLSession(_lifeCycle, cqlCluster);
     }
 
-    protected CassandraHealthCheck newHealthCheck(CassandraKeyspace keyspace, String healthCheckColumnFamily) {
-        return new CassandraHealthCheck(keyspace, healthCheckColumnFamily, _healthCheckKeySupplier);
+    protected CassandraHealthCheck newHealthCheck(CassandraKeyspace keyspace, String heathCheckCql) {
+        return new CassandraHealthCheck(keyspace, heathCheckCql, _clock);
     }
 }

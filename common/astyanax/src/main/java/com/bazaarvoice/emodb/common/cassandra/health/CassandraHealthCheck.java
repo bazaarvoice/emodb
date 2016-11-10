@@ -1,89 +1,90 @@
 package com.bazaarvoice.emodb.common.cassandra.health;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
-import com.bazaarvoice.emodb.common.dropwizard.guava.MoreSuppliers;
 import com.codahale.metrics.health.HealthCheck;
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.ColumnMetadata;
-import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Host;
-import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
-import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.cql.CqlStatementResult;
 
-import java.nio.ByteBuffer;
-import java.util.List;
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.netflix.astyanax.model.ConsistencyLevel.CL_LOCAL_QUORUM;
+import static com.netflix.astyanax.model.ConsistencyLevel.CL_ONE;
 
 /**
  * Dropwizard health check for Cassandra.
  */
 public class CassandraHealthCheck extends HealthCheck {
     private final CassandraKeyspace _keyspace;
-    private final ColumnFamily<ByteBuffer, ByteBuffer> _validationColumnFamily;
-    private final Supplier<ByteBuffer> _keySupplier;
-    private final Supplier<Result> _resultCache;
-    private final Supplier<PreparedStatement> _cqlStatement;
+    private final String _healthCheckCql;
+    private final Clock _clock;
+    private final ReentrantLock _lock = new ReentrantLock();
+    private transient volatile Result _cachedResult;
+    private transient volatile long _cacheExpirationTime = 0;
+    private transient volatile long _cacheRefreshTimeoutTime = Long.MAX_VALUE;
 
-    public CassandraHealthCheck(CassandraKeyspace keyspace, String validationColumnFamily,
-                                Supplier<ByteBuffer> keySupplier) {
+    public CassandraHealthCheck(CassandraKeyspace keyspace, String healthCheckCql, Clock clock) {
         _keyspace = checkNotNull(keyspace, "keyspace");
-        _validationColumnFamily = new ColumnFamily<>(
-                checkNotNull(validationColumnFamily, "validationColumnFamily"),
-                ByteBufferSerializer.get(), ByteBufferSerializer.get());
-        _keySupplier = checkNotNull(keySupplier, "keySupplier");
+        _healthCheckCql = checkNotNull(healthCheckCql, "healthCheckCql");
+        _clock = checkNotNull(clock, "clock");
 
-        _cqlStatement = Suppliers.memoize(this::prepareCqlStatement);
-
-        // Rate limit health check calls to Cassandra.  Because there are typically several Cassandra connections used
-        // by EmoDB randomize the cache refresh time to avoid requiring all Cassandra clusters to be queried on
-        // a single health check in the event health checks are performed with high frequency.
-        _resultCache = MoreSuppliers.memoizeWithRandomExpiration(this::pingAllUnchecked, 5, 10, TimeUnit.SECONDS);
-    }
-
-    public String getName() {
-        return _keyspace.getName() + "-cassandra";
+        // Optimistically return positive cached health check results until the first actual health check
+        // returns a result
+        _cachedResult = Result.healthy("Waiting for initial health check response");
     }
 
     @Override
     protected Result check() throws Exception {
-        return _resultCache.get();
+        // Check if the cached result can be returned
+        if (_clock.millis() < _cacheExpirationTime) {
+            return _cachedResult;
+        }
+
+        // Attempt to get a lock on refreshing the result without blocking
+
+        if (_lock.tryLock()) {
+            try {
+                // Lock acquired.  First verify the results still refreshing.
+                if (_clock.millis() >= _cacheExpirationTime) {
+                    // Set the cache refresh timeout to 30 seconds from now.  That way any concurrent health checks
+                    // will return failure if the ping is taking longer than 30 seconds.
+                    _cacheRefreshTimeoutTime = _clock.millis() + TimeUnit.SECONDS.toMillis(30);
+
+                    // Perform the health check and cache the result
+                    _cachedResult = pingAll();
+
+                    // Set the cache expiration time to 5 seconds from now, forcing the cached result to be refreshed
+                    // after that time.
+                    _cacheExpirationTime = _clock.millis() + TimeUnit.SECONDS.toMillis(5);
+                    // Reset the refresh timeout
+                    _cacheRefreshTimeoutTime = Long.MAX_VALUE;
+                }
+            } finally {
+                _lock.unlock();
+            }
+        } else {
+            // Lock not acquired because another thread is currently updating and caching the heath check result.
+            // If the current time is within the timeout time then continue returning the previously cached result.
+            // Otherwise, the concurrent health check is taking an unreasonably long time and therefore Cassandra
+            // should be considered unhealthy.
+
+            if (_clock.millis() >= _cacheRefreshTimeoutTime) {
+                return Result.unhealthy("Asynchronous health check update is taking too long");
+            }
+        }
+
+        return _cachedResult;
     }
 
-    private Result pingAllUnchecked() {
+    private Result pingAll() {
         try {
-            // Get a random row to distribute queries among different servers in the ring.
-            ByteBuffer key = _keySupplier.get();
             StringBuilder message = new StringBuilder();
 
-            ListenableFuture<OperationResult<ColumnList<ByteBuffer>>> astyanaxResultFuture = pingAstyanax(key);
-
-            // The Astyanax driver includes timing metrics in the result.  To get the same from the CQL driver
-            // requires query tracing.  However, this adds unnecessary overhead to the query.  Additionally, it can
-            // cause the health check to take a relatively long time waiting for trace fetch retries
-            // if the driver eventually throws a TraceRetrievalException.  So use a local timer to get a coarse
-            // estimate of the query time instead.
-            Stopwatch cqlTimer = Stopwatch.createStarted();
-            ResultSetFuture cqlResultFuture = pingCql(key);
-            cqlResultFuture.addListener(cqlTimer::stop, MoreExecutors.sameThreadExecutor());
-
-            OperationResult<ColumnList<ByteBuffer>> astyanaxResult = Futures.getUnchecked(astyanaxResultFuture);
+            OperationResult<CqlStatementResult> astyanaxResult = pingAstyanax();
             message.append("Astyanax: ").append(astyanaxResult.getHost()).append(" ")
                     .append(astyanaxResult.getLatency(TimeUnit.MICROSECONDS)).append("us");
 
@@ -91,7 +92,8 @@ public class CassandraHealthCheck extends HealthCheck {
                 message.append(", ").append(astyanaxResult.getAttemptsCount()).append(" attempts");
             }
 
-            ResultSet cqlResult = cqlResultFuture.getUninterruptibly();
+            Stopwatch cqlTimer = Stopwatch.createStarted();
+            ResultSet cqlResult = pingCql();
             long queryDurationMicros = cqlTimer.elapsed(TimeUnit.MICROSECONDS);
 
             Host host = cqlResult.getExecutionInfo().getQueriedHost();
@@ -99,36 +101,18 @@ public class CassandraHealthCheck extends HealthCheck {
 
             return Result.healthy(message.toString());
         } catch (Throwable t) {
-            throw Throwables.propagate(t);
+            return Result.unhealthy(t);
         }
     }
 
-    private ListenableFuture<OperationResult<ColumnList<ByteBuffer>>> pingAstyanax(ByteBuffer key) throws Exception {
-        // Use quorum consistency to ensure a minimum # of nodes are alive.
-        return _keyspace.prepareQuery(_validationColumnFamily, CL_LOCAL_QUORUM)
-                .getKey(key)
-                .executeAsync();
+    private OperationResult<CqlStatementResult> pingAstyanax() throws Exception {
+        return _keyspace.getAstyanaxKeyspace().prepareCqlStatement()
+                .withCql(_healthCheckCql)
+                .withConsistencyLevel(CL_ONE)
+                .execute();
     }
 
-    private PreparedStatement prepareCqlStatement() {
-        List<ColumnMetadata> metadata = _keyspace.getKeyspaceMetadata().getTable(_validationColumnFamily.getName()).getPartitionKey();
-        String query = "select " +
-                Joiner.on(", ").join(metadata.stream().map(ColumnMetadata::getName).collect(Collectors.toList())) +
-                " from " + _validationColumnFamily.getName() +
-                " where " +
-                Joiner.on(" and ").join(metadata.stream().map((md) -> "token(" + md.getName() + ")=?").collect(Collectors.toList())) +
-                " limit 1";
-
-        return _keyspace.getCqlSession().prepare(query).setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM);
-    }
-
-    private ResultSetFuture pingCql(ByteBuffer key) throws Exception {
-        PreparedStatement preparedStatement = _cqlStatement.get();
-        BoundStatement statement = preparedStatement.bind();
-        for (int i=0; i < preparedStatement.getVariables().size(); i++) {
-            statement.setBytesUnsafe(i, key);
-        }
-
-        return _keyspace.getCqlSession().executeAsync(statement);
+    private ResultSet pingCql() throws Exception {
+        return _keyspace.getCqlSession().execute(_healthCheckCql);
     }
 }
