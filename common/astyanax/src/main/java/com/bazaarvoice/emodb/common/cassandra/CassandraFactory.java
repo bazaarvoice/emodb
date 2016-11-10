@@ -14,6 +14,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Clock;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -29,15 +30,17 @@ public class CassandraFactory {
     private final HealthCheckRegistry _healthChecks;
     private final CuratorFramework _curator;
     private final MetricRegistry _metricRegistry;
+    private final Clock _clock;
 
     @Inject
     public CassandraFactory(LifeCycleRegistry lifeCycle, HealthCheckRegistry healthChecks,
                             @Global CuratorFramework curator,
-                            MetricRegistry metricRegistry) {
+                            MetricRegistry metricRegistry, Clock clock) {
         _lifeCycle = checkNotNull(lifeCycle, "lifeCycle");
         _curator = checkNotNull(curator, "zooKeeperConnection");
         _healthChecks = checkNotNull(healthChecks, "healthChecks");
         _metricRegistry = metricRegistry;
+        _clock = clock;
     }
 
     public Map<String, CassandraKeyspace> build(CassandraConfiguration configuration) {
@@ -123,6 +126,6 @@ public class CassandraFactory {
     }
 
     protected CassandraHealthCheck newHealthCheck(CassandraKeyspace keyspace, String heathCheckCql) {
-        return new CassandraHealthCheck(keyspace, heathCheckCql);
+        return new CassandraHealthCheck(keyspace, heathCheckCql, _clock);
     }
 }

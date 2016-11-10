@@ -115,6 +115,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import java.net.URI;
+import java.time.Clock;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -140,6 +141,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> Jersey {@link Client}
  * <li> @{@link CqlForMultiGets} Supplier&lt;Boolean&gt;
  * <li> @{@link CqlForScans} Supplier&lt;Boolean&gt;
+ * <li> {@link Clock}
  * </ul>
  * Exports the following:
  * <ul>
