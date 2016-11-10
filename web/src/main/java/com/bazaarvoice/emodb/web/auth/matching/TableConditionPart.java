@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
+import com.bazaarvoice.emodb.sor.condition.eval.SubsetEvaluator;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.google.common.collect.ImmutableMap;
 
@@ -76,6 +77,10 @@ abstract public class TableConditionPart extends EmoMatchingPart {
     @Nullable
     abstract protected PlacementAndAttributes getPlacementAndAttributesForTable(String table, boolean useOptionsPlacement);
 
+    public Condition getCondition() {
+        return _condition;
+    }
+
     @Override
     protected boolean impliedBy(Implier implier, List<MatchingPart> leadingParts) {
         return ((EmoImplier) implier).impliesTableCondition(this, leadingParts);
@@ -117,6 +122,12 @@ abstract public class TableConditionPart extends EmoMatchingPart {
         // Although there are an infinite number of conditions which satisfy all inputs we only check for the
         // most basic "alwaysTrue()" condition.
         return _condition.equals(Conditions.alwaysTrue());
+    }
+
+    @Override
+    public boolean impliesTableCondition(TableConditionPart part, List<MatchingPart> leadingParts) {
+        // This condition implies the other condition only if it is a subset of this condition.
+        return SubsetEvaluator.isSubset(part.getCondition(), _condition);
     }
 
     @Override

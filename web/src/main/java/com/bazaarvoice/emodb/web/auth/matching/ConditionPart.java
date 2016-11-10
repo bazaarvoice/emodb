@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.eval.SubsetEvaluator;
 import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
@@ -46,6 +47,10 @@ public class ConditionPart extends EmoMatchingPart {
         _condition.visit(_validator, null);
     }
 
+    public Condition getCondition() {
+        return _condition;
+    }
+
     @Override
     protected boolean impliedBy(Implier implier, List<MatchingPart> leadingParts) {
         return ((EmoImplier) implier).impliesCondition(this, leadingParts);
@@ -72,6 +77,12 @@ public class ConditionPart extends EmoMatchingPart {
         // Although there are an infinite number of conditions which satisfy all inputs we only check for the
         // most basic "alwaysTrue()" condition.
         return _condition.equals(Conditions.alwaysTrue());
+    }
+
+    @Override
+    public boolean impliesCondition(ConditionPart part, List<MatchingPart> leadingParts) {
+        // This condition implies the other condition only if it is a subset of this condition.
+        return SubsetEvaluator.isSubset(part.getCondition(), _condition);
     }
 
     /**

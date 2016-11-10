@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharStreams;
@@ -142,6 +143,69 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
     }
 
     @Override
+    public String getCondition() {
+        return _condition;
+    }
+
+    @Override
+    public boolean overlaps(LikeCondition condition) {
+        // If either condition is a constant then the other condition must contain the the condition's string to overlap.
+        // For example, "door" overlaps "d*r"
+        if (!hasWildcards()) {
+            return condition.matches(getCondition());
+        } else if (!condition.hasWildcards()) {
+            return matches(condition.getCondition());
+        }
+
+        // Any internal wildcards surrounded by constants can match any other internal values, so determining overlap
+        // only depends on the prefixes and suffixes.
+
+        String prefix = getPrefix();
+        String otherPrefix = condition.getPrefix();
+        String suffix = getSuffix();
+        String otherSuffix = condition.getSuffix();
+
+        return (prefix == null || otherPrefix == null || prefix.startsWith(otherPrefix) || otherPrefix.startsWith(prefix)) &&
+                (suffix == null || otherSuffix == null || suffix.endsWith(otherSuffix) || otherSuffix.endsWith(suffix));
+    }
+
+    @Override
+    public boolean isSubsetOf(LikeCondition condition) {
+        // This condition is a subset of the other condition if this condition, with all wildcards replaced with
+        // unique characters, matches the other condition.
+        String testString = substituteWildcardsWith("\u0000");
+        return condition.matches(testString);
+    }
+
+    /**
+     * Default implementation returns null, subclasses with a prefix must override.
+     */
+    @Override
+    public String getPrefix() {
+        return null;
+    }
+
+    /**
+     * Default implementation returns null, subclasses with a suffix must override.
+     */
+    @Override
+    public String getSuffix() {
+        return null;
+    }
+
+    /**
+     * Default implementation returns true, the one subclass where this is false, {@link ExactMatch}, overrides.
+     */
+    @Override
+    public boolean hasWildcards() {
+        return true;
+    }
+    /**
+     * Returns this condition with all wildcards substituted with the provided string.
+     */
+    abstract protected String substituteWildcardsWith(String substitute);
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -186,6 +250,16 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         public Condition simplify() {
             return Conditions.equal(_expression);
         }
+
+        @Override
+        public boolean hasWildcards() {
+            return false;
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return _expression;
+        }
     }
 
     /** Implementation for matching all strings, such as "*" */
@@ -215,6 +289,11 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         public Condition simplify() {
             return Conditions.isString();
         }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return substitute;
+        }
     }
 
     /** Implementation for matching a prefix, such as "review:*" */
@@ -230,6 +309,16 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         public boolean matches(String input) {
             return input.startsWith(_prefix);
         }
+
+        @Override
+        public String getPrefix() {
+            return _prefix;
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return _prefix + substitute;
+        }
     }
 
     /** Implementation for matching a suffix, such as "*:client" */
@@ -244,6 +333,16 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         @Override
         public boolean matches(String input) {
             return input.endsWith(_suffix);
+        }
+
+        @Override
+        public String getSuffix() {
+            return _suffix;
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return substitute + _suffix;
         }
     }
 
@@ -266,6 +365,21 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
                     input.startsWith(_prefix) &&
                     input.endsWith(_suffix);
         }
+
+        @Override
+        public String getPrefix() {
+            return _prefix;
+        }
+
+        @Override
+        public String getSuffix() {
+            return _suffix;
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return _prefix + substitute + _suffix;
+        }
     }
 
     /** Implementation for matching a contained expression, such as "*client*" */
@@ -280,6 +394,11 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         @Override
         public boolean matches(String input) {
             return input.contains(_expression);
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return substitute + _expression + substitute;
         }
     }
 
@@ -327,6 +446,23 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
 
             // Ensure the final inner string terminated before the suffix
             return idx <= input.length() - _suffix.length();
+        }
+
+        @Override
+        public String getPrefix() {
+            return _prefix.length() != 0 ? _prefix : null;
+        }
+
+        @Override
+        public String getSuffix() {
+            return _suffix.length() != 0 ? _suffix : null;
+        }
+
+        @Override
+        protected String substituteWildcardsWith(String substitute) {
+            return _prefix + substitute +
+                    Joiner.on(substitute).join(_innerSubstrings) +
+                    substitute + _suffix;
         }
     }
 }
