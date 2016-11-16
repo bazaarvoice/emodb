@@ -175,6 +175,10 @@ queueService:
       queue: {}
 
 
+cqlDriver:
+  multiRowFetchSize: 100
+  multiRowPrefetchLimit: 50
+
 jobs:
   # Placement for table which holds jobs metadata and results
   tablePlacement: "app_global:sys"

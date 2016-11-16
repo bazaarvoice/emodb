@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.blob.BlobStoreZooKeeper;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.DropwizardResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
@@ -211,6 +212,7 @@ public class EmoModule extends AbstractModule {
             bind(MetricRegistry.class).toInstance(_environment.metrics());
             bind(ServerFactory.class).toInstance(_configuration.getServerFactory());
             bind(DataCenterConfiguration.class).toInstance(_configuration.getDataCenterConfiguration());
+            bind(CqlDriverConfiguration.class).toInstance(_configuration.getCqlDriverConfiguration());
             bind(Clock.class).toInstance(Clock.systemUTC());
         }
 

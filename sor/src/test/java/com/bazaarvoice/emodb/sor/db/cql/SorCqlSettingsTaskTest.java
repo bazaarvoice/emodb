@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.sor.db.cql;
 
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
@@ -18,16 +19,14 @@ public class SorCqlSettingsTaskTest {
     @Test
     public void testTask()
             throws Exception {
-        DataReaderDAO astyanaxDelegate = mock(DataReaderDAO.class);
-        DataReaderDAO dataReaderDAO = new CqlDataReaderDAO(astyanaxDelegate, mock(PlacementCache.class),
-                mock(MetricRegistry.class));
-        int defaultFetchSize = ((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize();
+        CqlDriverConfiguration cqlDriverConfig = new CqlDriverConfiguration();
+        int defaultFetchSize = cqlDriverConfig.getSingleRowFetchSize();
         SorCqlSettingsTask task =
-                new SorCqlSettingsTask(mock(TaskRegistry.class), dataReaderDAO, Suppliers.ofInstance(true),
+                new SorCqlSettingsTask(mock(TaskRegistry.class), cqlDriverConfig, Suppliers.ofInstance(true),
                         Suppliers.ofInstance(true));
 
         // Verify the fetch size is the same as default of 10
-        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize(), defaultFetchSize, "Fetch size should be the default.");
+        assertEquals(cqlDriverConfig.getSingleRowFetchSize(), defaultFetchSize, "Fetch size should be the default.");
 
         // Try modifying fetch size and prefetch limit
         int expectedFetchSize = 15;
@@ -37,7 +36,7 @@ public class SorCqlSettingsTaskTest {
                 .put("prefetchLimit", Integer.toString(expectedPrefetchLimit))
                 .build(), new PrintWriter(System.out));
         // Verify the fetch size is changed to 15 and the prefetch limit is changed to 5
-        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowFetchSize(), expectedFetchSize, "Fetch size should be changed.");
-        assertEquals(((CqlDataReaderDAO) dataReaderDAO).getSingleRowPrefetchLimit(), expectedPrefetchLimit, "Prefetch limit should be changed.");
+        assertEquals(cqlDriverConfig.getSingleRowFetchSize(), expectedFetchSize, "Fetch size should be changed.");
+        assertEquals(cqlDriverConfig.getSingleRowPrefetchLimit(), expectedPrefetchLimit, "Prefetch limit should be changed.");
     }
 }
