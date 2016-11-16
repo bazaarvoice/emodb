@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
@@ -141,6 +142,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> Jersey {@link Client}
  * <li> @{@link CqlForMultiGets} Supplier&lt;Boolean&gt;
  * <li> @{@link CqlForScans} Supplier&lt;Boolean&gt;
+ * <li> {@link CqlDriverConfiguration}
  * <li> {@link Clock}
  * </ul>
  * Exports the following:

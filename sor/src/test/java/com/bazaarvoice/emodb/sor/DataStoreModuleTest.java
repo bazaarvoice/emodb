@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor;
 
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
@@ -119,6 +120,8 @@ public class DataStoreModuleTest {
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setSystemDataCenter("datacenter1")
                         .setCurrentDataCenter("datacenter1"));
+
+                bind(CqlDriverConfiguration.class).toInstance(new CqlDriverConfiguration());
 
                 bind(HostAndPort.class).annotatedWith(SelfHostAndPort.class).toInstance(HostAndPort.fromString("localhost:8080"));
                 bind(Client.class).toInstance(mock(Client.class));

@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
@@ -138,8 +139,10 @@ public class CasBlobStoreTest {
                         .setSystemDataCenter("datacenter1")
                         .setDataCenterServiceUri(URI.create("http://localhost:8080"))
                         .setDataCenterAdminUri(URI.create("http://localhost:8080")));
-                bind(String.class).annotatedWith(ServerCluster.class).toInstance("local_default");
 
+                bind(CqlDriverConfiguration.class).toInstance(new CqlDriverConfiguration());
+
+                bind(String.class).annotatedWith(ServerCluster.class).toInstance("local_default");
                 bind(String.class).annotatedWith(InvalidationService.class).toInstance("emodb-cachemgr");
 
                 bind(CuratorFramework.class).annotatedWith(Global.class).toInstance(curator);

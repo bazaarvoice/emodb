@@ -3,6 +3,7 @@ package test.integration.sor;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
@@ -137,6 +138,9 @@ public class CasDataStoreTest {
                         .setSystemDataCenter("datacenter1")
                         .setDataCenterServiceUri(URI.create("http://localhost:8080"))
                         .setDataCenterAdminUri(URI.create("http://localhost:8080")));
+
+                bind(CqlDriverConfiguration.class).toInstance(new CqlDriverConfiguration());
+
                 bind(KeyspaceDiscovery.class).annotatedWith(Names.named("blob")).toInstance(mock(KeyspaceDiscovery.class));
                 bind(String.class).annotatedWith(ServerCluster.class).toInstance("local_default");
 

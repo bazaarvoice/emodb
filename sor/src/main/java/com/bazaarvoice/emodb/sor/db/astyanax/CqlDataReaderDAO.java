@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
@@ -37,6 +38,8 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
+import com.datastax.driver.core.utils.MoreFutures;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
@@ -53,9 +56,14 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Range;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
+import org.apache.cassandra.utils.ByteBufferUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -65,6 +73,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
@@ -81,13 +90,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 // Delegates to AstyanaxReaderDAO for non-CQL stuff
 // Once we transition fully, we will stop delegating to Astyanax
 public class CqlDataReaderDAO implements DataReaderDAO {
-    private static final int MAX_RANDOM_ROWS_BATCH = 50;
-    private static final int DEFAULT_SINGLE_ROW_FETCH_SIZE = 100;
-    private static final int DEFAULT_SINGLE_ROW_PREFETCH_LIMIT = 50;
-    private static final int DEFAULT_MULTI_ROW_FETCH_SIZE = 100;
-    private static final int DEFAULT_MULTI_ROW_PREFETCH_LIMIT = 50;
-    private static final int RECORD_CACHE_SIZE = 20;
-    private static final int RECORD_SOFT_CACHE_SIZE = 10;
+
+    private final Logger _log = LoggerFactory.getLogger(CqlDataReaderDAO.class);
 
     /**
      * Depending on the placement and type of data being queried (delta, audit, or delta history) the names of the
@@ -101,6 +105,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final DataReaderDAO _astyanaxReaderDAO;
     private final ChangeEncoder _changeEncoder;
     private final PlacementCache _placementCache;
+    private final CqlDriverConfiguration _driverConfig;
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
 
@@ -108,29 +113,12 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private volatile Supplier<Boolean> _useCqlForMultiGets = Suppliers.ofInstance(true);
     private volatile Supplier<Boolean> _useCqlForScans = Suppliers.ofInstance(true);
 
-    /**
-     * Fetch sizes determine the number of rows the CQL driver will stream into memory for a given query.  For example,
-     * if a query contains 1,000 matching rows and the fetch size is 100 then it will be streamed from Cassandra in
-     * batches of 100 rows.  This helps limit the memory requirements for queries with extremely large result sets.
-     */
-    private volatile int _singleRowFetchSize = DEFAULT_SINGLE_ROW_FETCH_SIZE;
-    private volatile int _multiRowFetchSize = DEFAULT_MULTI_ROW_FETCH_SIZE;
-
-    /**
-     * Prefetch limits determine the point at which more results are asynchronously fetched for an open query.  For
-     * example, assume a query has a fetch size of 500.  After fetching and iterating over the first 500 rows the CQL
-     * driver synchronously fetches the next 500 rows in the result set.  This results in a synchronous delay iterating
-     * to the 501st row.  With a prefetch limit of 200, for example, the next 500 rows are asynchronously fetched once
-     * the first 300 rows have been iterated from the last fetch and there are 200 rows remaining in memory.  This
-     * decreases or possibly eliminates the fetch delay at the cost of requiring more room in memory for result rows.
-     */
-    private volatile int _singleRowPrefetchLimit = DEFAULT_SINGLE_ROW_PREFETCH_LIMIT;
-    private volatile int _multiRowPrefetchLimit = DEFAULT_MULTI_ROW_PREFETCH_LIMIT;
-
     @Inject
-    public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache, MetricRegistry metricRegistry) {
+    public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
+                            CqlDriverConfiguration driverConfig, MetricRegistry metricRegistry) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
         _placementCache = placementCache;
+        _driverConfig = driverConfig;
         _changeEncoder = new DefaultChangeEncoder();
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
@@ -201,38 +189,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return placement.getKeyspace().getClusterName();
     }
 
-    public void setSingleRowFetchSizeAndPrefetchLimit(int singleRowFetchSize, int singleRowPrefetchLimit) {
-        checkArgument(singleRowFetchSize > 0, "Fetch size must be greater than 0");
-        checkArgument(singleRowPrefetchLimit >= 0, "Prefetch limit must be at least 0");
-        checkArgument(singleRowPrefetchLimit < singleRowFetchSize, "Fetch size cannot be lower than prefetch limit");
-        _singleRowFetchSize = singleRowFetchSize;
-        _singleRowPrefetchLimit = singleRowPrefetchLimit;
-    }
-
-    public void setMultiRowFetchSizeAndPrefetchLimit(int multiRowFetchSize, int multiRowPrefetchLimit) {
-        checkArgument(multiRowFetchSize > 0, "Fetch size must be greater than 0");
-        checkArgument(multiRowPrefetchLimit >= 0, "Prefetch limit must be at least 0");
-        checkArgument(multiRowPrefetchLimit < multiRowFetchSize, "Fetch size cannot be lower than prefetch limit");
-        _multiRowFetchSize = multiRowFetchSize;
-        _multiRowPrefetchLimit = multiRowPrefetchLimit;
-    }
-
-    public int getSingleRowFetchSize() {
-        return _singleRowFetchSize;
-    }
-
-    public int getMultiRowFetchSize() {
-        return _multiRowFetchSize;
-    }
-
-    public int getSingleRowPrefetchLimit() {
-        return _singleRowPrefetchLimit;
-    }
-
-    public int getMultiRowPrefetchLimit() {
-        return _multiRowPrefetchLimit;
-    }
-
     private Record read(Key key, ByteBuffer rowKey, ReadConsistency consistency, DeltaPlacement placement) {
         checkNotNull(key, "key");
         checkNotNull(consistency, "consistency");
@@ -247,7 +203,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // Track metrics
         _randomReadMeter.mark();
 
-        Iterator<Iterable<Row>> groupedRows = deltaQuery(placement, statement, true);
+        Iterator<Iterable<Row>> groupedRows = deltaQuery(placement, statement, true, "Failed to read record %s", key);
 
         Iterable<Row> rows;
         if (groupedRows.hasNext()) {
@@ -264,8 +220,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * Synchronously executes the provided statement.  The statement must query the delta table as returned from
      * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getDeltaTableDDL()}
      */
-    private Iterator<Iterable<Row>> deltaQuery(DeltaPlacement placement, Statement statement, boolean singleRow) {
-        return doDeltaQuery(placement, statement, singleRow, false);
+    private Iterator<Iterable<Row>> deltaQuery(DeltaPlacement placement, Statement statement, boolean singleRow,
+                                               String errorContext, Object... errorContextArgs) {
+        return doDeltaQuery(placement, statement, singleRow, false, errorContext, errorContextArgs);
     }
 
     /**
@@ -273,14 +230,16 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * may still be loading in the background.  The statement must query the delta table as returned from
      * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getDeltaTableDDL()}
      */
-    private Iterator<Iterable<Row>> deltaQueryAsync(DeltaPlacement placement, Statement statement, boolean singleRow) {
-        return doDeltaQuery(placement, statement, singleRow, true);
+    private Iterator<Iterable<Row>> deltaQueryAsync(DeltaPlacement placement, Statement statement, boolean singleRow,
+                                                    String errorContext, Object... errorContextArgs) {
+        return doDeltaQuery(placement, statement, singleRow, true, errorContext, errorContextArgs);
     }
 
-    private Iterator<Iterable<Row>> doDeltaQuery(DeltaPlacement placement, Statement statement, boolean singleRow, boolean async) {
+    private Iterator<Iterable<Row>> doDeltaQuery(DeltaPlacement placement, Statement statement, boolean singleRow, boolean async,
+                                                 String errorContext, Object... errorContextArgs) {
         // Set the fetch size and prefetch limits depending on whether the query is for a single row or multiple rows.
-        int fetchSize = singleRow ? _singleRowFetchSize : _multiRowFetchSize;
-        int prefetchLimit = singleRow ? _singleRowPrefetchLimit : _multiRowPrefetchLimit;
+        int fetchSize = singleRow ? _driverConfig.getSingleRowFetchSize() : _driverConfig.getMultiRowFetchSize();
+        int prefetchLimit = singleRow ? _driverConfig.getSingleRowPrefetchLimit() : _driverConfig.getMultiRowPrefetchLimit();
 
         statement.setFetchSize(fetchSize);
 
@@ -291,13 +250,25 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             ResultSetFuture resultSetFuture = session.executeAsync(statement);
             deltaRowGroupResultSetIterator = new DeltaRowGroupResultSetIterator(
                     resultSetFuture, prefetchLimit, placement, statement.getConsistencyLevel());
+
+            Futures.addCallback(resultSetFuture, new MoreFutures.FailureCallback<ResultSet>() {
+                @Override
+                public void onFailure(Throwable t) {
+                    _log.error(String.format(errorContext, errorContextArgs), t);
+                }
+            });
         } else {
-            ResultSet resultSet = session.execute(statement);
-            deltaRowGroupResultSetIterator = new DeltaRowGroupResultSetIterator(
-                    resultSet, prefetchLimit, placement, statement.getConsistencyLevel());
+            try {
+                ResultSet resultSet = session.execute(statement);
+                deltaRowGroupResultSetIterator = new DeltaRowGroupResultSetIterator(
+                        resultSet, prefetchLimit, placement, statement.getConsistencyLevel());
+            } catch (Throwable t) {
+                _log.error(String.format(errorContext, errorContextArgs), t);
+                throw t;
+            }
         }
 
-        return new CachingRowGroupIterator(deltaRowGroupResultSetIterator, RECORD_CACHE_SIZE, RECORD_SOFT_CACHE_SIZE);
+        return new CachingRowGroupIterator(deltaRowGroupResultSetIterator, _driverConfig.getRecordCacheSize(), _driverConfig.getRecordSoftCacheSize());
     }
 
     /**
@@ -365,7 +336,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Collections.sort(rowKeys, Ordering.natural().onResultOf(entry -> entry.getKey()));
 
         // Group them into batches.  Cassandra may have to seek each row so prefer smaller batches.
-        List<List<Map.Entry<ByteBuffer, Key>>> batches = Lists.partition(rowKeys, MAX_RANDOM_ROWS_BATCH);
+        List<List<Map.Entry<ByteBuffer, Key>>> batches = Lists.partition(rowKeys, _driverConfig.getMaxRandomRowsBatchSize());
 
         // This algorithm is arranged such that rows are return in pages with size _fetchSize.  The rows are grouped
         // into row groups by common row key.  The first RECORD_CACHE_SIZE rows are cached for the row group
@@ -403,7 +374,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 .where(in(tableDDL.getRowKeyColumnName(), keys))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
-        Iterator<Iterable<Row>> rowGroups = deltaQueryAsync(placement, statement, false);
+        Iterator<Iterable<Row>> rowGroups = deltaQueryAsync(placement, statement, false, "Failed to read records %s", rawKeyMap.values());
 
         return Iterators.concat(
                 // First iterator reads the row groups found and transforms them to Records
@@ -543,7 +514,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     /**
      * Scans a range of keys and returns an iterator containing each row's columns as an iterable.
      */
-    private Iterator<Iterable<Row>> rowScan(DeltaPlacement placement, ByteBufferRange keyRange, ReadConsistency consistency) {
+    private Iterator<Iterable<Row>> rowScan(DeltaPlacement placement, @Nullable AstyanaxTable table, ByteBufferRange keyRange,
+                                            ReadConsistency consistency) {
         ByteBuffer startToken = keyRange.getStart();
         ByteBuffer endToken = keyRange.getEnd();
 
@@ -558,17 +530,19 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 .and(lte(token(tableDDL.getRowKeyColumnName()), endToken))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
-        return deltaQueryAsync(placement, statement, false);
+        return deltaQueryAsync(placement, statement, false, "Failed to scan token range [%s, %s] for %s",
+                ByteBufferUtil.bytesToHex(startToken), ByteBufferUtil.bytesToHex(endToken),
+                table != null ? table : "multiple tables");
     }
 
     /**
-     * Similar to {@link #rowScan(DeltaPlacement, com.netflix.astyanax.model.ByteBufferRange, com.bazaarvoice.emodb.sor.api.ReadConsistency)}
+     * Similar to {@link #rowScan(DeltaPlacement, AstyanaxTable, com.netflix.astyanax.model.ByteBufferRange, com.bazaarvoice.emodb.sor.api.ReadConsistency)}
      * except this method converts each C* row into a Record.
      */
     private Iterator<Record> recordScan(DeltaPlacement placement, AstyanaxTable table, ByteBufferRange keyRange,
                                         ReadConsistency consistency) {
 
-        Iterator<Iterable<Row>> rowGroups = rowScan(placement, keyRange, consistency);
+        Iterator<Iterable<Row>> rowGroups = rowScan(placement, table, keyRange, consistency);
         return decodeRows(rowGroups, table);
     }
 
@@ -615,7 +589,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // Avoiding pinning multiple decoded rows into memory at once.
         return () -> limit.limit(new AbstractIterator<MultiTableScanResult>() {
             private PeekingIterator<Iterable<Row>> _iter = Iterators.peekingIterator(
-                    rowScan(placement, rowRange, consistency));
+                    rowScan(placement, null, rowRange, consistency));
 
             private long _lastTableUuid = -1;
             private AstyanaxTable _table = null;
@@ -690,7 +664,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                     if (AstyanaxStorage.compareKeys(nextPossibleTableStart, end) < 0) {
                         // We haven't reached the last end boundary of the original range scan
                         ByteBufferRange updatedRange = new ByteBufferRangeImpl(nextPossibleTableStart, end, -1, false);
-                        return Iterators.peekingIterator(rowScan(placement, updatedRange, consistency));
+                        return Iterators.peekingIterator(rowScan(placement, null, updatedRange, consistency));
                     }
                 }
 
@@ -776,7 +750,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Statement statement = where
                 .orderBy(ascending ? asc(tableDDL.getChangeIdColumnName()) : desc(tableDDL.getChangeIdColumnName()))
                 .limit(limit)
-                .setFetchSize(_singleRowFetchSize)
+                .setFetchSize(_driverConfig.getSingleRowFetchSize())
                 .setConsistencyLevel(consistency);
 
         return placement.getKeyspace().getCqlSession().execute(statement);

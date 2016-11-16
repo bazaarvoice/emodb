@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web;
 
 import com.bazaarvoice.curator.dropwizard.ZooKeeperConfiguration;
 import com.bazaarvoice.emodb.blob.BlobStoreConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
@@ -55,6 +56,11 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty("dataCenter")
     private DataCenterConfiguration _dataCenterConfiguration = new DataCenterConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty("cqlDriver")
+    private CqlDriverConfiguration _cqlDriverConfiguration = new CqlDriverConfiguration();
 
     @Valid
     @NotNull
@@ -147,6 +153,15 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setDataCenterConfiguration(DataCenterConfiguration dataCenterConfiguration) {
         _dataCenterConfiguration = dataCenterConfiguration;
+        return this;
+    }
+
+    public CqlDriverConfiguration getCqlDriverConfiguration() {
+        return _cqlDriverConfiguration;
+    }
+
+    public EmoConfiguration setCqlDriverConfiguration(CqlDriverConfiguration cqlDriverConfiguration) {
+        _cqlDriverConfiguration = cqlDriverConfiguration;
         return this;
     }
 

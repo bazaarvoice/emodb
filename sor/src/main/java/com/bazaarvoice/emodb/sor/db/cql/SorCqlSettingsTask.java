@@ -1,9 +1,7 @@
 package com.bazaarvoice.emodb.sor.db.cql;
 
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
@@ -11,8 +9,6 @@ import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 
 import java.io.PrintWriter;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Update CQL driver settings.  Current configurable settings are:
@@ -28,18 +24,16 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class SorCqlSettingsTask extends Task {
 
-    private final CqlDataReaderDAO _cqlDataReaderDAO;
+    private final CqlDriverConfiguration _cqlDriverConfiguration;
     private final Supplier<Boolean> _useCqlForMultiGets;
     private final Supplier<Boolean> _useCqlForScans;
 
     @Inject
-    public SorCqlSettingsTask(TaskRegistry taskRegistry, DataReaderDAO cqlDataReaderDAO,
+    public SorCqlSettingsTask(TaskRegistry taskRegistry, CqlDriverConfiguration cqlDriverConfiguration,
                               @CqlForMultiGets Supplier<Boolean> useCqlForMultiGets,
                               @CqlForScans Supplier<Boolean> useCqlForScans) {
         super("sor-cql-settings");
-        checkArgument(cqlDataReaderDAO instanceof CqlDataReaderDAO, "We should be using CQL now");
-        //noinspection ConstantConditions
-        _cqlDataReaderDAO = (CqlDataReaderDAO) cqlDataReaderDAO;
+        _cqlDriverConfiguration = cqlDriverConfiguration;
         _useCqlForMultiGets = useCqlForMultiGets;
         _useCqlForScans = useCqlForScans;
         taskRegistry.addTask(this);
@@ -60,34 +54,30 @@ public class SorCqlSettingsTask extends Task {
             return;
         }
 
-        // TODO: At some point these should be revised to use the newer "settings" capabilities
-
         // Update fetch sizes and prefetch limits if needed
         if (fetchSize > 0 || prefetchLimit >= 0) {
-            if (fetchSize <= 0) {
-                fetchSize = _cqlDataReaderDAO.getSingleRowFetchSize();
+            if (fetchSize > 0) {
+                _cqlDriverConfiguration.setSingleRowFetchSize(fetchSize);
             }
-            if (prefetchLimit < 0) {
-                prefetchLimit = _cqlDataReaderDAO.getSingleRowPrefetchLimit();
+            if (prefetchLimit >= 0) {
+                _cqlDriverConfiguration.setSingleRowPrefetchLimit(prefetchLimit);
             }
-            _cqlDataReaderDAO.setSingleRowFetchSizeAndPrefetchLimit(fetchSize, prefetchLimit);
         }
         if (batchFetchSize > 0 || batchPrefetchLimit >= 0) {
-            if (batchFetchSize <= 0) {
-                batchFetchSize = _cqlDataReaderDAO.getMultiRowFetchSize();
+            if (batchFetchSize > 0) {
+                _cqlDriverConfiguration.setMultiRowFetchSize(batchFetchSize);
             }
-            if (batchPrefetchLimit < 0) {
-                batchPrefetchLimit = _cqlDataReaderDAO.getMultiRowPrefetchLimit();
+            if (batchPrefetchLimit >= 0) {
+                _cqlDriverConfiguration.setMultiRowPrefetchLimit(batchPrefetchLimit);
             }
-            _cqlDataReaderDAO.setMultiRowFetchSizeAndPrefetchLimit(batchFetchSize, batchPrefetchLimit);
         }
 
         out.printf("Use CQL for multi-gets/scans = %s/%s.  To change these values use the \"sor-cql-driver\" task.%n%n",
                 _useCqlForMultiGets.get(), _useCqlForScans.get());
 
         out.printf("FETCH_SIZE : %d | BATCH_FETCH_SIZE: %d | PREFETCH_LIMIT=%d | BATCH_PREFETCH_LIMIT=%d%n",
-                _cqlDataReaderDAO.getSingleRowFetchSize(), _cqlDataReaderDAO.getMultiRowFetchSize(),
-                _cqlDataReaderDAO.getSingleRowPrefetchLimit(), _cqlDataReaderDAO.getMultiRowPrefetchLimit());
+                _cqlDriverConfiguration.getSingleRowFetchSize(), _cqlDriverConfiguration.getMultiRowFetchSize(),
+                _cqlDriverConfiguration.getSingleRowPrefetchLimit(), _cqlDriverConfiguration.getMultiRowPrefetchLimit());
     }
 
     private Integer parseInt(String value, String description, PrintWriter out) {
