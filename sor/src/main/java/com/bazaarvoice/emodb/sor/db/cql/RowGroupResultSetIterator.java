@@ -7,6 +7,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 
@@ -39,15 +40,8 @@ abstract public class RowGroupResultSetIterator extends AbstractIterator<RowGrou
         this(Suppliers.ofInstance(resultSet), prefetchLimit);
     }
 
-    public RowGroupResultSetIterator(final ResultSetFuture resultSetFuture, int prefetchLimit) {
-        this(
-                new Supplier<ResultSet>() {
-                    @Override
-                    public ResultSet get() {
-                        return resultSetFuture.getUninterruptibly();
-                    }
-                },
-                prefetchLimit);
+    public RowGroupResultSetIterator(final ListenableFuture<ResultSet> resultSetFuture, int prefetchLimit) {
+        this(() -> Futures.getUnchecked(resultSetFuture), prefetchLimit);
     }
 
     private RowGroupResultSetIterator(Supplier<ResultSet> resultSetSupplier, int prefetchLimit) {
