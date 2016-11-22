@@ -28,7 +28,6 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Date;
 
 import static org.mockito.Matchers.any;
@@ -40,7 +39,7 @@ import static org.testng.Assert.assertEquals;
 public class DefaultFanoutTest {
 
     private DefaultFanout _defaultFanout;
-    private Supplier<Collection<OwnedSubscription>> _subscriptionsSupplier;
+    private Supplier<Iterable<OwnedSubscription>> _subscriptionsSupplier;
     private DataCenter _currentDataCenter;
     private DataCenter _remoteDataCenter;
     private DataProvider _dataProvider;

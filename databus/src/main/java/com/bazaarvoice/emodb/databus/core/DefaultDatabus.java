@@ -39,14 +39,12 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -73,6 +71,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -254,39 +253,21 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkArgument(limit > 0, "Limit must be >0");
 
         // We always have all the subscriptions cached in memory so fetch them all.
-        Collection<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
+        Iterable<OwnedSubscription> allSubscriptions = _subscriptionDao.getAllSubscriptions();
 
-        // Ignore subscriptions not accessible by the owner.
-        subscriptions = Collections2.filter(subscriptions,
-                (subscription) -> _databusAuthorizer.owner(ownerId).canAccessSubscription(subscription));
-
-        // Sort them by name.  They're stored sorted in Cassandra so this should be a no-op, but
-        // do the sort anyway so we're not depending on internals of the subscription DAO.
-        List<? extends Subscription> sorted = new Ordering<Subscription>() {
-            @Override
-            public int compare(Subscription left, Subscription right) {
-                return left.getName().compareTo(right.getName());
-            }
-        }.immutableSortedCopy(subscriptions);
-
-        // Apply the "from" parameter.
-        if (fromSubscriptionExclusive != null) {
-            int start = 0;
-            for (; start < sorted.size(); start++) {
-                if (fromSubscriptionExclusive.compareTo(sorted.get(start).getName()) < 0) {
-                    break;
-                }
-            }
-            sorted = sorted.subList(start, sorted.size());
-        }
-
-        // Apply the "limit" parameter (be careful to avoid overflow when limit == Long.MAX_VALUE).
-        if (sorted.size() > limit) {
-            sorted = sorted.subList(0, (int) limit);
-        }
-
-        //noinspection unchecked
-        return (Iterator<Subscription>) sorted.iterator();
+        return StreamSupport.stream(allSubscriptions.spliterator(), false)
+                // Ignore subscriptions not accessible by the owner.
+                .filter((subscription) -> _databusAuthorizer.owner(ownerId).canAccessSubscription(subscription))
+                // Sort them by name.  They're stored sorted in Cassandra so this should be a no-op, but
+                // do the sort anyway so we're not depending on internals of the subscription DAO.
+                .sorted((left, right) -> left.getName().compareTo(right.getName()))
+                // Apply the "from" parameter
+                .filter(subscription -> fromSubscriptionExclusive == null || subscription.getName().compareTo(fromSubscriptionExclusive) > 0)
+                // Apply the "limit" parameter (be careful to avoid overflow when limit == Long.MAX_VALUE).
+                .limit(limit)
+                // Necessary to make generics work
+                .map(subscription -> (Subscription) subscription)
+                .iterator();
     }
 
     @Override

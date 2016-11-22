@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.util.Collection;
 
 public interface SubscriptionDAO {
 
@@ -17,5 +16,12 @@ public interface SubscriptionDAO {
     @Nullable
     OwnedSubscription getSubscription(String subscription);
 
-    Collection<OwnedSubscription> getAllSubscriptions();
+    Iterable<OwnedSubscription> getAllSubscriptions();
+
+    /**
+     * Potentially more efficient than {@link #getAllSubscriptions()} when the caller only needs a list of all
+     * subscription names.  If possible the implementation should provide a more efficient implementation than
+     * actually loading all subscriptions.
+     */
+    Iterable<String> getAllSubscriptionNames();
 }
