@@ -12,9 +12,11 @@ import com.datastax.driver.core.exceptions.FrameTooLongException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.datastax.driver.core.exceptions.OperationTimedOutException;
 import com.datastax.driver.core.exceptions.ReadTimeoutException;
+import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.slf4j.Logger;
@@ -117,6 +119,9 @@ public class AdaptiveResultSet implements ResultSet {
 
     private final Session _session;
     private ResultSet _delegate;
+    private Iterator<Row> _fetchedResults = Iterators.emptyIterator();
+    private volatile ResultSet _delegateWithPrefetchFailure;
+    private volatile Throwable _prefetchFailure;
     private int _remainingAdaptations;
 
     private AdaptiveResultSet(Session session, ResultSet delegate, int remainingAdaptations) {
@@ -127,16 +132,48 @@ public class AdaptiveResultSet implements ResultSet {
 
     @Override
     public Row one() {
-        Row row;
-        try {
-            row = _delegate.one();
-        } catch (Throwable t) {
-            if (!reduceFetchSize(t)) {
-                throw Throwables.propagate(t);
-            }
-            return one();
+        // If we've already identified pre-fetched rows that can be read locally then return the next row.
+        if (_fetchedResults.hasNext()) {
+            return _fetchedResults.next();
         }
-        return row;
+
+        // Determine how many rows are available without fetching, if any.  This can happen if a call to
+        // fetchMoreResults() made more results locally available since _fetchedResults was created.
+        int availableWithoutFetching = _delegate.getAvailableWithoutFetching();
+        if (availableWithoutFetching != 0) {
+            // Create an iterator for these rows to return them efficiently since we know returning them
+            // will never throw an adaptive exception.
+            _fetchedResults = Iterators.limit(_delegate.iterator(), availableWithoutFetching);
+            return _fetchedResults.next();
+        }
+
+        // At this point either the result set is exhausted or the next row requires fetching more results.  Determining
+        // either of these may potentially raise an exception which requires adapting the fetch size.
+
+        Throwable fetchException;
+
+        // If an asynchronous pre-fetch from a prior call to fetchMoreResults() failed for an adaptive reason then
+        // don't try again with the current fetch size.
+        if (_delegateWithPrefetchFailure == _delegate && _prefetchFailure != null) {
+            fetchException = _prefetchFailure;
+            _delegateWithPrefetchFailure = null;
+            _prefetchFailure = null;
+        } else {
+            try {
+                return _delegate.one();
+            } catch (Throwable t) {
+                fetchException = t;
+            }
+        }
+
+        // This code is only reachable if there was an exception fetching more rows.  If appropriate reduce the fetch
+        // size and try again, otherwise propagate the exception.
+        if (!reduceFetchSize(fetchException)) {
+            throw Throwables.propagate(fetchException);
+        }
+
+        // Call again to return the next row.
+        return one();
     }
 
     /**
@@ -194,13 +231,37 @@ public class AdaptiveResultSet implements ResultSet {
 
     @Override
     public ListenableFuture<ResultSet> fetchMoreResults() {
+        final ResultSet delegate = _delegate;
+
+        // If we've already tried to pre-fetch for this delegate and ran into frame size issues then don't try again.
+        if (_delegateWithPrefetchFailure == delegate) {
+            return Futures.immediateFuture(this);
+        }
+
         // Change the returned future to contain this instance instead of the delegate
-        return Futures.transform(_delegate.fetchMoreResults(), new Function<ResultSet, ResultSet>() {
+        ListenableFuture<ResultSet> future = Futures.transform(delegate.fetchMoreResults(), new Function<ResultSet, ResultSet>() {
             @Override
             public ResultSet apply(ResultSet ignore) {
                 return AdaptiveResultSet.this;
             }
         });
+
+        Futures.addCallback(future, new MoreFutures.FailureCallback<ResultSet>() {
+            @Override
+            public void onFailure(Throwable t) {
+                // The async pre-fetch has failed.  Check if the root cause is adaptive.
+                if (isAdaptiveException(t)) {
+                    // Future:  Optimize to pre-fetch the next delegate immediately.  For now simply record that
+                    // we shouldn't try to pre-fetch again for this delegate.  The frame size will be adjusted
+                    // synchronously after all available rows have been consumed.
+
+                    _prefetchFailure = t;
+                    _delegateWithPrefetchFailure = delegate;
+                }
+            }
+        });
+
+        return future;
     }
 
     // Remaining methods require no additional logic beyond forwarding calls to the ResultSet delegate.
