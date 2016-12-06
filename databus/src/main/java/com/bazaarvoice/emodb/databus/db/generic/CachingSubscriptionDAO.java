@@ -11,11 +11,12 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Objects;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
-import com.google.common.cache.RemovalCause;
 import com.google.common.cache.RemovalListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -26,6 +27,7 @@ import com.google.inject.Inject;
 import org.joda.time.Duration;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.util.Date;
 import java.util.List;
@@ -95,7 +97,6 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     private final LoadingCache<String, OwnedSubscription> _subscriptionCache;
     private final LoadingCache<String, List<OwnedSubscription>> _allSubscriptionsCache;
     private final CacheHandle _subscriptionCacheHandle;
-    private final CacheHandle _allSubscriptionsCacheHandle;
     private final ListeningExecutorService _refreshService;
     private final LoadingCache<String, Map<String, OwnedSubscription>> _legacyCache;
     private final CacheHandle _legacyCacheHandle;
@@ -121,6 +122,8 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                 .build(new CacheLoader<String, List<OwnedSubscription>>() {
                     @Override
                     public List<OwnedSubscription> load(String key) throws Exception {
+                        assert SUBSCRIPTIONS.equals(key) : "All subscriptions cache should only be accessed by a single key";
+
                         Iterable<String> subscriptionNames = _delegate.getAllSubscriptionNames();
                         ImmutableList.Builder<OwnedSubscription> subscriptions = ImmutableList.builder();
 
@@ -136,34 +139,16 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                     }
                 });
 
-        _allSubscriptionsCacheHandle = cacheRegistry.register("allSubscriptions", _allSubscriptionsCache, true);
-
-        _subscriptionCache = CacheBuilder.newBuilder()
+        final LoadingCache<String, OwnedSubscription> rawSubscriptionCache = CacheBuilder.newBuilder()
                 .refreshAfterWrite(10, TimeUnit.MINUTES)
                 .ticker(ticker)
-                .removalListener((RemovalListener<String, OwnedSubscription>) notification -> {
-                    // If the subscription was removed due to an explicit invalidation then to avoid a potential
-                    // race condition with the corresponding _allSubscriptionsCache invalidation event proactively
-                    // also invalidate the list of all subscriptions.
-                    if (notification.getCause() == RemovalCause.EXPLICIT && notification.getValue() != NULL_SUBSCRIPTION) {
-                        _allSubscriptionsCache.invalidate(SUBSCRIPTIONS);
-                    }
-                })
+                .recordStats()
                 .build(new CacheLoader<String, OwnedSubscription>() {
                     @Override
                     public OwnedSubscription load(String subscription) throws Exception {
                         OwnedSubscription ownedSubscription = _delegate.getSubscription(subscription);
-                        if (ownedSubscription == null) {
-                            // Can't cache null, use special null value
-                            ownedSubscription = NULL_SUBSCRIPTION;
-                        }
-
-                        if (_cachingMode != CachingMode.normal) {
-                            // Ensure there is an entry in the legacy cache so it can receive invalidation events.
-                            _legacyCache.get(SUBSCRIPTIONS);
-                        }
-
-                        return ownedSubscription;
+                        // Can't cache null, use special null value if the subscription does not exist
+                        return Objects.firstNonNull(ownedSubscription, NULL_SUBSCRIPTION);
                     }
 
                     /**
@@ -177,27 +162,62 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                     }
                 });
 
+        // Add a forwarding layer to the raw subscription cache to handle several custom responses.
+        _subscriptionCache = new InvalidationListeningForwardingCache<String, OwnedSubscription>(rawSubscriptionCache) {
+
+            @Override
+            protected void valueInvalidated() {
+                // If any subscription is invalidated also invalidate the full list of subscriptions to force a refresh.
+                _allSubscriptionsCache.invalidate(SUBSCRIPTIONS);
+            }
+
+            // The only get methods called by the DAO are getIfPresent() and getUnchecked().  Override both
+            // to invalidate non-existent subscriptions immediately so we don't leak memory if there is a flood of
+            // requests for non-existent subscriptions.
+
+            @Nullable
+            @Override
+            public OwnedSubscription getIfPresent(Object key) {
+                return getWithNullInvalidation(key, super.getIfPresent(key));
+            }
+
+            @Override
+            public OwnedSubscription getUnchecked(String key) {
+                return getWithNullInvalidation(key, super.getUnchecked(key));
+            }
+
+            private OwnedSubscription getWithNullInvalidation(Object key, @Nullable OwnedSubscription subscription) {
+                if (subscription == NULL_SUBSCRIPTION) {
+                    delegate().invalidate(key);
+                }
+                return subscription;
+            }
+        };
+
         _subscriptionCacheHandle = cacheRegistry.register("subscriptionsByName", _subscriptionCache, true);
 
         if (cachingMode != CachingMode.normal) {
             LoggerFactory.getLogger(getClass()).info("Subscription caching mode is {}", cachingMode);
 
-            _legacyCache = CacheBuilder.newBuilder()
-                    .removalListener(notification -> {
-                        // The legacy system sends a single notification when any subscription changes.  Without knowing
-                        // which subscription changed the only safe action is to invalidate them all.  This is inefficient
-                        // but is only necessary during an in-flight upgrade.
-                        _subscriptionCache.invalidateAll();
-                        _allSubscriptionsCache.invalidate(SUBSCRIPTIONS);
-                    })
-                    .build(new CacheLoader<String, Map<String, OwnedSubscription>>() {
+            _legacyCache = new InvalidationListeningForwardingCache<String, Map<String, OwnedSubscription>>(
+                    CacheBuilder.newBuilder().build(new CacheLoader<String, Map<String, OwnedSubscription>>() {
                         @Override
                         public Map<String, OwnedSubscription> load(String key) throws Exception {
                             // The actual cached object doesn't matter since this cache is only used for receiving
                             // invalidation messages.  Just need to provide a non-null value.
                             return ImmutableMap.of();
                         }
-                    });
+                    })
+            ) {
+                @Override
+                protected void valueInvalidated() {
+                    // The legacy system sends a single notification when any subscription changes.  Without knowing
+                    // which subscription changed the only safe action is to invalidate them all.  This is inefficient
+                    // but is only necessary during an in-flight upgrade.
+                    _subscriptionCache.invalidateAll();
+                }
+            };
+
             _legacyCacheHandle = cacheRegistry.register("subscriptions", _legacyCache, true);
         } else {
             _legacyCache = null;
@@ -214,7 +234,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         _delegate.insertSubscription(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl);
 
         // Invalidate this subscription.  No need to invalidate the list of all subscriptions since this will happen
-        // naturally in _subscriptionCache's removal listener.
+        // naturally in _subscriptionCache's invalidation handler.
         invalidateSubscription(subscription);
     }
 
@@ -232,12 +252,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         if (_cachingMode == CachingMode.legacy) {
             _legacyCacheHandle.invalidate(InvalidationScope.DATA_CENTER, SUBSCRIPTIONS);
         } else {
-            // Invalidate the individual subscription
             _subscriptionCacheHandle.invalidate(InvalidationScope.DATA_CENTER, subscription);
-            // Invalidate the list of all subscriptions.  A secondary notification is necessary because if this is
-            // a new subscription then there will be no existing value in the recipient's _subscriptionCache to receive
-            // an invalidation event.
-            _allSubscriptionsCacheHandle.invalidate(InvalidationScope.DATA_CENTER, SUBSCRIPTIONS);
         }
     }
 
@@ -256,9 +271,8 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
             ownedSubscription = _subscriptionCache.getUnchecked(subscription);
         }
 
-        // If the subscription did not exist return null and immediately remove from cache.
+        // If the subscription did not exist return null
         if (ownedSubscription == NULL_SUBSCRIPTION) {
-            _subscriptionCache.invalidate(subscription);
             ownedSubscription = null;
         }
 
@@ -273,5 +287,41 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     @Override
     public Iterable<String> getAllSubscriptionNames() {
         return Iterables.transform(getAllSubscriptions(), OwnedSubscription::getName);
+    }
+
+    /**
+     * Custom forwarding cache used by this class.  Any time a subscription is invalidated the single value in
+     * {@link #_allSubscriptionsCache} also needs to be invalidated.  Normally this could be accomplished by providing
+     * a listener to {@link CacheBuilder#removalListener(RemovalListener)}.  However, that listener only receives
+     * notification if a cached value is actually removed.  If a brand new subscription is created remotely then
+     * there will be no locally cached entry and therefore no notification.  Therefore, the solution instead is to
+     * wrap the cache with a forwarding implementation which calls {@link InvalidationListeningForwardingCache#valueInvalidated()}
+     * whenever <em>any</em> value is removed since the action taken on any value invalidation is the same.
+     */
+    private abstract static class InvalidationListeningForwardingCache<K,V> extends ForwardingLoadingCache.SimpleForwardingLoadingCache<K,V> {
+
+        InvalidationListeningForwardingCache(LoadingCache<K, V> delegate) {
+            super(delegate);
+        }
+
+        protected abstract void valueInvalidated();
+
+        @Override
+        public void invalidate(Object key) {
+            super.invalidate(key);
+            valueInvalidated();
+        }
+
+        @Override
+        public void invalidateAll(Iterable<?> keys) {
+            super.invalidateAll(keys);
+            valueInvalidated();
+        }
+
+        @Override
+        public void invalidateAll() {
+            super.invalidateAll();
+            valueInvalidated();
+        }
     }
 }

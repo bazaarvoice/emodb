@@ -38,6 +38,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
 
 @SuppressWarnings("unchecked")
@@ -49,8 +50,6 @@ public class CachingSubscriptionDAOTest {
     private SubscriptionDAO _delegate;
     private Cache<String, ?> _cache;
     private CacheHandle _cacheHandle;
-    private Cache<String, ?> _allSubscriptionsCache;
-    private CacheHandle _allSubscriptionsCacheHandle;
     private Cache<String, ?> _legacyCache;
     private CacheHandle _legacyCacheHandle;
 
@@ -86,8 +85,6 @@ public class CachingSubscriptionDAOTest {
 
         _legacyCacheHandle = mock(CacheHandle.class);
         when(cacheRegistry.register(eq("subscriptions"), any(Cache.class), eq(true))).thenReturn(_legacyCacheHandle);
-        _allSubscriptionsCacheHandle = mock(CacheHandle.class);
-        when(cacheRegistry.register(eq("allSubscriptions"), any(Cache.class), eq(true))).thenReturn(_allSubscriptionsCacheHandle);
 
         CachingSubscriptionDAO dao = new CachingSubscriptionDAO(_delegate, cacheRegistry, _service, new MetricRegistry(),
                 _clock, cachingMode);
@@ -95,10 +92,6 @@ public class CachingSubscriptionDAOTest {
         ArgumentCaptor<Cache> cacheCaptor = ArgumentCaptor.forClass(Cache.class);
         verify(cacheRegistry).register(eq("subscriptionsByName"), cacheCaptor.capture(), eq(true));
         _cache = cacheCaptor.getValue();
-
-        cacheCaptor = ArgumentCaptor.forClass(Cache.class);
-        verify(cacheRegistry).register(eq("allSubscriptions"), cacheCaptor.capture(), eq(true));
-        _allSubscriptionsCache = cacheCaptor.getValue();
 
         if (cachingMode != CachingSubscriptionDAO.CachingMode.normal) {
             cacheCaptor = ArgumentCaptor.forClass(Cache.class);
@@ -113,7 +106,7 @@ public class CachingSubscriptionDAOTest {
 
     @AfterMethod
     public void verifyMocks() {
-        verifyNoMoreInteractions(_cacheHandle, _allSubscriptionsCacheHandle, _legacyCacheHandle, _service);
+        verifyNoMoreInteractions(_cacheHandle, _legacyCacheHandle, _service);
     }
 
     @Test
@@ -136,7 +129,6 @@ public class CachingSubscriptionDAOTest {
 
         // Invalidate sub2 and all subscriptions
         _cache.invalidate("sub2");
-        _allSubscriptionsCache.invalidate("subscriptions");
 
         // Reading again should include the updated sub2
         subscriptions = ImmutableList.copyOf(cachingSubscriptionDAO.getAllSubscriptions());
@@ -202,7 +194,6 @@ public class CachingSubscriptionDAOTest {
         // This is necessary because without an explicit cache invalidation the all-subscriptions cache value
         // will not be updated.  So invalidate it now.
         _cache.invalidate("sub0");
-        _allSubscriptionsCache.invalidate("subscriptions");
 
         // Reading again now should return the updated value
         subscriptions = ImmutableList.copyOf(cachingSubscriptionDAO.getAllSubscriptions());
@@ -261,14 +252,12 @@ public class CachingSubscriptionDAOTest {
     public void testInvalidateOnInsert() throws Exception {
         createDAO().insertSubscription("owner", "sub4", Conditions.alwaysTrue(), Duration.standardDays(1), Duration.standardMinutes(5));
         verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub4");
-        verify(_allSubscriptionsCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
     }
 
     @Test
     public void testInvalidateOnDelete() throws Exception {
         createDAO().deleteSubscription("sub0");
         verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
-        verify(_allSubscriptionsCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
     }
 
     @Test
@@ -293,9 +282,8 @@ public class CachingSubscriptionDAOTest {
             // Legacy should send invalidation to the legacy handle
             verify(_legacyCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
         } else {
-            // Bridge should send invalidation to the current handles
+            // Bridge should send invalidation to the current handle
             verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
-            verify(_allSubscriptionsCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
         }
 
         // Cache sub1, change sub1 on the delegate, then simulate a legacy cache invalidation by invalidating "subscriptions"
@@ -314,9 +302,28 @@ public class CachingSubscriptionDAOTest {
         Condition sub2Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate2"));
         _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.standardDays(1), Duration.standardMinutes(5));
         _cache.invalidate("sub2");
-        _allSubscriptionsCache.invalidate("subscriptions");
 
         // Verify the subscription has been updated in the caching DAO
         assertEquals(cachingSubscriptionDAO.getSubscription("sub2").getTableFilter(), sub2Condition);
+    }
+
+    @Test
+    public void testNonExistentSubscriptionNotCached() throws Exception {
+        CachingSubscriptionDAO cachingSubscriptionDAO = createDAO();
+
+        // Request a subscription that does not exist
+        OwnedSubscription subscription = cachingSubscriptionDAO.getSubscription("nosuchsub");
+        assertNull(subscription);
+        assertFalse(_cache.asMap().containsKey("nosuchsub"));
+
+        // Delete a subscription which does exist
+        assertEquals(cachingSubscriptionDAO.getSubscription("sub0").getName(), "sub0");
+        cachingSubscriptionDAO.deleteSubscription("sub0");
+        verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
+        _cache.invalidateAll(ImmutableList.of("sub0"));
+
+        subscription = cachingSubscriptionDAO.getSubscription("sub0");
+        assertNull(subscription);
+        assertFalse(_cache.asMap().containsKey("sub0"));
     }
 }
