@@ -200,6 +200,6 @@ public class DatabusModule extends PrivateModule {
 
     @Provides @Singleton
     CachingSubscriptionDAO.CachingMode provideCachingSubscriptionDAOCachingMode(DatabusConfiguration configuration) {
-        return configuration.getSubscriptionCacheInvaliation();
+        return configuration.getSubscriptionCacheInvalidation();
     }
 }

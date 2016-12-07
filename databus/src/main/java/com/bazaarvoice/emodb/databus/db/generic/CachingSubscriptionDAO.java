@@ -64,26 +64,21 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *
  * <ol>
  *     <li>
- *         In legacy mode the DAO uses legacy cache invalidation.  It listens for invalidation messages and posts them
- *         to the legacy cache.  It also listens for current cache invalidation, although none will be posted until
- *         the next phase.
- *     </li>
- *     <li>
- *         In bridge mode the DAO still listens for legacy cache invalidations but only posts current cache invalidations.
+ *         In legacy mode the DAO listens for invalidation messages and posts them to both the legacy cache and
+ *         current cache.
  *     </li>
  *     <li>
  *         In normal mode the DAO exclusively uses current cache invalidation.
  *     </li>
  * </ol>
  *
- * A safe upgrade requires upgrading all servers from legacy to bridge to normal mode.  Only once all active servers
- * are in one mode is it safe to move to the next.
+ * A safe upgrade requires upgrading all servers from legacy to normal mode.  Only once all active servers are in one
+ * mode is it safe to move to the next.
  */
 public class CachingSubscriptionDAO implements SubscriptionDAO {
 
     public enum CachingMode {
         legacy,
-        bridge,
         normal
     };
 
@@ -196,7 +191,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
 
         _subscriptionCacheHandle = cacheRegistry.register("subscriptionsByName", _subscriptionCache, true);
 
-        if (cachingMode != CachingMode.normal) {
+        if (cachingMode == CachingMode.legacy) {
             LoggerFactory.getLogger(getClass()).info("Subscription caching mode is {}", cachingMode);
 
             _legacyCache = new InvalidationListeningForwardingCache<String, Map<String, OwnedSubscription>>(
@@ -249,10 +244,11 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     private void invalidateSubscription(String subscription) {
         _invalidationEventMeter.mark();
 
+        _subscriptionCacheHandle.invalidate(InvalidationScope.DATA_CENTER, subscription);
+
+        // If in legacy mode also invalidate the legacy cache
         if (_cachingMode == CachingMode.legacy) {
             _legacyCacheHandle.invalidate(InvalidationScope.DATA_CENTER, SUBSCRIPTIONS);
-        } else {
-            _subscriptionCacheHandle.invalidate(InvalidationScope.DATA_CENTER, subscription);
         }
     }
 

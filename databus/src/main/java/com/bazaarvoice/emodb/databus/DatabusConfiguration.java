@@ -35,7 +35,7 @@ public class DatabusConfiguration {
     @Valid
     @NotNull
     @JsonProperty("subscriptionCacheInvalidation")
-    private CachingSubscriptionDAO.CachingMode _subscriptionCacheInvaliation = CachingSubscriptionDAO.CachingMode.normal;
+    private CachingSubscriptionDAO.CachingMode _subscriptionCacheInvalidation = CachingSubscriptionDAO.CachingMode.normal;
 
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
@@ -64,12 +64,12 @@ public class DatabusConfiguration {
         return this;
     }
 
-    public CachingSubscriptionDAO.CachingMode getSubscriptionCacheInvaliation() {
-        return _subscriptionCacheInvaliation;
+    public CachingSubscriptionDAO.CachingMode getSubscriptionCacheInvalidation() {
+        return _subscriptionCacheInvalidation;
     }
 
-    public DatabusConfiguration setSubscriptionCacheInvaliation(CachingSubscriptionDAO.CachingMode subscriptionCacheInvaliation) {
-        _subscriptionCacheInvaliation = subscriptionCacheInvaliation;
+    public DatabusConfiguration setSubscriptionCacheInvalidation(CachingSubscriptionDAO.CachingMode subscriptionCacheInvalidation) {
+        _subscriptionCacheInvalidation = subscriptionCacheInvalidation;
         return this;
     }
 }

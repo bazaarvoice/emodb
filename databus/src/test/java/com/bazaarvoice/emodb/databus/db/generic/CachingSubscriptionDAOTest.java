@@ -262,32 +262,20 @@ public class CachingSubscriptionDAOTest {
 
     @Test
     public void testLegacyCachingMode() throws Exception {
-        testNonNormalCachingMode(CachingSubscriptionDAO.CachingMode.legacy);
-    }
-
-    @Test
-    public void testBridgeCachingMode() throws Exception {
-        testNonNormalCachingMode(CachingSubscriptionDAO.CachingMode.bridge);
-    }
-
-    private void testNonNormalCachingMode(CachingSubscriptionDAO.CachingMode cachingMode) {
-        CachingSubscriptionDAO cachingSubscriptionDAO = createDAO(cachingMode);
+        CachingSubscriptionDAO cachingSubscriptionDAO = createDAO(CachingSubscriptionDAO.CachingMode.legacy);
 
         // Cache sub0 then update sub0 using the caching DAO
         cachingSubscriptionDAO.getSubscription("sub0");
         Condition sub0Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate0"));
         cachingSubscriptionDAO.insertSubscription("owner", "sub0", sub0Condition, Duration.standardDays(1), Duration.standardMinutes(5));
 
-        if (cachingMode == CachingSubscriptionDAO.CachingMode.legacy) {
-            // Legacy should send invalidation to the legacy handle
-            verify(_legacyCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
-        } else {
-            // Bridge should send invalidation to the current handle
-            verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
-        }
+        // Verify invalidation sent to the cache handle
+        verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
+        // Legacy should have also sent invalidation to the legacy handle
+        verify(_legacyCacheHandle).invalidate(InvalidationScope.DATA_CENTER, "subscriptions");
 
         // Cache sub1, change sub1 on the delegate, then simulate a legacy cache invalidation by invalidating "subscriptions"
-        // from the legacy cache.  Both legacy and bridge caching modes should be listening for legacy cache invalidations.
+        // from the legacy cache.  Legacy caching mode should be listening for legacy cache invalidations.
         cachingSubscriptionDAO.getSubscription("sub1");
         Condition sub1Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate1"));
         _delegate.insertSubscription("owner", "sub1", sub1Condition, Duration.standardDays(1), Duration.standardMinutes(5));
@@ -296,8 +284,8 @@ public class CachingSubscriptionDAOTest {
         // Verify the subscription has been updated in the caching DAO
         assertEquals(cachingSubscriptionDAO.getSubscription("sub1").getTableFilter(), sub1Condition);
 
-        // Cache sub2, change sub2 on the delegate, then simulate a normal cache invalidation.  Both legacy and bridge
-        // caching modes should be listening for normal cache invalidations.
+        // Cache sub2, change sub2 on the delegate, then simulate a normal cache invalidation.  Legacy caching mode
+        // should be listening for normal cache invalidations.
         cachingSubscriptionDAO.getSubscription("sub2");
         Condition sub2Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate2"));
         _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.standardDays(1), Duration.standardMinutes(5));
