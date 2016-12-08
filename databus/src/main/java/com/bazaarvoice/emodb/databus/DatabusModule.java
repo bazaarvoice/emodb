@@ -29,9 +29,10 @@ import com.bazaarvoice.emodb.databus.core.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.core.SubscriptionEvaluator;
 import com.bazaarvoice.emodb.databus.core.SystemQueueMonitorManager;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
-import com.bazaarvoice.emodb.databus.db.astyanax.AstyanaxSubscriptionDAO;
+import com.bazaarvoice.emodb.databus.db.cql.CqlSubscriptionDAO;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAO;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAODelegate;
+import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAOExecutorService;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAORegistry;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationManager;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationSource;
@@ -53,16 +54,22 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.eventbus.EventBus;
 import com.google.common.net.HostAndPort;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
+import io.dropwizard.lifecycle.ExecutorServiceManager;
+import io.dropwizard.util.Duration;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -111,10 +118,10 @@ public class DatabusModule extends PrivateModule {
 
     @Override
     protected void configure() {
-        // Chain SubscriptionDAO -> CachingSubscriptionDAO -> AstyanaxSubscriptionDAO.
+        // Chain SubscriptionDAO -> CachingSubscriptionDAO -> CqlSubscriptionDAO.
         bind(SubscriptionDAO.class).to(CachingSubscriptionDAO.class).asEagerSingleton();
-        bind(SubscriptionDAO.class).annotatedWith(CachingSubscriptionDAODelegate.class).to(AstyanaxSubscriptionDAO.class).asEagerSingleton();
-        bind(AstyanaxSubscriptionDAO.class).asEagerSingleton();
+        bind(SubscriptionDAO.class).annotatedWith(CachingSubscriptionDAODelegate.class).to(CqlSubscriptionDAO.class).asEagerSingleton();
+        bind(CqlSubscriptionDAO.class).asEagerSingleton();
         bind(CassandraFactory.class).asEagerSingleton();
 
         // Event Store
@@ -181,5 +188,18 @@ public class DatabusModule extends PrivateModule {
                                                   LifeCycleRegistry lifeCycle) {
         return lifeCycle.manage(
                 new ZkValueStore<>(curator, "/settings/replication-enabled", new ZkBooleanSerializer(), true));
+    }
+
+    @Provides @Singleton @CachingSubscriptionDAOExecutorService
+    ListeningExecutorService provideCachingSubscriptionDAOExecutorService(LifeCycleRegistry lifeCycleRegistry) {
+        ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(
+                1, new ThreadFactoryBuilder().setNameFormat("subscription-cache-%d").build()));
+        lifeCycleRegistry.manage(new ExecutorServiceManager(service, Duration.seconds(1), "subscription-cache"));
+        return service;
+    }
+
+    @Provides @Singleton
+    CachingSubscriptionDAO.CachingMode provideCachingSubscriptionDAOCachingMode(DatabusConfiguration configuration) {
+        return configuration.getSubscriptionCacheInvalidation();
     }
 }

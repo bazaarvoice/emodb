@@ -21,7 +21,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -45,7 +44,7 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Function<Multimap<String, ByteBuffer>, Void> _eventSink;
     private final boolean _replicateOutbound;
     private final Duration _sleepWhenIdle;
-    private final Supplier<Collection<OwnedSubscription>> _subscriptionsSupplier;
+    private final Supplier<Iterable<OwnedSubscription>> _subscriptionsSupplier;
     private final DataCenter _currentDataCenter;
     private final RateLimitedLog _rateLimitedLog;
     private final SubscriptionEvaluator _subscriptionEvaluator;
@@ -58,7 +57,7 @@ public class DefaultFanout extends AbstractScheduledService {
                          Function<Multimap<String, ByteBuffer>, Void> eventSink,
                          boolean replicateOutbound,
                          Duration sleepWhenIdle,
-                         Supplier<Collection<OwnedSubscription>> subscriptionsSupplier,
+                         Supplier<Iterable<OwnedSubscription>> subscriptionsSupplier,
                          DataCenter currentDataCenter,
                          RateLimitedLogFactory logFactory,
                          SubscriptionEvaluator subscriptionEvaluator,
@@ -122,7 +121,7 @@ public class DefaultFanout extends AbstractScheduledService {
     boolean copyEvents(List<EventData> rawEvents) {
             // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
         // creating a new subscription.
-        Collection<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
+        Iterable<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
 
         // Copy the events to all the destination channels.
         List<String> eventKeys = Lists.newArrayListWithCapacity(rawEvents.size());

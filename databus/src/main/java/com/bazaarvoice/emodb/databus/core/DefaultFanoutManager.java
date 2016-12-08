@@ -27,6 +27,7 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -83,12 +84,7 @@ public class DefaultFanoutManager implements FanoutManager {
                 return null;
             }
         };
-        final Supplier<Collection<OwnedSubscription>> subscriptionsSupplier = new Supplier<Collection<OwnedSubscription>>() {
-            @Override
-            public Collection<OwnedSubscription> get() {
-                return _subscriptionDao.getAllSubscriptions();
-            }
-        };
+        final Supplier<Iterable<OwnedSubscription>> subscriptionsSupplier = () -> _subscriptionDao.getAllSubscriptions();
 
         LeaderService leaderService = new LeaderService(
                 _curator, ZKPaths.makePath("/leader/fanout", name), _selfId, "LeaderSelector-" + name, 1, TimeUnit.MINUTES,
