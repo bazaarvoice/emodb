@@ -28,7 +28,7 @@ public class FileScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file){
+    protected ListenableFuture<?> transfer(TransferKey transferKey, String tableName, URI uri, File file){
         _activeFiles.put(transferKey, file);
         try {
             File dest = new File(uri.toURL().getFile());

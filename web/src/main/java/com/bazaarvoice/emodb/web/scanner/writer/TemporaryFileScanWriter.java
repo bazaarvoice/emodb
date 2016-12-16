@@ -66,7 +66,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     /**
      * Implementation-specific call to asynchronously transfer the temporary file to the given URI.
      */
-    abstract protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file);
+    abstract protected ListenableFuture<?> transfer(TransferKey transferKey, String tableName, URI uri, File file);
 
     /**
      * Implementation-specific call to get TransferStatus objects for all active transfers.
@@ -125,7 +125,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                 public void asyncTransfer(final File completeFile) {
                     _log.debug("Initiating async transfer: id={}, file={}, uri={}", _taskId, completeFile, uri);
                     _openTransfers.inc();
-                    ListenableFuture<?> future = transfer(shardFiles.getKey(), uri, completeFile);
+                    ListenableFuture<?> future = transfer(shardFiles.getKey(), tableName, uri, completeFile);
                     Futures.addCallback(future, new FutureCallback<Object>() {
                         @Override
                         public void onSuccess(Object result) {

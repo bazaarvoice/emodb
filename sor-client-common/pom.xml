@@ -101,12 +101,12 @@
             <artifactId>emodb-auth-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-
-        <!-- 3rd-party dependencies -->
         <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-aws-sdk</artifactId>
+            <version>${project.version}</version>
         </dependency>
+
         <!-- Third party dependencies -->
         <dependency>
             <groupId>javax.ws.rs</groupId>

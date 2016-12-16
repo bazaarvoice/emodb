@@ -23,6 +23,7 @@
 
     <modules>
         <module>parent</module>
+        <module>common/aws-sdk</module>
         <module>common/api</module>
         <module>common/astyanax</module>
         <module>common/dropwizard</module>
