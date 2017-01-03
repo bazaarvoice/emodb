@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -102,7 +103,7 @@ public class TrustedDatabus implements AuthDatabus {
         _databus.injectEvent(subscription, table, key);
     }
 
-    public List<Event> poll(@Credential String apiKey, String subscription, Duration claimTtl, int limit) {
+    public PollResult poll(@Credential String apiKey, String subscription, Duration claimTtl, int limit) {
         return _databus.poll(subscription, claimTtl, limit);
     }
 

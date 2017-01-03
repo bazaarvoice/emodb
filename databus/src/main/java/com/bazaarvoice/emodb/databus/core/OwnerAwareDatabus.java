@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -50,7 +51,7 @@ public interface OwnerAwareDatabus {
     List<Event> peek(String ownerId, String subscription, int limit)
         throws UnauthorizedSubscriptionException;
 
-    List<Event> poll(String ownerId, String subscription, Duration claimTtl, int limit)
+    PollResult poll(String ownerId, String subscription, Duration claimTtl, int limit)
         throws UnauthorizedSubscriptionException;
 
     void renew(String ownerId, String subscription, Collection<String> eventKeys, Duration claimTtl)

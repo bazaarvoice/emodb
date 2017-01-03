@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -74,7 +75,7 @@ class DatabusAuthenticatorProxy implements Databus {
     }
 
     @Override
-    public List<Event> poll(@PartitionKey String subscription, Duration claimTtl, int limit) {
+    public PollResult poll(@PartitionKey String subscription, Duration claimTtl, int limit) {
         return _authDatabus.poll(_apiKey, subscription, claimTtl, limit);
     }
 

@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -72,7 +73,7 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
-    public List<Event> poll(Subject subject, @PartitionKey String subscription, Duration claimTtl, int limit) {
+    public PollResult poll(Subject subject, @PartitionKey String subscription, Duration claimTtl, int limit) {
         return databus(subject).poll(subscription, claimTtl, limit);
     }
 

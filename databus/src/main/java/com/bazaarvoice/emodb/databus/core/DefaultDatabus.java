@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -382,29 +383,30 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkArgument(limit > 0, "Limit must be >0");
         checkSubscriptionOwner(ownerId, subscription);
 
-        List<Event> events = peekOrPoll(subscription, null, limit);
-        _peekedMeter.mark(events.size());
-        return events;
+        PollResult result = peekOrPoll(subscription, null, limit);
+        _peekedMeter.mark(result.getEvents().size());
+        return result.getEvents();
     }
 
     @Override
-    public List<Event> poll(String ownerId, final String subscription, final Duration claimTtl, int limit) {
+    public PollResult poll(String ownerId, final String subscription, final Duration claimTtl, int limit) {
         checkLegalSubscriptionName(subscription);
         checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
         checkSubscriptionOwner(ownerId, subscription);
 
-        List<Event> events = peekOrPoll(subscription, claimTtl, limit);
-        _polledMeter.mark(events.size());
-        return events;
+        PollResult result = peekOrPoll(subscription, claimTtl, limit);
+        _polledMeter.mark(result.getEvents().size());
+        return result;
     }
 
     /** Implements peek() or poll() based on whether claimTtl is null or non-null. */
-    private List<Event> peekOrPoll(String subscription, @Nullable Duration claimTtl, int limit) {
+    private PollResult peekOrPoll(String subscription, @Nullable Duration claimTtl, int limit) {
         List<Item> items = Lists.newArrayList();
         Map<Coordinate, Item> uniqueItems = Maps.newHashMap();
         Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
         boolean repeatable = claimTtl != null && claimTtl.getMillis() > 0;
+        boolean eventsAvailableForNextPoll = false;
 
         Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
         int padding = 0;
@@ -422,7 +424,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             Map<Coordinate, EventList> rawEvents = sink.getEvents();
 
             if (rawEvents.isEmpty()) {
-                break;  // No events to be had.
+                // No events to be had.
+                eventsAvailableForNextPoll = more;
+                break;
             }
 
             List<String> eventIdsToDiscard = Lists.newArrayList();
@@ -525,8 +529,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             if (!eventIdsToDiscard.isEmpty()) {
                 _eventStore.delete(subscription, eventIdsToDiscard, true);
             }
-            if (!more) {
-                break;  // Didn't get a full batch, that means there are no more events to be had.
+            if (more) {
+                // As of this iteration if the cycle were to break without polling the raw event store again there are
+                // still more events
+                eventsAvailableForNextPoll = true;
+            } else {
+                // Didn't get a full batch, that means there are no more events to be had.
+                // If we unclaimed any events due to padding then the result should indicate there are more events
+                eventsAvailableForNextPoll = !eventIdsToUnclaim.isEmpty();
+                break;
             }
 
             // Note: Due to redundant/unknown events, it's possible that the 'events' list is empty even though, if we
@@ -544,7 +555,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         for (Item item : items) {
             events.add(item.toEvent());
         }
-        return events;
+        return new PollResult(events, eventsAvailableForNextPoll);
     }
 
     private boolean isRecent(UUID changeId) {
