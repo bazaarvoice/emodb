@@ -104,7 +104,7 @@ public class AdaptiveResultSet implements ResultSet {
      * Returns true if the exception is one which indicates that the frame size may be too large, false otherwise.
      */
     private static boolean isAdaptiveException(Throwable t) {
-        if (t instanceof FrameTooLongException || t instanceof ReadTimeoutException || t instanceof OperationTimedOutException) {
+        if (t instanceof FrameTooLongException) {
             return true;
         }
 
