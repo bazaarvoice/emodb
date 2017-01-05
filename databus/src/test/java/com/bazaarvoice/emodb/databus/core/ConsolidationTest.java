@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.mock;
@@ -155,10 +156,18 @@ public class ConsolidationTest {
                     assertTrue(sink.remaining() > 0);
                     Set<String> tags;
                     switch (i % 4) {
-                        case 0:  tags = ImmutableSet.of("tag2", "tag3");  break;
-                        case 1:  tags = ImmutableSet.of("tag1", "tag2");  break;
-                        case 2:  tags = ImmutableSet.of();  break;
-                        default: tags = ImmutableSet.of("tag2", "tag3", "tag4");  break;
+                        case 0:
+                            tags = ImmutableSet.of("tag2", "tag3");
+                            break;
+                        case 1:
+                            tags = ImmutableSet.of("tag1", "tag2");
+                            break;
+                        case 2:
+                            tags = ImmutableSet.of();
+                            break;
+                        default:
+                            tags = ImmutableSet.of("tag2", "tag3", "tag4");
+                            break;
                     }
                     EventSink.Status status = sink.accept(newEvent(id, "table", "key", TimeUUIDs.newUUID(), tags));
                     assertEquals(status, EventSink.Status.ACCEPTED_CONTINUE);
@@ -199,10 +208,18 @@ public class ConsolidationTest {
                     assertTrue(sink.remaining() > 0);
                     Set<String> tags;
                     switch (iteration % 4) {
-                        case 0:  tags = ImmutableSet.of("tag2", "tag3");  break;
-                        case 1:  tags = ImmutableSet.of("tag1", "tag2");  break;
-                        case 2:  tags = ImmutableSet.of();  break;
-                        default: tags = ImmutableSet.of("tag2", "tag3", "tag4");  break;
+                        case 0:
+                            tags = ImmutableSet.of("tag2", "tag3");
+                            break;
+                        case 1:
+                            tags = ImmutableSet.of("tag1", "tag2");
+                            break;
+                        case 2:
+                            tags = ImmutableSet.of();
+                            break;
+                        default:
+                            tags = ImmutableSet.of("tag2", "tag3", "tag4");
+                            break;
                     }
                     EventSink.Status status = sink.accept(newEvent(id, "table", "key", TimeUUIDs.newUUID(), tags));
                     assertEquals(status, EventSink.Status.ACCEPTED_CONTINUE);
@@ -323,8 +340,8 @@ public class ConsolidationTest {
         JobHandlerRegistry jobHandlerRegistry = mock(JobHandlerRegistry.class);
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
-                jobService, jobHandlerRegistry,  databusAuthorizer, "replication",
-                Suppliers.ofInstance(Conditions.alwaysFalse()), new MetricRegistry(), clock);
+                jobService, jobHandlerRegistry, databusAuthorizer, "replication",
+                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), new MetricRegistry(), clock);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {
