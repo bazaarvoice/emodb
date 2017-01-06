@@ -3,6 +3,7 @@ package test.integration.databus;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
@@ -24,6 +25,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.test.ResourceTest;
+import com.bazaarvoice.emodb.web.partition.PartitionForwardingException;
 import com.bazaarvoice.emodb.web.resources.databus.AbstractSubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResource1;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
@@ -43,6 +45,7 @@ import com.google.common.collect.Iterators;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -756,6 +759,21 @@ public class DatabusJerseyTest extends ResourceTest {
             assertTrue(e instanceof UnauthorizedException);
         }
 
+        verifyNoMoreInteractions(_client);
+    }
+
+    @Test
+    public void testPollPartitionTimeout() {
+        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+                .thenThrow(new PartitionForwardingException(new ConnectTimeoutException()));
+
+        try {
+            databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
+        } catch (ServiceUnavailableException e) {
+            // Ok
+        }
+
+        verify(_client).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
         verifyNoMoreInteractions(_client);
     }
 

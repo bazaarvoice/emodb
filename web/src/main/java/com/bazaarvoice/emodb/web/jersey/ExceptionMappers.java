@@ -25,11 +25,13 @@ public class ExceptionMappers {
                 new StashNotAvailableExceptionMapper(),
                 new DeltaSizeLimitExceptionMapper(),
                 new AuditSizeLimitExceptionMapper(),
-                new UnauthorizedSubscriptionExceptionMapper());
+                new UnauthorizedSubscriptionExceptionMapper(),
+                new ServiceUnavailableExceptionMapper());
     }
 
     public static Iterable<Class> getMapperTypes() {
         return ImmutableList.<Class>of(
-                UncheckedExecutionExceptionMapper.class);
+                UncheckedExecutionExceptionMapper.class,
+                PartitionForwardingExceptionMapper.class);
     }
 }
