@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.databus.api.DefaultSubscription;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -483,15 +484,18 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> pollResults = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
-        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123))).thenReturn(pollResults);
+        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+                .thenReturn(new PollResult(pollResults, false));
 
         List<Event> expected;
         List<Event> actual;
 
         if (includeTags) {
             // This is the default poll behavior
-            expected = databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
-            actual = pollResults;
+            PollResult pollResult = databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
+            assertFalse(pollResult.hasMoreEvents());
+            actual = pollResult.getEvents();
+            expected = pollResults;
         } else {
             // Tags won't be returned
              expected = ImmutableList.of(
@@ -541,7 +545,7 @@ public class DatabusJerseyTest extends ResourceTest {
                     new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
             //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(emptyList, pollResults);
+                    .thenReturn(new PollResult(emptyList, false), new PollResult(pollResults, true));
 
             List<Event> expected;
             Class<? extends EventViews.ContentOnly> view;
@@ -639,7 +643,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(ImmutableList.<Event>of())
+                    .thenReturn(new PollResult(ImmutableList.of(), false))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();
@@ -738,11 +742,13 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> expected = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
-        when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123))).thenReturn(expected);
+        when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+                .thenReturn(new PollResult(expected, true));
 
-        List<Event> actual = databusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
+        PollResult actual = databusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
 
-        assertEquals(actual, expected);
+        assertEquals(actual.getEvents(), expected);
+        assertTrue(actual.hasMoreEvents());
         verify(_local).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
         verifyNoMoreInteractions(_local);
     }

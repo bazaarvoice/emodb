@@ -5,19 +5,21 @@ import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import javax.annotation.Nullable;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -41,8 +43,15 @@ public class Canary extends AbstractScheduledService {
     private final String _timerName;
     private final String _subscriptionName;
     private final Condition _subscriptionCondition;
+    private final ScheduledExecutorService _executor;
 
     public Canary(ClusterInfo cluster, Condition subscriberCondition, Databus databus, RateLimitedLogFactory logFactory, MetricRegistry metricRegistry) {
+        this(cluster, subscriberCondition, databus, logFactory, metricRegistry, null);
+    }
+
+    @VisibleForTesting
+    Canary(ClusterInfo cluster, Condition subscriberCondition, Databus databus, RateLimitedLogFactory logFactory,
+           MetricRegistry metricRegistry, @Nullable ScheduledExecutorService executor) {
         _databus = checkNotNull(databus, "databus");
         _timers = new MetricsGroup(metricRegistry);
         checkNotNull(cluster, "cluster");
@@ -50,6 +59,7 @@ public class Canary extends AbstractScheduledService {
         _subscriptionCondition = checkNotNull(subscriberCondition, "subscriptionCondition");
         _timerName = newTimerName("readEventsByCanaryPoll-" + cluster.getClusterMetric());
         _rateLimitedLog = logFactory.from(_log);
+        _executor = executor;
         createCanarySubscription();
         ServiceFailureListener.listenTo(this, metricRegistry);
     }
@@ -78,6 +88,12 @@ public class Canary extends AbstractScheduledService {
     }
 
     @Override
+    protected ScheduledExecutorService executor() {
+        // If an explicit executor was provided use it, otherwise create a default executor
+        return _executor != null ? _executor : super.executor();
+    }
+
+    @Override
     protected void runOneIteration() {
         try {
             //noinspection StatementWithEmptyBody
@@ -93,14 +109,9 @@ public class Canary extends AbstractScheduledService {
     private boolean pollAndAckEvents() {
         // Poll for events on the canary bus subscription
         long startTime = System.nanoTime();
-        List<Event> events = _databus.poll(_subscriptionName, CLAIM_TTL, EVENTS_LIMIT);
+        PollResult result = _databus.poll(_subscriptionName, CLAIM_TTL, EVENTS_LIMIT);
         long endTime = System.nanoTime();
-        trackAverageEventDuration(endTime - startTime, events.size());
-
-        // If no events, sleep a second before returning and continuing to poll
-        if (events.isEmpty()) {
-            return false;
-        }
+        trackAverageEventDuration(endTime - startTime, result.getEvents().size());
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
         if (!isRunning()) {
@@ -108,14 +119,12 @@ public class Canary extends AbstractScheduledService {
         }
 
         // Ack these events
-        _databus.acknowledge(_subscriptionName, Lists.transform(events, new Function<Event, String>() {
-            @Override
-            public String apply(Event event) {
-                return event.getEventKey();
-            }
-        }));
+        if (!result.getEvents().isEmpty()) {
+            _databus.acknowledge(_subscriptionName,
+                    result.getEvents().stream().map(Event::getEventKey).collect(Collectors.toList()));
+        }
 
-        return true;
+        return result.hasMoreEvents();
     }
 
     private void trackAverageEventDuration(long durationInNs, int numEvents) {

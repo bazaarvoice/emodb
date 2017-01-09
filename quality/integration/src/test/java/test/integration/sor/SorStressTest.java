@@ -119,7 +119,7 @@ public class SorStressTest  {
         loop(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                List<Event> events = _databus.poll(SUBSCRIPTION, Duration.standardSeconds(30), 10);
+                List<Event> events = _databus.poll(SUBSCRIPTION, Duration.standardSeconds(30), 10).getEvents();
                 if (events.isEmpty()) {
                     _numIdle.incrementAndGet();
                     return false;  // idle

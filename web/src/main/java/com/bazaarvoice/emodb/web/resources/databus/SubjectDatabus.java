@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.resources.databus;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -56,7 +57,7 @@ public interface SubjectDatabus {
 
     List<Event> peek(Subject subject, String subscription, int limit);
 
-    List<Event> poll(Subject subject, String subscription, Duration claimTtl, int limit);
+    PollResult poll(Subject subject, String subscription, Duration claimTtl, int limit);
 
     void renew(Subject subject, String subscription, Collection<String> eventKeys, Duration claimTtl);
 
