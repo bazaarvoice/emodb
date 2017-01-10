@@ -5,13 +5,15 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
 interface ChangeEncoder {
 
-    String encodeDelta(String delta, Set<String> tags);
+    String encodeDelta(String delta, @Nullable EnumSet<ChangeFlag> changeFlags, Set<String> tags);
 
     String encodeAudit(Audit audit);
 

@@ -476,91 +476,105 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             List<String> recentUnknownEventIds = Lists.newArrayList();
             List<String> eventIdsToUnclaim = Lists.newArrayList();
 
-            // Query the events from the data store in batch to reduce latency.
-            DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
-            for (Map.Entry<Coordinate, EventList> entry : rawEvents.entrySet()) {
-                Coordinate coord = entry.getKey();
+            // There's a delicate balance being targeted here.  On the one had we want to query the events from the data
+            // store in batch to reduce latency.  On the other hand querying too many large records at once may
+            // adversely delay a response.  Therefore, query for the annotated content in batches of 10.
 
-                // Query the table/key pair.
-                try {
-                    annotatedGet.add(coord.getTable(), coord.getId());
-                } catch (UnknownTableException e) {
-                    // It's likely the table was dropped since the event was queued.  Discard the events.
-                    EventList list = entry.getValue();
-                    for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
-                        eventIdsToDiscard.add(pair.first());
-                    }
-                    _discardedMeter.mark(list.size());
-                }
+            Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
 
-                // Keep track of the order in which we received the events from the EventStore.
-                if (!eventOrder.containsKey(coord)) {
-                    eventOrder.put(coord, eventOrder.size());
-                }
-            }
-            Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
+            do {
+                int annotatedBatchRemaining = 10;
 
-            // Loop through the results of the data store query.
-            while (readResultIter.hasNext()) {
-                DataProvider.AnnotatedContent readResult = readResultIter.next();
+                DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
+                while (rawEventIterator.hasNext() && annotatedBatchRemaining != 0) {
+                    Map.Entry<Coordinate, EventList> entry = rawEventIterator.next();
+                    Coordinate coord = entry.getKey();
 
-                // Get the JSON System of Record entity for this piece of content
-                Map<String, Object> content = readResult.getContent();
-
-                // Find the original event IDs that correspond to this piece of content
-                Coordinate coord = Coordinate.fromJson(content);
-                EventList eventList = rawEvents.get(coord);
-
-                // Get all databus event tags for the original event(s) for this coordinate
-                List<List<String>> tags = eventList.getTags();
-
-                // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
-                for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
-                    String eventId = eventData.first();
-                    UUID changeId = eventData.second();
-
-                    // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
-                    if (readResult.isChangeDeltaPending(changeId)) {
-                        if (isRecent(changeId)) {
-                            recentUnknownEventIds.add(eventId);
-                            _recentUnknownMeter.mark();
-                        } else {
-                            _staleUnknownMeter.mark();
+                    // Query the table/key pair.
+                    try {
+                        annotatedGet.add(coord.getTable(), coord.getId());
+                        annotatedBatchRemaining -= 1;
+                    } catch (UnknownTableException e) {
+                        // It's likely the table was dropped since the event was queued.  Discard the events.
+                        EventList list = entry.getValue();
+                        for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
+                            eventIdsToDiscard.add(pair.first());
                         }
-                        continue;
+                        _discardedMeter.mark(list.size());
                     }
 
-                    // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
-                    if (readResult.isChangeDeltaRedundant(changeId)) {
-                        eventIdsToDiscard.add(eventId);
-                        _redundantMeter.mark();
-                        continue;
+                    // Keep track of the order in which we received the events from the EventStore.
+                    if (!eventOrder.containsKey(coord)) {
+                        eventOrder.put(coord, eventOrder.size());
                     }
-
-                    // Check whether we've already added this piece of content to the poll result.  If so, consolidate
-                    // the two together to reduce the amount of work a client must do.  Note that the previous item
-                    // might be from a previous batch of events and it's possible that we have read two different
-                    // versions of the same item of content.  This will prefer the most recent.
-                    Item previousItem = uniqueItems.get(coord);
-                    if (previousItem != null && previousItem.consolidateWith(eventId, content, tags)) {
-                        _consolidatedMeter.mark();
-                        continue;
-                    }
-
-                    // If, due to "padding" we asked for too many events, release the claims for the next poll().
-                    if (items.size() == limit) {
-                        eventIdsToUnclaim.add(eventId);
-                        continue;
-                    }
-
-                    // We have found a new item of content to return!
-                    Item item = new Item(eventId, eventOrder.get(coord), content, tags);
-                    items.add(item);
-                    uniqueItems.put(coord, item);
                 }
-            }
+                Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
 
-            // Abandon claims when we claimed more items than necessary to satisfy the specified limit.
+                // Loop through the results of the data store query.
+                while (readResultIter.hasNext()) {
+                    DataProvider.AnnotatedContent readResult = readResultIter.next();
+
+                    // Get the JSON System of Record entity for this piece of content
+                    Map<String, Object> content = readResult.getContent();
+
+                    // Find the original event IDs that correspond to this piece of content
+                    Coordinate coord = Coordinate.fromJson(content);
+                    EventList eventList = rawEvents.get(coord);
+
+                    // Get all databus event tags for the original event(s) for this coordinate
+                    List<List<String>> tags = eventList.getTags();
+
+                    // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
+                    for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
+                        String eventId = eventData.first();
+                        UUID changeId = eventData.second();
+
+                        // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
+                        if (readResult.isChangeDeltaPending(changeId)) {
+                            if (isRecent(changeId)) {
+                                recentUnknownEventIds.add(eventId);
+                                _recentUnknownMeter.mark();
+                            } else {
+                                _staleUnknownMeter.mark();
+                            }
+                            continue;
+                        }
+
+                        // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
+                        if (readResult.isChangeDeltaRedundant(changeId)) {
+                            eventIdsToDiscard.add(eventId);
+                            _redundantMeter.mark();
+                            continue;
+                        }
+
+                        // Check whether we've already added this piece of content to the poll result.  If so, consolidate
+                        // the two together to reduce the amount of work a client must do.  Note that the previous item
+                        // might be from a previous batch of events and it's possible that we have read two different
+                        // versions of the same item of content.  This will prefer the most recent.
+                        Item previousItem = uniqueItems.get(coord);
+                        if (previousItem != null && previousItem.consolidateWith(eventId, content, tags)) {
+                            _consolidatedMeter.mark();
+                            continue;
+                        }
+
+                        // If, due to "padding" we asked for too many events, release the claims for the next poll().
+                        if (items.size() == limit) {
+                            eventIdsToUnclaim.add(eventId);
+                            continue;
+                        }
+
+                        // We have found a new item of content to return!
+                        Item item = new Item(eventId, eventOrder.get(coord), content, tags);
+                        items.add(item);
+                        uniqueItems.put(coord, item);
+                    }
+                }
+            } while (rawEventIterator.hasNext() && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
+
+            // Abandon claims in excess of what could be resolved within a reasonable amount of time
+            rawEventIterator.forEachRemaining(entry ->
+                    entry.getValue().getEventAndChangeIds().forEach(eventData -> eventIdsToUnclaim.add(eventData.first())));
+            // Abandon claims from above plus if we claimed more items than necessary to satisfy the specified limit.
             if (!eventIdsToUnclaim.isEmpty()) {
                 _eventStore.renew(subscription, eventIdsToUnclaim, Duration.ZERO, false);
             }
@@ -579,7 +593,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 eventsAvailableForNextPoll = true;
             } else {
                 // Didn't get a full batch, that means there are no more events to be had.
-                // If we unclaimed any events due to padding then the result should indicate there are more events
+                // If we unclaimed any events then the result should indicate there are more events
                 eventsAvailableForNextPoll = !eventIdsToUnclaim.isEmpty();
                 break;
             }

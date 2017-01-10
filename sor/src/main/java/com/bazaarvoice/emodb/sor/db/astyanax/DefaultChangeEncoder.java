@@ -2,11 +2,13 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
+import com.bazaarvoice.emodb.sor.db.LazyDelta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.deser.JsonTokener;
 import com.google.common.base.Charsets;
@@ -15,24 +17,58 @@ import com.google.common.collect.FluentIterable;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
 class DefaultChangeEncoder implements ChangeEncoder {
+
     private enum Encoding {
         D1,  // delta (version 1 encoding)
         D2,  // delta (version 2 encoding includes tags)
+        D3,  // delta (version 3 encoding, adds change flags to D2
         C1,  // compaction (version 1 encoding)
         A1,  // audit (version 1 encoding)
         H1,  // historical deltas (version 1 encoding)
     }
 
+    private final Encoding _deltaEncoding;
+
+    public DefaultChangeEncoder() {
+        // To support a rolling upgrade the default constructor uses the legacy D2 encoding for new deltas.
+        // Once all Emo instances in an environment have been upgraded a new version should be released where the
+        // default constructor does not use legacy encoding.
+        this(true);
+    }
+
+    public DefaultChangeEncoder(boolean useLegacyEncoding) {
+        _deltaEncoding = useLegacyEncoding ? Encoding.D2 : Encoding.D3;
+    }
+
     @Override
-    public String encodeDelta(String deltaString, @Nonnull Set<String> tags) {
+    public String encodeDelta(String deltaString, @Nullable EnumSet<ChangeFlag> changeFlags, @Nonnull Set<String> tags) {
+        // Encoding will be either the legacy D2 or the current D3
         // Spec for D2 is <tags>:<delta>
-        String changeBody = (tags.isEmpty() ? "[]" : JsonHelper.asJson(tags)) + ":" + deltaString;
-        return encodeChange(Encoding.D2, changeBody);
+        // Spec for D3 is <tags>:<change flags>:<Delta>
+
+        StringBuilder changeBody = new StringBuilder()
+                .append(tags.isEmpty() ? "[]" : JsonHelper.asJson(tags));
+
+        if (_deltaEncoding == Encoding.D3) {
+            changeBody.append(":");
+            if (changeFlags != null) {
+                for (ChangeFlag changeFlag : changeFlags) {
+                    changeBody.append(changeFlag.serialize());
+                }
+            }
+        }
+
+        changeBody.append(":")
+                .append(deltaString);
+
+        return encodeChange(_deltaEncoding, changeBody.toString());
     }
 
     @Override
@@ -62,6 +98,8 @@ class DefaultChangeEncoder implements ChangeEncoder {
         int sep = getSeparatorIndex(buf);
         Encoding encoding = getEncoding(buf, sep);
         String body = getBody(buf, sep);
+        JsonTokener tokener;
+        Set<String> tags;
 
         ChangeBuilder builder = new ChangeBuilder(changeId);
         switch (encoding) {
@@ -71,10 +109,46 @@ class DefaultChangeEncoder implements ChangeEncoder {
             case D2:
                 // Spec for D2 is as follows:
                 // D2:<tags>:<Delta>
-                JsonTokener tokener = new JsonTokener(body);
-                Set<String> tags = FluentIterable.from(tokener.nextArray()).transform(Functions.toStringFunction()).toSet();
+                tokener = new JsonTokener(body);
+                tags = FluentIterable.from(tokener.nextArray()).transform(Functions.toStringFunction()).toSet();
                 tokener.next(':');
                 builder.with(Deltas.fromString(tokener)).with(tags);
+                break;
+            case D3:
+                // Spec for D3 is as follows:
+                // D3:<tags>:<change flags>:<Delta>
+                tokener = new JsonTokener(body);
+                tags = FluentIterable.from(tokener.nextArray()).transform(Functions.toStringFunction()).toSet();
+                tokener.next(':');
+                boolean isConstant = false;
+                boolean isMapDelta = false;
+                char changeFlag = tokener.next();
+                while (changeFlag != ':' && changeFlag != 0) {
+                    // In the future there may be more change flags, though for now we're only interested in
+                    // those provided below
+                    switch (ChangeFlag.deserialize(changeFlag)) {
+                        case CONSTANT_DELTA:
+                            isConstant = true;
+                            break;
+                        case MAP_DELTA:
+                            isMapDelta = true;
+                            break;
+                    }
+                    changeFlag = tokener.next();
+                }
+
+                // There are numerous circumstances where the expense of parsing a literal map delta is wasted.  For
+                // example, with two consecutive literal deltas for the same record the elder is immediately replaced
+                // by the latter, so resources spent parsing and instantiating the elder are unnecessary.  Return a lazy
+                // map literal instead to defer instantiation until necessary.
+                if (isConstant && isMapDelta) {
+                    builder.with(Deltas.literal(new LazyJsonMap(body.substring(tokener.pos())))).with(tags);
+                } else {
+                    // Even if the delta is not a literal map delta there are still benefits to evaluating it lazily.
+                    // For example, if a delta is behind a compaction record but has not yet been deleted it won't
+                    // be used.
+                    builder.with(new LazyDelta(tokener, isConstant)).with(tags);
+                }
                 break;
             case C1:
                 builder.with(JsonHelper.fromJson(body, Compaction.class));
@@ -118,6 +192,8 @@ class DefaultChangeEncoder implements ChangeEncoder {
                     return Encoding.D1;
                 case 'D' | ('2' << 8):
                     return Encoding.D2;
+                case 'D' | ('3' << 8):
+                    return Encoding.D3;
                 case 'C' | ('1' << 8):
                     return Encoding.C1;
                 case 'A' | ('1' << 8):

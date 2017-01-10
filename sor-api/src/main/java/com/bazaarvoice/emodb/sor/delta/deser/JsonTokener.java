@@ -378,4 +378,12 @@ public class JsonTokener {
     public String toString() {
         return " at character " + this.myIndex + " of " + this.mySource;
     }
+
+    /**
+     * Returns the current position in the source string from the beginning, 0-based.  This function is not
+     * commonly used but is useful to perform custom handling of the remaining source.
+     */
+    public int pos() {
+        return myIndex;
+    }
 }

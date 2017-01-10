@@ -58,7 +58,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         Map.Entry<UUID, Compaction> compactionEntry = findEffectiveCompaction(record.passOneIterator(), keysToDelete, compactionConsistencyTimeStamp);
 
         // Check to see if this is a legacy compaction
-        if (compactionEntry != null && compactionEntry.getValue().getCompactedDelta() == null) {
+        if (compactionEntry != null && !compactionEntry.getValue().hasCompactedDelta()) {
             // Legacy compaction found. Can't use this compactor.
             return _legacyCompactor.doExpand(record, fullConsistencyTimestamp, intrinsics, ignoreRecent, compactionEntry);
         }

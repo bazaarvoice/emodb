@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetric
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
@@ -141,6 +142,7 @@ public class EmoService extends Application<EmoConfiguration> {
         bootstrap.addCommand(new EncryptConfigurationApiKeyCommand());
         // Write Date objects using ISO8601 strings instead of numeric milliseconds-since-1970.
         bootstrap.getObjectMapper().setDateFormat(new ISO8601DateFormat());
+        bootstrap.getObjectMapper().registerModule(new LazyJsonModule());
 
         bootstrap.getMetricRegistry().register("jvm.gc.totals", new EmoGarbageCollectorMetricSet());
     }

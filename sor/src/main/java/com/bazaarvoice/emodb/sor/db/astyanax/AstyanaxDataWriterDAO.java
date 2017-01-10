@@ -15,6 +15,8 @@ import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.Literal;
+import com.bazaarvoice.emodb.sor.delta.MapDelta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
@@ -54,6 +56,7 @@ import org.apache.thrift.transport.TTransportException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -189,8 +192,20 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             RecordUpdate update = batchUpdate.getUpdate();
             ByteBuffer rowKey = storage.getRowKey(update.getKey());
 
-            String deltaString = update.getDelta().toString();
+            Delta delta = update.getDelta();
+            String deltaString = delta.toString();
             Set<String> tags = update.getTags();
+
+            // Set any change flags which may make reading this delta back more efficient.  Currently the only case
+            // for this is for a literal map delta.
+            EnumSet<ChangeFlag> changeFlags = EnumSet.noneOf(ChangeFlag.class);
+            if (delta.isConstant()) {
+                changeFlags.add(ChangeFlag.CONSTANT_DELTA);
+            }
+            if (delta instanceof MapDelta || (delta instanceof Literal && ((Literal) delta).getValue() instanceof Map)) {
+                changeFlags.add(ChangeFlag.MAP_DELTA);
+            }
+
             // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
             // Update the audit to include the tags associated with the update
             Audit augmentedAudit = AuditBuilder.from(update.getAudit())
@@ -199,7 +214,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                     .build();
 
             // The values are encoded in a flexible format that allows versioning of the strings
-            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, tags));
+            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags));
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
             int deltaSize = encodedDelta.remaining();
             int auditSize = encodedAudit.remaining();

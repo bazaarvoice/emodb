@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
@@ -285,6 +286,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
             @Override
             public Iterator<AnnotatedContent> execute() {
+                if (_keys.isEmpty()) {
+                    return Iterators.emptyIterator();
+                }
                 // Limit memory usage using an iterator such that only one row's change list is in memory at a time.
                 Iterator<Record> recordIterator = _dataReaderDao.readAll(_keys, consistency);
                 return Iterators.transform(recordIterator, new Function<Record, AnnotatedContent>() {
@@ -373,15 +377,24 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @VisibleForTesting
     public Map<String, Object> toContent(Resolved resolved, ReadConsistency consistency) {
-        Map<String, Object> result = Maps.newLinkedHashMap();
+        Map<String, Object> result;
         if (!resolved.isUndefined()) {
             Object content = resolved.getContent();
-            if (content instanceof Map) {
-                for (Map.Entry<?, ?> entry : ((Map<?, ?>) content).entrySet()) {
-                    result.put(entry.getKey().toString(), entry.getValue());
+            if (content instanceof LazyJsonMap) {
+                // If the content is a lazy map it's more efficient to create a copy.
+                result = ((LazyJsonMap) content).lazyCopy();
+            } else {
+                result = Maps.newLinkedHashMap();
+                if (content instanceof Map) {
+                    for (Map.Entry<?, ?> entry : ((Map<?, ?>) content).entrySet()) {
+                        result.put(entry.getKey().toString(), entry.getValue());
+                    }
                 }
             }
+        } else {
+            result = Maps.newLinkedHashMap();
         }
+
         MutableIntrinsics intrinsics = resolved.getIntrinsics();
         result.putAll(intrinsics.getTemplate());
         result.put(Intrinsic.ID, checkNotNull(intrinsics.getId()));

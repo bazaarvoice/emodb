@@ -1,6 +1,9 @@
 package com.bazaarvoice.emodb.sor.api;
 
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.delta.deser.DeltaParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -60,7 +63,7 @@ public final class Compaction {
                       @Nullable String cutoffSignature,
                       @Nullable UUID lastContentMutation,
                       @Nullable UUID lastMutation) {
-        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, null, null);
+        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, (Delta) null, null);
     }
 
     public Compaction(long count,
@@ -73,15 +76,60 @@ public final class Compaction {
         this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, compactedDelta, null);
     }
 
+    public Compaction(long count,
+                      @Nullable UUID first,
+                      @Nullable UUID cutoff,
+                      @Nullable String cutoffSignature,
+                      @Nullable UUID lastContentMutation,
+                      @Nullable UUID lastMutation,
+                      @Nullable Delta compactedDelta,
+                      @Nullable Set<String> lastTags) {
+        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, lastTags);
+        _compactedDelta = compactedDelta;
+    }
+
+    /**
+     * Compactions are most commonly deserialized when a record contains one or more compaction records.  If there
+     * is more than one all but the algorithmically selected compaction record are ignored.  As an efficiency gain
+     * the compacted delta may be lazily deserialized so that resolution only occurs on the selected record.
+     */
     @JsonCreator
-    public Compaction(@JsonProperty("count") long count,
-                      @JsonProperty("first") @Nullable UUID first,
-                      @JsonProperty("cutoff") @Nullable UUID cutoff,
-                      @JsonProperty("cutoffSignature") @Nullable String cutoffSignature,
-                      @JsonProperty("lastContentMutation") @Nullable UUID lastContentMutation,
-                      @JsonProperty("lastMutation") @Nullable UUID lastMutation,
-                      @JsonProperty("compactedDelta") @Nullable Delta compactedDelta,
-                      @JsonProperty("lastTags") @Nullable Set<String> lastTags) {
+    private Compaction(@JsonProperty("count") long count,
+                       @JsonProperty("first") @Nullable UUID first,
+                       @JsonProperty("cutoff") @Nullable UUID cutoff,
+                       @JsonProperty("cutoffSignature") @Nullable String cutoffSignature,
+                       @JsonProperty("lastContentMutation") @Nullable UUID lastContentMutation,
+                       @JsonProperty("lastMutation") @Nullable UUID lastMutation,
+                       @JsonProperty("compactedDelta") @Nullable String compactedDeltaString,
+                       @JsonProperty("lastTags") @Nullable Set<String> lastTags) {
+        this(count, first, cutoff, cutoffSignature, lastContentMutation, lastMutation, lastTags);
+
+        if (compactedDeltaString != null) {
+            // By definition the compacted delta must be constant.  If the literal is a map then there are many
+            // circumstances where performance is improved by lazily converting the literal to a JSON map, such as when
+            // the literal will be streamed as-is to an API request.  Therefore create a literal delta from a lazy map.
+
+            // Shouldn't be any leading white space, but better to be careful.
+            for (int i=0; i < compactedDeltaString.length(); i++) {
+                if (!Character.isWhitespace(compactedDeltaString.charAt(i))) {
+                    if (compactedDeltaString.charAt(i) == '{') {
+                        _compactedDelta = Deltas.literal(new LazyJsonMap(compactedDeltaString));
+                    } else {
+                        _compactedDelta = DeltaParser.parse(compactedDeltaString);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    public Compaction(long count,
+                      @Nullable UUID first,
+                      @Nullable UUID cutoff,
+                      @Nullable String cutoffSignature,
+                      @Nullable UUID lastContentMutation,
+                      @Nullable UUID lastMutation,
+                      @Nullable Set<String> lastTags) {
         checkArgument((count > 0) || (first == null && cutoff == null));
         checkArgument((count == 0) || (first != null && cutoff != null));
         checkArgument((cutoff != null) == (cutoffSignature != null));
@@ -93,7 +141,6 @@ public final class Compaction {
         // but not the last content mutation.  In these cases substitute the last mutation if available
         _lastContentMutation = lastContentMutation != null ? lastContentMutation : lastMutation;
         _lastMutation = lastMutation;
-        _compactedDelta = compactedDelta;
         _lastTags = lastTags == null ? ImmutableSet.<String>of() : lastTags;
     }
 
@@ -124,6 +171,10 @@ public final class Compaction {
 
     public Delta getCompactedDelta() {
         return _compactedDelta;
+    }
+
+    public boolean hasCompactedDelta() {
+        return _compactedDelta != null;
     }
 
     /** Last applied tags */

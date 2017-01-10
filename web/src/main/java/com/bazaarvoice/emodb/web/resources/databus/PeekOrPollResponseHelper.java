@@ -1,15 +1,12 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
-import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -37,12 +34,7 @@ public class PeekOrPollResponseHelper {
     /**
      * Returns an object that can be serialized as a response entity to output the event list using the proper view.
      */
-    public StreamingOutput asEntity(final List<Event> events) {
-        return new StreamingOutput() {
-            @Override
-            public void write(OutputStream out) throws IOException, WebApplicationException {
-                _json.writeJson(out, events);
-            }
-        };
+    public StreamingOutput asEntity(final Object events) {
+        return out -> _json.writeJson(out, events);
     }
 }
