@@ -69,6 +69,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -108,6 +109,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  * </ul>
  */
 public class DatabusModule extends PrivateModule {
+    private static final int MAX_THREADS_FOR_QUEUE_DRAINING = 10;
+
     private final EmoServiceMode _serviceMode;
     private MetricRegistry _metricRegistry;
 
@@ -201,5 +204,12 @@ public class DatabusModule extends PrivateModule {
     @Provides @Singleton
     CachingSubscriptionDAO.CachingMode provideCachingSubscriptionDAOCachingMode(DatabusConfiguration configuration) {
         return configuration.getSubscriptionCacheInvalidation();
+    }
+
+    @Provides @Singleton @QueueDrainExecutorService
+    ExecutorService provideQueueDrainService (LifeCycleRegistry lifeCycleRegistry) {
+        ExecutorService queueDrainService = Executors.newFixedThreadPool(MAX_THREADS_FOR_QUEUE_DRAINING, new ThreadFactoryBuilder().setNameFormat("drainQueue-%d").build());
+        lifeCycleRegistry.manage(new ExecutorServiceManager(queueDrainService, Duration.seconds(1), "drainQueue-cache"));
+        return queueDrainService;
     }
 }
