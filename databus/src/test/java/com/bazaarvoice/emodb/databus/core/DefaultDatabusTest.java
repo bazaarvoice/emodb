@@ -116,7 +116,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                mock(MetricRegistry.class), Clock.systemUTC());
+                new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -159,7 +159,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                mock(MetricRegistry.class), Clock.systemUTC());
+                new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -205,7 +205,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                mock(MetricRegistry.class), Clock.systemUTC());
+                new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
