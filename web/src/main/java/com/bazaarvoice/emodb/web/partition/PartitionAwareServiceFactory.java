@@ -7,9 +7,16 @@ import com.bazaarvoice.ostrich.ServiceFactory;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.common.base.Predicate;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
+import com.google.common.reflect.AbstractInvocationHandler;
+import com.google.common.reflect.Reflection;
+import com.sun.jersey.api.client.ClientHandlerException;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -19,12 +26,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * implementation for the end point corresponding to the local server.
  */
 public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFactory<S> {
+    private final Class<S> _serviceClass;
     private final MultiThreadedServiceFactory<S> _delegate;
     private final S _local;
     private final String _localId;
     private final HealthCheckRegistry _healthCheckRegistry;
+    private final Map<S, S> _proxiedToDelegateServices = Maps.newIdentityHashMap();
 
-    public PartitionAwareServiceFactory(MultiThreadedServiceFactory<S> delegate, S local, HostAndPort self, HealthCheckRegistry healthCheckRegistry) {
+    public PartitionAwareServiceFactory(Class<S> serviceClass, MultiThreadedServiceFactory<S> delegate, S local,
+                                        HostAndPort self, HealthCheckRegistry healthCheckRegistry) {
+        _serviceClass = checkNotNull(serviceClass, "serviceClass");
         _delegate = checkNotNull(delegate, "delegate");
         _local = checkNotNull(local, "local");
         _localId = self.toString();
@@ -46,13 +57,13 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
         if (isSelf(endPoint)) {
             return _local;
         }
-        return _delegate.create(endPoint);
+        return createDelegate(endPoint);
     }
 
     @Override
     public void destroy(ServiceEndPoint endPoint, S service) {
         if (!isSelf(endPoint)) {
-            _delegate.destroy(endPoint, service);
+            destoryDelegate(endPoint, service);
         }
     }
 
@@ -77,5 +88,42 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
     @Override
     public boolean isRetriableException(Exception e) {
         return _delegate.isRetriableException(e);
+    }
+
+    private S createDelegate(ServiceEndPoint endPoint) {
+        final S delegateService = _delegate.create(endPoint);
+
+        S proxiedService = Reflection.newProxy(_serviceClass, new AbstractInvocationHandler() {
+            @Override
+            protected Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
+                try {
+                    return method.invoke(delegateService, args);
+                } catch (InvocationTargetException e) {
+                    // If the target exception is a declared exception then rethrow as-is
+                    Throwable targetException = e.getTargetException();
+                    for (Class<?> declaredException : method.getExceptionTypes()) {
+                        // noinspection unchecked
+                        Throwables.propagateIfInstanceOf(targetException, (Class<? extends Throwable>) declaredException);
+                    }
+                    // If the exception was due to connection issues and not necessarily the target let the caller know.
+                    // It's possible the connection timed out due to a problem on the target, but from our perspective
+                    // there's no definitive way of knowing.
+                    if (targetException instanceof ClientHandlerException) {
+                        throw new PartitionForwardingException("Failed to handle request at endpoint", targetException.getCause());
+                    }
+                    throw Throwables.propagate(targetException);
+                }
+            }
+        });
+
+        _proxiedToDelegateServices.put(proxiedService, delegateService);
+        return proxiedService;
+    }
+
+    private void destoryDelegate(ServiceEndPoint endPoint, S proxiedService) {
+        S delegateService = _proxiedToDelegateServices.remove(proxiedService);
+        if (delegateService != null) {
+            _delegate.destroy(endPoint, delegateService);
+        }
     }
 }
