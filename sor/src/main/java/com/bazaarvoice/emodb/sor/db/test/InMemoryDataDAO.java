@@ -39,6 +39,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -55,7 +56,9 @@ import java.util.UUID;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-/** In-memory implementation of {@link DataWriterDAO}, for testing. */
+/**
+ * In-memory implementation of {@link DataWriterDAO}, for testing.
+ */
 public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
@@ -107,7 +110,8 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
         return safeGet(_contentChanges, table.getName()).size();
     }
 
-    @Override public long count(Table table, @Nullable Integer limit, ReadConsistency consistency) {
+    @Override
+    public long count(Table table, @Nullable Integer limit, ReadConsistency consistency) {
         int actual = safeGet(_contentChanges, table.getName()).size();
         return limit == null ? actual : Math.min(limit, actual);
     }
@@ -186,7 +190,7 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
 
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
-                                                         ReadConsistency consistency) {
+                                                         ReadConsistency consistency, @Nullable DateTime cutoffTime) {
         // TODO:  Create a simulation for this method
         return Iterators.emptyIterator();
     }
@@ -289,7 +293,7 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
     }
 
     public synchronized void deleteDeltasOnly(Table table, String key, UUID compactionKey, Compaction compaction,
-                                                       UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                              UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -306,7 +310,7 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
     }
 
     public synchronized void addCompactionOnly(Table table, String key, UUID compactionKey, Compaction compaction,
-                                                       UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                               UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -423,7 +427,7 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
                         return new RecordEntryRawMetadata()
                                 .withTimestamp(TimeUUIDs.getTimeMillis(entry.getKey()))
                                 .withSize(1);  // Size is a measure of the raw data, which the in-memory implementation does not have.
-                                               // Return a constant value.
+                        // Return a constant value.
                     }
                 });
             }
@@ -459,7 +463,7 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
 
             private SortedMap<UUID, Change> getSortedCopy(Map<UUID, Change> changes) {
                 SortedMap<UUID, Change> sortedCopy = null;
-                while (sortedCopy ==  null) {
+                while (sortedCopy == null) {
                     try {
                         sortedCopy = TimeUUIDs.sortedCopy(changes);
                     } catch (ConcurrentModificationException e) {

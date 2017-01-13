@@ -8,10 +8,13 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
+import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 
 public interface DataTools {
     /**
@@ -35,9 +38,9 @@ public interface DataTools {
     String getPlacementCluster(String placement);
 
     /**
-     * For performing a raw scan across multiple tables.
+     * For performing a raw scan across multiple tables. If cut off time is provided, then NO Changes after that time will be included.
      */
-    Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency);
+    Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime);
 
     /**
      * Resolve a scan record into a single JSON literal object + metadata.  If allowAsyncCompaction is true then it may

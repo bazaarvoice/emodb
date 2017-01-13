@@ -244,7 +244,7 @@ public class ScanUploaderTest {
                 ScanRangeSplits.builder()
                         .addScanRange("dummy", "dummy", ScanRange.all())
                         .build());
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class)))
+        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(createMockScanResults());
         when(dataTools.toContent(any(MultiTableScanResult.class), any(ReadConsistency.class), eq(false)))
                 .thenAnswer(new Answer<Map<String, Object>>() {
@@ -814,10 +814,11 @@ public class ScanUploaderTest {
         final MetricRegistry metricRegistry = new MetricRegistry();
 
         DataTools dataTools = mock(DataTools.class);
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class)))
+        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenAnswer(new Answer<Iterator<MultiTableScanResult>>() {
                     @Override
-                    public Iterator<MultiTableScanResult> answer(InvocationOnMock invocation) throws Throwable {
+                    public Iterator<MultiTableScanResult> answer(InvocationOnMock invocation)
+                            throws Throwable {
                         // For this test return 400 results; if the test is successful it should only pull the first
                         // 300 anyway, but put a hard stop on it so the test cannot infinite loop on failure.
                         return new AbstractIterator<MultiTableScanResult>() {
@@ -1038,7 +1039,7 @@ public class ScanUploaderTest {
             Record record = mock(Record.class);
             when(record.getKey()).thenReturn(key);
 
-            when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class)))
+            when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                     .thenReturn(Iterators.singletonIterator(
                             new MultiTableScanResult(
                                     ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1092,7 +1093,7 @@ public class ScanUploaderTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
 
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class)))
+        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(Iterators.singletonIterator(
                         new MultiTableScanResult(
                                 ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1165,7 +1166,7 @@ public class ScanUploaderTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
 
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class)))
+        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(Iterators.singletonIterator(
                         new MultiTableScanResult(
                                 ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
