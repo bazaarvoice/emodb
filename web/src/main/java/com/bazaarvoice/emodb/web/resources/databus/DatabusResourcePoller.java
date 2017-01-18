@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.MetricRegistry;
@@ -42,6 +44,8 @@ public class DatabusResourcePoller {
     private static final Duration LONG_POLL_RETRY_TIME = Duration.standardSeconds(2);
     private static final Duration LONG_POLL_SEND_REFRESH_TIME = Duration.millis(200);
     private static final Duration KEEP_ALIVE_SAFETY_BUFFER_TIME = Duration.standardSeconds(10);
+
+    private static final String POLL_DATABUS_EMPTY_HEADER = "X-BV-Databus-Empty";
 
     private final Timer _pollTimer;
 
@@ -92,7 +96,8 @@ public class DatabusResourcePoller {
 
         private final AsyncContext _asyncContext;
         private KeepAliveRunnable _keepAliveRunnable;
-        private Databus _databus;
+        private Subject _subject;
+        private SubjectDatabus _databus;
         private Duration _claimTtl;
         private int _limit;
         private String _subscription;
@@ -101,11 +106,12 @@ public class DatabusResourcePoller {
         private Timer.Context _timerContext;
         private long _lastRunTime = 0;
 
-        DatabusPollRunnable(AsyncContext asyncContext, KeepAliveRunnable keepAliveRunnable, Databus databus,
+        DatabusPollRunnable(AsyncContext asyncContext, KeepAliveRunnable keepAliveRunnable, Subject subject, SubjectDatabus databus,
                             Duration claimTtl, int limit, String subscription, PeekOrPollResponseHelper helper,
                             long longPollStopTime, Timer.Context timerContext) {
             _asyncContext = asyncContext;
             _keepAliveRunnable = keepAliveRunnable;
+            _subject = subject;
             _databus = databus;
             _claimTtl = claimTtl;
             _limit = limit;
@@ -126,23 +132,23 @@ public class DatabusResourcePoller {
                 }
                 if (_pollingActive) {
                     boolean pollFailed = false;
-                    List<Event> events;
+                    PollResult result;
                     try {
                         // Issue a polling call with our server-side client. This ensures that we execute a synchronous
                         // call on the other end and receive a quick response - we do NOT want to execute a long-poll here
                         // and spend up to 20 seconds waiting for a response (occupying this thread all the while).
-                        events = _databus.poll(_subscription, _claimTtl, _limit);
+                        result = _databus.poll(_subject, _subscription, _claimTtl, _limit);
                     } catch (Exception e) {
                         // We're in an async context and have already returned a 200 response.  Since we can't
                         // retroactively change to 500 finish the request with an empty response and log the error.
                         _log.error("Failed to perform asynchronous poll on subscription {}", _subscription, e);
-                        events = ImmutableList.of();
+                        result = new PollResult(ImmutableList.of(), false);
                         pollFailed = true;
                     }
 
                     // Go ahead and output the response if we either 1.) find events to output, 2.) exceed our time
                     // limit, or 3.) received an exception during the last poll
-                    if (events.size() > 0
+                    if (result.getEvents().size() > 0
                             || (System.currentTimeMillis() + LONG_POLL_RETRY_TIME.getMillis()) >= _longPollStopTime
                             || pollFailed) {
                         // Lock the context before writing the response to ensure that the KeepAliveRunnable doesn't
@@ -150,13 +156,18 @@ public class DatabusResourcePoller {
                         synchronized (_asyncContext) {
                             if (_pollingActive) {
                                 _keepAliveRunnable.cancelKeepAlive();
-                                populateResponse(events, (HttpServletResponse) _asyncContext.getResponse(), _helper);
+                                populateResponse(result, (HttpServletResponse) _asyncContext.getResponse(), _helper);
                             }
                         }
                     } else {
-                        // Nothing to output; schedule the job to check again in a few seconds
+                        // Nothing to output; schedule the job to check again.  If the result had more events then poll
+                        // again immediately, otherwise wait a few seconds.
                         _lastRunTime = System.currentTimeMillis();
-                        _pollingExecutorService.schedule(this, LONG_POLL_RETRY_TIME.getMillis(), TimeUnit.MILLISECONDS);
+                        if (result.hasMoreEvents()) {
+                            _pollingExecutorService.execute(this);
+                        } else {
+                            _pollingExecutorService.schedule(this, LONG_POLL_RETRY_TIME.getMillis(), TimeUnit.MILLISECONDS);
+                        }
                         rescheduled = true;
                     }
                 }
@@ -236,9 +247,9 @@ public class DatabusResourcePoller {
         }
     }
 
-    private static void populateResponse(List<Event> events, HttpServletResponse response, PeekOrPollResponseHelper helper) {
+    private static void populateResponse(PollResult result, HttpServletResponse response, PeekOrPollResponseHelper helper) {
         try {
-            helper.getJson().writeJson(response.getOutputStream(), events);
+            helper.getJson().writeJson(response.getOutputStream(), result.getEvents());
         } catch (IOException ex) {
             _log.error("Failed to write response to the client");
         }
@@ -252,7 +263,7 @@ public class DatabusResourcePoller {
         response.flushBuffer();
     }
 
-    public Response poll(Databus databus, String subscription, Duration claimTtl, int limit, HttpServletRequest request,
+    public Response poll(Subject subject, SubjectDatabus databus, String subscription, Duration claimTtl, int limit, HttpServletRequest request,
                          boolean ignoreLongPoll, PeekOrPollResponseHelper helper) {
         Timer.Context timerContext = _pollTimer.time();
         boolean synchronousResponse = true;
@@ -268,15 +279,18 @@ public class DatabusResourcePoller {
             // that the thread will stall if "databus" is an instance of DatabusClient and we are stuck waiting for a
             // response - however, since we use the server-side client we know that it will always execute synchronously
             // itself (no long-polling) and return in a reasonable period of time.
-            List<Event> events = databus.poll(subscription, claimTtl, limit);
-            if (ignoreLongPoll || !events.isEmpty() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
+            PollResult result = databus.poll(subject, subscription, claimTtl, limit);
+            if (ignoreLongPoll || !result.getEvents().isEmpty() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
                 // If ignoreLongPoll == true or we have no executor services to schedule long-polling on then always
                 // return a response, even if it's empty. Alternatively, if we have data to return - return it!
-                response = Response.ok().entity(helper.asEntity(events)).build();
+                response = Response.ok()
+                        .header(POLL_DATABUS_EMPTY_HEADER, String.valueOf(!result.hasMoreEvents()))
+                        .entity(helper.asEntity(result.getEvents()))
+                        .build();
             } else {
                 // If the response is empty then go into async-mode and start up the runnables for our long-polling.
-                response = scheduleLongPollingRunnables(request, longPollStopTime, databus, claimTtl, limit, subscription,
-                        helper, timerContext);
+                response = scheduleLongPollingRunnables(request, longPollStopTime, subject, databus, claimTtl, limit, subscription,
+                        result.hasMoreEvents(), helper, timerContext);
                 synchronousResponse = false;
             }
         } finally {
@@ -290,21 +304,27 @@ public class DatabusResourcePoller {
         return response;
     }
 
-    private Response scheduleLongPollingRunnables(HttpServletRequest request, long longPollStopTime, Databus databus,
-                                                  Duration claimTtl, int limit, String subscription,
-                                                  PeekOrPollResponseHelper helper, Timer.Context timerContext) {
+    private Response scheduleLongPollingRunnables(HttpServletRequest request, long longPollStopTime, Subject subject,
+                                                  SubjectDatabus databus, Duration claimTtl, int limit, String subscription,
+                                                  boolean firstPollHadMoreEvents, PeekOrPollResponseHelper helper,
+                                                  Timer.Context timerContext) {
         final AsyncContext ctx = request.startAsync();
         boolean jobsScheduled = false;
 
         try {
             ctx.getResponse().setContentType("application/json");
+            //  We can't know at this point if the queue will be fully drained or not, so base the "databus empty"
+            // header on whether the original empty poll had more results.  Worst case the caller has a single false empty
+            // header which gets set correctly on the next poll.
+            ((HttpServletResponse) ctx.getResponse()).setHeader(POLL_DATABUS_EMPTY_HEADER, String.valueOf(!firstPollHadMoreEvents));
+
             // Immediately send a client refresh since we've already executed a poll() call and we don't know how long it
             // will take for our scheduled refresh to do its thing. It's probably not needed 99.9% of the time, but we
             // keep it here as a precaution.
             sendClientRefresh((HttpServletResponse) ctx.getResponse());
 
             KeepAliveRunnable keepAliveRunnable = new KeepAliveRunnable(ctx, longPollStopTime);
-            DatabusPollRunnable pollingRunnable = new DatabusPollRunnable(ctx, keepAliveRunnable, databus, claimTtl, limit,
+            DatabusPollRunnable pollingRunnable = new DatabusPollRunnable(ctx, keepAliveRunnable, subject, databus, claimTtl, limit,
                     subscription, helper, longPollStopTime, timerContext);
             keepAliveRunnable.setDatabusPollRunnable(pollingRunnable);
 

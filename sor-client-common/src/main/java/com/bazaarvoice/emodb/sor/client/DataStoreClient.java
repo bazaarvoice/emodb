@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
+import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.JsonStreamProcessingException;
@@ -674,6 +675,13 @@ public class DataStoreClient implements AuthDataStore {
                 return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
             } else {
                 return (RuntimeException) new UnauthorizedException().initCause(e);
+            }
+        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
+                ServiceUnavailableException.class.getName().equals(exceptionType)) {
+            if (response.hasEntity()) {
+                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
+            } else {
+                return (RuntimeException) new ServiceUnavailableException().initCause(e);
             }
         }
 

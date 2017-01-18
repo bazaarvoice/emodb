@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAO;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 
@@ -27,6 +28,15 @@ public class DatabusConfiguration {
     @JsonProperty("longPollPollingThreadCount")
     private Optional<Integer> _longPollPollingThreadCount = Optional.absent();
 
+    /**
+     * The following is only necessary during the period while the legacy subscription cache is upgraded to the current
+     * implementation.
+     */
+    @Valid
+    @NotNull
+    @JsonProperty("subscriptionCacheInvalidation")
+    private CachingSubscriptionDAO.CachingMode _subscriptionCacheInvalidation = CachingSubscriptionDAO.CachingMode.normal;
+
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
     }
@@ -51,6 +61,15 @@ public class DatabusConfiguration {
 
     public DatabusConfiguration setLongPollPollingThreadCount(Integer longPollPollingThreadCount) {
         _longPollPollingThreadCount = Optional.of(longPollPollingThreadCount);
+        return this;
+    }
+
+    public CachingSubscriptionDAO.CachingMode getSubscriptionCacheInvalidation() {
+        return _subscriptionCacheInvalidation;
+    }
+
+    public DatabusConfiguration setSubscriptionCacheInvalidation(CachingSubscriptionDAO.CachingMode subscriptionCacheInvalidation) {
+        _subscriptionCacheInvalidation = subscriptionCacheInvalidation;
         return this;
     }
 }

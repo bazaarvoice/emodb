@@ -39,6 +39,7 @@ import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
@@ -61,6 +62,7 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -286,7 +288,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-            Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
+                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
     }
 
     /**
@@ -317,7 +319,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 .withSize(getValue(row).remaining()));
     }
 
-    /** Read a batch of keys that all belong to the same placement (ColumnFamily). */
+    /**
+     * Read a batch of keys that all belong to the same placement (ColumnFamily).
+     */
     private Iterator<Record> readBatch(final DeltaPlacement placement, final Collection<Key> keys, final ReadConsistency consistency) {
         checkNotNull(keys, "keys");
 
@@ -383,7 +387,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 }),
                 // Second iterator returns an empty Record for each key queried but not found.
                 new AbstractIterator<Record>() {
-                    private Iterator<Key>_nonExistentKeyIterator;
+                    private Iterator<Key> _nonExistentKeyIterator;
 
                     @Override
                     protected Record computeNext() {
@@ -426,10 +430,10 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     /**
      * A few notes on this method:
      * <ol>
-     *     <li>All rows in the row group have the same key, so choosing the first row is safe.</li>
-     *     <li>The rowGroup will always contain at least one row.</li>
-     *     <li>The row group has at least the first row in hard cache, so iterating to the first row will never
-     *         result in a new CQL query.</li>
+     * <li>All rows in the row group have the same key, so choosing the first row is safe.</li>
+     * <li>The rowGroup will always contain at least one row.</li>
+     * <li>The row group has at least the first row in hard cache, so iterating to the first row will never
+     * result in a new CQL query.</li>
      * </ol>
      */
     private ByteBuffer getRawKeyFromRowGroup(Iterable<Row> rowGroup) {
@@ -446,7 +450,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return iter;
     }
 
-    @Timed(name = "bv.emodb.sor.CqlDataReaderDAO.scan", absolute = true)
+    @Timed (name = "bv.emodb.sor.CqlDataReaderDAO.scan", absolute = true)
     @Override
     public Iterator<Record> scan(Table tbl, @Nullable String fromKeyExclusive, final LimitCounter ignore_limit,
                                  final ReadConsistency consistency) {
@@ -454,7 +458,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // control paging.  The CQL driver natively performs this functionality so it is not used here.  The caller
         // will apply limit boundaries on the results from this method.
         if (!_useCqlForScans.get()) {
-            return  _astyanaxReaderDAO.scan(tbl, fromKeyExclusive, ignore_limit, consistency);
+            return _astyanaxReaderDAO.scan(tbl, fromKeyExclusive, ignore_limit, consistency);
         }
 
         checkNotNull(tbl, "table");
@@ -548,16 +552,16 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table) {
         return Iterators.transform(rowGroups, rowGroup -> {
-                String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
-                return newRecordFromCql(new Key(table, key), rowGroup);
+            String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
+            return newRecordFromCql(new Key(table, key), rowGroup);
         });
     }
 
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
-                                                         final LimitCounter limit, final ReadConsistency consistency) {
+                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable DateTime cutoffTime) {
         if (!_useCqlForScans.get()) {
-            return _astyanaxReaderDAO.multiTableScan(query, tables, limit, consistency);
+            return _astyanaxReaderDAO.multiTableScan(query, tables, limit, consistency, cutoffTime);
         }
 
         checkNotNull(query, "query");
@@ -572,16 +576,17 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return touch(FluentIterable.from(ranges)
                 .transformAndConcat(rowRange -> scanMultiTableRows(
                         tables, placement, rowRange.asByteBufferRange(), limit, query.isIncludeDeletedTables(),
-                        query.isIncludeMirrorTables(), consistency))
+                        query.isIncludeMirrorTables(), consistency, cutoffTime))
                 .iterator());
-
     }
 
-    /** Decodes rows returned by scanning across tables. */
+    /**
+     * Decodes rows returned by scanning across tables.
+     */
     private Iterable<MultiTableScanResult> scanMultiTableRows(
             final TableSet tables, final DeltaPlacement placement, final ByteBufferRange rowRange,
             final LimitCounter limit, final boolean includeDroppedTables, final boolean includeMirrorTables,
-            final ReadConsistency consistency) {
+            final ReadConsistency consistency, final DateTime cutoffTime) {
 
         // Avoiding pinning multiple decoded rows into memory at once.
         return () -> limit.limit(new AbstractIterator<MultiTableScanResult>() {
@@ -598,10 +603,16 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 while (_iter.hasNext()) {
                     // Get the next rows from the grouping iterator.  All rows in the returned Iterable
                     // are from the same Cassandra wide row (in other words, they share the same key).
-                    Iterable<Row> rows = _iter.next();
+                    final Iterable<Row> rows = _iter.next();
 
-                    // Convert the rows into a Record object
-                    ByteBuffer rowKey = getRawKeyFromRowGroup(rows);
+                    // filter the rows if a cutOff time is specified.
+                    Iterable<Row> filteredRows = rows;
+                    if (cutoffTime != null) {
+                        filteredRows = getFilteredRows(rows, cutoffTime);
+                    }
+
+                    // Convert the filteredRows into a Record object
+                    ByteBuffer rowKey = getRawKeyFromRowGroup(filteredRows);
 
                     long tableUuid = AstyanaxStorage.getTableUuid(rowKey);
                     if (_lastTableUuid != tableUuid) {
@@ -618,14 +629,14 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                     }
 
                     // Skip dropped and mirror tables if configured
-                    if ((!includeDroppedTables && _droppedTable) || (!includeMirrorTables && !_primaryTable) ) {
+                    if ((!includeDroppedTables && _droppedTable) || (!includeMirrorTables && !_primaryTable)) {
                         _iter = skipToNextTable(tableUuid);
                         continue;
                     }
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), rows);
+                    Record record = newRecordFromCql(new Key(_table, key), filteredRows);
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
@@ -841,7 +852,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     /**
      * {@link Range} needs comparable type.  This class thinly encapsulates a UUID and sorts as a TimeUUID.
      */
-    private static class RangeTimeUUID implements Comparable<RangeTimeUUID>{
+    private static class RangeTimeUUID implements Comparable<RangeTimeUUID> {
         private final UUID _uuid;
 
         private RangeTimeUUID(UUID uuid) {
@@ -856,7 +867,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             if (!(o instanceof RangeTimeUUID)) {
                 return false;
             }
-            return _uuid.equals(((RangeTimeUUID)o)._uuid);
+            return _uuid.equals(((RangeTimeUUID) o)._uuid);
         }
 
         @Override
@@ -882,6 +893,14 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
                 Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
                 Iterators.<RecordEntryRawMetadata>emptyIterator());
+    }
+
+    @VisibleForTesting
+    public static Iterable<Row> getFilteredRows(Iterable<Row> rows, DateTime cutoffTime) {
+        if (cutoffTime == null) {
+            return rows;
+        }
+        return () -> Iterators.filter(rows.iterator(), row -> (TimeUUIDs.getTimeMillis(row.getUUID(CHANGE_ID_RESULT_SET_COLUMN)) < cutoffTime.getMillis()));
     }
 
     // The following methods rely on using the Cassandra thrift call <code>describe_splits_ex()</code> to split

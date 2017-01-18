@@ -68,7 +68,7 @@ public interface AuthDatabus {
      * an event will be returned multiple times.  In practice, it will try to return
      * events in order without duplicates, but there are no promises.
      */
-    List<Event> poll(@Credential String apiKey, String subscription, Duration claimTtl, int limit);
+    PollResult poll(@Credential String apiKey, String subscription, Duration claimTtl, int limit);
 
     /** Renew the claims on events previously returned by {@link #poll}. */
     void renew(@Credential String apiKey, String subscription, Collection<String> eventKeys, Duration claimTtl);

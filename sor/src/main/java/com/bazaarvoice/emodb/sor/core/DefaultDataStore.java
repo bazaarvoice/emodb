@@ -51,6 +51,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -751,12 +752,12 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
-    public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency) {
+    public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime) {
         checkNotNull(query, "query");
         checkNotNull(tables, "tables");
         checkNotNull(limit, "limit");
         checkNotNull(consistency, "consistency");
-        return _dataReaderDao.multiTableScan(query, tables, limit, consistency);
+        return _dataReaderDao.multiTableScan(query, tables, limit, consistency, cutoffTime);
     }
 
     @Override

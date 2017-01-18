@@ -244,7 +244,7 @@ HTTP:
 Java:
 
 ```java
-List<Event> poll(String subscription, Duration claimTtl, int limit);
+PollResult poll(String subscription, Duration claimTtl, int limit);
 ```
 
 Request URL Parameters:
@@ -255,6 +255,27 @@ Request URL Parameters:
     events before the claim expires.  But if the claim period is too long, it may take a while for events to be
     re-processed if an application dies while holding claims.
 *   `limit` - optional - The maximum number of events to return.  The default `limit` is 10.
+
+In addition to any claimed events the HTTP response also includes the following header:
+
+```
+X-BV-Databus-Empty: [true|false]
+```
+
+If at the time the poll completed there are no more events for the subscription this header value will be `true`, otherwise
+it will be `false`.  Client code can take advantage of this information to poll again immediately if the databus is
+not empty, otherwise wait a brief period before polling again since an immediate subsequent call to `poll` is
+unlikely to return any events.  Note that because of EmoDB internals it is possible that a poll may return less than
+`limit` events yet still be non-empty.
+
+The Java response contains the following method which returns `true` if the databus is non-empty,
+`false` otherwise.
+
+Java:
+
+```java:
+pollResult.hasMoreEvents()
+```
 
 ### Renew Claims
 

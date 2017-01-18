@@ -7,19 +7,18 @@ import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * {@link DatabusClientSubjectProxy} implementation that uses the Subject's internal ID to proxy a DatabusFactory.
+ * SubjectDatabus implementation which forwards requests to a local Databus using the internal ID as the authenticator.
  */
-public class LocalDatabusClientSubjectProxy implements DatabusClientSubjectProxy {
+public class LocalSubjectDatabus extends AbstractSubjectDatabus {
 
     private final DatabusFactory _databusFactory;
 
-    public LocalDatabusClientSubjectProxy(DatabusFactory databusFactory) {
+    public LocalSubjectDatabus(DatabusFactory databusFactory) {
         _databusFactory = checkNotNull(databusFactory, "databusFactory");
     }
 
     @Override
-    public Databus forSubject(Subject subject) {
-        // Get a Databus instance using the subject's internal ID
+    protected Databus databus(Subject subject) {
         return _databusFactory.forOwner(subject.getInternalId());
     }
 }

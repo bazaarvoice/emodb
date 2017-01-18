@@ -63,6 +63,26 @@ public class CqlCluster extends AbstractCassandraCluster<Session> implements Man
                 metrics.getOpenConnections());
 
         _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "trashed-connections"),
+                metrics.getTrashedConnections());
+
+        _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "executor-queue-depth"),
+                metrics.getExecutorQueueDepth());
+
+        _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "blocking-executor-queue-depth"),
+                metrics.getBlockingExecutorQueueDepth());
+
+        _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "reconnection-scheduler-task-count"),
+                metrics.getReconnectionSchedulerQueueSize());
+
+        _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "task-scheduler-task-count"),
+                metrics.getTaskSchedulerQueueSize());
+
+        _metricRegistry.register(
                 MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "connection-errors"),
                 metrics.getErrorMetrics().getConnectionErrors());
 
@@ -75,6 +95,10 @@ public class CqlCluster extends AbstractCassandraCluster<Session> implements Man
                 metrics.getErrorMetrics().getWriteTimeouts());
 
         _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "client-timeouts"),
+                metrics.getErrorMetrics().getClientTimeouts());
+
+        _metricRegistry.register(
                 MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "ignores"),
                 metrics.getErrorMetrics().getIgnores());
 
@@ -82,6 +106,9 @@ public class CqlCluster extends AbstractCassandraCluster<Session> implements Man
                 MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "unavailables"),
                 metrics.getErrorMetrics().getUnavailables());
 
+        _metricRegistry.register(
+                MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "speculative-executions"),
+                metrics.getErrorMetrics().getSpeculativeExecutions());
     }
 
 }

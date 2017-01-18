@@ -6,11 +6,13 @@ import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
+import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
+import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -53,6 +55,9 @@ public class DatabusClient implements AuthDatabus {
     public static final String SERVICE_PATH = "/bus/1";
 
     private static final MediaType JSON_CONDITION_MEDIA_TYPE = new MediaType("application", "x.json-condition");
+
+    /** Poll header indicating whether the databus subscription is empty. */
+    private static final String POLL_DATABUS_EMPTY_HEADER = "X-BV-Databus-Empty";
 
     private final EmoClient _client;
     private final UriBuilder _databus;
@@ -205,19 +210,35 @@ public class DatabusClient implements AuthDatabus {
     }
 
     @Override
-    public List<Event> poll(String apiKey, @PartitionKey String subscription, Duration claimTtl, int limit) {
+    public PollResult poll(String apiKey, @PartitionKey String subscription, Duration claimTtl, int limit) {
         checkNotNull(subscription, "subscription");
         checkNotNull(claimTtl, "claimTtl");
-        try {
-            URI uri = getPollUriBuilder(subscription, claimTtl, limit).build();
-            return _client.resource(uri)
-                    .queryParam("includeTags", "true")
-                    .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<Event>>() {});
-        } catch (EmoClientException e) {
-            throw convertException(e);
+
+        URI uri = getPollUriBuilder(subscription, claimTtl, limit).build();
+        EmoResponse response = _client.resource(uri)
+                .queryParam("includeTags", "true")
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .get(EmoResponse.class);
+
+        if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+            throw convertException(new EmoClientException(response));
         }
+
+        List<Event> events = response.getEntity(new TypeReference<List<Event>>() {});
+
+        boolean moreEvents;
+        String databusEmpty = response.getFirstHeader(POLL_DATABUS_EMPTY_HEADER);
+        if (databusEmpty != null) {
+            // Use the header value from the server to determine if the databus subscription is empty
+            moreEvents = !Boolean.parseBoolean(databusEmpty);
+        } else {
+            // Must be polling an older version of Emo which did not include this header.  Infer whether the queue
+            // is empty based on whether any results were returned.
+            moreEvents = !events.isEmpty();
+        }
+
+        return new PollResult(events, moreEvents);
     }
 
     protected UriBuilder getPollUriBuilder(String subscription, Duration claimTtl, int limit) {
@@ -433,6 +454,13 @@ public class DatabusClient implements AuthDatabus {
                 return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
             } else {
                 return (RuntimeException) new UnauthorizedException().initCause(e);
+            }
+        } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
+                ServiceUnavailableException.class.getName().equals(exceptionType)) {
+            if (response.hasEntity()) {
+                return (RuntimeException) response.getEntity(ServiceUnavailableException.class).initCause(e);
+            } else {
+                return (RuntimeException) new ServiceUnavailableException().initCause(e);
             }
         }
 

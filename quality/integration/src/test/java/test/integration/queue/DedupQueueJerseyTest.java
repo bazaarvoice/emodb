@@ -1,6 +1,7 @@
 package test.integration.queue;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
@@ -10,6 +11,7 @@ import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.client.DedupQueueClient;
 import com.bazaarvoice.emodb.queue.client.DedupQueueServiceAuthenticator;
 import com.bazaarvoice.emodb.test.ResourceTest;
+import com.bazaarvoice.emodb.web.partition.PartitionForwardingException;
 import com.bazaarvoice.emodb.web.resources.queue.DedupQueueResource1;
 import com.bazaarvoice.ostrich.PartitionContextBuilder;
 import com.bazaarvoice.ostrich.pool.OstrichAccessors;
@@ -18,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Rule;
@@ -30,6 +33,7 @@ import java.util.Map;
 
 import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -322,6 +326,21 @@ public class DedupQueueJerseyTest extends ResourceTest {
             assertTrue(e instanceof UnauthorizedException);
         }
 
+        verifyNoMoreInteractions(_proxy);
+    }
+
+    @Test
+    public void testPollPartitionTimeout() {
+        when(_proxy.poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123))
+                .thenThrow(new PartitionForwardingException(new ConnectTimeoutException()));
+
+        try {
+            queueClient().poll("queue-name", Duration.standardSeconds(15), 123);
+        } catch (ServiceUnavailableException e) {
+            // Ok
+        }
+
+        verify(_proxy).poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123);
         verifyNoMoreInteractions(_proxy);
     }
 

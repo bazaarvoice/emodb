@@ -13,6 +13,7 @@ import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
@@ -35,7 +36,7 @@ public class DatabusSizeCachingTest {
      * The cache is expired after every 15 seconds.
      */
     @Test
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings ("unchecked")
     public void testSizeCache() {
         final Clock clock = mock(Clock.class);
         long start = System.currentTimeMillis();
@@ -45,7 +46,7 @@ public class DatabusSizeCachingTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
-                mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()),
+                mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
                 mock(MetricRegistry.class), clock);
 
         // At limit=500, size estimate should be at 4800
@@ -69,7 +70,7 @@ public class DatabusSizeCachingTest {
         verify(mockEventStore, times(1)).getSizeEstimate("testsubscription", 500L);
 
         // verify that it does *not* interact if the accuracy is decreased limit=50 over the next 14 seconds
-        for (int i=1; i <= 14; i++) {
+        for (int i = 1; i <= 14; i++) {
             when(clock.millis()).thenReturn(start + TimeUnit.SECONDS.toMillis(i));
             size = testDatabus.getEventCountUpTo("id", "testsubscription", 50L);
             assertEquals(size, 4800L, "Size should still be 4800");

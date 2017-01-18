@@ -84,12 +84,12 @@ import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
 import com.bazaarvoice.emodb.web.report.ReportsModule;
-import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxy;
-import com.bazaarvoice.emodb.web.resources.databus.DatabusClientSubjectProxyServiceFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
-import com.bazaarvoice.emodb.web.resources.databus.LocalDatabusClientSubjectProxy;
+import com.bazaarvoice.emodb.web.resources.databus.LocalSubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.databus.LongPollingExecutorServices;
+import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabus;
+import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabusClientFactory;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
 import com.bazaarvoice.emodb.web.settings.DatabusDefaultJoinFilterConditionAdminTask;
@@ -393,28 +393,34 @@ public class EmoModule extends AbstractModule {
         }
 
         @Provides @Singleton
-        MultiThreadedServiceFactory<DatabusClientSubjectProxy> provideSubjectDatabusFactoryServiceFactory(
+        MultiThreadedServiceFactory<SubjectDatabus> provideSubjectDatabusServiceFactory(
                 MultiThreadedServiceFactory<AuthDatabus> authDatabusServiceFactory) {
             // Proxy the AuthDatabus service factory into another service factory that will authorize the caller
             // indirectly using a Subject's API key.
-            return new DatabusClientSubjectProxyServiceFactory(authDatabusServiceFactory);
+            return new SubjectDatabusClientFactory(authDatabusServiceFactory);
         }
 
         @Provides @Singleton @DatabusHostDiscovery
-        HostDiscovery provideDatabusHostDiscovery(MultiThreadedServiceFactory<DatabusClientSubjectProxy> serviceFactory,
+        HostDiscovery provideSubjectDatabusHostDiscovery(MultiThreadedServiceFactory<SubjectDatabus> serviceFactory,
                                                   @Global CuratorFramework curator, LifeCycleRegistry lifeCycle) {
             return lifeCycle.manage(new ZooKeeperHostDiscovery(curator, serviceFactory.getServiceName(), _environment.metrics()));
         }
 
+        @Provides @Singleton
+        SubjectDatabus provideLocalSubjectDatabus(DatabusFactory databusFactory) {
+            return new LocalSubjectDatabus(databusFactory);
+        }
+
         /** Create an SOA Databus client for forwarding non-partition-aware clients to the right server. */
         @Provides @Singleton @PartitionAwareClient
-        DatabusClientSubjectProxy provideDatabusClient(MultiThreadedServiceFactory<DatabusClientSubjectProxy> serviceFactory,
-                                     @DatabusHostDiscovery HostDiscovery hostDiscovery,
-                                     DatabusFactory databusFactory, @SelfHostAndPort HostAndPort self, MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
-            DatabusClientSubjectProxy client = ServicePoolBuilder.create(DatabusClientSubjectProxy.class)
+        SubjectDatabus provideSubjectDatabusClient(MultiThreadedServiceFactory<SubjectDatabus> serviceFactory,
+                                                   @DatabusHostDiscovery HostDiscovery hostDiscovery,
+                                                   SubjectDatabus localSubjectDatabus, @SelfHostAndPort HostAndPort self,
+                                                   MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
+            SubjectDatabus client = ServicePoolBuilder.create(SubjectDatabus.class)
                     .withHostDiscovery(hostDiscovery)
                     .withServiceFactory(
-                            new PartitionAwareServiceFactory<>(serviceFactory, new LocalDatabusClientSubjectProxy(databusFactory), self, healthCheckRegistry))
+                            new PartitionAwareServiceFactory<>(SubjectDatabus.class, serviceFactory, localSubjectDatabus, self, healthCheckRegistry))
                     .withMetricRegistry(metricRegistry)
                     .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
                     .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
@@ -456,6 +462,7 @@ public class EmoModule extends AbstractModule {
                                                      @SelfHostAndPort HostAndPort self, @Global CuratorFramework curator,
                                                      MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
             MultiThreadedServiceFactory<AuthQueueService> serviceFactory = new PartitionAwareServiceFactory<>(
+                    AuthQueueService.class,
                     QueueClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient),
                     new TrustedQueueService(queueService), self, healthCheckRegistry);
             AuthQueueService client = ServicePoolBuilder.create(AuthQueueService.class)
@@ -493,7 +500,7 @@ public class EmoModule extends AbstractModule {
             AuthDedupQueueService client = ServicePoolBuilder.create(AuthDedupQueueService.class)
                     .withHostDiscovery(hostDiscovery)
                     .withServiceFactory(new PartitionAwareServiceFactory<>(
-                            serviceFactory, new TrustedDedupQueueService(databus), self, healthCheckRegistry))
+                            AuthDedupQueueService.class, serviceFactory, new TrustedDedupQueueService(databus), self, healthCheckRegistry))
                     .withMetricRegistry(_environment.metrics())
                     .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
                     .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
