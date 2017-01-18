@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
+import com.bazaarvoice.emodb.common.cassandra.cqldriver.AdaptiveResultSet;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
@@ -32,7 +33,6 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
@@ -57,6 +57,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
@@ -240,13 +241,12 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         int fetchSize = singleRow ? _driverConfig.getSingleRowFetchSize() : _driverConfig.getMultiRowFetchSize();
         int prefetchLimit = singleRow ? _driverConfig.getSingleRowPrefetchLimit() : _driverConfig.getMultiRowPrefetchLimit();
 
-        statement.setFetchSize(fetchSize);
-
         Session session = placement.getKeyspace().getCqlSession();
         DeltaRowGroupResultSetIterator deltaRowGroupResultSetIterator;
 
         if (async) {
-            ResultSetFuture resultSetFuture = session.executeAsync(statement);
+            ListenableFuture<ResultSet> resultSetFuture = AdaptiveResultSet.executeAdaptiveQueryAsync(session, statement, fetchSize);
+
             deltaRowGroupResultSetIterator = new DeltaRowGroupResultSetIterator(
                     resultSetFuture, prefetchLimit, placement, statement.getConsistencyLevel());
 
@@ -258,7 +258,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             });
         } else {
             try {
-                ResultSet resultSet = session.execute(statement);
+                ResultSet resultSet = AdaptiveResultSet.executeAdaptiveQuery(session, statement, fetchSize);
                 deltaRowGroupResultSetIterator = new DeltaRowGroupResultSetIterator(
                         resultSet, prefetchLimit, placement, statement.getConsistencyLevel());
             } catch (Throwable t) {
@@ -709,7 +709,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             _consistency = consistency;
         }
 
-        private DeltaRowGroupResultSetIterator(ResultSetFuture resultSetFuture, int prefetchLimit,
+        private DeltaRowGroupResultSetIterator(ListenableFuture<ResultSet> resultSetFuture, int prefetchLimit,
                                                DeltaPlacement placement, ConsistencyLevel consistency) {
             super(resultSetFuture, prefetchLimit);
             _placement = placement;
