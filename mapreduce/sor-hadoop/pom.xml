@@ -37,16 +37,17 @@
             <artifactId>core</artifactId>
             <version>${curator-extensions.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-aws-sdk</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- 3rd party dependencies -->
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
         </dependency>
 
         <!-- Test dependencies -->

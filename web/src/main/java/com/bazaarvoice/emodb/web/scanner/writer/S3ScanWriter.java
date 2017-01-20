@@ -6,12 +6,15 @@ import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.Tag;
 import com.amazonaws.util.BinaryUtils;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadService;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
@@ -69,8 +72,8 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file) {
-        ActiveUpload activeUpload = new ActiveUpload(transferKey, uri, file);
+    protected ListenableFuture<?> transfer(TransferKey transferKey, String tableName, URI uri, File file) {
+        ActiveUpload activeUpload = new ActiveUpload(transferKey, tableName, uri, file);
         ActiveUploadRunner runner = new ActiveUploadRunner(activeUpload);
         return runner.start();
     }
@@ -80,6 +83,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
      */
     private class ActiveUpload {
         private final TransferKey _transferKey;
+        private final String _tableName;
         private final URI _uri;
         private final String _bucket;
         private final String _key;
@@ -89,8 +93,9 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
         private Future<?> _uploadFuture;
         private SettableFuture<String> _resultFuture;
 
-        ActiveUpload(TransferKey transferKey, URI uri, File file) {
+        ActiveUpload(TransferKey transferKey, String tableName, URI uri, File file) {
             _transferKey = transferKey;
+            _tableName = tableName;
             _uri = uri;
             _bucket = uri.getHost();
             _key = getKeyFromPath(uri);
@@ -123,8 +128,9 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
                             }
                         };
 
-                        PutObjectRequest putObjectRequest = new PutObjectRequest(_bucket, _key, _file);
-                        putObjectRequest.setGeneralProgressListener(progressListener);
+                        PutObjectRequest putObjectRequest = new PutObjectRequest(_bucket, _key, _file)
+                                .withTagging(new ObjectTagging(ImmutableList.of(new Tag("bv.emodb.table", _tableName))))
+                                .withGeneralProgressListener(progressListener);
                         PutObjectResult result = _amazonS3.putObject(putObjectRequest);
                         _resultFuture.set(result.getETag());
                     } catch (Throwable t) {

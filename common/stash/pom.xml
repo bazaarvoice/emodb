@@ -31,12 +31,13 @@
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-aws-sdk</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- 3rd-party dependencies -->
-        <dependency>
-            <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk</artifactId>
-        </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>

@@ -25,7 +25,7 @@ public class DiscardingScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file) {
+    protected ListenableFuture<?> transfer(TransferKey transferKey, String tableName, URI uri, File file) {
         return Futures.immediateFuture(null);
     }
 
