@@ -446,7 +446,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         List<Item> items = Lists.newArrayList();
         Map<Coordinate, Item> uniqueItems = Maps.newHashMap();
         Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
-        boolean repeatable = claimTtl != null && claimTtl.getMillis() > 0;
+        boolean isPeek = claimTtl == null;
+        boolean repeatable = !isPeek && claimTtl.getMillis() > 0;
         boolean eventsAvailableForNextPoll = false;
         boolean noMaxPollTimeOut = true;
         boolean itemsDiscarded = false;
@@ -461,7 +462,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             // Query the databus event store.  Consolidate multiple events that refer to the same item.
             ConsolidatingEventSink sink = new ConsolidatingEventSink(remaining + padding);
-            boolean more = (claimTtl == null) ?
+            boolean more = isPeek ?
                     _eventStore.peek(subscription, sink) :
                     _eventStore.poll(subscription, claimTtl, sink);
             Map<Coordinate, EventList> rawEvents = sink.getEvents();
@@ -476,14 +477,18 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             List<String> recentUnknownEventIds = Lists.newArrayList();
             List<String> eventIdsToUnclaim = Lists.newArrayList();
 
-            // There's a delicate balance being targeted here.  On the one had we want to query the events from the data
-            // store in batch to reduce latency.  On the other hand querying too many large records at once may
-            // adversely delay a response.  Therefore, query for the annotated content in batches of 10.
+            // There's a delicate balance being targeted here for polls.  On the one had we want to query the events
+            // from the data store in batch to reduce latency.  On the other hand querying too many large records at
+            // once may adversely delay a response.  Therefore, polls query for the annotated content in batches
+            // of 10 and return if more than MAX_POLL_TIME has elapsed.
+            //
+            // Peeks, on the other hand, are generally performed for debugging or investigation and therefore
+            // should favor returning the requested number of events over returning quickly.
 
             Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
 
             do {
-                int annotatedBatchRemaining = 10;
+                int annotatedBatchRemaining = isPeek ? rawEvents.size() : 10;
 
                 DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
                 while (rawEventIterator.hasNext() && annotatedBatchRemaining != 0) {
