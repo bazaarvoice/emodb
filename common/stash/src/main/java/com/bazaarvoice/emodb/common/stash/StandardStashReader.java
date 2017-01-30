@@ -7,9 +7,11 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Charsets;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
@@ -136,7 +138,9 @@ public class StandardStashReader extends StashReader {
     private String readFirstLineFromS3File(String bucket, String path) {
         S3Object s3Object;
         try {
-            s3Object = _s3.getObject(bucket, path);
+            // In the unlikely case that someone replaced the Stash file with a malicious file intended to cause
+            // a memory overrun restrict the file contents fetched to a reasonably high limit.
+            s3Object = _s3.getObject(new GetObjectRequest(bucket, path).withRange(0, 2048));
         } catch (AmazonS3Exception e) {
             if (e.getStatusCode() == Response.Status.NOT_FOUND.getStatusCode()) {
                 throw new StashNotAvailableException();
@@ -144,7 +148,7 @@ public class StandardStashReader extends StashReader {
             throw e;
         }
 
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(s3Object.getObjectContent()))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), Charsets.UTF_8))) {
             return in.readLine();
         } catch (IOException e) {
             throw Throwables.propagate(e);

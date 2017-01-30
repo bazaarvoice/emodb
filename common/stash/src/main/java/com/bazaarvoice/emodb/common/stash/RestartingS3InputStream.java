@@ -38,7 +38,7 @@ public class RestartingS3InputStream extends InputStream {
 
         // Get the object synchronously so any immediate S3 errors, such as file not found, are thrown inline.
         if (range == null) {
-            s3Object = _s3.getObject(_bucket, _key);
+            s3Object = _s3.getObject(new GetObjectRequest(_bucket, _key));
             _pos = 0;
             _length = s3Object.getObjectMetadata().getContentLength();
         } else {

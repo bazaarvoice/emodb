@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
@@ -51,7 +52,7 @@ public class StashReaderTest {
         AmazonS3 s3 = mock(AmazonS3.class);
 
         final AtomicReference<String> latest = new AtomicReference<>("2015-01-01-00-00-00");
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -85,7 +86,7 @@ public class StashReaderTest {
         AmazonS3 s3 = mock(AmazonS3.class);
 
         final String latest = "2015-01-01-00-00-00";
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -98,7 +99,7 @@ public class StashReaderTest {
         Date startTime = DateTime.now().minusDays(1).toDate();
         String startTimeAsWrittenInSuccessFile = new ISO8601DateFormat().format(startTime);
         final String contents = format("%s\n%s\n%s", startTimeAsWrittenInSuccessFile, "2015-01-01T03:00:00Z", "scanId");
-        when(s3.getObject("stash-bucket", "stash/test/" + latest + "/_SUCCESS")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/" + latest + "/_SUCCESS")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -116,7 +117,7 @@ public class StashReaderTest {
     @Test
     public void testListTables() {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -147,7 +148,7 @@ public class StashReaderTest {
     @Test
     public void testListTableMetadata() {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -230,7 +231,7 @@ public class StashReaderTest {
     @Test
     public void testGetTableMetadata() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -265,7 +266,7 @@ public class StashReaderTest {
     @Test
     public void testGetSplits() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -332,7 +333,7 @@ public class StashReaderTest {
         s3Object.setObjectMetadata(objectMetadata);
 
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/2015-01-01-00-00-00/test-table/split0.gz"))
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/2015-01-01-00-00-00/test-table/split0.gz"))))
                 .thenReturn(s3Object);
 
         StashSplit stashSplit = new StashSplit("test:table", "2015-01-01-00-00-00/test-table/split0.gz", splitOut.size());
@@ -347,7 +348,7 @@ public class StashReaderTest {
     @Test
     public void testLockedView() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/_LATEST")).thenAnswer(new Answer<S3Object>() {
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
             @Override
             public S3Object answer(InvocationOnMock invocation)
                     throws Throwable {
@@ -390,6 +391,21 @@ public class StashReaderTest {
 
         assertEquals(readerTables, ImmutableList.of("table0101"));
         assertEquals(lockedViewTables, ImmutableList.of("table0102"));
+    }
+
+    private Matcher<GetObjectRequest> getsObject(final String bucket, final String key) {
+        return new BaseMatcher<GetObjectRequest>() {
+            @Override
+            public boolean matches(Object o) {
+                GetObjectRequest request = (GetObjectRequest) o;
+                return request != null && request.getBucketName().equals(bucket) && request.getKey().equals(key);
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("gets object s3://").appendText(bucket).appendText("/").appendText(key);
+            }
+        };
     }
 
     private Matcher<ListObjectsRequest> listObjectRequest(final String bucket, final String prefix, @Nullable final String marker) {
@@ -477,7 +493,7 @@ public class StashReaderTest {
         s3Object.setObjectMetadata(objectMetadata);
 
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject("stash-bucket", "stash/test/2015-01-01-00-00-00/test-table/split0.gz"))
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/2015-01-01-00-00-00/test-table/split0.gz"))))
                 .thenReturn(s3Object);
 
         StashSplit stashSplit = new StashSplit("test:table", "2015-01-01-00-00-00/test-table/split0.gz", splitOut.size());
