@@ -38,6 +38,11 @@ public class BlobStoreConfiguration {
     @JsonProperty("placementsUnderMove")
     private Map<String, String> _placementsUnderMove;
 
+    @Valid
+    @NotNull
+    @JsonProperty("approvedContentTypes")
+    private Set<String> _approvedContentTypes = ImmutableSet.of();
+
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
     }
@@ -79,6 +84,15 @@ public class BlobStoreConfiguration {
 
     public BlobStoreConfiguration setPlacementsUnderMove(Map<String, String> placementsUnderMove) {
         _placementsUnderMove = placementsUnderMove;
+        return this;
+    }
+
+    public Set<String> getApprovedContentTypes() {
+        return _approvedContentTypes;
+    }
+
+    public BlobStoreConfiguration setApprovedContentTypes(Set<String> approvedContentTypes) {
+        _approvedContentTypes = approvedContentTypes;
         return this;
     }
 }

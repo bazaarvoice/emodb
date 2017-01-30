@@ -158,6 +158,25 @@ blobStore:
         media_global_mirror: {}
         blob_global: {}
 
+  approvedContentTypes:
+  - application/json
+  - audio/aac
+  - audio/mp4
+  - audio/mpeg
+  - audio/ogg
+  - audio/wav
+  - image/bmp
+  - image/gif
+  - image/jpeg
+  - image/png
+  - image/tiff
+  - image/x-xbitmap
+  - text/plain
+  - video/mp4
+  - video/mpeg
+  - video/ogg
+  - video/quicktime
+  - video/x-msvideo
 
 queueService:
   # Cassandra connection settings

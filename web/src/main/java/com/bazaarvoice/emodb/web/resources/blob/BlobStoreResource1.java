@@ -71,6 +71,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -90,10 +91,12 @@ public class BlobStoreResource1 {
 
     private final BlobStore _blobStore;
     private final DataCenters _dataCenters;
+    private final Set<String> _approvedContentTypes;
 
-    public BlobStoreResource1(BlobStore blobStore, DataCenters dataCenters) {
+    public BlobStoreResource1(BlobStore blobStore, DataCenters dataCenters, Set<String> approvedContentTypes) {
         _blobStore = blobStore;
         _dataCenters = dataCenters;
+        _approvedContentTypes = approvedContentTypes;
     }
 
     @GET
@@ -367,12 +370,35 @@ public class BlobStoreResource1 {
 
             if (CONTENT_TYPE.matcher(name).matches()) {
                 // Set the content type so browsers, etc. can display the content natively
-                response.type(value);
+                response.type(safeResponseContentType(value));
             } else if (CONTENT_ENCODING.matcher(name).matches()) {
                 // Set the content encoding so browsers etc. can uncompress the content automatically, if necessary
                 response.header(HttpHeaders.CONTENT_ENCODING, value);
             }
         }
+    }
+
+    /**
+     * Because Emo sets the Content-Type header based on the X-BVA content type header it's possible for a client to
+     * maliciously abuse the system.  For example, a client may create a blob at "table/evil.png" with content
+     * type "text/html" and content akin to:
+     * <code>
+     *     &lt;html&gt;
+     *         &lt;script&gt;
+     *             doSomethingBad();
+     *         &lt;/script&gt;
+     *     &lt;/html&gt;
+     * </code>
+     *
+     * To prevent this we always pass back the X-BVA content type as provided but only set the HTTP response's
+     * "Content-Type" header if it matches an approved set of safe types.
+     */
+    private String safeResponseContentType(String metadataContentType) {
+        if (_approvedContentTypes.contains(metadataContentType)) {
+            return metadataContentType;
+        }
+        // Content type is not safe.  Use binary.
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 
     @PUT

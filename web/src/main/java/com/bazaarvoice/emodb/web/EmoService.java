@@ -33,6 +33,7 @@ import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
+import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResource1;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
@@ -83,6 +84,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_web;
@@ -238,9 +240,11 @@ public class EmoService extends Application<EmoConfiguration> {
 
         DataCenters dataCenters = _injector.getInstance(DataCenters.class);
         BlobStore blobStore = _injector.getInstance(BlobStore.class);
+        Set<String> approvedContentTypes = _injector.getInstance(
+                Key.get(new TypeLiteral<Set<String>>(){}, ApprovedBlobContentTypes.class));
         // Start the Blob service
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
-        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, dataCenters));
+        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, dataCenters, approvedContentTypes));
     }
 
     private void evaluateDatabus()
