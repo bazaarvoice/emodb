@@ -6,6 +6,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.io.Closeables;
+import com.google.common.io.LineReader;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import java.io.BufferedReader;
@@ -20,7 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 class StashSplitIterator extends AbstractIterator<Map<String, Object>> implements StashRowIterator {
     private final AtomicBoolean _closed = new AtomicBoolean(false);
-    private BufferedReader _in;
+    private final BufferedReader _in;
+    private final LineReader _reader;
 
     StashSplitIterator(AmazonS3 s3, String bucket, String key) {
         InputStream rawIn = new RestartingS3InputStream(s3, bucket, key);
@@ -30,8 +32,9 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
             //   Because the content may be concatenated gzip files we cannot use the default GZIPInputStream.
             //   GzipCompressorInputStream supports concatenated gzip files.
             GzipCompressorInputStream gzipIn = new GzipCompressorInputStream(rawIn, true);
-            // Create a buffered reader to read it line-by-line
             _in = new BufferedReader(new InputStreamReader(gzipIn, Charsets.UTF_8));
+            // Create a line reader
+            _reader = new LineReader(_in);
         } catch (Exception e) {
             try {
                 Closeables.close(rawIn, true);
@@ -46,7 +49,7 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
     protected Map<String, Object> computeNext() {
         String line;
         try {
-            line = _in.readLine();
+            line = _reader.readLine();
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
