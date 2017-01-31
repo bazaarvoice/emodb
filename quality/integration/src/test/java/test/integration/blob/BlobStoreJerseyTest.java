@@ -19,7 +19,6 @@ import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.blob.client.BlobStoreAuthenticator;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreStreaming;
-import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
@@ -37,6 +36,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -63,9 +63,11 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest.AUTHENTICATION_HEADER;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -94,6 +96,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     private BlobStore _server = mock(BlobStore.class);
     private DataCenters _dataCenters = mock(DataCenters.class);
     private ScheduledExecutorService _connectionManagementService = mock(ScheduledExecutorService.class);
+    private Set<String> _approvedContentTypes = ImmutableSet.of("application/json");
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule();
@@ -112,7 +115,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         permissionManager.updateForRole("blob-role-b", new PermissionUpdateRequest().permit("blob|read|b*"));
 
         return setupResourceTestRule(
-            Collections.<Object>singletonList(new BlobStoreResource1(_server, _dataCenters)),
+            Collections.<Object>singletonList(new BlobStoreResource1(_server, _dataCenters, _approvedContentTypes)),
             authIdentityManager,
             permissionManager);
     }
@@ -789,6 +792,44 @@ public class BlobStoreJerseyTest extends ResourceTest {
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
+    }
+
+    @Test
+    public void testApprovedContentType() throws Exception {
+        testContentType("{}".getBytes(Charsets.UTF_8), "application/json", "application/json");
+    }
+
+    @Test
+    public void testUnapprovedContentType() throws Exception {
+        testContentType("<html/>".getBytes(Charsets.UTF_8), "text/html", "application/octet-stream");
+    }
+
+    private void testContentType(byte[] content, String metadataContentType, String expectedContentType) throws Exception {
+        Map<String, String> attributes = ImmutableMap.of("content-type", metadataContentType);
+        BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), content.length, "00", "ff", attributes);
+        Range expectedRange = new Range(0, content.length);
+        when(_server.get("table-name", "blob-id", null))
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, out -> out.write(content)));
+
+        // The blob store client doesn't interact directly with the Content-Type header.  Therefore this test must bypass
+        // and use the underlying client.
+
+        ClientResponse response = _resourceTestRule.client().resource("/blob/1/table-name/blob-id")
+                .accept("*")
+                .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
+                .get(ClientResponse.class);
+
+        assertEquals(response.getStatus(), 200);
+        assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
+        assertEquals(response.getType().toString(), expectedContentType);
+
+        byte[] actual = new byte[content.length];
+        InputStream in = response.getEntityInputStream();
+        assertEquals(in.read(actual, 0, content.length), content.length);
+        assertEquals(in.read(), -1);
+        assertArrayEquals(actual, content);
+
+        verify(_server).get("table-name", "blob-id", null);
     }
 
     private void assertMetadataEquals(BlobMetadata expected, BlobMetadata actual) {

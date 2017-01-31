@@ -84,6 +84,7 @@ import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
 import com.bazaarvoice.emodb.web.report.ReportsModule;
+import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
 import com.bazaarvoice.emodb.web.resources.databus.LocalSubjectDatabus;
@@ -141,6 +142,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URI;
 import java.time.Clock;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -339,6 +341,11 @@ public class EmoModule extends AbstractModule {
         protected void configure() {
             bind(BlobStoreConfiguration.class).toInstance(_configuration.getBlobStoreConfiguration());
             install(new BlobStoreModule(_serviceMode, "bv.emodb.blob", _environment.metrics()));
+        }
+
+        @Provides @ApprovedBlobContentTypes
+        Set<String> provideApprovedBlobContentTypes(BlobStoreConfiguration config) {
+            return config.getApprovedContentTypes();
         }
 
         /** Provide ZooKeeper namespaced to BlobStore data. */
