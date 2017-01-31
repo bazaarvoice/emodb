@@ -59,11 +59,13 @@ abstract public class AbstractScanWriter implements ScanWriter {
         _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
     }
 
-    protected URI getUriForShard(String tableName, int shardId, long tableUuid) {
-        String sanitizedTableName = StashUtil.encodeStashTable(tableName);
+    protected URI getUriForShard(ShardMetadata metadata) {
+        String sanitizedTableName = StashUtil.encodeStashTable(metadata.getTableName());
         return UriBuilder.fromUri(_baseUri)
                 .path(sanitizedTableName)
-                .path(format("%s-%02x-%016x-%d.json%s", sanitizedTableName, shardId, tableUuid, _taskId, _compression.getExtension()))
+                .path(format("%s-%02x-%016x-%d.json%s",
+                        sanitizedTableName, metadata.getShardId(), metadata.getTableUuid(),
+                        _taskId, _compression.getExtension()))
                 .build();
     }
 

@@ -48,7 +48,7 @@ import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterFactory;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
-import com.bazaarvoice.emodb.web.scanner.writer.TransferKey;
+import com.bazaarvoice.emodb.web.scanner.writer.ShardMetadata;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferStatus;
 import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResult;
 import com.codahale.metrics.MetricRegistry;
@@ -1114,17 +1114,17 @@ public class ScanUploaderTest {
                 });
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
-        when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows("test:table", "p0", 0, 0));
+        final ShardMetadata metadata = new ShardMetadata("test:table", "p0", ImmutableMap.of(), 0, 0);
+        when(scanWriter.writeShardRows(any(ShardMetadata.class)))
+                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows(metadata));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer(new Answer<WaitForAllTransfersCompleteResult>() {
                     @Override
                     public WaitForAllTransfersCompleteResult answer(InvocationOnMock invocation) throws Throwable {
                         Duration duration = (Duration) invocation.getArguments()[0];
                         Thread.sleep(duration.getMillis());
-                        TransferKey transferKey = new TransferKey(0, 0);
                         return new WaitForAllTransfersCompleteResult(
-                                ImmutableMap.of(transferKey, new TransferStatus(transferKey, 100, 1, 0)));
+                                ImmutableMap.of(metadata, new TransferStatus(metadata, 100, 1, 0)));
                     }
                 });
 
@@ -1187,8 +1187,9 @@ public class ScanUploaderTest {
                 });
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
-        when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows("test:table", "p0", 0, 0));
+        final ShardMetadata metadata = new ShardMetadata("test:table", "p0", ImmutableMap.of(), 0, 0);
+        when(scanWriter.writeShardRows(any(ShardMetadata.class)))
+                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows(metadata));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer(new Answer<WaitForAllTransfersCompleteResult>() {
                     int _call = -1;
@@ -1198,16 +1199,15 @@ public class ScanUploaderTest {
                         // Simulated uploading one byte at a time for 20 calls in 2 attempts at 10 bytes per attempt
                         // before succeeding
                         if (++_call == 20) {
-                            return new WaitForAllTransfersCompleteResult(ImmutableMap.<TransferKey, TransferStatus>of());
+                            return new WaitForAllTransfersCompleteResult(ImmutableMap.<ShardMetadata, TransferStatus>of());
                         }
 
                         Duration duration = (Duration) invocation.getArguments()[0];
                         Thread.sleep(duration.getMillis());
-                        TransferKey transferKey = new TransferKey(0, 0);
                         int attempt = _call / 10 + 1;
                         long bytesTransferred = _call % 10;
                         return new WaitForAllTransfersCompleteResult(
-                                ImmutableMap.of(transferKey, new TransferStatus(transferKey, 20, attempt, bytesTransferred)));
+                                ImmutableMap.of(metadata, new TransferStatus(metadata, 20, attempt, bytesTransferred)));
                     }
                 });
 

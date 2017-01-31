@@ -30,7 +30,7 @@ public class MultiScanWriter implements ScanWriter {
     }
 
     @Override
-    public ShardWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
+    public ShardWriter writeShardRows(ShardMetadata metadata)
             throws IOException, InterruptedException {
 
         final List<ShardWriter> shardWriters = Lists.newArrayListWithCapacity(_scanWriters.size());
@@ -38,7 +38,7 @@ public class MultiScanWriter implements ScanWriter {
 
         // Create an output stream that tees to all of the underling shard writer's output streams
         for (ScanWriter scanWriter : _scanWriters) {
-            ShardWriter shardWriter = scanWriter.writeShardRows(tableName, placement, shardId, tableUuid);
+            ShardWriter shardWriter = scanWriter.writeShardRows(metadata);
             shardWriters.add(shardWriter);
 
             out = (out == null) ? shardWriter.getOutputStream()
@@ -66,7 +66,7 @@ public class MultiScanWriter implements ScanWriter {
 
     @Override
     public WaitForAllTransfersCompleteResult waitForAllTransfersComplete(Duration duration) throws IOException, InterruptedException {
-        Map<TransferKey, TransferStatus> allStatuses = Maps.newHashMap();
+        Map<ShardMetadata, TransferStatus> allStatuses = Maps.newHashMap();
         for (ScanWriter scanWriter : _scanWriters) {
             WaitForAllTransfersCompleteResult result = scanWriter.waitForAllTransfersComplete(duration);
             if (!result.isComplete()) {

@@ -6,13 +6,13 @@ import java.util.Map;
  * Simple object for the results of {@link TemporaryFileScanWriter#waitForAllTransfersComplete(org.joda.time.Duration)}.
  */
 public class WaitForAllTransfersCompleteResult {
-    private final Map<TransferKey, TransferStatus> _statusMap;
+    private final Map<ShardMetadata, TransferStatus> _statusMap;
 
-    public WaitForAllTransfersCompleteResult(Map<TransferKey, TransferStatus> statusMap) {
+    public WaitForAllTransfersCompleteResult(Map<ShardMetadata, TransferStatus> statusMap) {
         _statusMap = statusMap;
     }
 
-    public Map<TransferKey, TransferStatus> getActiveTransferStatusMap() {
+    public Map<ShardMetadata, TransferStatus> getActiveTransferStatusMap() {
         return _statusMap;
     }
 
