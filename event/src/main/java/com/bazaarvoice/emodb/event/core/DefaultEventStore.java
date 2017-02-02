@@ -166,12 +166,13 @@ public class DefaultEventStore implements EventStore {
 
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
-    public void addAllAndPeek(String channel, Collection<ByteBuffer> events, EventSink sink) {
+    public boolean addAllAndPeek(String channel, Collection<ByteBuffer> events, EventSink sink) {
         checkNotNull(channel, "channel");
         checkNotNull(events, "events");
 
         if (events.isEmpty()) {
-            return;
+            // No events were provided, so by definition there aren't any more
+            return false;
         }
 
         DaoEventSink daoSink = new DaoEventSink(Integer.MAX_VALUE, sink);
@@ -180,6 +181,8 @@ public class DefaultEventStore implements EventStore {
         if (isDebugLoggingEnabled(channel)) {
             _log.debug("addAllAndPeek {} count={} extra={}", channel, events.size(), events.size() - daoSink.getCount());
         }
+
+        return daoSink.hasMore();
     }
 
     @ParameterizedTimed(type="DefaultEventStore")
@@ -234,19 +237,20 @@ public class DefaultEventStore implements EventStore {
 
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
-    public void addAllAndPoll(final String channel, final Collection<ByteBuffer> events,
+    public boolean addAllAndPoll(final String channel, final Collection<ByteBuffer> events,
                               final Duration claimTtl, final EventSink sink) {
         checkNotNull(channel, "channel");
         checkNotNull(events, "events");
         checkClaimTtl(claimTtl);
 
         if (events.isEmpty()) {
-            return;
+            // No events were provided, so by definition there aren't any more
+            return false;
         }
 
-        _claimStore.withClaimSet(channel, new Function<ClaimSet, Void>() {
+        return _claimStore.withClaimSet(channel, new Function<ClaimSet, Boolean>() {
             @Override
-            public Void apply(final ClaimSet claims) {
+            public Boolean apply(final ClaimSet claims) {
                 // Protect from abusive clients that use long TTLs but never ack messages.
                 int hardLimit = getClaimsAllowed(claims, Limits.MAX_CLAIMS_OUTSTANDING);
 
@@ -258,7 +262,7 @@ public class DefaultEventStore implements EventStore {
                             channel, events.size(), claimTtl, events.size() - daoSink.getCount());
                 }
 
-                return null;
+                return daoSink.hasMore();
             }
         });
     }

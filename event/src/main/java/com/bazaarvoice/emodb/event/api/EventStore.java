@@ -16,13 +16,13 @@ public interface EventStore extends BaseEventStore {
      * Equivalent to {@code addAll(channel, events)} followed immediately by {@code peek(channel, limit)}, but likely
      * more efficient.  The events added will be passed to the sink until the sink limit is satisfied.
      */
-    void addAllAndPeek(String channel, Collection<ByteBuffer> events, EventSink sink);
+    boolean addAllAndPeek(String channel, Collection<ByteBuffer> events, EventSink sink);
 
     /**
      * Equivalent to {@code addAll(channel, events)} followed immediately by {@code poll(channel, claimTtl, limit)},
      * but likely more efficient.  The events added will be passed to the sink until the sink limit is satisfied.
      */
-    void addAllAndPoll(String channel, Collection<ByteBuffer> events, Duration claimTtl, EventSink sink);
+    boolean addAllAndPoll(String channel, Collection<ByteBuffer> events, Duration claimTtl, EventSink sink);
 
     /** Reads all events in the channel, passing them to the specified sink {@code batchSize} at a time. */
     void scan(String channel, Predicate<ByteBuffer> filter, ScanSink sink, int batchSize, Date since);
