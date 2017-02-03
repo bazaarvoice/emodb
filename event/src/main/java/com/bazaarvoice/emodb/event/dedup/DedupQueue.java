@@ -33,6 +33,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -216,14 +217,14 @@ public class DedupQueue extends AbstractIdleService {
         }
     }
 
-    private void addAndPeekOrPollReadChannel(Collection<ByteBuffer> records, @Nullable Duration claimTtl, TrackingEventSink sink) {
+    private boolean addAndPeekOrPollReadChannel(Collection<ByteBuffer> records, @Nullable Duration claimTtl, TrackingEventSink sink) {
         if (records.isEmpty()) {
-            return;
+            return false;
         }
         if (claimTtl == null) {
-            _eventStore.addAllAndPeek(_readChannel, records, sink);
+            return _eventStore.addAllAndPeek(_readChannel, records, sink);
         } else {
-            _eventStore.addAllAndPoll(_readChannel, records, claimTtl, sink);
+            return _eventStore.addAllAndPoll(_readChannel, records, claimTtl, sink);
         }
     }
 
@@ -276,19 +277,23 @@ public class DedupQueue extends AbstractIdleService {
         int padding = 0;
         long stopAt = System.currentTimeMillis() + SORTED_QUEUE_TIMEOUT.getMillis();  // Don't loop forever
         long remainingTime;
+        // As events are drained from the sorted queue to the read channel keep track of whether there were more events
+        // than were accepted by the sink.
+        AtomicBoolean moreEventsInReadChannel = new AtomicBoolean(false);
         while (!sink.isDone() && !queue.isEmpty() && (remainingTime = stopAt - System.currentTimeMillis()) > 0) {
             queue.drainTo(new Consumer() {
                 @Override
                 public void consume(List<ByteBuffer> records) {
                     // The records will be deleted from the PersistentSortedQueue when this method returns, so to avoid
                     // possible data loss we *must* copy them to persistent storage (ie. read channel) before returning.
-                    addAndPeekOrPollReadChannel(filterDuplicates(records, unique), claimTtl, sink);
+                    boolean more = addAndPeekOrPollReadChannel(filterDuplicates(records, unique), claimTtl, sink);
+                    moreEventsInReadChannel.set(more);
                 }
             }, sink.remaining() + padding, Duration.millis(remainingTime));
             // Increase the padding each time in case the sink finds lots of events it can consolidate.
             padding = Math.min(padding + 10, 1000);
         }
-        return !queue.isEmpty();
+        return !queue.isEmpty() || moreEventsInReadChannel.get();
     }
 
     private enum Drained {
