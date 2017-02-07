@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>0.0.2-rpatel-SNAPSHOT</version>
+        <version>5.4.27-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
