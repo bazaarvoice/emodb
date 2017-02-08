@@ -48,7 +48,7 @@
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
-        <yumrepo.s3RepositoryPath>s3://example-bucket/path/to/yum-repo</yumrepo.s3RepositoryPath>
+        <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
     </properties>
