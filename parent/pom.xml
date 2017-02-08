@@ -31,7 +31,7 @@
         <curator-extensions.version>1.4.1</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
         <guava.version>16.0.1</guava.version>
-        <guice.version>3.0</guice.version>
+        <guice.version>4.0</guice.version>
         <jackson.version>2.4.5</jackson.version>
         <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.2</ostrich.version>
