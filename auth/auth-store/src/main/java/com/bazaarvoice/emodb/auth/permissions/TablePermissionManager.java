@@ -87,7 +87,7 @@ public class TablePermissionManager implements PermissionManager {
                 TimeUUIDs.newUUID(),
                 createDelta(request),
                 new AuditBuilder().setLocalHost().setComment("update permissions").build(),
-                WriteConsistency.STRONG);
+                WriteConsistency.GLOBAL);
     }
 
     private Delta createDelta(PermissionUpdateRequest request) {
@@ -126,7 +126,7 @@ public class TablePermissionManager implements PermissionManager {
                 TimeUUIDs.newUUID(),
                 Deltas.delete(),
                 new AuditBuilder().setLocalHost().setComment("delete permissions").build(),
-                WriteConsistency.STRONG);
+                WriteConsistency.GLOBAL);
 
     }
 
