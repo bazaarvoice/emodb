@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.auth;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
-import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
+import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
+import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.mgt.SecurityManager;
@@ -22,8 +22,8 @@ public class SecurityManagerBuilder {
     private final static String DEFAULT_REALM_NAME = "DefaultRealm";
 
     protected String _realmName = DEFAULT_REALM_NAME;
-    protected AuthIdentityManager<ApiKey> _authIdentityManager;
-    protected PermissionManager _permissionManager;
+    protected AuthIdentityReader<ApiKey> _authIdentityReader;
+    protected PermissionReader _permissionReader;
     protected String _anonymousId;
     protected CacheManager _cacheManager;
 
@@ -43,13 +43,13 @@ public class SecurityManagerBuilder {
         return this;
     }
 
-    public SecurityManagerBuilder withAuthIdentityManager(AuthIdentityManager<ApiKey> authIdentityManager) {
-        _authIdentityManager = checkNotNull(authIdentityManager, "authIdentityManager");
+    public SecurityManagerBuilder withAuthIdentityReader(AuthIdentityReader<ApiKey> authIdentityReader) {
+        _authIdentityReader = checkNotNull(authIdentityReader, "authIdentityReader");
         return this;
     }
 
-    public SecurityManagerBuilder withPermissionManager(PermissionManager permissionManager) {
-        _permissionManager = checkNotNull(permissionManager, "permissionManager");
+    public SecurityManagerBuilder withPermissionReader(PermissionReader permissionReader) {
+        _permissionReader = checkNotNull(permissionReader, "permissionReader");
         return this;
     }
 
@@ -69,12 +69,12 @@ public class SecurityManagerBuilder {
     }
 
     public EmoSecurityManager build() {
-        checkNotNull(_authIdentityManager, "authIdentityManager not set");
-        checkNotNull(_permissionManager, "permissionManager not set");
+        checkNotNull(_authIdentityReader, "authIdentityManager not set");
+        checkNotNull(_permissionReader, "permissionManager not set");
         if(_cacheManager == null) { // intended for test use
             _cacheManager = new GuavaCacheManager(null);
         }
-        ApiKeyRealm realm = new ApiKeyRealm(_realmName, _cacheManager, _authIdentityManager, _permissionManager, _anonymousId);
+        ApiKeyRealm realm = new ApiKeyRealm(_realmName, _cacheManager, _authIdentityReader, _permissionReader, _anonymousId);
         LifecycleUtils.init(realm);
 
         return new ApiKeySecurityManager(realm);

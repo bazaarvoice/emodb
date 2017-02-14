@@ -5,7 +5,9 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
@@ -128,17 +130,15 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole("table-role", new PermissionUpdateRequest().permit("sor|*|*"));
-        permissionManager.updateForRole("tables-a-role", new PermissionUpdateRequest().permit("sor|read|a*"));
-        permissionManager.updateForRole("tables-b-role", new PermissionUpdateRequest().permit("sor|read|b*"));
-        permissionManager.updateForRole(
-                "facade-role", new PermissionUpdateRequest().permit("facade|*|*"));
-        permissionManager.updateForRole(
-                "reviews-only-role", new PermissionUpdateRequest().permit("sor|*|if({..,\"type\":\"review\"})"));
-        permissionManager.updateForRole(
-                "standard", new PermissionUpdateRequest().permit(DefaultRoles.standard.getPermissions()));
-        permissionManager.updateForRole(
-                "update-with-events", new PermissionUpdateRequest().permit("sor|update|*"));
+        RoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        roleManager.createRole(new RoleIdentifier(null, "table-role"), null, ImmutableSet.of("sor|*|*"));
+        roleManager.createRole(new RoleIdentifier(null, "tables-a-role"), null, ImmutableSet.of("sor|read|a*"));
+        roleManager.createRole(new RoleIdentifier(null, "tables-b-role"), null, ImmutableSet.of("sor|read|b*"));
+        roleManager.createRole(new RoleIdentifier(null, "facade-role"), null, ImmutableSet.of("facade|*|*"));
+        roleManager.createRole(new RoleIdentifier(null, "reviews-only-role"), null, ImmutableSet.of("sor|*|if({..,\"type\":\"review\"})"));
+        roleManager.createRole(new RoleIdentifier(null, "standard"), null, DefaultRoles.standard.getPermissions());
+        roleManager.createRole(new RoleIdentifier(null, "update-with-events"), null, ImmutableSet.of("sor|update|*"));
 
         return setupResourceTestRule(Collections.<Object>singletonList(new DataStoreResource1(_server, mock(DataStoreAsync.class))), authIdentityManager, permissionManager);
     }

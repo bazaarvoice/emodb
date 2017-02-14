@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.web.auth.resource.ConditionResource;
 import com.google.common.collect.ImmutableSet;
@@ -152,12 +153,14 @@ public enum DefaultRoles {
         return _permissions;
     }
 
-    public static boolean isDefaultRole(String role) {
-        if (role == null) {
+    public static boolean isDefaultRole(RoleIdentifier id) {
+        // Default roles exist with no group, so if the ID has a group it's not a default role.
+        if (id == null || id.getGroup() != null) {
             return false;
         }
+        String name = id.getName();
         for (DefaultRoles defaultRole : DefaultRoles.values()) {
-            if (defaultRole.name().equals(role)) {
+            if (defaultRole.name().equals(name)) {
                 return true;
             }
         }

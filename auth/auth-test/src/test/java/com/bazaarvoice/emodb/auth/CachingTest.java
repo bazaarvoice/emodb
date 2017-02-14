@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.auth.permissions.CacheManagingPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
+import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
@@ -87,11 +88,11 @@ public class CachingTest {
         authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
         authIdentityDAO.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("testrole")));
 
-        permissionDAO.updateForRole("testrole", new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
+        permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"), new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
         ResourceTestAuthUtil.setUpResources(resourceTestRuleBuilder, SecurityManagerBuilder.create()
-                .withAuthIdentityManager(_authIdentityManager)
-                .withPermissionManager(_permissionManager)
+                .withAuthIdentityReader(_authIdentityManager)
+                .withPermissionReader(_permissionManager)
                 .withCacheManager(_cacheManager)
                 .withAnonymousAccessAs("anon")
                 .build());
@@ -106,7 +107,7 @@ public class CachingTest {
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         verify(_authIdentityManager, times(2)).getIdentity("testkey");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getAllForRole("testrole");
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getPermissions(PermissionIDs.forRole("testrole"));
         verify(_permissionManager).getPermissionResolver();
         verifyNoMoreInteractions(_permissionManager, _authIdentityManager);
     }
@@ -118,7 +119,7 @@ public class CachingTest {
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         verify(_authIdentityManager, times(2)).getIdentity("testkey");
         verify(_authIdentityManager).getIdentity("othertestkey");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getAllForRole("testrole");
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getPermissions(PermissionIDs.forRole("testrole"));
         verify(_permissionManager).getPermissionResolver();
         verifyNoMoreInteractions(_permissionManager, _authIdentityManager);
     }
@@ -137,14 +138,14 @@ public class CachingTest {
     public void testInvalidateByMutation() throws Exception {
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
-        _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
+        _permissionCaching.updatePermissions(PermissionIDs.forRole("othertestrole"), new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("othertestrole")));
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         verify(_authIdentityManager, times(6)).getIdentity("testkey");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 3)).getAllForRole("testrole");
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 3)).getPermissions(PermissionIDs.forRole("testrole"));
         verify(_permissionManager).getPermissionResolver();
         verifyNoMoreInteractions(_permissionManager, _authIdentityManager);
     }
@@ -154,12 +155,12 @@ public class CachingTest {
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         testGetWithMissingPermissions("testkey", "USA", "Austin");
         testGetWithMissingPermissions("testkey", "USA", "Austin");
-        _permissionCaching.updateForRole("testrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
+        _permissionCaching.updatePermissions(PermissionIDs.forRole("testrole"), new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
         testGetWithMatchingPermissions("testkey", "USA", "Austin");
         testGetWithMatchingPermissions("testkey", "USA", "Austin");
         testGetWithMatchingPermissions("testkey", "Spain", "Madrid");
         verify(_authIdentityManager, times(4)).getIdentity("testkey");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 2)).getAllForRole("testrole");
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 2)).getPermissions(PermissionIDs.forRole("testrole"));
         verify(_permissionManager).getPermissionResolver();
         verifyNoMoreInteractions(_permissionManager, _authIdentityManager);
     }
@@ -172,7 +173,7 @@ public class CachingTest {
 
         testGetWithMissingPermissions("othertestkey", "USA", "Austin");
         testGetWithMissingPermissions("othertestkey", "USA", "Austin");
-        _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
+        _permissionCaching.updatePermissions(PermissionIDs.forRole("othertestrole"), new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
         _authIdentityCaching.updateIdentity(new ApiKey("othertestkey", "id1", ImmutableSet.of("testrole", "othertestrole")));
 
         testGetWithMatchingPermissions("othertestkey", "USA", "Austin"); // +1 othertestkey, +1 othertestrole
@@ -184,8 +185,8 @@ public class CachingTest {
 
         verify(_authIdentityManager, times(4)).getIdentity("testkey");
         verify(_authIdentityManager, times(4)).getIdentity("othertestkey");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 2)).getAllForRole("testrole");
-        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getAllForRole("othertestrole");
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 2)).getPermissions(PermissionIDs.forRole("testrole"));
+        verify(_permissionManager, times(INVOCATIONS_PER_ROLE * 1)).getPermissions(PermissionIDs.forRole("othertestrole"));
         verify(_permissionManager).getPermissionResolver();
         verifyNoMoreInteractions(_permissionManager, _authIdentityManager);
     }

@@ -10,9 +10,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
-import com.google.common.base.Function;
-import com.google.common.base.Predicates;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -20,10 +17,11 @@ import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 import org.apache.shiro.authz.permission.PermissionResolver;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -50,13 +48,10 @@ public class TablePermissionManager implements PermissionManager {
     }
 
     @Override
-    public Set<Permission> getAllForRole(String role) {
-        return getAll(getRoleKey(role));
-    }
-
-    private Set<Permission> getAll(String key) {
+    public Set<Permission> getPermissions(String id) {
+        checkNotNull(id, "id");
         validateTable();
-        Map<String, Object> map = _dataStore.get(_tableName, key, ReadConsistency.STRONG);
+        Map<String, Object> map = _dataStore.get(_tableName, id, ReadConsistency.STRONG);
         return extractPermissionsFromRecord(map);
     }
 
@@ -73,17 +68,14 @@ public class TablePermissionManager implements PermissionManager {
     }
 
     @Override
-    public void updateForRole(String role, PermissionUpdateRequest request) {
-        update(getRoleKey(role), request);
-    }
-
-    private void update(String key, PermissionUpdateRequest request) {
+    public void updatePermissions(String id, PermissionUpdateRequest request) {
+        checkNotNull(id, "id");
         checkNotNull(request, "request");
         validateTable();
 
         _dataStore.update(
                 _tableName,
-                key,
+                id,
                 TimeUUIDs.newUUID(),
                 createDelta(request),
                 new AuditBuilder().setLocalHost().setComment("update permissions").build(),
@@ -99,6 +91,9 @@ public class TablePermissionManager implements PermissionManager {
         for (String permissionString : request.getRevoked()) {
             builder.remove("perm_" + validated(permissionString));
         }
+        if (request.isRevokeRest()) {
+            builder.removeRest();
+        }
 
         return builder.build();
     }
@@ -113,16 +108,13 @@ public class TablePermissionManager implements PermissionManager {
     }
 
     @Override
-    public void revokeAllForRole(String role) {
-        revokeAll(getRoleKey(role));
-    }
-
-    private void revokeAll(String key) {
+    public void revokePermissions(String id) {
+        checkNotNull(id, "id");
         validateTable();
 
         _dataStore.update(
                 _tableName,
-                key,
+                id,
                 TimeUUIDs.newUUID(),
                 Deltas.delete(),
                 new AuditBuilder().setLocalHost().setComment("delete permissions").build(),
@@ -134,28 +126,12 @@ public class TablePermissionManager implements PermissionManager {
     public Iterable<Map.Entry<String, Set<Permission>>> getAll() {
         validateTable();
 
-        // Wrap the table scan in an iterable
-        Iterable<Map<String, Object>> recordIterable = new Iterable<Map<String, Object>>() {
-            @Override
-            public Iterator<Map<String, Object>> iterator() {
-                return _dataStore.scan(_tableName, null, Long.MAX_VALUE, ReadConsistency.STRONG);
-            }
+        return () -> {
+            Iterator<Map<String, Object>> records = _dataStore.scan(_tableName, null, Long.MAX_VALUE, ReadConsistency.STRONG);
+            return StreamSupport.stream(Spliterators.spliteratorUnknownSize(records, 0), false)
+                    .map(record -> Maps.immutableEntry(Intrinsic.getId(record), extractPermissionsFromRecord(record)))
+                    .iterator();
         };
-
-        // Transform and filter records that are associated with roles
-        return FluentIterable.from(recordIterable)
-                .transform(new Function<Map<String, Object>, Map.Entry<String, Set<Permission>>>() {
-                    @Nullable
-                    @Override
-                    public Map.Entry<String, Set<Permission>> apply(Map<String, Object> map) {
-                        String role = getRoleFromKey(Intrinsic.getId(map));
-                        if (role != null) {
-                            return Maps.immutableEntry(role, extractPermissionsFromRecord(map));
-                        }
-                        return null;
-                    }
-                })
-                .filter(Predicates.notNull());
     }
 
     @Override
@@ -180,24 +156,4 @@ public class TablePermissionManager implements PermissionManager {
             _tableValidated = true;
         }
     }
-
-    // The reason we have "role:name" and not just name as the key is for backwards compatibility.
-    // We used to have "principal:name" as we used to allow permissions attached directly to API keys instead of roles.
-    // We have since deprecated directly attaching permissions to API Key. However, we need to keep the old naming convention.
-    private String getRoleKey(String role) {
-        checkNotNull(role, "role");
-        return "role:" + role;
-    }
-
-    /**
-     * Returns the role from a raw key of the form "role:name" or null if the key does not start with "role:".
-     */
-    @Nullable
-    private String getRoleFromKey(String key) {
-        if (key != null && key.startsWith("role:")) {
-            return key.substring(5);
-        }
-        return null;
-    }
-
 }

@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
+import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.google.common.collect.ImmutableMap;
@@ -90,8 +91,8 @@ public class ResourcePermissionsTest {
         ResourceTestRule.Builder resourceTestRuleBuilder = ResourceTestRule.builder();
 
         ResourceTestAuthUtil.setUpResources(resourceTestRuleBuilder, SecurityManagerBuilder.create()
-                .withAuthIdentityManager(_authIdentityDAO)
-                .withPermissionManager(_permissionDAO)
+                .withAuthIdentityReader(_authIdentityDAO)
+                .withPermissionReader(_permissionDAO)
                 .withAnonymousAccessAs("anon")
                 .build());
 
@@ -165,7 +166,7 @@ public class ResourcePermissionsTest {
 
     private void testGetWithMissingPermission(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        _permissionDAO.updateForRole("testrole", new PermissionUpdateRequest().permit("country|get|Spain"));
+        _permissionDAO.updatePermissions("testrole", new PermissionUpdateRequest().permit("country|get|Spain"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
@@ -188,7 +189,7 @@ public class ResourcePermissionsTest {
 
     private void testGetWithMatchingPermissions(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        _permissionDAO.updateForRole("testrole",
+        _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
@@ -212,7 +213,7 @@ public class ResourcePermissionsTest {
 
     private void testGetWithMatchingWildcardPermissions(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        _permissionDAO.updateForRole("testrole",
+        _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|*", "country|*|*"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
@@ -236,7 +237,7 @@ public class ResourcePermissionsTest {
 
     private void testGetWithNonMatchingWildcardPermission(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        _permissionDAO.updateForRole("testrole",
+        _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|*|Portugal"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
@@ -260,7 +261,7 @@ public class ResourcePermissionsTest {
 
     private void testGetWithEscapedPermission(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
-        _permissionDAO.updateForRole("testrole",
+        _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Pipe\\|Town", "country|get|Star\\*Nation"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Star*Nation", "Pipe|Town", "testkey");
@@ -284,7 +285,7 @@ public class ResourcePermissionsTest {
 
     private void testAnonymousWithPermission(PermissionCheck permissionCheck) throws Exception {
         _authIdentityDAO.updateIdentity(new ApiKey("anon", "id1", ImmutableSet.of("anonrole")));
-        _permissionDAO.updateForRole("anonrole",
+        _permissionDAO.updatePermissions(PermissionIDs.forRole("anonrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);

@@ -21,8 +21,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *
  *     SecurityManager securityManager = SecurityManagerBuilder.create()
  *             .withRealmName("MyRealm")
- *             .withAuthIdentityManager(identityManager)
- *             .withPermissionManager(permissionManager)
+ *             .withAuthIdentityReader(identityManager)
+ *             .withPermissionReader(permissionManager)
  *             .build();
  *
  *     new DropWizardAuthConfigurator(securityManager).configure(environment);
