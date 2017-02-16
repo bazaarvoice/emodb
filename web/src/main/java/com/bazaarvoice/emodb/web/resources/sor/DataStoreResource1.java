@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.resources.sor;
 
+import com.bazaarvoice.emodb.auth.ParamRequiresPermissions;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
@@ -323,7 +324,8 @@ public class DataStoreResource1 {
     public Map<String, Object> get(@PathParam ("table") String table,
                                    @PathParam ("key") String key,
                                    @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                   @QueryParam ("debug") BooleanParam debug) {
+                                   @QueryParam ("debug") BooleanParam debug,
+                                   @ParamRequiresPermissions("sor|update|{table}") @QueryParam ("showHidden") BooleanParam showHidden) {
         Map<String, Object> content = _dataStore.get(table, key, consistency.get());
         // if debugging, sort the json result so it's easier to understand in a browser
         return optionallyOrdered(content, debug);

@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
+import com.bazaarvoice.emodb.auth.ParamRequiresPermissions;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -8,12 +9,18 @@ import com.sun.jersey.api.core.HttpRequestContext;
 import com.sun.jersey.api.model.AbstractMethod;
 import com.sun.jersey.spi.container.ResourceFilter;
 import com.sun.jersey.spi.container.ResourceFilterFactory;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.mgt.SecurityManager;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.Path;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MultivaluedMap;
+import java.lang.reflect.Parameter;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -66,15 +73,43 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
         LinkedList<ResourceFilter> filters = Lists.newLinkedList();
 
         // Check the resource
-        RequiresPermissions permAnnotation = am.getResource().getAnnotation(RequiresPermissions.class);
-        if (permAnnotation != null) {
-            filters.add(new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()), permAnnotation.logical(), createSubstitutionMap(permAnnotation, am)));
+        {
+            final RequiresPermissions permAnnotation = am.getResource().getAnnotation(RequiresPermissions.class);
+            if (permAnnotation != null) {
+                filters.add(new AuthorizationResourceFilter(
+                    ImmutableList.copyOf(permAnnotation.value()),
+                    permAnnotation.logical(),
+                    createSubstitutionMap(permAnnotation.value(), am)
+                ));
+            }
         }
 
         // Check the method
-        permAnnotation = am.getAnnotation(RequiresPermissions.class);
-        if (permAnnotation != null) {
-            filters.add(new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()), permAnnotation.logical(), createSubstitutionMap(permAnnotation, am)));
+        {
+            final RequiresPermissions permAnnotation = am.getAnnotation(RequiresPermissions.class);
+            if (permAnnotation != null) {
+                filters.add(new AuthorizationResourceFilter(
+                    ImmutableList.copyOf(permAnnotation.value()),
+                    permAnnotation.logical(),
+                    createSubstitutionMap(permAnnotation.value(), am)
+                ));
+            }
+        }
+
+        // Check the parameters
+        {
+            for (Parameter parameter: am.getMethod().getParameters()) {
+                final ParamRequiresPermissions permAnnotation = parameter.getAnnotation(ParamRequiresPermissions.class);
+                if (permAnnotation != null) {
+                    final QueryParam queryParamAnnotation = parameter.getAnnotation(QueryParam.class);
+                    filters.add(new AuthorizationParameterFilter(
+                        queryParamAnnotation.value(),
+                        ImmutableList.copyOf(permAnnotation.value()),
+                        adapt(permAnnotation.logical()),
+                        createSubstitutionMap(permAnnotation.value(), am)
+                    ));
+                }
+            }
         }
 
         // If we're doing authorization or if authentication is explicitly requested then add it as the first filter
@@ -87,8 +122,15 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
         return filters;
     }
 
-    private Map<String,Function<HttpRequestContext, String>> createSubstitutionMap(RequiresPermissions permAnnotation, AbstractMethod am) {
-        return createSubstitutionMap(permAnnotation.value(), am);
+    private Logical adapt(final ParamRequiresPermissions.CustomLogical customLogical) {
+        switch (customLogical) {
+            case AND:
+                return Logical.AND;
+            case OR:
+                return Logical.OR;
+            default:
+                throw new IllegalArgumentException();
+        }
     }
 
     /**

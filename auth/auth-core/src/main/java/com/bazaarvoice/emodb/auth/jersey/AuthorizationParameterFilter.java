@@ -19,18 +19,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Resource filter for methods which require authorization.  The subject should already be authenticated prior
+ * Resource filter for parameters which require authorization.  The subject should already be authenticated prior
  * to this filter executing.
  */
 @SuppressWarnings("Duplicates")
-public class AuthorizationResourceFilter implements ResourceFilter, ContainerRequestFilter {
+public class AuthorizationParameterFilter implements ResourceFilter, ContainerRequestFilter {
 
+    private final String parameter;
     private final String[] _permissions;
     private final Logical _logical;
     private final Map<String, Function<HttpRequestContext, String>> _substitutions;
 
-    public AuthorizationResourceFilter(List<String> permissions, Logical logical,
-                                       Map<String, Function<HttpRequestContext, String>> substitutions) {
+    public AuthorizationParameterFilter(String parameter,
+                                        List<String> permissions,
+                                        Logical logical,
+                                        Map<String, Function<HttpRequestContext, String>> substitutions) {
+        this.parameter = parameter;
         _permissions = permissions.toArray(new String[permissions.size()]);
         _logical = logical;
         _substitutions = substitutions;
@@ -52,25 +56,27 @@ public class AuthorizationResourceFilter implements ResourceFilter, ContainerReq
      */
     @Override
     public ContainerRequest filter(ContainerRequest request) {
-        Subject subject = ThreadContext.getSubject();
+        if (request.getQueryParameters().containsKey(parameter)) {
+            Subject subject = ThreadContext.getSubject();
 
-        String[] permissions = resolvePermissions(request);
+            String[] permissions = resolvePermissions(request);
 
-        if (permissions.length == 1 || _logical == Logical.AND) {
-            // Shortcut call to check all permissions at once
-            subject.checkPermissions(permissions);
-        } else {
-            // Check each permission until any passes
-            boolean anyPermitted = false;
-            int p = 0;
-            while (!anyPermitted) {
-                try {
-                    subject.checkPermission(permissions[p]);
-                    anyPermitted = true;
-                } catch (AuthorizationException e) {
-                    // If this is the last permission then pass the exception along
-                    if (++p == permissions.length) {
-                        throw e;
+            if (permissions.length == 1 || _logical == Logical.AND) {
+                // Shortcut call to check all permissions at once
+                subject.checkPermissions(permissions);
+            } else {
+                // Check each permission until any passes
+                boolean anyPermitted = false;
+                int p = 0;
+                while (!anyPermitted) {
+                    try {
+                        subject.checkPermission(permissions[p]);
+                        anyPermitted = true;
+                    } catch (AuthorizationException e) {
+                        // If this is the last permission then pass the exception along
+                        if (++p == permissions.length) {
+                            throw e;
+                        }
                     }
                 }
             }
