@@ -71,10 +71,18 @@ public class DataStoreClient implements AuthDataStore {
 
     private final EmoClient _client;
     private final UriBuilder _dataStore;
+    private final boolean showHiddenFields;
 
     public DataStoreClient(URI endPoint, EmoClient client) {
         _client = checkNotNull(client, "client");
         _dataStore = EmoUriBuilder.fromUri(endPoint);
+        showHiddenFields = false;
+    }
+
+    public DataStoreClient(URI endPoint, EmoClient client, boolean showHiddenFields) {
+        _client = checkNotNull(client, "client");
+        _dataStore = EmoUriBuilder.fromUri(endPoint);
+        this.showHiddenFields = showHiddenFields;
     }
 
     @Override
@@ -297,6 +305,7 @@ public class DataStoreClient implements AuthDataStore {
             URI uri = _dataStore.clone()
                     .segment(table, key)
                     .queryParam("consistency", consistency)
+                    .queryParam("showHiddenFields", flag(showHiddenFields))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -694,5 +703,9 @@ public class DataStoreClient implements AuthDataStore {
 
     private Object[] optional(Object queryArg) {
         return (queryArg != null) ? new Object[]{queryArg} : new Object[0];
+    }
+
+    private Object[] flag(boolean flag) {
+        return (flag) ? new Object[]{ true } : new Object[0];
     }
 }

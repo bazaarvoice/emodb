@@ -65,6 +65,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.Stubber;
+import org.mockito.verification.VerificationMode;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
@@ -81,6 +82,7 @@ import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
@@ -109,6 +111,8 @@ public class DataStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_REVIEWS_ONLY = "reviews-only-key";
     private static final String APIKEY_STANDARD = "standard-key";
     private static final String APIKEY_STANDARD_UPDATE = "standard-update";
+    private static final String APIKEY_READ = "read-key";
+    private static final String APIKEY_UPDATE = "update-key";
 
     private DataStore _server = mock(DataStore.class);
     private DataCenters _dataCenters = mock(DataCenters.class);
@@ -125,9 +129,14 @@ public class DataStoreJerseyTest extends ResourceTest {
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", ImmutableSet.of("reviews-only-role")));
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", ImmutableSet.of("standard")));
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", ImmutableSet.of("update-with-events")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ, "id6", ImmutableSet.of("read-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UPDATE, "id7", ImmutableSet.of("update-role")));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
+        permissionManager.updateForRole("read-role", new PermissionUpdateRequest().permit("sor|read|*"));
+        permissionManager.updateForRole("update-role", new PermissionUpdateRequest().permit("sor|read|*", "sor|update|*"));
+
         permissionManager.updateForRole("table-role", new PermissionUpdateRequest().permit("sor|*|*"));
         permissionManager.updateForRole("tables-a-role", new PermissionUpdateRequest().permit("sor|read|a*"));
         permissionManager.updateForRole("tables-b-role", new PermissionUpdateRequest().permit("sor|read|b*"));
@@ -154,9 +163,14 @@ public class DataStoreJerseyTest extends ResourceTest {
             .usingCredentials(apiKey);
     }
 
+    private DataStore hiddenFieldsClient(String apiKey) {
+        return DataStoreAuthenticator.proxied(new DataStoreClient(URI.create("/sor/1"), new JerseyEmoClient(_resourceTestRule.client()), true))
+            .usingCredentials(apiKey);
+    }
+
     @Test
     public void testGetDocRestricted() {
-        final ImmutableMap<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer");
+        final ImmutableMap<String, Object> doc = ImmutableMap.of("asdf", "qwer");
         when(_server.get("a-table-1", "k", ReadConsistency.STRONG)).thenReturn(doc);
         {
             final Map<String, Object> map = sorClient(APIKEY_READ_TABLES_A).get("a-table-1", "k");
@@ -172,6 +186,36 @@ public class DataStoreJerseyTest extends ResourceTest {
             }
         }
     }
+
+    @Test
+    public void testGetDocHidden() {
+        {
+            final ImmutableMap<String, Object> storedDoc = ImmutableMap.of("asdf", "qwer", "~hidden.attr1", "value");
+            when(_server.get("h-table", "k", ReadConsistency.STRONG)).thenReturn(storedDoc);
+        }
+        {
+            final Map<String, Object> result = sorClient(APIKEY_READ).get("h-table", "k");
+            assertEquals(ImmutableMap.of("asdf", "qwer"), result);
+        }
+        {
+            try {
+                hiddenFieldsClient(APIKEY_READ).get("h-table", "k");
+                fail("should have thrown");
+            } catch (Exception e) {
+                assertTrue(e instanceof UnauthorizedException);
+            }
+        }
+        {
+            final Map<String, Object> result = sorClient(APIKEY_UPDATE).get("h-table", "k");
+            assertEquals(ImmutableMap.of("asdf", "qwer"), result);
+        }
+        {
+            final Map<String, Object> result = hiddenFieldsClient(APIKEY_UPDATE).get("h-table", "k");
+            assertEquals(ImmutableMap.of("asdf", "qwer", "~hidden.attr1", "value"), result);
+        }
+        verify(_server, times(3)).get("h-table", "k", ReadConsistency.STRONG);
+    }
+
 
     @Test
     public void testGetDocTimelineRestricted() {

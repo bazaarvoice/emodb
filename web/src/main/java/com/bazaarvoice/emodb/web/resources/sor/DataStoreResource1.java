@@ -38,6 +38,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -325,10 +326,11 @@ public class DataStoreResource1 {
                                    @PathParam ("key") String key,
                                    @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
                                    @QueryParam ("debug") BooleanParam debug,
-                                   @ParamRequiresPermissions("sor|update|{table}") @QueryParam ("showHidden") BooleanParam showHidden) {
+                                   @ParamRequiresPermissions("sor|update|{table}") @QueryParam ("showHiddenFields") BooleanParam showHiddenFields) {
         Map<String, Object> content = _dataStore.get(table, key, consistency.get());
         // if debugging, sort the json result so it's easier to understand in a browser
-        return optionallyOrdered(content, debug);
+        final Map<String, Object> optionallyOrdered = optionallyOrdered(content, debug);
+        return maybeStripHidden(optionallyOrdered, showHiddenFields);
     }
 
     /**
@@ -944,6 +946,22 @@ public class DataStoreResource1 {
         }
 
         return new LoggingIterator<>(peekingIterator, _log);
+    }
+
+    private static Map<String, Object> maybeStripHidden(Map<String, Object> content, BooleanParam showHidden) {
+        if (showHidden != null && showHidden.get()) {
+            return content;
+        } else {
+            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+
+            for (Map.Entry<String, Object> entry : content.entrySet()) {
+                if (!entry.getKey().startsWith("~hidden.")) {
+                    builder.put(entry.getKey(), entry.getValue());
+                }
+            }
+
+            return builder.build();
+        }
     }
 
     private static <T> T optionallyOrdered(T content, BooleanParam debug) {
