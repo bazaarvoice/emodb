@@ -115,11 +115,12 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
     @Inject
     public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
-                            CqlDriverConfiguration driverConfig, MetricRegistry metricRegistry) {
+                            CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
+                            MetricRegistry metricRegistry) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
         _placementCache = placementCache;
         _driverConfig = driverConfig;
-        _changeEncoder = new DefaultChangeEncoder();
+        _changeEncoder = changeEncoder;
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
     }

@@ -34,15 +34,10 @@ import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
 import com.bazaarvoice.emodb.sor.core.LocalDataStore;
 import com.bazaarvoice.emodb.sor.core.StashRoot;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.SorCqlSettingsTask;
 import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
@@ -59,8 +54,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.BootstrapTables;
 import com.bazaarvoice.emodb.table.db.astyanax.CQLSessionForHintsPollerMap;
 import com.bazaarvoice.emodb.table.db.astyanax.CurrentDataCenter;
-import com.bazaarvoice.emodb.table.db.astyanax.DataCopyDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
 import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
@@ -205,17 +198,11 @@ public class DataStoreModule extends PrivateModule {
                 "__system_sor:table_uuid", 0xab33556547b99d25L,
                 "__system_sor:data_center", 0x33f1f082cffc2c2fL));
 
-        bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
-        bind(DataReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
-        bind(DataWriterDAO.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
-        bind(DataCopyDAO.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
-        bind(DataPurgeDAO.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
+        // Bind all DAOs from the DAO module
+        install(new DAOModule());
+
         bind(AuditStore.class).to(DefaultAuditStore.class).asEagerSingleton();
-
-        // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
-        // This needs to be done for just about anything that has only public dependencies.
-        bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
-
+        
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
@@ -442,5 +429,4 @@ public class DataStoreModule extends PrivateModule {
         }
         return moveMap;
     }
-
 }

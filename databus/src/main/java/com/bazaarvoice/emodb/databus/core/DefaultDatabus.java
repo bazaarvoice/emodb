@@ -477,7 +477,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             List<String> recentUnknownEventIds = Lists.newArrayList();
             List<String> eventIdsToUnclaim = Lists.newArrayList();
 
-            // There's a delicate balance being targeted here for polls.  On the one had we want to query the events
+            // There's a delicate balance being targeted here for polls.  On the one hand we want to query the events
             // from the data store in batch to reduce latency.  On the other hand querying too many large records at
             // once may adversely delay a response.  Therefore, polls query for the annotated content in batches
             // of 10 and return if more than MAX_POLL_TIME has elapsed.
@@ -577,8 +577,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             } while (rawEventIterator.hasNext() && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
 
             // Abandon claims in excess of what could be resolved within a reasonable amount of time
-            rawEventIterator.forEachRemaining(entry ->
-                    entry.getValue().getEventAndChangeIds().forEach(eventData -> eventIdsToUnclaim.add(eventData.first())));
+            if (rawEventIterator.hasNext()) {
+                _log.debug("Subscriber polled for more events than could be resolved in {}: {}", MAX_POLL_TIME, subscription);
+                rawEventIterator.forEachRemaining(entry ->
+                        entry.getValue()
+                                .getEventAndChangeIds()
+                                .stream()
+                                .map(Pair::first)
+                                .forEach(eventIdsToUnclaim::add));
+            }
             // Abandon claims from above plus if we claimed more items than necessary to satisfy the specified limit.
             if (!eventIdsToUnclaim.isEmpty()) {
                 _eventStore.renew(subscription, eventIdsToUnclaim, Duration.ZERO, false);

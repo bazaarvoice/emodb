@@ -95,12 +95,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     public AstyanaxDataWriterDAO(AstyanaxDataReaderDAO readerDao,
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
+                                 ChangeEncoder changeEncoder,
                                  MetricRegistry metricRegistry) {
         _readerDao = checkNotNull(readerDao, "readerDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
         _auditStore = checkNotNull(auditStore, "auditStore");
-        _changeEncoder = new DefaultChangeEncoder();
+        _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
     }

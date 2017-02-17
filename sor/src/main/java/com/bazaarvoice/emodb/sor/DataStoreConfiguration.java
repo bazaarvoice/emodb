@@ -54,6 +54,11 @@ public class DataStoreConfiguration {
 
     @Valid
     @NotNull
+    @JsonProperty("deltaEncodingVersion")
+    private int _deltaEncodingVersion = 3;
+
+    @Valid
+    @NotNull
     @JsonProperty("stashRoot")
     private Optional<String> _stashRoot = Optional.absent();
 
@@ -139,6 +144,15 @@ public class DataStoreConfiguration {
 
     public DataStoreConfiguration setStashRoot(Optional<String> stashRoot) {
         _stashRoot = stashRoot;
+        return this;
+    }
+
+    public int getDeltaEncodingVersion() {
+        return _deltaEncodingVersion;
+    }
+
+    public DataStoreConfiguration setDeltaEncodingVersion(int deltaEncodingVersion) {
+        _deltaEncodingVersion = deltaEncodingVersion;
         return this;
     }
 }

@@ -23,6 +23,8 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 class DefaultChangeEncoder implements ChangeEncoder {
 
     private enum Encoding {
@@ -37,14 +39,18 @@ class DefaultChangeEncoder implements ChangeEncoder {
     private final Encoding _deltaEncoding;
 
     public DefaultChangeEncoder() {
-        // To support a rolling upgrade the default constructor uses the legacy D2 encoding for new deltas.
-        // Once all Emo instances in an environment have been upgraded a new version should be released where the
-        // default constructor does not use legacy encoding.
-        this(true);
+        // Default constructor uses the latest version.
+        this(3);
     }
 
-    public DefaultChangeEncoder(boolean useLegacyEncoding) {
-        _deltaEncoding = useLegacyEncoding ? Encoding.D2 : Encoding.D3;
+    public DefaultChangeEncoder(int deltaEncodingVersion) {
+        // To support a rolling upgrade between delta encodings the caller can specify which of the two most recent
+        // delta encoding versions to use.  When upgrading the version should be deployed as the old version so that
+        // old instances can read deltas written by the new instances.  Once all old instances have been terminated
+        // the encoding version can be flipped to the new version.
+
+        checkArgument(deltaEncodingVersion == 2 || deltaEncodingVersion == 3, "Only delta encoding versions 2 and 3 are permitted");
+        _deltaEncoding = deltaEncodingVersion == 2 ? Encoding.D2 : Encoding.D3;
     }
 
     @Override
