@@ -35,7 +35,7 @@ public final class Change {
     private final History _history;
     private final Set<String> _tags;
 
-    Change(@JsonProperty("id") UUID id,
+    public Change(@JsonProperty("id") UUID id,
            @JsonProperty("delta") @Nullable Delta delta,
            @JsonProperty("audit") @Nullable Audit audit,
            @JsonProperty("compaction") @Nullable Compaction compaction,

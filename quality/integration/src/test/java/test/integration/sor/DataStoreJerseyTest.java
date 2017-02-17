@@ -24,6 +24,7 @@ import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.DefaultTable;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
+import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.Table;
@@ -38,13 +39,21 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreStreaming;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
+import com.bazaarvoice.emodb.sor.delta.ConditionalDelta;
+import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.delta.Literal;
+import com.bazaarvoice.emodb.sor.delta.MapDelta;
+import com.bazaarvoice.emodb.sor.delta.impl.LiteralImpl;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.DefaultRoles;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -62,6 +71,7 @@ import org.joda.time.format.ISODateTimeFormat;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.Answers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.Stubber;
@@ -79,6 +89,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -240,6 +251,80 @@ public class DataStoreJerseyTest extends ResourceTest {
                 assertTrue(e instanceof UnauthorizedException);
             }
         }
+    }
+
+    @Test
+    public void testGetDocTimelineHidden() {
+        Audit audit = new AuditBuilder().setLocalHost().build();
+        List<Change> expected = ImmutableList.of(
+                new ChangeBuilder(TimeUUIDs.newUUID())
+                    .with(audit)
+                    .with(new Compaction(
+                        1,
+                        TimeUUIDs.newUUID(),
+                        TimeUUIDs.newUUID(),
+                        "",
+                        TimeUUIDs.newUUID(),
+                        TimeUUIDs.newUUID(),
+                        Deltas.literal(ImmutableMap.of("a", 1, "~hidden.b", 2))
+                    ))
+                    .with(new History(
+                        TimeUUIDs.newUUID(),
+                        ImmutableMap.of("e", 5, "~hidden.f", 6),
+                        Deltas.literal(ImmutableMap.of("g", 7, "~hidden.h", 8))
+                    ))
+                    .build(),
+            new ChangeBuilder(TimeUUIDs.newUUID())
+                    .with(audit)
+                    .with(Deltas.conditional(
+                        Conditions.mapBuilder().contains("c",3).contains("~hidden.d", 4).build(),
+                        Deltas.mapBuilder().put("i",9).put("~hidden.j", 10).build()
+                    ))
+                    .build()
+        );
+
+        when(_server.getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG))
+                .thenAnswer(new Answer<Iterator<Change>>() {
+                    @Override public Iterator<Change> answer(final InvocationOnMock invocation) throws Throwable {
+                        return expected.iterator();
+                    }
+                });
+
+        {
+            final Iterator<Change> result = sorClient(APIKEY_READ).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
+            assertFalse(JsonHelper.asJson(result.next()).contains("~hidden"));
+            assertFalse(JsonHelper.asJson(result.next()).contains("~hidden"));
+            assertFalse(result.hasNext());
+        }
+        {
+            try {
+                final DataStore dataStore = hiddenFieldsClient(APIKEY_READ);
+                dataStore.getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
+                fail("should have thrown");
+            } catch (Exception e) {
+                assertTrue(e instanceof UnauthorizedException);
+            }
+        }
+        {
+            final Iterator<Change> result = sorClient(APIKEY_UPDATE).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
+            final String firstJson = JsonHelper.asJson(result.next());
+            assertFalse(firstJson.contains("~hidden"));
+            final String secondJson = JsonHelper.asJson(result.next());
+            assertFalse(secondJson.contains("~hidden"));
+            assertFalse(result.hasNext());
+        }
+        {
+            final Iterator<Change> result = hiddenFieldsClient(APIKEY_UPDATE).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
+            final String firstJson = JsonHelper.asJson(result.next());
+            assertTrue(firstJson.contains("~hidden.b"));
+            assertTrue(firstJson.contains("~hidden.f"));
+            assertTrue(firstJson.contains("~hidden.h"));
+            final String secondJson = JsonHelper.asJson(result.next());
+            assertTrue(secondJson.contains("~hidden.d"));
+            assertTrue(secondJson.contains("~hidden.j"));
+            assertFalse(result.hasNext());
+        }
+        verify(_server, times(3)).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
     }
 
     @Test public void testScanRestricted() {

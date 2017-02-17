@@ -340,6 +340,7 @@ public class DataStoreClient implements AuthDataStore {
                     .queryParam("reversed", reversed)
                     .queryParam("limit", limit)
                     .queryParam("consistency", consistency)
+                    .queryParam("showHiddenFields", flag(showHiddenFields))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)

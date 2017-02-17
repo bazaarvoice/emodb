@@ -11,6 +11,8 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
+import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -20,17 +22,43 @@ import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.condition.AndCondition;
+import com.bazaarvoice.emodb.sor.condition.ComparisonCondition;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
+import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
+import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.EqualCondition;
+import com.bazaarvoice.emodb.sor.condition.InCondition;
+import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
+import com.bazaarvoice.emodb.sor.condition.IsCondition;
+import com.bazaarvoice.emodb.sor.condition.LikeCondition;
+import com.bazaarvoice.emodb.sor.condition.MapCondition;
+import com.bazaarvoice.emodb.sor.condition.NotCondition;
+import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.impl.ConstantConditionImpl;
+import com.bazaarvoice.emodb.sor.condition.impl.EqualConditionImpl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
+import com.bazaarvoice.emodb.sor.delta.ConditionalDelta;
+import com.bazaarvoice.emodb.sor.delta.Delete;
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.DeltaVisitor;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDelta;
+import com.bazaarvoice.emodb.sor.delta.NoopDelta;
+import com.bazaarvoice.emodb.sor.delta.SetDelta;
+import com.bazaarvoice.emodb.sor.delta.impl.ConditionalDeltaImpl;
+import com.bazaarvoice.emodb.sor.delta.impl.LiteralImpl;
+import com.bazaarvoice.emodb.sor.delta.impl.MapDeltaImpl;
+import com.bazaarvoice.emodb.sor.delta.impl.SetDeltaImpl;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
+import com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
 import com.codahale.metrics.annotation.Timed;
@@ -90,6 +118,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHiddenDispatch;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 
@@ -281,7 +310,7 @@ public class DataStoreResource1 {
             notes = "Returns a TableOptions object",
             response = TableOptions.class
     )
-    public TableOptions getTableOptions(@PathParam ("table") String table) {
+    public TableOptions getTableOptions(@PathParam("table") String table) {
         return _dataStore.getTableOptions(table);
     }
 
@@ -307,7 +336,7 @@ public class DataStoreResource1 {
             notes = "Returns a Table object",
             response = Table.class
     )
-    public Table getTableMetadata(@PathParam ("table") String table) {
+    public Table getTableMetadata(@PathParam("table") String table) {
         return _dataStore.getTableMetadata(table);
     }
 
@@ -352,14 +381,17 @@ public class DataStoreResource1 {
                                         @QueryParam ("end") String endParam,
                                         @QueryParam ("reversed") @DefaultValue ("true") BooleanParam reversed,
                                         @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
-                                        @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency) {
+                                        @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                                        @ParamRequiresPermissions ("sor|update|{table}") @QueryParam ("showHiddenFields") BooleanParam showHiddenFields) {
         // For the REST API, start & end may be either UUIDs or ISO 8601 timestamps.  If timestamps, they are inclusive
         // w/granularity of a millisecond so adjust upper endpoints to be the last valid time UUID for the millisecond.
         UUID start = parseUuidOrTimestamp(startParam, reversed.get());
         UUID end = parseUuidOrTimestamp(endParam, !reversed.get());
 
-        return streamingIterator(_dataStore.getTimeline(table, key, includeContentData.get(),
-                includeAuditInformation.get(), start, end, reversed.get(), limit.get(), consistency.get()), null);
+        return strippingHiddenFieldsIterator(
+            streamingIterator(_dataStore.getTimeline(table, key, includeContentData.get(),
+                includeAuditInformation.get(), start, end, reversed.get(), limit.get(), consistency.get()), null),
+            showHiddenFields);
     }
 
     /**
@@ -948,19 +980,39 @@ public class DataStoreResource1 {
         return new LoggingIterator<>(peekingIterator, _log);
     }
 
+    private static Iterator<Change> strippingHiddenFieldsIterator(Iterator<Change> iterator, BooleanParam showHidden) {
+        if (showHidden != null && showHidden.get()) {
+            return iterator;
+        } else {
+            return new Iterator<Change>() {
+                @Override public boolean hasNext() {
+                    return iterator.hasNext();
+                }
+
+                @Override public Change next() {
+                    final Change next = iterator.next();
+                    if (next == null) {
+                        return null;
+                    } else {
+                        return new Change(
+                            next.getId(),
+                            next.getDelta() == null? null : stripHiddenDispatch(next.getDelta()),
+                            next.getAudit(),
+                            next.getCompaction() == null? null : stripHiddenDispatch(next.getCompaction()),
+                            next.getHistory() == null? null : stripHiddenDispatch(next.getHistory()),
+                            next.getTags()
+                            );
+                    }
+                }
+            };
+        }
+    }
+
     private static Map<String, Object> maybeStripHidden(Map<String, Object> content, BooleanParam showHidden) {
         if (showHidden != null && showHidden.get()) {
             return content;
         } else {
-            final ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-
-            for (Map.Entry<String, Object> entry : content.entrySet()) {
-                if (!entry.getKey().startsWith("~hidden.")) {
-                    builder.put(entry.getKey(), entry.getValue());
-                }
-            }
-
-            return builder.build();
+            return stripHiddenDispatch(content);
         }
     }
 
