@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.privacy;
 
+import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -7,6 +8,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,9 +17,11 @@ public class HiddenFieldStripper {
     private HiddenFieldStripper() {}
 
     @SuppressWarnings("unchecked")
-    public static <T> T stripHiddenDispatch(final T o) {
+    public static <T> T stripHidden(final T o) {
         if (o instanceof Delta) {
             return (T) ((Delta) o).visit(new StrippingDeltaVisitor(), null);
+        } else if (o instanceof Change) {
+            return (T) stripHiddenFromChange((Change) o);
         } else if (o instanceof Compaction) {
             return (T) stripHiddenFromCompaction((Compaction) o);
         } else if (o instanceof History) {
@@ -33,6 +37,34 @@ public class HiddenFieldStripper {
         }
     }
 
+    public static <T> Iterator<T> strippingIterator(final Iterator<T> iterator) {
+        return new Iterator<T>() {
+            @Override public boolean hasNext() {
+                return iterator.hasNext();
+            }
+
+            @Override public T next() {
+                final T next = iterator.next();
+                if (next == null) {
+                    return null;
+                } else {
+                    return stripHidden(next);
+                }
+            }
+        };
+    }
+
+    private static Change stripHiddenFromChange(final Change o) {
+        return new Change(
+            o.getId(),
+            o.getDelta() == null? null : stripHidden(o.getDelta()),
+            o.getAudit(),
+            o.getCompaction() == null? null : stripHidden(o.getCompaction()),
+            o.getHistory() == null? null : stripHidden(o.getHistory()),
+            o.getTags()
+        );
+    }
+
     private static Compaction stripHiddenFromCompaction(final Compaction o) {
         return new Compaction(
             o.getCount(),
@@ -41,7 +73,7 @@ public class HiddenFieldStripper {
             o.getCutoffSignature(),
             o.getLastContentMutation(),
             o.getLastMutation(),
-            stripHiddenDispatch(o.getCompactedDelta()),
+            stripHidden(o.getCompactedDelta()),
             o.getLastTags()
         );
     }
@@ -49,15 +81,15 @@ public class HiddenFieldStripper {
     private static History stripHiddenFromHistory(final History o) {
         return new History(
             o.getChangeId(),
-            stripHiddenDispatch(o.getContent()),
-            stripHiddenDispatch(o.getDelta())
+            stripHidden(o.getContent()),
+            stripHidden(o.getDelta())
         );
     }
 
     private static <T> Set<T> stripHiddenFromSet(final Set<T> o) {
         final ImmutableSet.Builder<T> builder = ImmutableSet.builder();
         for (T elem : o) {
-            builder.add(stripHiddenDispatch(elem));
+            builder.add(stripHidden(elem));
         }
         return builder.build();
     }
@@ -65,7 +97,7 @@ public class HiddenFieldStripper {
     private static <T> List<T> stripHiddenFromList(final List<T> list) {
         final ImmutableList.Builder<T> builder = ImmutableList.builder();
         for (T elem : list) {
-            builder.add(stripHiddenDispatch(elem));
+            builder.add(stripHidden(elem));
         }
         return builder.build();
     }

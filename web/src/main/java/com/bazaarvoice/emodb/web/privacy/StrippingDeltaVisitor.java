@@ -1,7 +1,5 @@
 package com.bazaarvoice.emodb.web.privacy;
 
-import com.bazaarvoice.emodb.sor.condition.Condition;
-import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.delta.ConditionalDelta;
 import com.bazaarvoice.emodb.sor.delta.Delete;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -17,12 +15,12 @@ import com.bazaarvoice.emodb.sor.delta.impl.SetDeltaImpl;
 
 import javax.annotation.Nullable;
 
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHiddenDispatch;
+import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHidden;
 
 class StrippingDeltaVisitor implements DeltaVisitor<Void, Delta> {
 
     @Nullable @Override public Delta visit(final Literal delta, @Nullable final Void context) {
-        return new LiteralImpl(stripHiddenDispatch(delta.getValue()));
+        return new LiteralImpl(stripHidden(delta.getValue()));
     }
 
     @Nullable @Override public Delta visit(final NoopDelta delta, @Nullable final Void context) {
@@ -36,7 +34,7 @@ class StrippingDeltaVisitor implements DeltaVisitor<Void, Delta> {
     @Nullable @Override public Delta visit(final MapDelta delta, @Nullable final Void context) {
         return new MapDeltaImpl(
             delta.getRemoveRest(),
-            stripHiddenDispatch(delta.getEntries()),
+            stripHidden(delta.getEntries()),
             delta.getDeleteIfEmpty()
         );
     }
@@ -44,8 +42,8 @@ class StrippingDeltaVisitor implements DeltaVisitor<Void, Delta> {
     @Nullable @Override public Delta visit(final SetDelta delta, @Nullable final Void context) {
         return new SetDeltaImpl(
             delta.getRemoveRest(),
-            stripHiddenDispatch(delta.getAddedValues()),
-            stripHiddenDispatch(delta.getRemovedValues()),
+            stripHidden(delta.getAddedValues()),
+            stripHidden(delta.getRemovedValues()),
             delta.getDeleteIfEmpty()
         );
     }

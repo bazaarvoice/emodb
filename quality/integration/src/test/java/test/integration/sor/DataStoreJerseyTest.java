@@ -122,8 +122,6 @@ public class DataStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_REVIEWS_ONLY = "reviews-only-key";
     private static final String APIKEY_STANDARD = "standard-key";
     private static final String APIKEY_STANDARD_UPDATE = "standard-update";
-    private static final String APIKEY_READ = "read-key";
-    private static final String APIKEY_UPDATE = "update-key";
 
     private DataStore _server = mock(DataStore.class);
     private DataCenters _dataCenters = mock(DataCenters.class);
@@ -140,14 +138,9 @@ public class DataStoreJerseyTest extends ResourceTest {
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", ImmutableSet.of("reviews-only-role")));
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", ImmutableSet.of("standard")));
         authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", ImmutableSet.of("update-with-events")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ, "id6", ImmutableSet.of("read-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_UPDATE, "id7", ImmutableSet.of("update-role")));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole("read-role", new PermissionUpdateRequest().permit("sor|read|*"));
-        permissionManager.updateForRole("update-role", new PermissionUpdateRequest().permit("sor|read|*", "sor|update|*"));
-
         permissionManager.updateForRole("table-role", new PermissionUpdateRequest().permit("sor|*|*"));
         permissionManager.updateForRole("tables-a-role", new PermissionUpdateRequest().permit("sor|read|a*"));
         permissionManager.updateForRole("tables-b-role", new PermissionUpdateRequest().permit("sor|read|b*"));
@@ -174,11 +167,6 @@ public class DataStoreJerseyTest extends ResourceTest {
             .usingCredentials(apiKey);
     }
 
-    private DataStore hiddenFieldsClient(String apiKey) {
-        return DataStoreAuthenticator.proxied(new DataStoreClient(URI.create("/sor/1"), new JerseyEmoClient(_resourceTestRule.client()), true))
-            .usingCredentials(apiKey);
-    }
-
     @Test
     public void testGetDocRestricted() {
         final ImmutableMap<String, Object> doc = ImmutableMap.of("asdf", "qwer");
@@ -197,36 +185,6 @@ public class DataStoreJerseyTest extends ResourceTest {
             }
         }
     }
-
-    @Test
-    public void testGetDocHidden() {
-        {
-            final ImmutableMap<String, Object> storedDoc = ImmutableMap.of("asdf", "qwer", "~hidden.attr1", "value");
-            when(_server.get("h-table", "k", ReadConsistency.STRONG)).thenReturn(storedDoc);
-        }
-        {
-            final Map<String, Object> result = sorClient(APIKEY_READ).get("h-table", "k");
-            assertEquals(ImmutableMap.of("asdf", "qwer"), result);
-        }
-        {
-            try {
-                hiddenFieldsClient(APIKEY_READ).get("h-table", "k");
-                fail("should have thrown");
-            } catch (Exception e) {
-                assertTrue(e instanceof UnauthorizedException);
-            }
-        }
-        {
-            final Map<String, Object> result = sorClient(APIKEY_UPDATE).get("h-table", "k");
-            assertEquals(ImmutableMap.of("asdf", "qwer"), result);
-        }
-        {
-            final Map<String, Object> result = hiddenFieldsClient(APIKEY_UPDATE).get("h-table", "k");
-            assertEquals(ImmutableMap.of("asdf", "qwer", "~hidden.attr1", "value"), result);
-        }
-        verify(_server, times(3)).get("h-table", "k", ReadConsistency.STRONG);
-    }
-
 
     @Test
     public void testGetDocTimelineRestricted() {
@@ -251,80 +209,6 @@ public class DataStoreJerseyTest extends ResourceTest {
                 assertTrue(e instanceof UnauthorizedException);
             }
         }
-    }
-
-    @Test
-    public void testGetDocTimelineHidden() {
-        Audit audit = new AuditBuilder().setLocalHost().build();
-        List<Change> expected = ImmutableList.of(
-                new ChangeBuilder(TimeUUIDs.newUUID())
-                    .with(audit)
-                    .with(new Compaction(
-                        1,
-                        TimeUUIDs.newUUID(),
-                        TimeUUIDs.newUUID(),
-                        "",
-                        TimeUUIDs.newUUID(),
-                        TimeUUIDs.newUUID(),
-                        Deltas.literal(ImmutableMap.of("a", 1, "~hidden.b", 2))
-                    ))
-                    .with(new History(
-                        TimeUUIDs.newUUID(),
-                        ImmutableMap.of("e", 5, "~hidden.f", 6),
-                        Deltas.literal(ImmutableMap.of("g", 7, "~hidden.h", 8))
-                    ))
-                    .build(),
-            new ChangeBuilder(TimeUUIDs.newUUID())
-                    .with(audit)
-                    .with(Deltas.conditional(
-                        Conditions.mapBuilder().contains("c",3).contains("~hidden.d", 4).build(),
-                        Deltas.mapBuilder().put("i",9).put("~hidden.j", 10).build()
-                    ))
-                    .build()
-        );
-
-        when(_server.getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG))
-                .thenAnswer(new Answer<Iterator<Change>>() {
-                    @Override public Iterator<Change> answer(final InvocationOnMock invocation) throws Throwable {
-                        return expected.iterator();
-                    }
-                });
-
-        {
-            final Iterator<Change> result = sorClient(APIKEY_READ).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
-            assertFalse(JsonHelper.asJson(result.next()).contains("~hidden"));
-            assertFalse(JsonHelper.asJson(result.next()).contains("~hidden"));
-            assertFalse(result.hasNext());
-        }
-        {
-            try {
-                final DataStore dataStore = hiddenFieldsClient(APIKEY_READ);
-                dataStore.getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
-                fail("should have thrown");
-            } catch (Exception e) {
-                assertTrue(e instanceof UnauthorizedException);
-            }
-        }
-        {
-            final Iterator<Change> result = sorClient(APIKEY_UPDATE).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
-            final String firstJson = JsonHelper.asJson(result.next());
-            assertFalse(firstJson.contains("~hidden"));
-            final String secondJson = JsonHelper.asJson(result.next());
-            assertFalse(secondJson.contains("~hidden"));
-            assertFalse(result.hasNext());
-        }
-        {
-            final Iterator<Change> result = hiddenFieldsClient(APIKEY_UPDATE).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
-            final String firstJson = JsonHelper.asJson(result.next());
-            assertTrue(firstJson.contains("~hidden.b"));
-            assertTrue(firstJson.contains("~hidden.f"));
-            assertTrue(firstJson.contains("~hidden.h"));
-            final String secondJson = JsonHelper.asJson(result.next());
-            assertTrue(secondJson.contains("~hidden.d"));
-            assertTrue(secondJson.contains("~hidden.j"));
-            assertFalse(result.hasNext());
-        }
-        verify(_server, times(3)).getTimeline("h-table", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG);
     }
 
     @Test public void testScanRestricted() {

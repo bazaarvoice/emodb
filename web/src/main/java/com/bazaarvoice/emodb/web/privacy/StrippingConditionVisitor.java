@@ -26,7 +26,7 @@ import com.bazaarvoice.emodb.sor.delta.impl.ContainsConditionImpl;
 
 import javax.annotation.Nullable;
 
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHiddenDispatch;
+import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHidden;
 
 class StrippingConditionVisitor implements ConditionVisitor<Void, Condition> {
     @Nullable @Override public Condition visit(final ConstantCondition condition, @Nullable final Void context) {
@@ -34,11 +34,11 @@ class StrippingConditionVisitor implements ConditionVisitor<Void, Condition> {
     }
 
     @Nullable @Override public Condition visit(final EqualCondition condition, @Nullable final Void context) {
-        return new EqualConditionImpl(stripHiddenDispatch(condition.getValue()));
+        return new EqualConditionImpl(stripHidden(condition.getValue()));
     }
 
     @Nullable @Override public Condition visit(final InCondition condition, @Nullable final Void context) {
-        return new InConditionImpl(stripHiddenDispatch(condition.getValues()));
+        return new InConditionImpl(stripHidden(condition.getValues()));
     }
 
     @Nullable @Override public Condition visit(final IntrinsicCondition condition, @Nullable final Void context) {
@@ -50,11 +50,11 @@ class StrippingConditionVisitor implements ConditionVisitor<Void, Condition> {
     }
 
     @Nullable @Override public Condition visit(final ComparisonCondition condition, @Nullable final Void context) {
-        return new ComparisonConditionImpl(condition.getComparison(), stripHiddenDispatch(condition.getValue()));
+        return new ComparisonConditionImpl(condition.getComparison(), stripHidden(condition.getValue()));
     }
 
     @Nullable @Override public Condition visit(final ContainsCondition condition, @Nullable final Void context) {
-        return new ContainsConditionImpl(stripHiddenDispatch(condition.getValues()), condition.getContainment());
+        return new ContainsConditionImpl(stripHidden(condition.getValues()), condition.getContainment());
     }
 
     @Nullable @Override public Condition visit(final LikeCondition condition, @Nullable final Void context) {
@@ -66,14 +66,14 @@ class StrippingConditionVisitor implements ConditionVisitor<Void, Condition> {
     }
 
     @Nullable @Override public Condition visit(final AndCondition condition, @Nullable final Void context) {
-        return new AndConditionImpl(stripHiddenDispatch(condition.getConditions()));
+        return new AndConditionImpl(stripHidden(condition.getConditions()));
     }
 
     @Nullable @Override public Condition visit(final OrCondition condition, @Nullable final Void context) {
-        return new OrConditionImpl(stripHiddenDispatch(condition.getConditions()));
+        return new OrConditionImpl(stripHidden(condition.getConditions()));
     }
 
     @Nullable @Override public Condition visit(final MapCondition condition, @Nullable final Void context) {
-        return new MapConditionImpl(stripHiddenDispatch(condition.getEntries()));
+        return new MapConditionImpl(stripHidden(condition.getEntries()));
     }
 }

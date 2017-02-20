@@ -363,6 +363,7 @@ public class DataStoreClient implements AuthDataStore {
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
                     .queryParam("consistency", consistency)
+                    .queryParam("showHiddenFields", flag(showHiddenFields))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -404,6 +405,7 @@ public class DataStoreClient implements AuthDataStore {
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
                     .queryParam("consistency", consistency)
+                    .queryParam("showHiddenFields", flag(showHiddenFields))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -424,7 +426,10 @@ public class DataStoreClient implements AuthDataStore {
         checkNotNull(coordinates, "coordinates");
         checkNotNull(consistency, "consistency");
         try {
-            UriBuilder uriBuilder = _dataStore.clone().segment("_multiget").queryParam("consistency", consistency);
+            UriBuilder uriBuilder = _dataStore.clone()
+                .segment("_multiget")
+                .queryParam("consistency", consistency)
+                .queryParam("showHiddenFields", flag(showHiddenFields));
             for(Coordinate coordinate : coordinates) {
                 uriBuilder.queryParam("id", coordinate.toString());
             }
