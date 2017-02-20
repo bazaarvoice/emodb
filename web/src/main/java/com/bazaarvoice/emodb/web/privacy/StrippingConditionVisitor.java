@@ -26,7 +26,7 @@ import com.bazaarvoice.emodb.sor.delta.impl.ContainsConditionImpl;
 
 import javax.annotation.Nullable;
 
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHidden;
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 
 class StrippingConditionVisitor implements ConditionVisitor<Void, Condition> {
     @Nullable @Override public Condition visit(final ConstantCondition condition, @Nullable final Void context) {

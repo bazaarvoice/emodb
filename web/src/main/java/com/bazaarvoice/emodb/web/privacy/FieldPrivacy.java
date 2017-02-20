@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.privacy;
 
+import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
@@ -13,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class HiddenFieldStripper {
-    private HiddenFieldStripper() {}
+public class FieldPrivacy {
+    private FieldPrivacy() {}
 
     @SuppressWarnings("unchecked")
     public static <T> T stripHidden(final T o) {
@@ -26,10 +27,14 @@ public class HiddenFieldStripper {
             return (T) stripHiddenFromCompaction((Compaction) o);
         } else if (o instanceof History) {
             return (T) stripHiddenFromHistory((History) o);
+        } else if (o instanceof Event) {
+            return (T) stripHiddenFromEvent((Event) o);
         } else if (o instanceof Map) {
             return (T) stripHiddenFromMap((Map<String, Object>) o);
         } else if (o instanceof List) {
             return (T) stripHiddenFromList((List) o);
+        } else if (o instanceof Iterator) {
+            return (T) strippingIterator((Iterator) o);
         } else if (o instanceof Set) {
             return (T) stripHiddenFromSet((Set) o);
         } else {
@@ -37,7 +42,7 @@ public class HiddenFieldStripper {
         }
     }
 
-    public static <T> Iterator<T> strippingIterator(final Iterator<T> iterator) {
+    private static <T> Iterator<T> strippingIterator(final Iterator<T> iterator) {
         return new Iterator<T>() {
             @Override public boolean hasNext() {
                 return iterator.hasNext();
@@ -57,10 +62,10 @@ public class HiddenFieldStripper {
     private static Change stripHiddenFromChange(final Change o) {
         return new Change(
             o.getId(),
-            o.getDelta() == null? null : stripHidden(o.getDelta()),
+            o.getDelta() == null ? null : stripHidden(o.getDelta()),
             o.getAudit(),
-            o.getCompaction() == null? null : stripHidden(o.getCompaction()),
-            o.getHistory() == null? null : stripHidden(o.getHistory()),
+            o.getCompaction() == null ? null : stripHidden(o.getCompaction()),
+            o.getHistory() == null ? null : stripHidden(o.getHistory()),
             o.getTags()
         );
     }
@@ -83,6 +88,14 @@ public class HiddenFieldStripper {
             o.getChangeId(),
             stripHidden(o.getContent()),
             stripHidden(o.getDelta())
+        );
+    }
+
+    private static Event stripHiddenFromEvent(final Event o) {
+        return new Event(
+            o.getEventKey(),
+            stripHidden(o.getContent()),
+            o.getTags()
         );
     }
 

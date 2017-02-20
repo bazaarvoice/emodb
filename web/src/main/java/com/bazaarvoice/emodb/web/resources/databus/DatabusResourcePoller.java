@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -263,6 +264,7 @@ public class DatabusResourcePoller {
         response.flushBuffer();
     }
 
+    @VisibleForTesting
     public Response poll(Subject subject, SubjectDatabus databus, String subscription, Duration claimTtl, int limit, HttpServletRequest request,
                          boolean ignoreLongPoll, PeekOrPollResponseHelper helper) {
         Timer.Context timerContext = _pollTimer.time();
@@ -283,9 +285,10 @@ public class DatabusResourcePoller {
             if (ignoreLongPoll || !result.getEvents().isEmpty() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
                 // If ignoreLongPoll == true or we have no executor services to schedule long-polling on then always
                 // return a response, even if it's empty. Alternatively, if we have data to return - return it!
+                final List<Event> stripped = stripHidden(result.getEvents());
                 response = Response.ok()
                         .header(POLL_DATABUS_EMPTY_HEADER, String.valueOf(!result.hasMoreEvents()))
-                        .entity(helper.asEntity(result.getEvents()))
+                        .entity(helper.asEntity(stripped))
                         .build();
             } else {
                 // If the response is empty then go into async-mode and start up the runnables for our long-polling.

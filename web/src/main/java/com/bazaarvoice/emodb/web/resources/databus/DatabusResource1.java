@@ -50,6 +50,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -204,7 +205,14 @@ public class DatabusResource1 {
         // (default is false).
         PeekOrPollResponseHelper helper = getPeekOrPollResponseHelper(includeTags.get());
         List<Event> events = getClient(partitioned).peek(subject, subscription, limit.get());
-        return Response.ok().entity(helper.asEntity(events)).build();
+        // No option to show hidden fields on the databus. It's currently believed that
+        // writers will only want to show hidden fields in the SOR api for debugging purposes.
+        // If this belief is wrong, we can implement it, but we will have to do an event-by-event
+        // auth check, since all kinds of tables can be mixed in a dbus subscription.
+        // Probably the right way to handle this would be to just ignore the show directive unless you
+        // have update permission, rather than refuse the whole api request as we do in SOR.
+        final List<Event> stripped = stripHidden(events);
+        return Response.ok().entity(helper.asEntity(stripped)).build();
     }
 
     @GET
@@ -225,8 +233,8 @@ public class DatabusResource1 {
         // For backwards compatibility with older clients only include tags if explicitly requested
         // (default is false).
         PeekOrPollResponseHelper helper = getPeekOrPollResponseHelper(includeTags.get());
-        return _poller.poll(subject, getClient(partitioned), subscription, claimTtl.get(), limit.get(), request,
-                ignoreLongPoll.get(), helper);
+        final Response poll = _poller.poll(subject, getClient(partitioned), subscription, claimTtl.get(), limit.get(), request, ignoreLongPoll.get(), helper);
+        return poll;
     }
 
     private PeekOrPollResponseHelper getPeekOrPollResponseHelper(boolean includeTags) {

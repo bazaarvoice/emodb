@@ -15,7 +15,7 @@ import com.bazaarvoice.emodb.sor.delta.impl.SetDeltaImpl;
 
 import javax.annotation.Nullable;
 
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHidden;
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 
 class StrippingDeltaVisitor implements DeltaVisitor<Void, Delta> {
 

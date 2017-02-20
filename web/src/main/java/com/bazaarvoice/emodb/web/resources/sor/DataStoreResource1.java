@@ -89,8 +89,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.stripHidden;
-import static com.bazaarvoice.emodb.web.privacy.HiddenFieldStripper.strippingIterator;
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
 
@@ -975,7 +974,7 @@ public class DataStoreResource1 {
         if (showHidden != null && showHidden.get()) {
             return iterator;
         } else {
-            return strippingIterator(iterator);
+            return stripHidden(iterator);
         }
     }
 
