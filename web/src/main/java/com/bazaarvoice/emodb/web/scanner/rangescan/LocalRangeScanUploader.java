@@ -63,6 +63,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static com.bazaarvoice.emodb.web.privacy.FieldPrivacy.stripHidden;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -444,6 +445,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                 MultiTableScanResult result = resultIter.next();
 
                 Map<String, Object> content = _dataTools.toContent(result, ReadConsistency.STRONG, compactionEnabled);
+                Map<String, Object> stripped = stripHidden(content);
 
                 int shardId = result.getShardId();
                 long tableUuid = result.getTableUuid();
@@ -465,9 +467,9 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     _log.debug("Writing output file: {}", writer);
                 }
 
-                if (!Intrinsic.isDeleted(content)) {  // Ignore deleted objects
+                if (!Intrinsic.isDeleted(stripped)) {  // Ignore deleted objects
                     assert generator != null;
-                    _mapper.writeValue(generator, content);
+                    _mapper.writeValue(generator, stripped);
                     generator.writeRaw('\n');
                 }
             }
