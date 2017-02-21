@@ -91,8 +91,11 @@ public class CompactionControlJerseyTest extends ResourceTest {
 
     @Test
     public void testGetStashTime() {
-        compactionControlClient().getStashTime("1", "datacenter");
-
+        try {
+            compactionControlClient().getStashTime("1", "datacenter");
+        } catch (EmoClientException e) {
+            // we can expect this as there can be a 404 response.
+        }
         verify(_compactionControlSourceServer).getStashTime("1", "datacenter");
         verifyNoMoreInteractions(_compactionControlSourceServer);
     }

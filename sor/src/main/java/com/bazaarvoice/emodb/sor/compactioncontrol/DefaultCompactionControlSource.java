@@ -9,12 +9,18 @@ import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 
+/*
+ * Default implementation which uses ZooKeeper to store stash times just in the local data center.
+ *
+ */
 public class DefaultCompactionControlSource implements CompactionControlSource {
 
     private static final Logger _log = LoggerFactory.getLogger(DefaultCompactionControlSource.class);
@@ -29,10 +35,9 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
         checkNotNull(id, "id");
-        checkNotNull(timestamp, "timestamp");
         checkNotNull(placements, "placements");
-        checkNotNull(expiredTimestamp, "expiredTimestamp");
         checkNotNull(dataCenter, "dataCenter");
+        checkState(timestamp > System.currentTimeMillis() + Duration.ofSeconds(10).toMillis(), "specified timestamp seems to be in the past");
 
         try {
             _stashStartTimestampInfo.set(zkKey(id, dataCenter), new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
@@ -45,6 +50,7 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     @Override
     public void deleteStashTime(String id, String dataCenter) {
         checkNotNull(id, "id");
+        checkNotNull(dataCenter, "dataCenter");
 
         try {
             _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
@@ -57,8 +63,9 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
         checkNotNull(id, "id");
+        checkNotNull(dataCenter, "dataCenter");
 
-        return _stashStartTimestampInfo.get(id);
+        return _stashStartTimestampInfo.get(zkKey(id, dataCenter));
     }
 
     @Override
@@ -69,10 +76,9 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     @Override
     public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
         Map<String, StashRunTimeInfo> stashTimes = _stashStartTimestampInfo.getAll();
-        return stashTimes.size() > 0 ? stashTimes.entrySet()
-                .stream()
+        return stashTimes.size() > 0 ? stashTimes.entrySet().stream()
                 .filter(stashTime -> stashTime.getValue().getPlacements().contains(placement))
-                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                 : ImmutableMap.of();
     }
 

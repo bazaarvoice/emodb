@@ -32,9 +32,7 @@ public class CompactionControlClient implements CompactionControlSource {
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
         checkNotNull(id, "id");
-        checkNotNull(timestamp, "timestamp");
         checkNotNull(placements, "placements");
-        checkNotNull(expiredTimestamp, "expiredTimestamp");
         checkNotNull(dataCenter, "dataCenter");
 
         try {
@@ -59,6 +57,7 @@ public class CompactionControlClient implements CompactionControlSource {
     @Override
     public void deleteStashTime(String id, String dataCenter) {
         checkNotNull(id, "id");
+        checkNotNull(dataCenter, "dataCenter");
 
         try {
             URI uri = _compactionControlSource.clone()
@@ -77,6 +76,7 @@ public class CompactionControlClient implements CompactionControlSource {
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
         checkNotNull(id, "id");
+        checkNotNull(dataCenter, "dataCenter");
 
         try {
             URI uri = _compactionControlSource.clone()

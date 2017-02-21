@@ -1,16 +1,17 @@
 package com.bazaarvoice.emodb.web.compactioncontrol;
 
-import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
+import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
+import java.time.Clock;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -23,15 +24,12 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     @VisibleForTesting
     protected static final Duration POLL_INTERVAL = Duration.standardHours(1);
 
-    @VisibleForTesting
-    protected static final Long CURRENT_TIME = System.currentTimeMillis();
-
     private final CompactionControlSource _compactionControlSource;
-    private final DataCenters _dataCenters;
+    private final Clock _clock;
 
-    public CompactionControlMonitor(CompactionControlSource compactionControlSource, DataCenters dataCenters) {
+    public CompactionControlMonitor(CompactionControlSource compactionControlSource, Clock clock) {
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _clock = checkNotNull(clock, "clock");
     }
 
     @Override
@@ -46,21 +44,23 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     @Override
     protected void runOneIteration() {
         try {
-            deleteExpiredStashTimes();
+            deleteExpiredStashTimes(_clock.millis());
         } catch (Throwable t) {
             _log.error("Unexpected exception.", t);
         }
         ;
     }
 
-    private void deleteExpiredStashTimes() {
+    @VisibleForTesting
+    protected void deleteExpiredStashTimes(long currentTime) {
         try {
-            _log.debug("Checking for expired stash times at {}", CURRENT_TIME);
-            Set<String> expiredIds = Maps.filterValues(_compactionControlSource.getAllStashTimes(), value -> value.getExpiredTimestamp() > CURRENT_TIME).keySet();
-            for (String id : expiredIds) {
-                // If we are deleting the entries here, then there could be a problem which we may want to know. So setting it as an ERROR.
-                _log.error("Deleting the stash time entry for id: {}", id);
-                _compactionControlSource.deleteStashTime(id, _dataCenters.getSelf().getName());
+            _log.debug("Checking for expired stash times at {}", currentTime);
+            Map<String, StashRunTimeInfo> expiredStashTimes = _compactionControlSource.getAllStashTimes().entrySet().stream()
+                    .filter(entry -> entry.getValue().getExpiredTimestamp() < currentTime).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            for (Map.Entry<String, StashRunTimeInfo> expiredStashTimeInfo : expiredStashTimes.entrySet()) {
+                // If we are deleting the entries here, then there could be a problem which we may want to know. So setting it as a warn.
+                _log.warn("Deleting the stash time entry for id: {}", expiredStashTimeInfo.getKey());
+                _compactionControlSource.deleteStashTime(expiredStashTimeInfo.getKey(), expiredStashTimeInfo.getValue().getDataCenter());
             }
         } catch (Exception e) {
             _log.error("Unexpected exception deleting the expired stash times", e);

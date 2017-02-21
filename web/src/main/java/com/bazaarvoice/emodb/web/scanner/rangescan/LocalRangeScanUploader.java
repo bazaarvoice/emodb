@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricCounterOutputStream
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
-import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
@@ -53,6 +52,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -186,7 +186,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
     @Override
     public RangeScanUploaderResult scanAndUpload(
-            final int taskId, ScanOptions options, final String placement, ScanRange scanRange, final TableSet tableSet)
+            final int taskId, ScanOptions options, final String placement, ScanRange scanRange, final TableSet tableSet, Date stashStartTime)
             throws IOException, InterruptedException {
         checkState(!_shutdown, "Service not started");
 
@@ -252,15 +252,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             int partCountForFirstShard = 1;
             Batch batch = new Batch(context, partCountForFirstShard);
 
-            // check if there is a stash cut off time.
-            Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(placement);
-            DateTime cutoffTime = null;
-            if (stashTimeInfoMap.size() > 0) {
-                cutoffTime = new DateTime(stashTimeInfoMap.entrySet().stream()
-                        .min((entry1, entry2) -> entry1.getValue().getTimestamp() > entry2.getValue().getTimestamp() ? 1 : -1)
-                        .get().getValue().getTimestamp());
-            }
-
+            DateTime cutoffTime = new DateTime(stashStartTime);
             Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
 
             // Enforce a maximum number of results based on the scan options

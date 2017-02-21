@@ -15,6 +15,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
 
@@ -60,12 +61,15 @@ public class CompactionControlResource1 {
     @GET
     @Path ("/stash-time/{id}")
     @RequiresPermissions ("system|comp_control")
-    public StashRunTimeInfo getStashTime(@PathParam ("id") String id, @QueryParam ("dataCenter") String dataCenter) {
+    public Response getStashTime(@PathParam ("id") String id, @QueryParam ("dataCenter") String dataCenter) {
         checkArgument(!Strings.isNullOrEmpty(id), "id is required");
         checkArgument(!Strings.isNullOrEmpty(dataCenter), "datacenter is required");
 
         StashRunTimeInfo stashTimeInfo = _compactionControlSource.getStashTime(id, dataCenter);
-        return (stashTimeInfo != null) ? stashTimeInfo : new StashRunTimeInfo();
+        if (stashTimeInfo == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(stashTimeInfo).build();
     }
 
     @GET

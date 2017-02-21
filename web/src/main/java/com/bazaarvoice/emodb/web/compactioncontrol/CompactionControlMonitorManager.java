@@ -17,6 +17,7 @@ import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,6 +30,7 @@ public class CompactionControlMonitorManager {
                                     DataCenters dataCenters,
                                     @GlobalFullConsistencyZooKeeper CuratorFramework curator,
                                     @SelfHostAndPort HostAndPort self,
+                                    Clock clock,
                                     LeaderServiceTask dropwizardTask,
                                     final MetricRegistry metricRegistry) {
         LeaderService leaderService = new LeaderService(
@@ -36,7 +38,7 @@ public class CompactionControlMonitorManager {
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new CompactionControlMonitor(compactionControlSource, dataCenters);
+                        return new CompactionControlMonitor(compactionControlSource, clock);
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, metricRegistry);

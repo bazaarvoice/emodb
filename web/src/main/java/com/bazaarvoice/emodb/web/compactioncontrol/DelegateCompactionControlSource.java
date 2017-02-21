@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.web.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.slf4j.Logger;
@@ -14,15 +14,23 @@ import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/*
+ * This delegate implementation
+ * - iterates over all the datacenter sources for update and delete operations.
+ * - queries only the local datacenter for reads.
+ */
 public class DelegateCompactionControlSource implements CompactionControlSource {
 
     private static final Logger _log = LoggerFactory.getLogger(DelegateCompactionControlSource.class);
 
     private Provider<List<CompactionControlSource>> _compactionControlSourceListProvider;
+    private CompactionControlSource _localCompactionControl;
 
     @Inject
-    public DelegateCompactionControlSource(@AllCompactionControlSources Provider<List<CompactionControlSource>> compactionControlSourceListProvider) {
+    public DelegateCompactionControlSource(@AllCompactionControlSources Provider<List<CompactionControlSource>> compactionControlSourceListProvider,
+                                           @LocalCompactionControl CompactionControlSource localCompactionSource) {
         _compactionControlSourceListProvider = checkNotNull(compactionControlSourceListProvider, "compactionControlSourceListProvider");
+        _localCompactionControl = checkNotNull(localCompactionSource, "localCompactionSource");
     }
 
     @Override
@@ -52,44 +60,30 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
     @Override
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
         try {
-            for (CompactionControlSource compactionControlSource : _compactionControlSourceListProvider.get()) {
-                StashRunTimeInfo stashRunTimeInfo = compactionControlSource.getStashTime(id, dataCenter);
-                if (stashRunTimeInfo != null) {
-                    return stashRunTimeInfo;
-                }
-            }
+            return _localCompactionControl.getStashTime(id, dataCenter);
         } catch (Exception e) {
             _log.error("Failed to get stash timestamp info for id: {}", id, e);
             throw Throwables.propagate(e);
         }
-        return null;
     }
 
     @Override
     public Map<String, StashRunTimeInfo> getAllStashTimes() {
-        Map<String, StashRunTimeInfo> stashTimes = Maps.newLinkedHashMap();
         try {
-            for (CompactionControlSource compactionControlSource : _compactionControlSourceListProvider.get()) {
-                stashTimes.putAll(compactionControlSource.getAllStashTimes());
-            }
+            return _localCompactionControl.getAllStashTimes();
         } catch (Exception e) {
             _log.error("Failed to get all stash timestamps info", e);
             throw Throwables.propagate(e);
         }
-        return stashTimes;
     }
 
     @Override
     public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
-        Map<String, StashRunTimeInfo> stashTimes = Maps.newLinkedHashMap();
         try {
-            for (CompactionControlSource compactionControlSource : _compactionControlSourceListProvider.get()) {
-                stashTimes.putAll(compactionControlSource.getStashTimesForPlacement(placement));
-            }
+            return _localCompactionControl.getStashTimesForPlacement(placement);
         } catch (Exception e) {
             _log.error("Failed to get all stash timestamps info for placement: {}", placement, e);
             throw Throwables.propagate(e);
         }
-        return stashTimes;
     }
 }

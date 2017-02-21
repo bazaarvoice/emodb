@@ -340,10 +340,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         long fullConsistencyTimeStamp = _dataWriterDao.getFullConsistencyTimestamp(record.getKey().getTable());
         long rawConsistencyTimeStamp = _dataWriterDao.getRawConsistencyTimestamp(record.getKey().getTable());
         Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(record.getKey().getTable().getAvailability().getPlacement());
-        long compactionControlTimestamp = (stashTimeInfoMap.size() > 0) ? stashTimeInfoMap.entrySet().stream()
-                    .min((entry1, entry2) -> entry1.getValue().getTimestamp() > entry2.getValue().getTimestamp() ? 1 : -1)
-                    .get().getValue().getTimestamp() : System.currentTimeMillis();
-
+        long compactionControlTimestamp = stashTimeInfoMap.isEmpty() ?
+                System.currentTimeMillis() : stashTimeInfoMap.values().stream().map(StashRunTimeInfo::getTimestamp).min(Long::compareTo).get();
         return expand(record, fullConsistencyTimeStamp, rawConsistencyTimeStamp, compactionControlTimestamp, ignoreRecent, consistency);
     }
 

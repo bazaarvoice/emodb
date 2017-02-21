@@ -24,9 +24,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
     @Override
     public void updateStashTime(String id, long timestamp, List<String> placements, long expiredTimestamp, String dataCenter) {
         checkNotNull(id, "id");
-        checkNotNull(timestamp, "timestamp");
         checkNotNull(placements, "placements");
-        checkNotNull(expiredTimestamp, "expiredTimestamp");
         checkNotNull(dataCenter, "dataCenter");
 
         try {
@@ -66,7 +64,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
         return _stashStartTimestampInfo.size() > 0 ? _stashStartTimestampInfo.entrySet()
                 .stream()
                 .filter(stashTime -> stashTime.getValue().getPlacements().contains(placement))
-                .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
                 : ImmutableMap.of();
     }
 }

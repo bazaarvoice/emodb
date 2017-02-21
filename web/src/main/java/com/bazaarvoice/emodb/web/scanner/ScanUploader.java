@@ -70,7 +70,7 @@ public class ScanUploader {
         ScanStatus status = plan.toScanStatus();
 
         if (!dryRun) {
-            startScanUpload(scanId, status, options.getPlacements());
+            startScanUpload(scanId, status);
         }
 
         return status;
@@ -106,14 +106,17 @@ public class ScanUploader {
         return plan;
     }
 
-    private void startScanUpload(String scanId, ScanStatus status, Set<String> placements) {
+    private void startScanUpload(String scanId, ScanStatus status) {
         boolean scanCreated = false;
 
         try {
+            // Adding 1 minute buffer time to the actual stash start time.
+            // this is needed to allow the setting time to trickle the request to the DataStore.
+            // Also, this way the in-flight compactions can finish as usual.
+            long stashStartTime = status.getStartTime().getTime() + Duration.ofMinutes(1).toMillis();
+            long expireTime = stashStartTime + Duration.ofHours(10).toMillis();
             // Update the scan start time in Zookeeper in all data centers.
-            long currentTime = System.currentTimeMillis();
-            long expireTime = currentTime + Duration.ofHours(10).toMillis();
-            _compactionControlSource.updateStashTime(scanId, currentTime, Lists.newArrayList(placements), expireTime, _dataCenters.getSelf().getName());
+            _compactionControlSource.updateStashTime(scanId, stashStartTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
         } catch (Exception e) {
             _log.error("Failed to update the stash time for scan {}", scanId, e);
             throw Throwables.propagate(e);
@@ -127,7 +130,7 @@ public class ScanUploader {
             // Notify the workflow that the scan can be started
             _scanWorkflow.scanStatusUpdated(scanId);
 
-            // Send notification that the scan has startedcd 
+            // Send notification that the scan has started
             _stashStateListener.stashStarted(status.asPluginStashMetadata());
         } catch (Exception e) {
             _log.error("Failed to start scan and upload for scan {}", scanId, e);

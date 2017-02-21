@@ -359,7 +359,7 @@ public class ScanUploaderTest {
                 Duration.standardMinutes(5));
         uploader.start();
         try {
-            uploader.scanAndUpload(task.getId(), scanStatus.getOptions(), "placement1", task.getRange(), tableSet);
+            uploader.scanAndUpload(task.getId(), scanStatus.getOptions(), "placement1", task.getRange(), tableSet, new Date());
         } finally {
             uploader.stop();
         }
@@ -537,7 +537,7 @@ public class ScanUploaderTest {
         // Create a RangeScanUploader which will raise an uncaught exception when the scan is attempted.
         RangeScanUploader rangeScanUploader = mock(RangeScanUploader.class);
         doThrow(new RuntimeException("Mock error reading from Cassandra"))
-                .when(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class));
+                .when(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class), any(Date.class));
 
         // Set up the distributed scan range monitor
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
@@ -562,7 +562,7 @@ public class ScanUploaderTest {
         assertEquals(pendingTasks.get(0).getScanId(), id);
         assertEquals(pendingTasks.get(0).getId(), 123);
 
-        verify(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class));
+        verify(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class), any(Date.class));
         verifyNoMoreInteractions(rangeScanUploader);
     }
 
@@ -595,7 +595,7 @@ public class ScanUploaderTest {
         );
 
         RangeScanUploader rangeScanUploader = mock(RangeScanUploader.class);
-        when(rangeScanUploader.scanAndUpload(anyInt(), eq(options), eq(placement), eq(ScanRange.all()), any(TableSet.class)))
+        when(rangeScanUploader.scanAndUpload(anyInt(), eq(options), eq(placement), eq(ScanRange.all()), any(TableSet.class), any(Date.class)))
                 .thenReturn(RangeScanUploaderResult.success());
         ScanTableSetManager scanTableSetManager = mock(ScanTableSetManager.class);
 
@@ -898,7 +898,7 @@ public class ScanUploaderTest {
         RangeScanUploaderResult result;
         uploader.start();
         try {
-            result = uploader.scanAndUpload(123, options, "p0", ScanRange.all(), tableSet);
+            result = uploader.scanAndUpload(123, options, "p0", ScanRange.all(), tableSet, new Date());
         } finally {
             uploader.stop();
         }
@@ -946,7 +946,7 @@ public class ScanUploaderTest {
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
         scanStatusDAO.updateScanStatus(scanStatus);
 
-        when(rangeScanUploader.scanAndUpload(eq(123), eq(options), eq(placement), eq(originalRange), any(TableSet.class)))
+        when(rangeScanUploader.scanAndUpload(eq(123), eq(options), eq(placement), eq(originalRange), any(TableSet.class), any(Date.class)))
                 .thenReturn(RangeScanUploaderResult.resplit(resplitRange));
 
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
@@ -1089,7 +1089,7 @@ public class ScanUploaderTest {
             ScanOptions scanOptions = new ScanOptions("p0")
                     .addDestination(ScanDestination.discard());
 
-            RangeScanUploaderResult result = scanUploader.scanAndUpload(1, scanOptions, "p0", ScanRange.all(), tableSet);
+            RangeScanUploaderResult result = scanUploader.scanAndUpload(1, scanOptions, "p0", ScanRange.all(), tableSet, new Date());
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.FAILURE);
         } finally {
             uploadService.shutdownNow();
@@ -1167,7 +1167,7 @@ public class ScanUploaderTest {
         uploader.start();
 
         try {
-            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class));
+            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class), mock(Date.class));
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.FAILURE);
         } finally {
             uploader.stop();
@@ -1255,7 +1255,7 @@ public class ScanUploaderTest {
             // Given our configuration above the file will take 2 seconds to upload but we are configured to terminate
             // the upload if there was no progress for 100ms.  Therefore if this returns success then the upload
             // was not killed despite taking over 100ms, which is what this test is checking for.
-            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class));
+            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class), mock(Date.class));
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.SUCCESS);
         } finally {
             uploader.stop();

@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.client.CompactionControlClientFactory;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
-import com.bazaarvoice.emodb.sor.client.DatacenterAwareCompactionControlFactory;
 import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DefaultCompactionControlSource;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
@@ -95,21 +94,25 @@ public class CompactionControlModule extends PrivateModule {
         for (DataCenter dataCenter : dataCenters.getAll()) {
             MultiThreadedServiceFactory<CompactionControlSource> clientFactory = new CompactionControlClientFactory(serverCluster, new JerseyEmoClient(client), compControlApiKey);
 
-            ServiceEndPoint endPoint = new ServiceEndPointBuilder()
-                    .withServiceName(clientFactory.getServiceName())
-                    .withId(dataCenter.getName())
-                    .withPayload(new PayloadBuilder()
-                            .withUrl(dataCenter.getServiceUri().resolve(DataStoreClient.SERVICE_PATH))
-                            .withAdminUrl(dataCenter.getAdminUri())
-                            .toString())
-                    .build();
+            if (dataCenter.equals(dataCenters.getSelf())) {
+                compactionControlSources.add(localCompactionControlSource);
+            } else {
+                ServiceEndPoint endPoint = new ServiceEndPointBuilder()
+                        .withServiceName(clientFactory.getServiceName())
+                        .withId(dataCenter.getName())
+                        .withPayload(new PayloadBuilder()
+                                .withUrl(dataCenter.getServiceUri().resolve(DataStoreClient.SERVICE_PATH))
+                                .withAdminUrl(dataCenter.getAdminUri())
+                                .toString())
+                        .build();
 
-            compactionControlSources.add(ServicePoolBuilder.create(CompactionControlSource.class)
-                    .withHostDiscovery(new FixedHostDiscovery(endPoint))
-                    .withServiceFactory(new DatacenterAwareCompactionControlFactory<>(clientFactory, localCompactionControlSource, dataCenters.getSelf().getName(), healthCheckRegistry))
-                    .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
-                    .withMetricRegistry(metrics)
-                    .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS)));
+                compactionControlSources.add(ServicePoolBuilder.create(CompactionControlSource.class)
+                        .withHostDiscovery(new FixedHostDiscovery(endPoint))
+                        .withServiceFactory(clientFactory)
+                        .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
+                        .withMetricRegistry(metrics)
+                        .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS)));
+            }
         }
         return compactionControlSources;
     }
