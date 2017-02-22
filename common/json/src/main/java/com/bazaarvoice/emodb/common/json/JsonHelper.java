@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.common.json;
 
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -18,7 +19,10 @@ import java.util.Date;
 
 public abstract class JsonHelper {
 
-    private static final ObjectMapper JSON = Jackson.newObjectMapper().disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+    private static final ObjectMapper JSON = Jackson.newObjectMapper()
+            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .registerModule(new LazyJsonModule());
+
     private static final ObjectWriter DEFAULT_WRITER = JSON.writer();
 
     public static String asJson(Object value) {

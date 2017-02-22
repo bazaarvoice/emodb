@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.common.json;
 
+import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
+
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -19,18 +21,36 @@ public class JsonValidator {
             for (Object value : ((List<?>) obj)) {
                 checkValid(value);
             }
-        } else if (obj instanceof Map) {
-            for (Map.Entry<?, ?> entry : ((Map<?, ?>) obj).entrySet()) {
-                Object key = entry.getKey();
-                if (!(key instanceof String)) {
-                    throw new JsonValidationException("JSON map keys must be instances of String: " + key + " (class=" + (key != null ? key.getClass().getName() : "null") + ")");
+        } else if (obj instanceof LazyJsonMap) {
+            LazyJsonMap lazyJsonMap = (LazyJsonMap) obj;
+            if (lazyJsonMap.isDeserialized()) {
+                // Map is already deserialized so it can be validated as a whole with no deserialization cost.
+                validateMap(lazyJsonMap);
+            } else {
+                // The serialized JSON string contained in the instance should already be valid.
+                // For efficiency only validate any attributes on top of the original JSON.  Otherwise, validating each
+                // entry in the map could cause an unnecessary and expensive deserialization.
+                Map<String, Object> overrides = lazyJsonMap.getOverrides();
+                if (overrides != null) {
+                    validateMap(overrides);
                 }
-                checkValid(entry.getValue());
             }
+        } else if (obj instanceof Map) {
+            validateMap((Map<?, ?>) obj);
         } else {
             throw new JsonValidationException("Unsupported JSON value type: " + obj + " (class=" + obj.getClass().getName() + ")");
         }
         return obj;
+    }
+
+    private static void validateMap(Map<?,?> map) {
+        for (Map.Entry<?, ?> entry : map.entrySet()) {
+            Object key = entry.getKey();
+            if (!(key instanceof String)) {
+                throw new JsonValidationException("JSON map keys must be instances of String: " + key + " (class=" + (key != null ? key.getClass().getName() : "null") + ")");
+            }
+            checkValid(entry.getValue());
+        }
     }
 
     private static boolean isSupportedNumberType(Object obj) {

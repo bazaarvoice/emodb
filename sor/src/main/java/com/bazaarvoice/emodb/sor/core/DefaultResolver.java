@@ -52,7 +52,7 @@ public class DefaultResolver implements Resolver {
         _compactionCutoffSignature = compaction.getCutoffSignature();
         _lastCompactedMutationId = compaction.getLastMutation();
         _lastMutationId = _lastCompactedMutationId;
-        if (compaction.getCompactedDelta() != null) {
+        if (compaction.hasCompactedDelta()) {
             // We have compacted delta in this compaction. No cutoff delta was mutated as a part of this compaction.
             _content = DeltaEvaluator.eval(compaction.getCompactedDelta(), _content, _intrinsics);
             _lastAppliedTags = compaction.getLastTags();

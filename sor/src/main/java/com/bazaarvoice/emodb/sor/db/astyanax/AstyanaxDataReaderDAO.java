@@ -116,9 +116,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     private final Meter _copyMeter;
 
     @Inject
-    public AstyanaxDataReaderDAO(PlacementCache placementCache, MetricRegistry metricRegistry) {
+    public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry) {
         _placementCache = placementCache;
-        _changeEncoder = new DefaultChangeEncoder();
+        _changeEncoder = changeEncoder;
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
         _scanBatchTimer = metricRegistry.timer(getMetricName("scanBatch"));
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));

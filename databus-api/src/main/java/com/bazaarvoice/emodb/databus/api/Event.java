@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
 import com.google.common.base.Objects;
@@ -31,9 +32,21 @@ public class Event {
         return _eventKey;
     }
 
-    @JsonView(EventViews.ContentOnly.class)
+    @JsonIgnore
     public Map<String, Object> getContent() {
         return Collections.unmodifiableMap(_content);
+    }
+
+    /**
+     * For purposes of JSON serialization wrapping the content in an unmodifiable view may cause the serializer
+     * to choose a less-optimal implementation.  Since JSON serialization cannot modify the underlying content
+     * it is safe to return the original content object to the serializer.
+     */
+    @JsonView(EventViews.ContentOnly.class)
+    @JsonProperty("content")
+    private Map<String, Object> getJsonSerializingContent() {
+        //noinspection unchecked
+        return (Map<String, Object>) _content;
     }
 
     @JsonView(EventViews.WithTags.class)
