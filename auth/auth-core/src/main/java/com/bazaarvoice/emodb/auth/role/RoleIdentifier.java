@@ -49,10 +49,10 @@ public class RoleIdentifier {
     @Override
     public String toString() {
         if (_group == null) {
-            // When a role has no group the string representation is just the name.
+            // When a role has no group the string representation is just the id.
             return _id;
         }
-        // Since "/" isn't a valid character in group or role names it can be used as a separator without
+        // Since "/" isn't a valid character in groups or ids it can be used as a separator without
         // needing to encode either component.
         return _group + "/" + _id;
     }

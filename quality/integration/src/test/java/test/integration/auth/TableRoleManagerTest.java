@@ -286,10 +286,14 @@ public class TableRoleManagerTest {
     }
 
     private void createRole(RoleIdentifier id, String name, String description, Set<String> permissions) {
-        _roleManager.createRole(id, new RoleUpdateRequest()
+        RoleUpdateRequest request = new RoleUpdateRequest()
                 .withName(name)
-                .withDescription(description)
-                .withPermissionUpdate(new PermissionUpdateRequest()
-                        .permit(Objects.firstNonNull(permissions, ImmutableList.of()))));
+                .withDescription(description);
+
+        if (permissions != null) {
+            request = request.withPermissionUpdate(new PermissionUpdateRequest().permit(permissions));
+        }
+
+        _roleManager.createRole(id, request);
     }
 }

@@ -52,6 +52,10 @@ public class Role {
         return _name;
     }
 
+    public void setName(String name) {
+        _name = name;
+    }
+
     @Nullable
     public String getDescription() {
         return _description;

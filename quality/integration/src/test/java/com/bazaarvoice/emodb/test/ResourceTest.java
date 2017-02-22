@@ -53,7 +53,7 @@ public abstract class ResourceTest {
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         RoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        createRole(roleManager, null,typeName + "-role", ImmutableSet.of(typeName + "|*|*"));
+        createRole(roleManager, null, typeName + "-role", ImmutableSet.of(typeName + "|*|*"));
 
         return setupResourceTestRule(resourceList, filters, authIdentityManager, permissionManager);
     }

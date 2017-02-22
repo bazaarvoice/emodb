@@ -3,7 +3,8 @@ package com.bazaarvoice.emodb.auth.role;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 
 /**
- * Request parameter for updating a role using {@link RoleManager#updateRole(RoleIdentifier, RoleUpdateRequest)}.
+ * Request parameter for updating a role using {@link RoleManager#createRole(RoleIdentifier, RoleUpdateRequest)}
+ * or {@link RoleManager#updateRole(RoleIdentifier, RoleUpdateRequest)}.
  */
 public class RoleUpdateRequest {
 
