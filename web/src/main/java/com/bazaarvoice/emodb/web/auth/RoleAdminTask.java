@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -156,6 +158,12 @@ public class RoleAdminTask extends Task {
         } catch (AuthenticationException | AuthorizationException e) {
             _log.warn("Unauthorized attempt to access role management task");
             output.println("Not authorized");
+        } catch (Exception e) {
+            if (Throwables.getRootCause(e) instanceof TimeoutException) {
+                output.println("Timed out, try again later");
+            } else {
+                throw Throwables.propagate(e);
+            }
         } finally {
             subject.logout();
         }
