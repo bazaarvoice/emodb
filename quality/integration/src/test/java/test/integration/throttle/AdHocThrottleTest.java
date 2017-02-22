@@ -107,7 +107,7 @@ public class AdHocThrottleTest extends ResourceTest {
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         InMemoryRoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        roleManager.createRole(new RoleIdentifier(null, "all-sor-role"), null, ImmutableSet.of("sor|*|*"));
+        createRole(roleManager,null, "all-sor-role", ImmutableSet.of("sor|*|*"));
 
         return setupResourceTestRule(
                 Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)))),

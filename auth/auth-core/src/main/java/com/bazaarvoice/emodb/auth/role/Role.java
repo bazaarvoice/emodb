@@ -18,21 +18,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class Role {
 
     private final String _group;
-    private final String _name;
+    private final String _id;
+    private String _name;
     private String _description;
 
     @JsonCreator
     public Role(@Nullable @JsonProperty("group") String group,
-                @JsonProperty("name") String name,
+                @JsonProperty("id") String id,
+                @Nullable @JsonProperty("name") String name,
                 @Nullable @JsonProperty("description") String description) {
         _group = group;
-        _name = checkNotNull(name, "name");
+        _id = checkNotNull(id, "id");
+        _name = name;
         _description = description;
     }
 
     @JsonIgnore
-    public RoleIdentifier getId() {
-        return new RoleIdentifier(_group, _name);
+    public RoleIdentifier getRoleIdentifier() {
+        return new RoleIdentifier(_group, _id);
     }
     
     @Nullable
@@ -40,6 +43,11 @@ public class Role {
         return _group;
     }
 
+    public String getId() {
+        return _id;
+    }
+    
+    @Nullable
     public String getName() {
         return _name;
     }
@@ -64,13 +72,14 @@ public class Role {
 
         Role that = (Role) o;
 
-        return _name.equals(that._name) &&
+        return _id.equals(that._id) &&
+                _name.equals(that._name) &&
                 Objects.equals(_group, that._group) &&
                 Objects.equals(_description, that._description);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(_group, _name);
+        return Objects.hash(_group, _id);
     }
 }

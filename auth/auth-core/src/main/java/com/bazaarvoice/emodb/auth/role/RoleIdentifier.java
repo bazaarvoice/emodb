@@ -10,7 +10,7 @@ import java.util.Objects;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Object implementation for the unique identifier for a role.  This ID consists of the role's group and name.
+ * Object implementation for the unique identifier for a role.  This ID consists of the role's group and id.
  *
  * Note this this identifier is only used in the context of managing roles.  Shiro represents roles as Strings,
  * as demonstrated by {@link AuthorizationInfo#getRoles()}, so in all authentication and authorization interfaces
@@ -18,7 +18,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class RoleIdentifier {
     private final String _group;
-    private final String _name;
+    private final String _id;
 
     @JsonCreator
     public static RoleIdentifier fromString(String idStr) {
@@ -31,9 +31,9 @@ public class RoleIdentifier {
         return new RoleIdentifier(idStr.substring(0, s), idStr.substring(s+1));
     }
 
-    public RoleIdentifier(@Nullable String group, String name) {
+    public RoleIdentifier(@Nullable String group, String id) {
         _group = group;
-        _name = checkNotNull(name, "name");
+        _id = checkNotNull(id, "id");
     }
 
     @Nullable
@@ -41,8 +41,8 @@ public class RoleIdentifier {
         return _group;
     }
 
-    public String getName() {
-        return _name;
+    public String getId() {
+        return _id;
     }
 
     @JsonValue
@@ -50,11 +50,11 @@ public class RoleIdentifier {
     public String toString() {
         if (_group == null) {
             // When a role has no group the string representation is just the name.
-            return _name;
+            return _id;
         }
         // Since "/" isn't a valid character in group or role names it can be used as a separator without
         // needing to encode either component.
-        return _group + "/" + _name;
+        return _group + "/" + _id;
     }
 
     @Override
@@ -68,11 +68,11 @@ public class RoleIdentifier {
 
         RoleIdentifier that = (RoleIdentifier) o;
 
-        return _name.equals(that._name) && Objects.equals(_group, that._group);
+        return _id.equals(that._id) && Objects.equals(_group, that._group);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(_group, _name);
+        return Objects.hash(_group, _id);
     }
 }

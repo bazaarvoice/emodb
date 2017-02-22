@@ -6,9 +6,10 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.RoleExistsException;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -43,6 +44,10 @@ import static java.lang.String.format;
  *
  * Create or update role
  * =====================
+ *
+ * EmoDB does not distinguish between creating a new role and updating an existing role.  An API key can be associated with
+ * any role name, even one that has not been created.  However, until an administrator explicitly assigns permissions
+ * to the role it will only be able to perform actions with implicit permissions, such as reading from a SoR table.
  *
  * The following example adds databus poll permissions for subscriptions starting with "foo_" and removes poll permissions
  * for subscriptions starting with "bar_" for role "sample-role":
@@ -96,7 +101,6 @@ public class RoleAdminTask extends Task {
 
     private enum Action {
         VIEW,
-        CREATE,
         UPDATE,
         DELETE,
         CHECK,
@@ -137,11 +141,8 @@ public class RoleAdminTask extends Task {
                 case VIEW:
                     viewRole(getRole(parameters), output);
                     break;
-                case CREATE:
-                    createOrUpdateRole(getRole(parameters), parameters, output, true);
-                    break;
                 case UPDATE:
-                    createOrUpdateRole(getRole(parameters), parameters, output, false);
+                    createOrUpdateRole(getRole(parameters), parameters, output);
                     break;
                 case DELETE:
                     deleteRole(getRole(parameters), output);
@@ -161,9 +162,16 @@ public class RoleAdminTask extends Task {
     }
 
     private RoleIdentifier getRole(ImmutableMultimap<String, String> parameters) {
-        String name = getValueFromParams("role", parameters);
+        // For legacy purposes the ID field can be named either the current "id" or the legacy "role".  Whichever is
+        // used the caller must provide exactly one value.
+        List<String> ids = ImmutableList.<String>builder()
+                .addAll(parameters.get("id"))
+                .addAll(parameters.get("role"))
+                .build();
+
+        checkArgument(ids.size() == 1, "A single 'id' parameter value is required");
         String group = parameters.get("group").stream().findFirst().orElse(null);
-        return new RoleIdentifier(group, name);
+        return new RoleIdentifier(group, ids.get(0));
     }
 
     private void viewRole(RoleIdentifier id, PrintWriter output) {
@@ -174,10 +182,11 @@ public class RoleAdminTask extends Task {
         }
     }
 
-    private void createOrUpdateRole(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output,
-                                    boolean isCreate) {
+    private void createOrUpdateRole(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
         checkArgument(!DefaultRoles.isDefaultRole(id), "Cannot update default role: %s", id);
 
+        String name = parameters.get("name").stream().findFirst().orElse(null);
+        String description = parameters.get("description").stream().findFirst().orElse(null);
         Set<String> permitSet = ImmutableSet.copyOf(parameters.get("permit"));
         Set<String> revokeSet = ImmutableSet.copyOf(parameters.get("revoke"));
 
@@ -204,27 +213,31 @@ public class RoleAdminTask extends Task {
             return;
         }
 
-        if (isCreate) {
-            try {
-                _roleManager.createRole(id, null, permitSet);
-                output.println("Role created.");
-                viewRole(id, output);
-            } catch (RoleExistsException e) {
-                output.write("Role already exists");
-            }
-        } else {
-            try {
-                _roleManager.updateRole(id, new RoleUpdateRequest()
-                        .withPermissionUpdate(new PermissionUpdateRequest()
-                                .permit(permitSet)
-                                .revoke(revokeSet)));
+        RoleUpdateRequest request = new RoleUpdateRequest();
 
-                output.println("Role updated.");
-                viewRole(id, output);
-            } catch (RoleNotFoundException e) {
-                output.write("Role not found");
-            }
+        if (name != null) {
+            request = request.withName(Strings.emptyToNull(name));
         }
+        if (description != null) {
+            request = request.withDescription(Strings.emptyToNull(description));
+        }
+        if (!permitSet.isEmpty() || !revokeSet.isEmpty()) {
+            request = request.withPermissionUpdate(new PermissionUpdateRequest()
+                    .permit(permitSet)
+                    .revoke(revokeSet));
+        }
+
+        // Although the backend distinguishes between creating and updating roles this task does not.  The long-term
+        // goal is to migrate away from using tasks to a proper REST API, at which time there would be distinct
+        // endpoints for creating versus updating a role.
+
+        try {
+            _roleManager.createRole(id, request);
+        } catch (RoleExistsException e) {
+            _roleManager.updateRole(id, request);
+        }
+        output.println("Role updated.");
+        viewRole(id, output);
     }
 
     private void deleteRole(RoleIdentifier id, PrintWriter output) {
@@ -257,7 +270,7 @@ public class RoleAdminTask extends Task {
         final AtomicBoolean anyDeprecated = new AtomicBoolean(false);
         
         _roleManager.getAll().forEachRemaining(role -> {
-            List<Permission> deprecatedPermissions = _roleManager.getPermissionsForRole(role.getId())
+            List<Permission> deprecatedPermissions = _roleManager.getPermissionsForRole(role.getRoleIdentifier())
                     .stream()
                     .map(p -> (EmoPermission) _permissionResolver.resolvePermission(p))
                     .filter(p -> !p.isAssignable())
@@ -267,7 +280,7 @@ public class RoleAdminTask extends Task {
                 if (anyDeprecated.compareAndSet(false, true)) {
                     output.println("The following roles have deprecated permissions:\n");
                 }
-                output.println(role.getId());
+                output.println(role.getRoleIdentifier());
                 deprecatedPermissions.forEach(p -> output.println("- " + p));
             }
         });

@@ -7,9 +7,17 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
  */
 public class RoleUpdateRequest {
 
+    private String _name;
+    private boolean _namePresent = false;
     private String _description;
     private boolean _descriptionPresent = false;
     private PermissionUpdateRequest _permissionUpdate;
+
+    public RoleUpdateRequest withName(String name) {
+        _name = name;
+        _namePresent = true;
+        return this;
+    }
 
     public RoleUpdateRequest withDescription(String description) {
         _description = description;
@@ -20,6 +28,14 @@ public class RoleUpdateRequest {
     public RoleUpdateRequest withPermissionUpdate(PermissionUpdateRequest permissionUpdate) {
         _permissionUpdate = permissionUpdate;
         return this;
+    }
+
+    public String getName() {
+        return _name;
+    }
+
+    public boolean isNamePresent() {
+        return _namePresent;
     }
 
     public String getDescription() {

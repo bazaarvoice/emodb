@@ -17,6 +17,7 @@ import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 import org.apache.shiro.authz.permission.PermissionResolver;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -73,29 +74,48 @@ public class TablePermissionManager implements PermissionManager {
         checkNotNull(request, "request");
         validateTable();
 
+        Delta delta = createDelta(request);
+        if (delta == null) {
+            // Request did not change the permissions at all.  Take no action.
+            return;
+        }
+
         _dataStore.update(
                 _tableName,
                 id,
                 TimeUUIDs.newUUID(),
-                createDelta(request),
+                delta,
                 new AuditBuilder().setLocalHost().setComment("update permissions").build(),
                 WriteConsistency.GLOBAL);
     }
 
+    /**
+     * Returns a delta constructed from this request, or null if the request contained no changes.
+     */
+    @Nullable
     private Delta createDelta(PermissionUpdateRequest request) {
         MapDeltaBuilder builder = Deltas.mapBuilder();
+        boolean modified = false;
 
         for (String permissionString : request.getPermitted()) {
             builder.put("perm_" + validated(permissionString), 1);
+            modified = true;
         }
         for (String permissionString : request.getRevoked()) {
             builder.remove("perm_" + validated(permissionString));
+            modified = true;
         }
         if (request.isRevokeRest()) {
             builder.removeRest();
+            modified = true;
         }
 
-        return builder.build();
+        if (modified) {
+            return builder.build();
+        }
+
+        // Request contained no changes
+        return null;
     }
 
     /**

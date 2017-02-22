@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
@@ -40,8 +41,9 @@ public class TableRoleManager implements RoleManager {
     // and cannot be explicitly used by the API.
     private static final String NO_GROUP_NAME = "_";
 
+    private final static String NAME_ATTR = "name";
     private final static String DESCRIPTION_ATTR = "description";
-    private final static String NAMES_ATTR = "names";
+    private final static String IDS_ATTR = "ids";
 
     private final DataStore _dataStore;
     // DataStore table which maps role IDs to roles
@@ -84,7 +86,7 @@ public class TableRoleManager implements RoleManager {
             return null;
         }
         RoleIdentifier id = RoleIdentifier.fromString(Intrinsic.getId(record));
-        return new Role(id.getGroup(), id.getName(), (String) record.get(DESCRIPTION_ATTR));
+        return new Role(id.getGroup(), id.getId(), (String) record.get(NAME_ATTR), (String) record.get(DESCRIPTION_ATTR));
     }
 
     @Override
@@ -96,7 +98,7 @@ public class TableRoleManager implements RoleManager {
         Map<String, Object> record = _dataStore.get(_groupTableName, groupKey);
         if (!Intrinsic.isDeleted(record)) {
             //noinspection unchecked
-            List<String> names = (List<String>) record.get(NAMES_ATTR);
+            List<String> names = (List<String>) record.get(IDS_ATTR);
             if (names != null && !names.isEmpty()) {
                 List<Coordinate> coordinates = names.stream()
                         .map(name -> Coordinate.of(_roleTableName, new RoleIdentifier(group, name).toString()))
@@ -136,15 +138,15 @@ public class TableRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(RoleIdentifier id, @Nullable String description, @Nullable Set<String> permissions) {
+    public Role createRole(RoleIdentifier id, RoleUpdateRequest request) {
         checkNotNull(id, "id");
-        checkArgument(isLegalRoleName(id.getName()), "Role cannot be named %s", id.getName());
+        checkArgument(isLegalRoleName(id.getId()), "Role cannot have ID %s", id.getId());
         String groupKey = checkGroup(id.getGroup());
 
         // First ensure that there is no conflicting role with the same name and group.
         Role existingRole = getRole(id);
         if (existingRole != null) {
-            throw new RoleExistsException(id.getGroup(), id.getName());
+            throw new RoleExistsException(id.getGroup(), id.getId());
         }
         
         // Without transactions it is not possible to ensure the role, group, and permissions are written without
@@ -157,8 +159,8 @@ public class TableRoleManager implements RoleManager {
 
         _dataStore.update(_groupTableName, groupKey, changeId,
                 Deltas.mapBuilder()
-                        .update(NAMES_ATTR, Deltas.setBuilder()
-                                .add(id.getName())
+                        .update(IDS_ATTR, Deltas.setBuilder()
+                                .add(id.getId())
                                 .build())
                         .build(),
                 new AuditBuilder().setLocalHost().setComment("Create role " + id).build(),
@@ -166,17 +168,21 @@ public class TableRoleManager implements RoleManager {
 
         _dataStore.update(_roleTableName, id.toString(), changeId,
                 Deltas.mapBuilder()
-                        .put(DESCRIPTION_ATTR, description)
+                        .put(NAME_ATTR, request.getName())
+                        .put(DESCRIPTION_ATTR, request.getDescription())
                         .build(),
                 new AuditBuilder().setLocalHost().setComment("Create role " + id).build(),
                 WriteConsistency.GLOBAL);
 
-        if (permissions != null && !permissions.isEmpty()) {
-            _permissionManager.updatePermissions(PermissionIDs.forRole(id),
-                    new PermissionUpdateRequest().permit(permissions));
+        if (request.getPermissionUpdate() != null) {
+            List<String> permissions = ImmutableList.copyOf(request.getPermissionUpdate().getPermitted());
+            if (!permissions.isEmpty()) {
+                _permissionManager.updatePermissions(PermissionIDs.forRole(id),
+                        new PermissionUpdateRequest().permit(permissions));
+            }
         }
 
-        return new Role(id.getGroup(), id.getName(), description);
+        return new Role(id.getGroup(), id.getId(), request.getName(), request.getDescription());
     }
 
     @Override
@@ -184,17 +190,22 @@ public class TableRoleManager implements RoleManager {
         // First, verify the role exists
         Role role = getRole(id);
         if (role == null) {
-            throw new RoleNotFoundException(id.getGroup(), id.getName());
+            throw new RoleNotFoundException(id.getGroup(), id.getId());
         }
 
         // As with creating a role, updating role metadata and permissions cannot be performed atomically.  Update
         // role metadata first since a failure at that point poses the least security risk.
-        
-        if (request.isDescriptionPresent()) {
+
+        if (request.isNamePresent() || request.isDescriptionPresent()) {
+            MapDeltaBuilder delta = Deltas.mapBuilder();
+            if (request.isNamePresent()) {
+                delta.put(NAME_ATTR, request.getName());
+            }
+            if (request.isDescriptionPresent()) {
+                delta.put(DESCRIPTION_ATTR, request.getDescription());
+            }
             _dataStore.update(_roleTableName, id.toString(), TimeUUIDs.newUUID(),
-                    Deltas.mapBuilder()
-                            .put(DESCRIPTION_ATTR, request.getDescription())
-                            .build(),
+                    delta.build(),
                     new AuditBuilder().setLocalHost().setComment("Update role " + id).build(),
                     WriteConsistency.GLOBAL);
         }
@@ -228,8 +239,8 @@ public class TableRoleManager implements RoleManager {
 
         _dataStore.update(_groupTableName, groupKey, changeId,
                 Deltas.mapBuilder()
-                        .update(NAMES_ATTR, Deltas.setBuilder()
-                                .remove(role.getName())
+                        .update(IDS_ATTR, Deltas.setBuilder()
+                                .remove(role.getId())
                                 .deleteIfEmpty()
                                 .build())
                         .deleteIfEmpty()

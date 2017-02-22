@@ -158,9 +158,9 @@ public enum DefaultRoles {
         if (id == null || id.getGroup() != null) {
             return false;
         }
-        String name = id.getName();
+        String checkId = id.getId();
         for (DefaultRoles defaultRole : DefaultRoles.values()) {
-            if (defaultRole.name().equals(name)) {
+            if (defaultRole.name().equals(checkId)) {
                 return true;
             }
         }

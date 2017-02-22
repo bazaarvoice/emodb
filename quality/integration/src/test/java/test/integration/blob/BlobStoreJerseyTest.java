@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
@@ -114,9 +113,9 @@ public class BlobStoreJerseyTest extends ResourceTest {
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         final RoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        roleManager.createRole(new RoleIdentifier(null, "blob-role"), null, ImmutableSet.of("blob|*|*"));
-        roleManager.createRole(new RoleIdentifier(null, "blob-role-a"), null, ImmutableSet.of("blob|read|a*"));
-        roleManager.createRole(new RoleIdentifier(null, "blob-role-b"), null, ImmutableSet.of("blob|read|b*"));
+        createRole(roleManager, null, "blob-role", ImmutableSet.of("blob|*|*"));
+        createRole(roleManager, null, "blob-role-a", ImmutableSet.of("blob|read|a*"));
+        createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
             Collections.<Object>singletonList(new BlobStoreResource1(_server, _dataCenters, _approvedContentTypes)),

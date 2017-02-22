@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.auth.role;
 import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Maps;
 
@@ -53,14 +54,17 @@ public class InMemoryRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(RoleIdentifier id, @Nullable String description, @Nullable Set<String> permissions) {
+    public Role createRole(RoleIdentifier id, RoleUpdateRequest request) {
         if (getRole(id) != null) {
-            throw new RoleExistsException(id.getGroup(), id.getName());
+            throw new RoleExistsException(id.getGroup(), id.getId());
         }
-        Role role = new Role(id.getGroup(), id.getName(), description);
+        Role role = new Role(id.getGroup(), id.getId(), request.getName(), request.getDescription());
         _rolesById.put(id, role);
-        if (permissions != null && !permissions.isEmpty()) {
-            _permissionManager.updatePermissions(PermissionIDs.forRole(id), new PermissionUpdateRequest().permit(permissions));
+        if (request.getPermissionUpdate() != null) {
+            List<String> permissions = ImmutableList.copyOf(request.getPermissionUpdate().getPermitted());
+            if (!permissions.isEmpty()) {
+                _permissionManager.updatePermissions(PermissionIDs.forRole(id), new PermissionUpdateRequest().permit(permissions));
+            }
         }
         return role;
     }
@@ -69,7 +73,7 @@ public class InMemoryRoleManager implements RoleManager {
     public void updateRole(RoleIdentifier id, RoleUpdateRequest request) {
         Role role = getRole(id);
         if (role == null) {
-            throw new RoleNotFoundException(id.getGroup(), id.getName());
+            throw new RoleNotFoundException(id.getGroup(), id.getId());
         }
         if (request.isDescriptionPresent()) {
             role.setDescription(request.getDescription());

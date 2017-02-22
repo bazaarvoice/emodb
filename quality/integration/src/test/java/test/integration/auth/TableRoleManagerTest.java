@@ -19,6 +19,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -93,15 +94,16 @@ public class TableRoleManagerTest {
     @Test
     public void testCreateRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id, "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
 
         Map<String, Object> roleMap = _backendDataStore.get(ROLE_TABLE, "g1/r1", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(roleMap), "g1/r1");
+        assertEquals(roleMap.get("name"), "n1");
         assertEquals(roleMap.get("description"), "d1");
 
         Map<String, Object> groupMap = _backendDataStore.get(GROUP_TABLE, "g1", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(groupMap), "g1");
-        assertEquals(groupMap.get("names"), ImmutableList.of("r1"));
+        assertEquals(groupMap.get("ids"), ImmutableList.of("r1"));
 
         assertEquals(_backendPermissionManager.getPermissions("role:g1/r1"),
                 ImmutableSet.of(_permissionResolver.resolvePermission("p1"), _permissionResolver.resolvePermission("p2")));
@@ -110,15 +112,16 @@ public class TableRoleManagerTest {
     @Test
     public void testCreateRoleWitNoGroup() throws Exception {
         RoleIdentifier id = new RoleIdentifier(null, "r1");
-        _roleManager.createRole(id, "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
 
         Map<String, Object> roleMap = _backendDataStore.get(ROLE_TABLE, "r1", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(roleMap), "r1");
+        assertEquals(roleMap.get("name"), "n1");
         assertEquals(roleMap.get("description"), "d1");
 
         Map<String, Object> groupMap = _backendDataStore.get(GROUP_TABLE, "_", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(groupMap), "_");
-        assertEquals(groupMap.get("names"), ImmutableList.of("r1"));
+        assertEquals(groupMap.get("ids"), ImmutableList.of("r1"));
 
         assertEquals(_backendPermissionManager.getPermissions("role:r1"),
                 ImmutableSet.of(_permissionResolver.resolvePermission("p1"), _permissionResolver.resolvePermission("p2")));
@@ -127,23 +130,23 @@ public class TableRoleManagerTest {
     @Test
     public void testAddRoleToExistingGroup() throws Exception {
         RoleIdentifier id1 = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id1, null, null);
+        createRole(id1, null,null, null);
         RoleIdentifier id2 = new RoleIdentifier("g1", "r2");
-        _roleManager.createRole(id2, null, null);
+        createRole(id2, null, null, null);
 
         Map<String, Object> groupMap = _backendDataStore.get(GROUP_TABLE, "g1", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(groupMap), "g1");
-        assertEquals(groupMap.get("names"), ImmutableList.of("r1", "r2"));
+        assertEquals(groupMap.get("ids"), ImmutableList.of("r1", "r2"));
     }
 
     @Test
     public void testCreateExistingRoleFails() throws Exception {
         // Create a role once
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id, null, null);
+        createRole(id, null, null, null);
         // Creating the same role again should fail
         try {
-            _roleManager.createRole(id, null, null);
+            createRole(id, null, null, null);
             fail("RoleExistsException not thrown");
         } catch (RoleExistsException e) {
             // expected
@@ -151,10 +154,10 @@ public class TableRoleManagerTest {
     }
 
     @Test
-    public void testCreateInvalidRoleName() throws Exception {
+    public void testCreateInvalidId() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "bad/role");
         try {
-            _roleManager.createRole(id, null, null);
+            createRole(id, null, null, null);
             fail("IllegalArgumentException not thrown");
         } catch (IllegalArgumentException e) {
             // expected
@@ -165,7 +168,7 @@ public class TableRoleManagerTest {
     public void testCreateInvalidGroupName() throws Exception {
         RoleIdentifier id = new RoleIdentifier("bad/group", "r1");
         try {
-            _roleManager.createRole(id, null, null);
+            createRole(id, null,null, null);
             fail("IllegalArgumentException not thrown");
         } catch (IllegalArgumentException e) {
             // expected
@@ -175,15 +178,17 @@ public class TableRoleManagerTest {
     @Test
     public void testUpdateRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id, "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
 
         // Modify the role
         _roleManager.updateRole(id, new RoleUpdateRequest()
+                .withName("new name")
                 .withDescription("new description")
                 .withPermissionUpdate(new PermissionUpdateRequest().revoke("p2").permit("p3")));
 
         Map<String, Object> roleMap = _backendDataStore.get(ROLE_TABLE, "g1/r1", ReadConsistency.STRONG);
         assertEquals(Intrinsic.getId(roleMap), "g1/r1");
+        assertEquals(roleMap.get("name"), "new name");
         assertEquals(roleMap.get("description"), "new description");
 
         assertEquals(_backendPermissionManager.getPermissions("role:g1/r1"),
@@ -204,7 +209,7 @@ public class TableRoleManagerTest {
     @Test
     public void testGetPermissionsForRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id, "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1","d1", ImmutableSet.of("p1", "p2"));
 
         Set<String> permissions = _roleManager.getPermissionsForRole(id);
         assertEquals(permissions, ImmutableSet.of("p1", "p2"));
@@ -220,16 +225,16 @@ public class TableRoleManagerTest {
 
     @Test
     public void testGetRolesByGroup() throws Exception {
-        _roleManager.createRole(new RoleIdentifier("g1", "r1"), null, null);
-        _roleManager.createRole(new RoleIdentifier("g1", "r2"), null, null);
-        _roleManager.createRole(new RoleIdentifier("g2", "r3"), null, null);
-        _roleManager.createRole(new RoleIdentifier(null, "r4"), null, null);
+        createRole(new RoleIdentifier("g1", "r1"), "n1", null, null);
+        createRole(new RoleIdentifier("g1", "r2"), "n2", null, null);
+        createRole(new RoleIdentifier("g2", "r3"), "n3", null, null);
+        createRole(new RoleIdentifier(null, "r4"), "n4", null, null);
 
-        assertEquals(_roleManager.getRolesByGroup("g1").stream().map(Role::getName).collect(Collectors.toSet()),
+        assertEquals(_roleManager.getRolesByGroup("g1").stream().map(Role::getId).collect(Collectors.toSet()),
                 ImmutableSet.of("r1", "r2"));
-        assertEquals(_roleManager.getRolesByGroup("g2").stream().map(Role::getName).collect(Collectors.toSet()),
+        assertEquals(_roleManager.getRolesByGroup("g2").stream().map(Role::getId).collect(Collectors.toSet()),
                 ImmutableSet.of("r3"));
-        assertEquals(_roleManager.getRolesByGroup(null).stream().map(Role::getName).collect(Collectors.toSet()),
+        assertEquals(_roleManager.getRolesByGroup(null).stream().map(Role::getId).collect(Collectors.toSet()),
                 ImmutableSet.of("r4"));
         assertEquals(_roleManager.getRolesByGroup("no_such_group"), ImmutableList.of());
     }
@@ -243,17 +248,17 @@ public class TableRoleManagerTest {
                 new RoleIdentifier(null, "r4"));
 
         for (RoleIdentifier id : roleIds) {
-            _roleManager.createRole(id, null, null);
+            createRole(id, null,null, null);
         }
         List<Role> actual = ImmutableList.copyOf(_roleManager.getAll());
 
-        assertEquals(actual.stream().map(Role::getId).collect(Collectors.toSet()), roleIds);
+        assertEquals(actual.stream().map(Role::getRoleIdentifier).collect(Collectors.toSet()), roleIds);
     }
 
     @Test
     public void testDeleteRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        _roleManager.createRole(id, "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
 
         // Verify role exists
         assertNotNull(_roleManager.getRole(id));
@@ -270,7 +275,7 @@ public class TableRoleManagerTest {
                 any(Audit.class), eq(WriteConsistency.GLOBAL));
         verify(_dataStore).update(eq(GROUP_TABLE), eq("g1"), any(UUID.class),
                 eq(Deltas.mapBuilder()
-                        .update("names", Deltas.setBuilder()
+                        .update("ids", Deltas.setBuilder()
                                 .remove("r1")
                                 .deleteIfEmpty()
                                 .build())
@@ -278,5 +283,13 @@ public class TableRoleManagerTest {
                         .build()),
                 any(Audit.class), eq(WriteConsistency.GLOBAL));
         verify(_permissionManager).revokePermissions("role:g1/r1");
+    }
+
+    private void createRole(RoleIdentifier id, String name, String description, Set<String> permissions) {
+        _roleManager.createRole(id, new RoleUpdateRequest()
+                .withName(name)
+                .withDescription(description)
+                .withPermissionUpdate(new PermissionUpdateRequest()
+                        .permit(Objects.firstNonNull(permissions, ImmutableList.of()))));
     }
 }

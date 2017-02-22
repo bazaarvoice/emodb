@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -45,7 +46,8 @@ public class ApiKeyAdminTaskTest {
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         InMemoryRoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        roleManager.createRole(new RoleIdentifier(null, DefaultRoles.admin.toString()), null, ImmutableSet.of(Permissions.manageApiKeys()));
+        roleManager.createRole(new RoleIdentifier(null, DefaultRoles.admin.toString()),
+                new RoleUpdateRequest().withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.manageApiKeys()))));
 
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
                 new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,

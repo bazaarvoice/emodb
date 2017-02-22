@@ -52,7 +52,7 @@ public class ReplicationJerseyTest extends ResourceTest {
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         RoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        roleManager.createRole(new RoleIdentifier(null, "replication-role"), null, DefaultRoles.replication.getPermissions());
+        createRole(roleManager, null, "replication-role", DefaultRoles.replication.getPermissions());
 
         return setupResourceTestRule(resourceList, authIdentityManager, permissionManager);
     }

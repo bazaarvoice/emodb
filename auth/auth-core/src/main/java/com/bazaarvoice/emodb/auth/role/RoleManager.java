@@ -35,14 +35,14 @@ public interface RoleManager {
     Set<String> getPermissionsForRole(RoleIdentifier id);
 
     /**
-     * Creates a role.  The method optionally accepts a list of initial permissions to associate with the role.
+     * Creates a role.
      * @return The role
      * @throws RoleExistsException Another role with the same ID exists
      */
-    Role createRole(RoleIdentifier id, @Nullable String description, @Nullable Set<String> permissions);
+    Role createRole(RoleIdentifier id, RoleUpdateRequest request);
 
     /**
-     * Updates a role.  This method can be used to update the role's description and/or permissions.
+     * Updates a role.  This method can be used to update the role's metadata and/or permissions.
      * @throws RoleNotFoundException No role with the ID exists
      */
     void updateRole(RoleIdentifier id, RoleUpdateRequest request);

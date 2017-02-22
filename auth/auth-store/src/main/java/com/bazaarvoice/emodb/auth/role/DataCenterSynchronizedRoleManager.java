@@ -52,8 +52,8 @@ public class DataCenterSynchronizedRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(RoleIdentifier id, @Nullable String description, @Nullable Set<String> permissions) {
-        return inMutex(() -> _delegate.createRole(id, description, permissions));
+    public Role createRole(RoleIdentifier id, RoleUpdateRequest request) {
+        return inMutex(() -> _delegate.createRole(id, request));
     }
 
     @Override

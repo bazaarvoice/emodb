@@ -8,19 +8,19 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @JsonIgnoreProperties({"cause", "localizedMessage", "stackTrace"})
 public class RoleExistsException extends RuntimeException {
     private final String _group;
-    private final String _name;
+    private final String _id;
 
-    public RoleExistsException(String group, String name) {
+    public RoleExistsException(String group, String id) {
         super("Role not found");
         _group = group;
-        _name = name;
+        _id = id;
     }
     
     public String getGroup() {
         return _group;
     }
 
-    public String getName() {
-        return _name;
+    public String getId() {
+        return _id;
     }
 }

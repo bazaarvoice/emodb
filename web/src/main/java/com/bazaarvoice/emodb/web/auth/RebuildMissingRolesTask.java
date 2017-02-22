@@ -1,9 +1,11 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
+import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.inject.Inject;
@@ -50,7 +52,7 @@ public class RebuildMissingRolesTask extends Task {
     public void execute(ImmutableMultimap<String, String> params, PrintWriter out) throws Exception {
         Set<RoleIdentifier> existingRoles = StreamSupport.stream(
                 Spliterators.spliteratorUnknownSize(_roleManager.getAll(), 0), false)
-                .map(Role::getId)
+                .map(Role::getRoleIdentifier)
                 .collect(Collectors.toSet());
 
         for (Map.Entry<String, Set<Permission>> entry : _permissionManager.getAll()) {
@@ -60,7 +62,10 @@ public class RebuildMissingRolesTask extends Task {
                 if (!existingRoles.contains(id)) {
                     // Permission exists for a role which does not exist.  Create the role now with reasonable defaults.
                     Set<String> initialPermissions = entry.getValue().stream().map(Object::toString).collect(Collectors.toSet());
-                    _roleManager.createRole(id, null, initialPermissions);
+                    _roleManager.createRole(id, new RoleUpdateRequest()
+                            .withName(id.getId())
+                            .withPermissionUpdate(new PermissionUpdateRequest()
+                                    .permit(initialPermissions)));
                     out.println("Created missing role: " + id);
                 }
             }

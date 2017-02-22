@@ -267,7 +267,8 @@ public class SecurityModule extends PrivateModule {
     RoleManager provideRoleManagerWithDefaultRoles(@Named("dao") RoleManager delegate) {
         List<Role> defaultRoles = Lists.newArrayList();
         for (DefaultRoles defaultRole : DefaultRoles.values()) {
-            defaultRoles.add(new Role(null, defaultRole.name(), "Reserved role"));
+            // Use the default role's name as both the role's identifier and name attribute
+            defaultRoles.add(new Role(null, defaultRole.name(), defaultRole.name(),"Reserved role"));
         }
         return new DeferringRoleManager(delegate, defaultRoles);
     }
