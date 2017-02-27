@@ -345,16 +345,14 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         final UnmodifiableIterator<Table> iterator = tables.iterator();
         //noinspection unchecked
-        when(_server.listTables(null, 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
-        when(_server.listTables("b-table-1", 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
+        when(_server.listTables(null, Long.MAX_VALUE)).thenAnswer(invocation -> iterator);
 
         {
             final Iterator<Table> tableIterator = sorClient(APIKEY_READ_TABLES_A).listTables(null, 3);
             final ImmutableList<Table> result = ImmutableList.copyOf(tableIterator);
             assertEquals(ImmutableList.<Table>of(a1, a2, a3), result);
         }
-        verify(_server, times(1)).listTables(null, 3);
-        verify(_server, times(1)).listTables("b-table-1", 3);
+        verify(_server, times(1)).listTables(null, Long.MAX_VALUE);
     }
 
     @Test public void testGetTableTemplateRestricted() {
@@ -457,7 +455,6 @@ public class DataStoreJerseyTest extends ResourceTest {
                 new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
                 new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
-        when(_server.listTables("table-2", Long.MAX_VALUE)).thenReturn(Iterators.emptyIterator());
 
         List<Table> actual = Lists.newArrayList(
                 DataStoreStreaming.listTables(sorClient(APIKEY_TABLE))
@@ -465,7 +462,6 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         assertEquals(actual, expected);
         verify(_server).listTables(null, Long.MAX_VALUE);
-        verify(_server).listTables("table-2", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 
@@ -476,15 +472,13 @@ public class DataStoreJerseyTest extends ResourceTest {
         List<Table> expected = ImmutableList.<Table>of(
                 new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
                 new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
-        when(_server.listTables("from-key", 1234L)).thenReturn(expected.iterator());
-        when(_server.listTables("table-2", 1234L)).thenReturn(Iterators.emptyIterator());
+        when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
                 DataStoreStreaming.listTables(sorClient(APIKEY_TABLE), "from-key", 1234L));
 
         assertEquals(actual, expected);
-        verify(_server).listTables("from-key", 1234L);
-        verify(_server).listTables("table-2", 1234L);
+        verify(_server).listTables("from-key", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 

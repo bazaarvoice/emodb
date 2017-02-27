@@ -32,7 +32,6 @@ import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
-import com.bazaarvoice.emodb.web.util.LimitedIterator;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -86,8 +85,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterator;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
@@ -122,16 +124,13 @@ public class DataStoreResource1 {
     public Iterator<Table> listTables(final @QueryParam("from") String fromKeyExclusive,
                                       final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
                                       final @Authenticated Subject subject) {
-        final String fromTableExclusive = Strings.emptyToNull(fromKeyExclusive);
-        final Long limit = limitParam.get();
-
-        final Iterator<Table> lazyAllTablesFromKey = new ListTablesPager(_dataStore, fromTableExclusive, limit);
-
-        final Iterator<Table> permittedTables = Iterators.filter(lazyAllTablesFromKey, input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))));
-
-        final Iterator<Table> limited = new LimitedIterator<>(permittedTables, limit);
-
-        return streamingIterator(limited, null);
+        return streamingIterator(
+            StreamSupport.stream(((Iterable<Table>) () -> _dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE)).spliterator(), false)
+                .filter(input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))))
+                .limit(limitParam.get())
+                .iterator(),
+            null
+        );
     }
 
     @PUT

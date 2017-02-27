@@ -147,18 +147,14 @@ public class BlobStoreJerseyTest extends ResourceTest {
         final DefaultTable aTable3 = new DefaultTable("a-table-3", options, ImmutableMap.of("key", "value1"), availability);
         final List<Table> expected = ImmutableList.<Table>of(aTable1, aTable2, bTable1, bTable2, aTable3);
 
-        final Iterator<Table> iterator = expected.iterator();
-
-        when(_server.listTables(null, 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
-        when(_server.listTables("b-table-1", 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
+        when(_server.listTables(null, Long.MAX_VALUE)).thenAnswer(invocation -> expected.iterator());
 
         {
             List<Table> actual = Lists.newArrayList(blobClient(APIKEY_BLOB_A).listTables(null, 3));
             assertEquals(ImmutableList.of(aTable1, aTable2, aTable3), actual);
         }
 
-        verify(_server, times(1)).listTables(null, 3);
-        verify(_server, times(1)).listTables("b-table-1", 3);
+        verify(_server, times(1)).listTables(null, Long.MAX_VALUE);
     }
 
     @Test public void getTableAttributesRestricted() {
@@ -336,14 +332,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
             new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
             new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
-        when(_server.listTables("table-2", Long.MAX_VALUE)).thenReturn(Iterators.emptyIterator());
 
         List<Table> actual = Lists.newArrayList(
             BlobStoreStreaming.listTables(blobClient()));
 
         assertEquals(expected, actual);
         verify(_server).listTables(null, Long.MAX_VALUE);
-        verify(_server).listTables("table-2", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 
@@ -354,15 +348,13 @@ public class BlobStoreJerseyTest extends ResourceTest {
         List<Table> expected = ImmutableList.<Table>of(
             new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
             new DefaultTable("blob-id-2", options, ImmutableMap.of("key", "value2"), availability));
-        when(_server.listTables("from-key", 1234L)).thenReturn(expected.iterator());
-        when(_server.listTables("blob-id-2", 1234L)).thenReturn(Iterators.emptyIterator());
+        when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
             BlobStoreStreaming.listTables(blobClient(), "from-key", 1234L));
 
         assertEquals(actual, expected);
-        verify(_server).listTables("from-key", 1234L);
-        verify(_server).listTables("blob-id-2", 1234L);
+        verify(_server).listTables("from-key", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 
