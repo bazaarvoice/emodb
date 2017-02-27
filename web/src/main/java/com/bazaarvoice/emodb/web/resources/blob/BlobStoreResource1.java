@@ -21,13 +21,12 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
+import com.bazaarvoice.emodb.web.util.LimitedIterator;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.jersey.params.AbstractParam;
@@ -109,13 +108,11 @@ public class BlobStoreResource1 {
     public Iterator<Table> listTables(@QueryParam("from") final String fromKeyExclusive,
                                       @QueryParam("limit") @DefaultValue("10") LongParam limit,
                                       final @Authenticated Subject subject) {
-        final Iterator<Table> tables = _blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), limit.get());
-        final UnmodifiableIterator<Table> permittedTables = Iterators.filter(tables, new Predicate<Table>() {
-            @Override public boolean apply(final Table input) {
-                return subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName())));
-            }
-        });
-        return streamingIterator(permittedTables);
+        final String fromTableExclusive = Strings.emptyToNull(fromKeyExclusive);
+        final Iterator<Table> lazyAllTablesPaged = new ListTablesPager(_blobStore, fromTableExclusive, limit.get());
+        final Iterator<Table> permittedTables = Iterators.filter(lazyAllTablesPaged, input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))));
+        final Iterator<Table> limitedIterator = new LimitedIterator<>(permittedTables, limit.get());
+        return streamingIterator(limitedIterator);
     }
 
     @PUT

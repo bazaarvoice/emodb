@@ -32,6 +32,7 @@ import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
+import com.bazaarvoice.emodb.web.util.LimitedIterator;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -119,16 +120,18 @@ public class DataStoreResource1 {
             response = Table.class
     )
     public Iterator<Table> listTables(final @QueryParam("from") String fromKeyExclusive,
-                                      final @QueryParam("limit") @DefaultValue("10") LongParam limit,
+                                      final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
                                       final @Authenticated Subject subject) {
-        return streamingIterator(
-                Iterators.filter(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), limit.get()), new Predicate<Table>() {
-                    @Override
-                    public boolean apply(final Table input) {
-                        return subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName())));
-                    }
-                }),
-                null);
+        final String fromTableExclusive = Strings.emptyToNull(fromKeyExclusive);
+        final Long limit = limitParam.get();
+
+        final Iterator<Table> lazyAllTablesFromKey = new ListTablesPager(_dataStore, fromTableExclusive, limit);
+
+        final Iterator<Table> permittedTables = Iterators.filter(lazyAllTablesFromKey, input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))));
+
+        final Iterator<Table> limited = new LimitedIterator<>(permittedTables, limit);
+
+        return streamingIterator(limited, null);
     }
 
     @PUT

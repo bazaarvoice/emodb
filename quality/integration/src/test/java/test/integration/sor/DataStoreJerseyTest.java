@@ -52,6 +52,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.collect.UnmodifiableIterator;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -339,21 +340,21 @@ public class DataStoreJerseyTest extends ResourceTest {
         final DefaultTable a2 = new DefaultTable("a-table-2", options, template, availability);
         final DefaultTable b1 = new DefaultTable("b-table-1", options, template, availability);
         final DefaultTable b2 = new DefaultTable("b-table-2", options, template, availability);
-        final ImmutableList<Table> tables = ImmutableList.<Table>of(a1, a2, b1, b2);
+        final DefaultTable a3 = new DefaultTable("a-table-3", options, template, availability);
+        final ImmutableList<Table> tables = ImmutableList.of(a1, a2, b1, b2, a3);
 
+        final UnmodifiableIterator<Table> iterator = tables.iterator();
         //noinspection unchecked
-        when(_server.listTables(null, 10)).thenReturn(tables.iterator(), tables.iterator());
+        when(_server.listTables(null, 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
+        when(_server.listTables("b-table-1", 3)).thenAnswer(invocation -> Iterators.limit(iterator, 3));
+
         {
-            final Iterator<Table> tableIterator = sorClient(APIKEY_READ_TABLES_A).listTables(null, 10);
+            final Iterator<Table> tableIterator = sorClient(APIKEY_READ_TABLES_A).listTables(null, 3);
             final ImmutableList<Table> result = ImmutableList.copyOf(tableIterator);
-            assertEquals(ImmutableList.<Table>of(a1, a2), result);
+            assertEquals(ImmutableList.<Table>of(a1, a2, a3), result);
         }
-        {
-            final Iterator<Table> tableIterator = sorClient(APIKEY_READ_TABLES_B).listTables(null, 10);
-            final ImmutableList<Table> result = ImmutableList.copyOf(tableIterator);
-            assertEquals(ImmutableList.<Table>of(b1, b2), result);
-        }
-        verify(_server, times(2)).listTables(null, 10);
+        verify(_server, times(1)).listTables(null, 3);
+        verify(_server, times(1)).listTables("b-table-1", 3);
     }
 
     @Test public void testGetTableTemplateRestricted() {
@@ -456,12 +457,15 @@ public class DataStoreJerseyTest extends ResourceTest {
                 new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
                 new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
+        when(_server.listTables("table-2", Long.MAX_VALUE)).thenReturn(Iterators.emptyIterator());
 
         List<Table> actual = Lists.newArrayList(
-                DataStoreStreaming.listTables(sorClient(APIKEY_TABLE)));
+                DataStoreStreaming.listTables(sorClient(APIKEY_TABLE))
+        );
 
         assertEquals(actual, expected);
         verify(_server).listTables(null, Long.MAX_VALUE);
+        verify(_server).listTables("table-2", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 
@@ -473,12 +477,14 @@ public class DataStoreJerseyTest extends ResourceTest {
                 new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
                 new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
         when(_server.listTables("from-key", 1234L)).thenReturn(expected.iterator());
+        when(_server.listTables("table-2", 1234L)).thenReturn(Iterators.emptyIterator());
 
         List<Table> actual = Lists.newArrayList(
                 DataStoreStreaming.listTables(sorClient(APIKEY_TABLE), "from-key", 1234L));
 
         assertEquals(actual, expected);
         verify(_server).listTables("from-key", 1234L);
+        verify(_server).listTables("table-2", 1234L);
         verifyNoMoreInteractions(_server);
     }
 
