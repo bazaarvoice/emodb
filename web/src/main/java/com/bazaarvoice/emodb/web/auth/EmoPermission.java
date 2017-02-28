@@ -20,6 +20,7 @@ import javax.annotation.Nullable;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 
 /**
  * Permission used by EmoDB for authorization.  It is identical to {@link MatchingPermission} except that it allows
@@ -34,7 +35,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * table template.
  *
  * <code>
- *      EmoPermission checkedPermission = new EmoPermission(dataStore, "sor|update|table(review:testcustomer)");
+ *      EmoPermission checkedPermission = new EmoPermission(dataStore, "sor|update|review:testcustomer");
  *      Map&lt;String, Object&gt; template = dataStore.getTableTemplate("review:testcustomer");
  *
  *      assert userPermission.implies(checkedPermission) == (template.get("team").equals("EmoDB") && template.get("type").equals("review"));
@@ -46,11 +47,13 @@ public class EmoPermission extends MatchingPermission {
     private final static ConstantPart SOR_PART = new EmoConstantPart(Permissions.SOR);
     // All blob store related permissions have this as the first part
     private final static ConstantPart BLOB_PART = new EmoConstantPart(Permissions.BLOB);
+    // All role related permissions have this as the first part
+    private final static ConstantPart ROLE_PART = new EmoConstantPart(Permissions.ROLE);
 
     private final DataStore _dataStore;
     private final BlobStore _blobStore;
 
-    private static enum PartType {
+    private enum PartType {
         CONTEXT,
         ACTION,
         SOR_TABLE,
@@ -108,9 +111,17 @@ public class EmoPermission extends MatchingPermission {
                     partType = PartType.NAMED_RESOURCE;
                 }
                 return createEmoPermissionPart(part, partType);
+
+            case 3:
+                // Only roles support four parts, where the group is the third part and the role ID is the fourth part.
+                if (MatchingPart.contextImpliedBy(ROLE_PART, leadingParts)) {
+                    return createEmoPermissionPart(part, PartType.NAMED_RESOURCE);
+                }
+                break;
         }
 
-        throw new IllegalArgumentException("EmoPermission does not support over three parts");
+        throw new IllegalArgumentException(format("Too many parts for EmoPermission in \"%s\" context",
+                MatchingPart.getContext(leadingParts)));
     }
 
     /**

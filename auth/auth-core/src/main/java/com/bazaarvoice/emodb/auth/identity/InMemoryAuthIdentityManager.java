@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.auth.identity;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -46,5 +48,9 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
 
     public void reset() {
         _identityMap.clear();
+    }
+
+    public List<T> getAllIdentities() {
+        return ImmutableList.copyOf(_identityMap.values());
     }
 }

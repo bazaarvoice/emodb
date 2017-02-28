@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.web.auth.resource.VerifiableResource;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -41,8 +42,9 @@ import static java.lang.String.format;
  * Task for managing roles and the permissions associated with them.
  *
  * The following examples demonstrate the various ways to use this task.  In order to actually run this task you must
- * provide an API key which has permission to manage roles (see {@link Permissions#manageRoles()}).  For
- * the purposes of this example the API key "admin-key" is a valid key with this permission.
+ * provide an API key which has permission to perform the action requested, such as
+ * {@link Permissions#updateRole(VerifiableResource, VerifiableResource)}.  For the purposes of this example the API key
+ * "admin-key" is a valid key with all required permissions.
  *
  * Create or update role
  * =====================
@@ -133,27 +135,25 @@ public class RoleAdminTask extends Task {
             String apiKey = getValueFromParams(ApiKeyRequest.AUTHENTICATION_PARAM, parameters);
             subject.login(new ApiKeyAuthenticationToken(apiKey));
 
-            // Make sure the API key is permitted to manage roles
-            subject.checkPermission(Permissions.manageRoles());
-
             String activityStr = getValueFromParams("action", parameters);
             Action action = Action.valueOf(activityStr.toUpperCase().replace('-', '_'));
+            RoleIdentifier roleId = getRole(parameters);
 
             switch (action) {
                 case VIEW:
-                    viewRole(getRole(parameters), output);
+                    viewRole(subject, roleId, output);
                     break;
                 case UPDATE:
-                    createOrUpdateRole(getRole(parameters), parameters, output);
+                    createOrUpdateRole(subject, roleId, parameters, output);
                     break;
                 case DELETE:
-                    deleteRole(getRole(parameters), output);
+                    deleteRole(subject, roleId, output);
                     break;
                 case CHECK:
-                    checkPermission(getRole(parameters), parameters, output);
+                    checkPermission(subject, roleId, parameters, output);
                     break;
                 case FIND_DEPRECATED_PERMISSIONS:
-                    findDeprecatedPermissions(output);
+                    findDeprecatedPermissions(subject, output);
             }
         } catch (AuthenticationException | AuthorizationException e) {
             _log.warn("Unauthorized attempt to access role management task");
@@ -182,7 +182,8 @@ public class RoleAdminTask extends Task {
         return new RoleIdentifier(group, ids.get(0));
     }
 
-    private void viewRole(RoleIdentifier id, PrintWriter output) {
+    private void viewRole(Subject subject, RoleIdentifier id, PrintWriter output) {
+        subject.checkPermission(Permissions.readRole(id));
         Set<String> permissions = _roleManager.getPermissionsForRole(id);
         output.println(String.format("%s has %d permissions", id, permissions.size()));
         for (String permission : permissions) {
@@ -190,7 +191,8 @@ public class RoleAdminTask extends Task {
         }
     }
 
-    private void createOrUpdateRole(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void createOrUpdateRole(Subject subject, RoleIdentifier id, ImmutableMultimap<String, String> parameters,
+                                    PrintWriter output) {
         checkArgument(!DefaultRoles.isDefaultRole(id), "Cannot update default role: %s", id);
 
         String name = parameters.get("name").stream().findFirst().orElse(null);
@@ -239,22 +241,27 @@ public class RoleAdminTask extends Task {
         // goal is to migrate away from using tasks to a proper REST API, at which time there would be distinct
         // endpoints for creating versus updating a role.
 
-        try {
+        if (_roleManager.getRole(id) == null) {  // Creating role
+            subject.checkPermission(Permissions.createRole(id));
             _roleManager.createRole(id, request);
-        } catch (RoleExistsException e) {
+        } else {
+            subject.checkPermission(Permissions.updateRole(id));
             _roleManager.updateRole(id, request);
         }
         output.println("Role updated.");
-        viewRole(id, output);
+        viewRole(subject, id, output);
     }
 
-    private void deleteRole(RoleIdentifier id, PrintWriter output) {
+    private void deleteRole(Subject subject, RoleIdentifier id, PrintWriter output) {
+        subject.checkPermission(Permissions.deleteRole(id));
         checkArgument(!DefaultRoles.isDefaultRole(id), "Cannot delete default role: %s", id);
         _roleManager.deleteRole(id);
         output.println("Role deleted");
     }
 
-    private void checkPermission(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void checkPermission(Subject subject, RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        subject.checkPermission(Permissions.readRole(id));
+
         String permissionStr = getValueFromParams("permission", parameters);
         final Permission permission = _permissionResolver.resolvePermission(permissionStr);
 
@@ -274,7 +281,11 @@ public class RoleAdminTask extends Task {
         }
     }
 
-    private void findDeprecatedPermissions(PrintWriter output) {
+    private void findDeprecatedPermissions(Subject subject, PrintWriter output) {
+        // Since finding deprecated permissions could potentially return information from any role the caller must
+        // have read permission for all roles.
+        subject.checkPermission(Permissions.readRole(Permissions.ALL, Permissions.ALL));
+
         final AtomicBoolean anyDeprecated = new AtomicBoolean(false);
         
         _roleManager.getAll().forEachRemaining(role -> {

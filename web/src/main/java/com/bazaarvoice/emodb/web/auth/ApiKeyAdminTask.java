@@ -4,10 +4,12 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.web.auth.resource.VerifiableResource;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
@@ -20,8 +22,8 @@ import com.google.common.net.HostAndPort;
 import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
-import org.apache.cassandra.thrift.AuthorizationException;
 import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
@@ -41,8 +43,10 @@ import static java.lang.String.format;
  * Task for managing API keys and the roles associated with them.
  *
  * The following examples demonstrate the various ways to use this task.  In order to actually run this task you must
- * provide an API key which has permission to manage API keys (see {@link Permissions#manageApiKeys()}).  For
- * the purposes of this example the API key "admin-key" is a valid key with this permission.
+ * provide an API key which has permission to perform the action requested, such as {@link Permissions#updateApiKey()}.
+ * Additionally, in order to grant or revoke roles for an API key you must provide an API key with grant permission
+ * for those roles, such as {@link Permissions#grantRole(VerifiableResource, VerifiableResource)}.
+ * For the purposes of this example the API key "admin-key" is a valid key with all required permissions.
  *
  * Create API key
  * ==============
@@ -138,28 +142,25 @@ public class ApiKeyAdminTask extends Task {
             // Make sure the API key is valid
             String apiKey = getValueFromParams(ApiKeyRequest.AUTHENTICATION_PARAM, parameters);
             subject.login(new ApiKeyAuthenticationToken(apiKey));
-
-            // Make sure the API key is permitted to manage API keys
-            subject.checkPermission(Permissions.manageApiKeys());
-
+            
             String activityStr = getValueFromParams("action", parameters);
             Action action = Action.valueOf(activityStr.toUpperCase());
 
             switch (action) {
                 case CREATE:
-                    createApiKey(parameters, output);
+                    createApiKey(subject, parameters, output);
                     break;
                 case VIEW:
-                    viewApiKey(parameters, output);
+                    viewApiKey(subject, parameters, output);
                     break;
                 case UPDATE:
-                    updateApiKey(parameters, output);
+                    updateApiKey(subject, parameters, output);
                     break;
                 case MIGRATE:
-                    migrateApiKey(parameters, output);
+                    migrateApiKey(subject, parameters, output);
                     break;
                 case DELETE:
-                    deleteApiKey(parameters, output);
+                    deleteApiKey(subject, parameters, output);
                     break;
             }
         } catch (AuthenticationException | AuthorizationException e) {
@@ -179,11 +180,18 @@ public class ApiKeyAdminTask extends Task {
         return BaseEncoding.base32().omitPadding().encode(b);
     }
 
-    private void createApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output)
+    private void createApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output)
                 throws Exception {
         String owner = getValueFromParams("owner", parameters);
         Set<String> roles = ImmutableSet.copyOf(parameters.get("role"));
         String description = Iterables.getFirst(parameters.get("description"), null);
+
+        // Does the caller have permission to create API keys?
+        subject.checkPermission(Permissions.createApiKey());
+        // Does the caller have permission to grant each role provided?
+        for (String role : roles) {
+            subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+        }
 
         // If the caller provided a specific key then only use that one.  This isn't common and should be
         // restricted to integration tests where stable keys are desirable.  In production it is better
@@ -274,8 +282,9 @@ public class ApiKeyAdminTask extends Task {
         return Pattern.matches("[a-zA-Z0-9]{48}", apiKey);
     }
 
-    private void viewApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output)
+    private void viewApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output)
             throws Exception {
+        subject.checkPermission(Permissions.readApiKey());
         String key = getValueFromParams("key", parameters);
 
         ApiKey apiKey = _authIdentityManager.getIdentity(key);
@@ -289,12 +298,20 @@ public class ApiKeyAdminTask extends Task {
         }
     }
 
-    private void updateApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void updateApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output) {
         Set<String> addRoles = ImmutableSet.copyOf(parameters.get("addRole"));
         Set<String> removeRoles = ImmutableSet.copyOf(parameters.get("removeRole"));
 
         checkArgument(!addRoles.isEmpty() || !removeRoles.isEmpty(), "Update requires one or more 'addRole' or 'removeRole' parameters");
         checkArgument(Sets.intersection(addRoles, _reservedRoles).isEmpty(), "Cannot assign reserved role");
+
+        // Does the caller have permission to grant all roles being added or removed?
+        for (String role : addRoles) {
+            subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+        }
+        for (String role : removeRoles) {
+            subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+        }
 
         String key = getValueFromParams("key", parameters);
         ApiKey apiKey = _authIdentityManager.getIdentity(key);
@@ -317,7 +334,10 @@ public class ApiKeyAdminTask extends Task {
         output.println("API key updated");
     }
 
-    private void migrateApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void migrateApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        // Migrating a key is considered a key update operation, so check for update permission
+        subject.checkPermission(Permissions.updateApiKey());
+
         String key = getValueFromParams("key", parameters);
         ApiKey apiKey = _authIdentityManager.getIdentity(key);
         checkArgument(apiKey != null, "Unknown API key");
@@ -332,7 +352,8 @@ public class ApiKeyAdminTask extends Task {
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
-    private void deleteApiKey(ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void deleteApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        subject.checkPermission(Permissions.deleteApiKey());
         String key = getValueFromParams("key", parameters);
         _authIdentityManager.deleteIdentity(key);
         output.println("API key deleted");

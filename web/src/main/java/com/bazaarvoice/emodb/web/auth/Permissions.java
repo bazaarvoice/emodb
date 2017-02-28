@@ -1,11 +1,16 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.web.auth.resource.AnyResource;
 import com.bazaarvoice.emodb.web.auth.resource.ConditionResource;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
+import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.auth.resource.VerifiableResource;
+import com.google.common.base.Objects;
+
+import javax.annotation.Nullable;
 
 import static com.bazaarvoice.emodb.auth.permissions.MatchingPermission.escapeSeparators;
 import static java.lang.String.format;
@@ -18,11 +23,15 @@ public class Permissions {
     public final static String BLOB = "blob";
     public final static String QUEUE = "queue";
     public final static String DATABUS = "databus";
+    public final static String ROLE = "role";
+    public final static String API_KEY = "apikey";
     public final static String SYSTEM = "system";
 
     // Actions
     public final static String READ = "read";
+    public final static String CREATE = "create";
     public final static String UPDATE = "update";
+    public final static String DELETE = "delete";
     public final static String CREATE_TABLE = "create_table";
     public final static String CREATE_FACADE = "create_facade";
     public final static String SET_TABLE_ATTRIBUTES = "set_table_attributes";
@@ -39,8 +48,7 @@ public class Permissions {
     public final static String PURGE = "purge";
     public final static String REPLICATE_DATABUS = "replicate_databus";
     public final static String RAW_DATABUS = "raw_databus";
-    public final static String MANAGE_API_KEYS = "manage_api_keys";
-    public final static String MANAGE_ROLES = "manage_roles";
+    public final static String GRANT = "grant";
 
     // Common resource values
     public final static AnyResource ALL = new AnyResource();
@@ -205,6 +213,101 @@ public class Permissions {
         return format("%s|%s|%s", DATABUS, ALL, escapeSeparators(subscription.toString()));
     }
 
+    // Authentication and authorization permissions
+
+    /**
+     * By convention permissions for roles with no group use "_" as the group name for permissions.
+     */
+    public static VerifiableResource toRoleGroupResource(@Nullable String group) {
+        return new NamedResource(Objects.firstNonNull(group, "_"));
+    }
+
+    public static String readRole(VerifiableResource group) {
+        return readRole(group, ALL);
+    }
+
+    public static String readRole(VerifiableResource group, VerifiableResource role) {
+        return format("%s|%s|%s|%s", ROLE, READ, escapeSeparators(group.toString()), escapeSeparators(role.toString()));
+    }
+
+    public static String readRole(RoleIdentifier roleIdentifier) {
+        return readRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
+    }
+
+    public static String createRole(VerifiableResource group) {
+        return createRole(group, ALL);
+    }
+
+    public static String createRole(VerifiableResource group, VerifiableResource role) {
+        return format("%s|%s|%s|%s", ROLE, CREATE, escapeSeparators(group.toString()), escapeSeparators(role.toString()));
+    }
+
+    public static String createRole(RoleIdentifier roleIdentifier) {
+        return createRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
+    }
+
+    public static String updateRole(VerifiableResource group) {
+        return updateRole(group, ALL);
+    }
+
+    public static String updateRole(VerifiableResource group, VerifiableResource role) {
+        return format("%s|%s|%s|%s", ROLE, UPDATE, escapeSeparators(group.toString()), escapeSeparators(role.toString()));
+    }
+
+    public static String updateRole(RoleIdentifier roleIdentifier) {
+        return updateRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
+    }
+
+    public static String deleteRole(VerifiableResource group) {
+        return deleteRole(group, ALL);
+    }
+
+    public static String deleteRole(RoleIdentifier roleIdentifier) {
+        return deleteRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
+    }
+
+    public static String deleteRole(VerifiableResource group, VerifiableResource role) {
+        return format("%s|%s|%s|%s", ROLE, DELETE, escapeSeparators(group.toString()), escapeSeparators(role.toString()));
+    }
+
+    public static String grantRole(VerifiableResource group) {
+        return grantRole(group, ALL);
+    }
+
+    public static String grantRole(VerifiableResource group, VerifiableResource role) {
+        return format("%s|%s|%s|%s", ROLE, GRANT, escapeSeparators(group.toString()), escapeSeparators(role.toString()));
+    }
+
+    public static String grantRole(RoleIdentifier roleIdentifier) {
+        return grantRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
+    }
+
+    public static String unlimitedRole() {
+        return ROLE;
+    }
+
+    public static String readApiKey() {
+        return format("%s|%s", API_KEY, READ);
+    }
+
+    public static String createApiKey() {
+        return format("%s|%s", API_KEY, CREATE);
+    }
+
+    public static String updateApiKey() {
+        return format("%s|%s", API_KEY, UPDATE);
+    }
+
+    public static String deleteApiKey() {
+        return format("%s|%s", API_KEY, DELETE);
+    }
+
+    public static String unlimitedApiKey() {
+        return API_KEY;
+    }
+
+    // System permissions
+    
     /**
      * Although the following permission concerns the databus it is placed in the "system" resource since
      * databus replication should only be performed internally by the system.
@@ -220,13 +323,4 @@ public class Permissions {
     public static String rawDatabus() {
         return format("%s|%s", SYSTEM, RAW_DATABUS);
     }
-
-    public static String manageApiKeys() {
-        return format("%s|%s", SYSTEM, MANAGE_API_KEYS);
-    }
-
-    public static String manageRoles() {
-        return format("%s|%s", SYSTEM, MANAGE_ROLES);
-    }
-
 }
