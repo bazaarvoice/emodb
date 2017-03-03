@@ -10,6 +10,7 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.commons.lang3.time.DateUtils;
 
 import javax.annotation.Nullable;
 import java.net.URI;
@@ -30,6 +31,7 @@ public class ScanStatus {
     private final List<ScanRangeStatus> _completeScanRanges;
     private final Date _startTime;
     private Date _completeTime;
+    private final Date _compactionControlTime;
 
     public ScanStatus(String scanId, ScanOptions options, boolean canceled,
                       Date startTime,
@@ -56,6 +58,8 @@ public class ScanStatus {
         _activeScanRanges = Objects.firstNonNull(activeScanRanges, ImmutableList.<ScanRangeStatus>of());
         _completeScanRanges = Objects.firstNonNull(completeScanRanges, ImmutableList.<ScanRangeStatus>of());
         _completeTime = completeTime;
+        // Adding 1 minute buffer time to the start time to give us the compaction control time. (setting the time in the future takes care of the issue of there being any in-flight compactions)
+        _compactionControlTime = DateUtils.addMinutes(startTime, 1);
     }
 
     public String getScanId() {
@@ -98,6 +102,10 @@ public class ScanStatus {
 
     public void setCompleteTime(Date completeTime) {
         _completeTime = completeTime;
+    }
+
+    public Date getCompactionControlTime() {
+        return _compactionControlTime;
     }
 
     @JsonIgnore

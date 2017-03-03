@@ -12,7 +12,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation indicating that the annotated object is the 'local' Compaction control source.
+ * Guice binding annotation indicating that the annotated object is the list of all Compaction control sources, local as well as remotes.
  */
 @BindingAnnotation
 @Target ({FIELD, PARAMETER, METHOD})

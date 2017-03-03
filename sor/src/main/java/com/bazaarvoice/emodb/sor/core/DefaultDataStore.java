@@ -340,8 +340,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         long fullConsistencyTimeStamp = _dataWriterDao.getFullConsistencyTimestamp(record.getKey().getTable());
         long rawConsistencyTimeStamp = _dataWriterDao.getRawConsistencyTimestamp(record.getKey().getTable());
         Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(record.getKey().getTable().getAvailability().getPlacement());
+        // we will consider the earliest timestamp found as our compactionControlTimestamp.
+        // we are also filtering out any expired timestamps. (CompactionControlMonitor should do this for us, but for now it's running every hour. So, just to fill that gap, we are filtering here.)
+        // If no timestamps are found, then taking minimum value because we want all the deltas after the compactionControlTimestamp to be deleted as per the compaction rules as usual.
         long compactionControlTimestamp = stashTimeInfoMap.isEmpty() ?
-                System.currentTimeMillis() : stashTimeInfoMap.values().stream().map(StashRunTimeInfo::getTimestamp).min(Long::compareTo).get();
+                Long.MIN_VALUE : stashTimeInfoMap.values().stream().filter(s -> s.getExpiredTimestamp() > System.currentTimeMillis()).map(StashRunTimeInfo::getTimestamp).min(Long::compareTo).get();
         return expand(record, fullConsistencyTimeStamp, rawConsistencyTimeStamp, compactionControlTimestamp, ignoreRecent, consistency);
     }
 
@@ -678,7 +681,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (ttlOverride != null) {
             // The caller can override DataWriterDAO.getFullConsistencyTimestamp() for debugging. Use with caution!
             long overriddenfullConsistencyTimestamp = System.currentTimeMillis() - ttlOverride.getMillis();
-            expanded = expand(record, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, true,
+            expanded = expand(record, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, Long.MIN_VALUE, true,
                     readConsistency);
         } else {
             expanded = expand(record, true, readConsistency);

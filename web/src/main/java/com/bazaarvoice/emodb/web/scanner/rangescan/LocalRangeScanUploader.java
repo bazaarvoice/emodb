@@ -186,7 +186,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
     @Override
     public RangeScanUploaderResult scanAndUpload(
-            final int taskId, ScanOptions options, final String placement, ScanRange scanRange, final TableSet tableSet, Date stashStartTime)
+            final int taskId, ScanOptions options, final String placement, ScanRange scanRange, final TableSet tableSet, Date compactionControlTime)
             throws IOException, InterruptedException {
         checkState(!_shutdown, "Service not started");
 
@@ -252,8 +252,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             int partCountForFirstShard = 1;
             Batch batch = new Batch(context, partCountForFirstShard);
 
-            DateTime cutoffTime = new DateTime(stashStartTime);
-            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, new DateTime(compactionControlTime));
 
             // Enforce a maximum number of results based on the scan options
             Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));

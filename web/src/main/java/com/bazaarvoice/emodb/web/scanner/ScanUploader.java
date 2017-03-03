@@ -20,7 +20,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -110,13 +109,14 @@ public class ScanUploader {
         boolean scanCreated = false;
 
         try {
-            // Adding 1 minute buffer time to the actual stash start time.
-            // this is needed to allow the setting time to trickle the request to the DataStore.
-            // Also, this way the in-flight compactions can finish as usual.
-            long stashStartTime = status.getStartTime().getTime() + Duration.ofMinutes(1).toMillis();
-            long expireTime = stashStartTime + Duration.ofHours(10).toMillis();
+            // compaction control timestamp = stash start time + 1 minutes buffer time. This is needed to allow the setting time to trickle the request to the DataStore.
+            // Setting the time in the future takes care of the issue of there being any in-flight compactions
+            // Note: the same compaction control timestamp with 1 minute buffer time is also considered during the multiscan deltas/compactions resolving.
+            long compactionControlTime = status.getCompactionControlTime().getTime();
+            // expired time for now is designed to be 10 hours from the compaction control time.
+            long expireTime = compactionControlTime + Duration.ofHours(10).toMillis();
             // Update the scan start time in Zookeeper in all data centers.
-            _compactionControlSource.updateStashTime(scanId, stashStartTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
+            _compactionControlSource.updateStashTime(scanId, compactionControlTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
         } catch (Exception e) {
             _log.error("Failed to update the stash time for scan {}", scanId, e);
             throw Throwables.propagate(e);

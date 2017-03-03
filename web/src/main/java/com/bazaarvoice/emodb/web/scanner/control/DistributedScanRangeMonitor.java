@@ -337,7 +337,7 @@ public class DistributedScanRangeMonitor implements Managed {
             // Get the distributed table set for this scan
             TableSet tableSet = _scanTableSetManager.getTableSetForScan(scanId);
             // Perform the range scan
-            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet, status.getStartTime());
+            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet, status.getCompactionControlTime());
 
             _log.info("Completed scan range task: {}", task);
         } catch (Throwable t) {
