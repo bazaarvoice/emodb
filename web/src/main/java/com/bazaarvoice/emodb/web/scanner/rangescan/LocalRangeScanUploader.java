@@ -204,7 +204,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                 _timeoutService.schedule(timeout, options.getMaxRangeScanTime().getMillis(), TimeUnit.MILLISECONDS);
 
         final BatchContext context = new BatchContext(
-                _batchSize, placement, scanRange, shardCounter, rawBytesUploadedCounter, options.isCompactionEnabled());
+                _batchSize, placement, scanRange, shardCounter, rawBytesUploadedCounter);
 
         _activeRangeScans.inc();
         try (ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(taskId, options.getDestinations())) {
@@ -435,7 +435,6 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         BatchContext context = batch.getContext();
         ScanWriter scanWriter = context.getScanWriter();
         Counter shardCounter = context.getShardCounter();
-        boolean compactionEnabled = context.isCompactionEnabled();
 
         ShardWriter writer = null;
         OutputStream out = null;
@@ -452,7 +451,9 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
                 MultiTableScanResult result = resultIter.next();
 
-                Map<String, Object> content = _dataTools.toContent(result, ReadConsistency.STRONG, compactionEnabled);
+                // NOTE:Compaction should always be disabled as the resolved record may not be the most current version of the document with the introduction of cutoffTimes in scanning the emo docs.
+                // and cannot be used for compaction without risking data loss.
+                Map<String, Object> content = _dataTools.toContent(result, ReadConsistency.STRONG, Boolean.FALSE);
 
                 int shardId = result.getShardId();
                 long tableUuid = result.getTableUuid();
@@ -597,7 +598,6 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         private final ScanRange _taskRange;
         private final Counter _shardCounter;
         private final Counter _rawBytesUploadedCounter;
-        private final boolean _compactionEnabled;
 
         private ScanWriter _scanWriter;
         private final Set<Batch> _openBatches = Sets.newHashSet();
@@ -608,13 +608,12 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         private volatile boolean _stopProcessing = false;
 
         private BatchContext(int batchSize, String placement, ScanRange taskRange,
-                             Counter shardCounter, Counter rawBytesUploadedCounter, boolean compactionEnabled) {
+                             Counter shardCounter, Counter rawBytesUploadedCounter) {
             _batchSize = batchSize;
             _placement = placement;
             _taskRange = taskRange;
             _shardCounter = shardCounter;
             _rawBytesUploadedCounter = rawBytesUploadedCounter;
-            _compactionEnabled = compactionEnabled;
         }
 
         private ScanWriter getScanWriter() {
@@ -643,10 +642,6 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
         private Counter getRawBytesUploadedCounter() {
             return _rawBytesUploadedCounter;
-        }
-
-        private boolean isCompactionEnabled() {
-            return _compactionEnabled;
         }
 
         public void openBatch(Batch batch) {

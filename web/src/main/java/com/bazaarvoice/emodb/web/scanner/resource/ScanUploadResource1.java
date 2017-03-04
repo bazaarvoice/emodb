@@ -42,7 +42,6 @@ public class ScanUploadResource1 {
                                 @QueryParam ("dest") List<String> destinationParams,
                                 @QueryParam ("byAZ") @DefaultValue ("true") Boolean byAZ,
                                 @QueryParam ("maxConcurrency") @DefaultValue ("4") Integer maxConcurrency,
-                                @QueryParam ("compactionEnabled") @DefaultValue ("false") Boolean compactionEnabled,
                                 @QueryParam ("dryRun") @DefaultValue ("false") Boolean dryRun) {
 
         checkArgument(!placements.isEmpty(), "Placement is required");
@@ -69,8 +68,7 @@ public class ScanUploadResource1 {
         ScanOptions options = new ScanOptions(placements)
                 .addDestinations(destinations)
                 .setScanByAZ(byAZ)
-                .setMaxConcurrentSubRangeScans(maxConcurrency)
-                .setCompactionEnabled(compactionEnabled);
+                .setMaxConcurrentSubRangeScans(maxConcurrency);
 
         return _scanUploader.scanAndUpload(id, options, dryRun);
     }

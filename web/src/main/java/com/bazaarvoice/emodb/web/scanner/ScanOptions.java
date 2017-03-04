@@ -36,8 +36,6 @@ public class ScanOptions {
     private int _rangeScanSplitSize = DEFAULT_RANGE_SCAN_SPLIT_SIZE;
     // Maximum time a range scan can run before it is automatically stopped and remaining work split to a new task
     private Duration _maxRangeScanTime = DEFAULT_MAX_RANGE_SCAN_TIME;
-    // Allow compaction of records during the scan.  Potentially increases the total scan time.  Default is false
-    private boolean _compactionEnabled = false;
 
     public ScanOptions(String placement) {
         this(ImmutableSortedSet.of(placement));
@@ -54,8 +52,7 @@ public class ScanOptions {
                         @JsonProperty ("scanByAZ") Boolean scanByAZ,
                         @JsonProperty ("maxConcurrentSubRangeScans") Integer maxConcurrentSubRangeScans,
                         @JsonProperty ("rangeScanSplitSize") Integer rangeScanSplitSize,
-                        @JsonProperty ("maxRangeScanTime") Long maxRangeScanTime,
-                        @JsonProperty ("compactionEnabled") Boolean compactionEnabled) {
+                        @JsonProperty ("maxRangeScanTime") Long maxRangeScanTime) {
         this(placements);
         if (destinations != null) {
             addDestinations(destinations);
@@ -71,9 +68,6 @@ public class ScanOptions {
         }
         if (maxRangeScanTime != null) {
             _maxRangeScanTime = Duration.millis(maxRangeScanTime);
-        }
-        if (compactionEnabled != null) {
-            _compactionEnabled = compactionEnabled;
         }
     }
 
@@ -144,15 +138,6 @@ public class ScanOptions {
         return this;
     }
 
-    public boolean isCompactionEnabled() {
-        return _compactionEnabled;
-    }
-
-    public ScanOptions setCompactionEnabled(boolean compactionEnabled) {
-        _compactionEnabled = compactionEnabled;
-        return this;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -166,7 +151,6 @@ public class ScanOptions {
 
         return Objects.equal(_placements, that.getPlacements()) &&
                 _scanByAZ == that._scanByAZ &&
-                _compactionEnabled == that._compactionEnabled &&
                 _maxConcurrentSubRangeScans == that._maxConcurrentSubRangeScans &&
                 Objects.equal(_destinations, that.getDestinations());
     }
