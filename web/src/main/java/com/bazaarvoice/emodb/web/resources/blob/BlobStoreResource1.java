@@ -70,6 +70,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
@@ -109,7 +110,7 @@ public class BlobStoreResource1 {
                                       @QueryParam("limit") @DefaultValue("10") LongParam limit,
                                       final @Authenticated Subject subject) {
         return streamingIterator(
-            StreamSupport.stream(((Iterable<Table>) () -> _blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE)).spliterator(), false)
+            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
                 .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
                 .limit(limit.get())
                 .iterator()

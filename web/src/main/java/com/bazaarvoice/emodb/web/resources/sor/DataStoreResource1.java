@@ -86,6 +86,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -125,7 +126,7 @@ public class DataStoreResource1 {
                                       final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
                                       final @Authenticated Subject subject) {
         return streamingIterator(
-            StreamSupport.stream(((Iterable<Table>) () -> _dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE)).spliterator(), false)
+            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
                 .filter(input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))))
                 .limit(limitParam.get())
                 .iterator(),
