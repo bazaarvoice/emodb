@@ -217,8 +217,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void testPermissionCheckByInternalId() {
-        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
-        _authIdentityManager.updateIdentity(apiKey);
+        String internalId = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);
         Permission negativePermission = mock(Permission.class);
@@ -227,25 +226,24 @@ public class ApiKeyRealmTest {
         when(_permissionManager.getPermissions(PermissionIDs.forRole("role0"))).thenReturn(ImmutableSet.of(rolePermission));
 
         // Verify the internal ID is not cached
-        assertNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        assertNull(_underTest.getInternalAuthorizationCache().get(internalId));
         // Verify permission was granted
-        assertTrue(_underTest.hasPermissionByInternalId("id0", positivePermission));
+        assertTrue(_underTest.hasPermissionByInternalId(internalId, positivePermission));
         // Verify the internal ID was cached
-        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        assertNotNull(_underTest.getInternalAuthorizationCache().get(internalId));
         // Verify no API key information was cached
         assertTrue(_underTest.getAuthenticationCache().keys().isEmpty());
         // Verify permission is granted using the API key
         PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
         assertTrue(_underTest.isPermitted(principals, positivePermission));
         // Negative tests
-        assertFalse(_underTest.hasPermissionByInternalId("id0", negativePermission));
+        assertFalse(_underTest.hasPermissionByInternalId(internalId, negativePermission));
         assertFalse(_underTest.isPermitted(principals, negativePermission));
     }
 
     @Test
     public void testCachedPermissionCheckByInternalId() {
-        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
-        _authIdentityManager.updateIdentity(apiKey);
+        String internalId = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);
         when(rolePermission.implies(positivePermission)).thenReturn(true);
@@ -256,9 +254,9 @@ public class ApiKeyRealmTest {
         PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
         assertTrue(_underTest.isPermitted(principals, positivePermission));
         // Verify the internal ID was cached
-        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+        assertNotNull(_underTest.getInternalAuthorizationCache().get(internalId));
         // Verify permission was granted
-        assertTrue(_underTest.hasPermissionByInternalId("id0", positivePermission));
+        assertTrue(_underTest.hasPermissionByInternalId(internalId, positivePermission));
     }
 
     @Test

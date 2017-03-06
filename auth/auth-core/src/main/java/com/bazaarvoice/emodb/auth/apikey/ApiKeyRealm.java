@@ -210,20 +210,20 @@ public class ApiKeyRealm extends AuthorizingRealm {
     /**
      * Gets the authentication info for an API key from the source (not from cache).
      */
-    private AuthenticationInfo getUncachedAuthenticationInfoForKey(String id) {
-        ApiKey apiKey = _authIdentityReader.getIdentity(id);
+    private AuthenticationInfo getUncachedAuthenticationInfoForKey(String authenicationId) {
+        ApiKey apiKey = _authIdentityReader.getIdentityByAuthenticationId(authenicationId);
         if (apiKey == null) {
             return null;
         }
 
-        return createAuthenticationInfo(apiKey);
+        return createAuthenticationInfo(authenicationId, apiKey);
     }
 
     /**
      * Simple method to build and AuthenticationInfo instance from an API key.
      */
-    private ApiKeyAuthenticationInfo createAuthenticationInfo(ApiKey apiKey) {
-        return new ApiKeyAuthenticationInfo(apiKey, getName());
+    private ApiKeyAuthenticationInfo createAuthenticationInfo(String authenticationId, ApiKey apiKey) {
+        return new ApiKeyAuthenticationInfo(authenticationId, apiKey, getName());
     }
 
     /**
@@ -418,13 +418,13 @@ public class ApiKeyRealm extends AuthorizingRealm {
      */
     private AuthorizationInfo getUncachedAuthorizationInfoByInternalId(String internalId) {
         // Retrieve the roles by internal ID
-        Set<String> roles = _authIdentityReader.getRolesByInternalId(internalId);
-        if (roles == null) {
+        ApiKey apiKey = _authIdentityReader.getIdentity(internalId);
+        if (apiKey == null) {
             _log.debug("Authorization info requested for non-existent internal id {}", internalId);
             return _nullAuthorizationInfo;
         }
 
-        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(roles));
+        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(apiKey.getRoles()));
     }
 
     /**

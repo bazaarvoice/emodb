@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.auth.identity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
@@ -15,7 +16,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 abstract public class AuthIdentity {
 
     /**
-     * Each identity is associated with an internal ID which is never exposed outside the system.  This is done
+     * Each identity is associated with an immutable ID distinct from the secret authentication key.  This is done
      * for several reasons:
      *
      * <ol>
@@ -35,12 +36,18 @@ abstract public class AuthIdentity {
      *         If an ID is compromised an administrator may want to replace it with a new ID without
      *         changing all internal references to that ID.
      *     </li>
+     *     <li>
+     *         User management can be performed without the identity owner divulging her authentication ID,
+     *         such as over a chat client or in an email.
+     *     </li>
      * </ol>
+     *
+     * In the original design this ID was only used internally, but over time it has become an accepted public-facing
+     * identifier for identities.  This is why for historical reasons this field is called "internalId" even though
+     * it is used as both the unique internal and external identifier for this identity.
      */
     private final String _internalId;
 
-    // Client-facing ID of the identity
-    private final String _id;
     // Roles assigned to the identity
     private final Set<String> _roles;
     // Owner of the identity, such as an email address
@@ -49,18 +56,13 @@ abstract public class AuthIdentity {
     private String _description;
     // Date this identity was issued
     private Date _issued;
+    // Masked version of the authentication ID.
+    private String _maskedId;
 
-
-    protected AuthIdentity(String id, String internalId, Set<String> roles) {
-        checkArgument(!Strings.isNullOrEmpty(id), "id");
-        checkArgument(!Strings.isNullOrEmpty(internalId), "internalId");
-        _id = id;
+    protected AuthIdentity(String internalId, Set<String> roles) {
+        checkArgument(!Strings.isNullOrEmpty(internalId), "id");
         _internalId = internalId;
         _roles = ImmutableSet.copyOf(checkNotNull(roles, "roles"));
-    }
-
-    public String getId() {
-        return _id;
     }
 
     public String getInternalId() {
@@ -93,5 +95,13 @@ abstract public class AuthIdentity {
 
     public void setIssued(Date issued) {
         _issued = issued;
+    }
+
+    public String getMaskedId() {
+        return _maskedId;
+    }
+
+    public void setMaskedId(String maskedId) {
+        _maskedId = maskedId;
     }
 }

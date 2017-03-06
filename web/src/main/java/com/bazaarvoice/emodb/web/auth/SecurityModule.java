@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.DataCenterSynchronizedAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.DeferringAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManagerDAO;
 import com.bazaarvoice.emodb.auth.permissions.CacheManagingPermissionManager;
@@ -26,16 +27,18 @@ import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
+import com.google.common.io.BaseEncoding;
+import com.google.common.primitives.Longs;
 import com.google.inject.Exposed;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -52,6 +55,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
@@ -182,36 +187,71 @@ public class SecurityModule extends PrivateModule {
         return Optional.absent();
     }
 
+    /**
+     * Supplier for generating internal IDs for API keys.  Note that, critically, the values returned will never
+     * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, AuthIdentityManager)}
+     */
     @Provides
     @Singleton
-    @Named("dao")
-    AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
-            AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash) {
-        return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
-                config.getInternalIdIndexTable(), config.getTablePlacement(), hash);
+    @InternalIdSupplier
+    Supplier<String> provideInternalIdSupplier() {
+        return () -> {
+            // This is effectively a TimeUUID but condensed to a slightly smaller String representation.
+            UUID uuid = TimeUUIDs.newUUID();
+            byte[] b = new byte[16];
+            System.arraycopy(Longs.toByteArray(uuid.getMostSignificantBits()), 0, b, 0, 8);
+            System.arraycopy(Longs.toByteArray(uuid.getLeastSignificantBits()), 0, b, 8, 8);
+            return BaseEncoding.base32().omitPadding().encode(b);
+        };
     }
 
     @Provides
     @Singleton
-    @Inject
-    AuthIdentityManager<ApiKey> provideAuthIdentityManager(
+    @Named("dao")
+    AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
+            AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash,
+            @InternalIdSupplier Supplier<String> internalIdSupplier) {
+        return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
+                config.getInternalIdIndexTable(), config.getTablePlacement(), internalIdSupplier, hash);
+    }
+
+    @Provides
+    @Singleton
+    @Named("withDefaults")
+    AuthIdentityManager<ApiKey> provideAuthIdentityManagerWithDefaults(
             @ReplicationKey String replicationKey,
-            InvalidatableCacheManager cacheManager,
             @Named("AdminKey") String adminKey, @Named("AnonymousKey") Optional<String> anonymousKey,
             @Named("dao") AuthIdentityManager<ApiKey> daoManager) {
 
-        ImmutableList.Builder<ApiKey> reservedIdentities = ImmutableList.builder();
-        reservedIdentities.add(
-                new ApiKey(replicationKey, REPLICATION_INTERNAL_ID, ImmutableSet.of(DefaultRoles.replication.toString())),
-                new ApiKey(adminKey, ADMIN_INTERNAL_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
+        ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
+        reservedIdentities.put(replicationKey,
+                new ApiKey(REPLICATION_INTERNAL_ID, ImmutableSet.of(DefaultRoles.replication.toString())));
+        reservedIdentities.put(adminKey,
+                new ApiKey(ADMIN_INTERNAL_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
-            reservedIdentities.add(new ApiKey(anonymousKey.get(), ANONYMOUS_INTERNAL_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
+            reservedIdentities.put(anonymousKey.get(),
+                    new ApiKey(ANONYMOUS_INTERNAL_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
-        AuthIdentityManager<ApiKey> deferring = new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
+        return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
+    }
 
-        return new CacheManagingAuthIdentityManager<>(deferring, cacheManager);
+    @Provides
+    @Singleton
+    @Named("cacheInvalidating")
+    AuthIdentityManager<ApiKey> provideAuthIdentityManagerCacheInvalidating(
+            @Named("withDefaults") AuthIdentityManager<ApiKey> defaultedManager,
+            InvalidatableCacheManager cacheManager) {
+        return new CacheManagingAuthIdentityManager<>(defaultedManager, cacheManager);
+    }
+
+    @Provides
+    @Singleton
+    AuthIdentityManager<ApiKey> provideAuthIdentityManager(
+            @Named("cacheInvalidating") AuthIdentityManager<ApiKey> cacheInvalidatingManager,
+            @AuthZooKeeper CuratorFramework curator) {
+        return new DataCenterSynchronizedAuthIdentityManager<>(cacheInvalidatingManager, curator);
     }
 
     @Provides

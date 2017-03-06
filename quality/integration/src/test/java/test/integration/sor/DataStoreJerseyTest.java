@@ -2,6 +2,7 @@ package test.integration.sor;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
@@ -120,13 +121,13 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     private ResourceTestRule setupDataStoreResourceTestRule() {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_TABLE, "id0", ImmutableSet.of("table-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_A, "id1", ImmutableSet.of("tables-a-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_B, "id2", ImmutableSet.of("tables-b-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_FACADE, "id3", ImmutableSet.of("facade-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", ImmutableSet.of("reviews-only-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", ImmutableSet.of("standard")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", ImmutableSet.of("update-with-events")));
+        authIdentityManager.createIdentity(APIKEY_TABLE, new ApiKeyModification().addRoles("table-role"));
+        authIdentityManager.createIdentity(APIKEY_READ_TABLES_A, new ApiKeyModification().addRoles("tables-a-role"));
+        authIdentityManager.createIdentity(APIKEY_READ_TABLES_B, new ApiKeyModification().addRoles("tables-b-role"));
+        authIdentityManager.createIdentity(APIKEY_FACADE, new ApiKeyModification().addRoles("facade-role"));
+        authIdentityManager.createIdentity(APIKEY_REVIEWS_ONLY, new ApiKeyModification().addRoles("reviews-only-role"));
+        authIdentityManager.createIdentity(APIKEY_STANDARD, new ApiKeyModification().addRoles("standard"));
+        authIdentityManager.createIdentity(APIKEY_STANDARD_UPDATE, new ApiKeyModification().addRoles("update-with-events"));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);

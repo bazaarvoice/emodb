@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.test;
 
 import com.bazaarvoice.emodb.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
@@ -20,6 +21,7 @@ import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 import com.sun.jersey.spi.container.ContainerResponseFilter;
@@ -30,30 +32,50 @@ import test.integration.databus.DatabusJerseyTest;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.function.Supplier;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public abstract class ResourceTest {
 
     private ConcurrentRequestsThrottlingFilter _concurrentRequestsThrottlingFilter;
 
-    protected static ResourceTestRule setupResourceTestRule(List<Object> resourceList, ApiKey apiKey, ApiKey unauthorizedKey, String typeName) {
-        return setupResourceTestRule(resourceList, ImmutableList.of(), apiKey, unauthorizedKey, typeName);
+    protected static ResourceTestRule setupResourceTestRule(List<Object> resourceList, Map<String, ApiKey> apiKeys,
+                                                            Multimap<String, String> permissionsByRole) {
+        return setupResourceTestRule(resourceList, ImmutableList.of(), apiKeys, permissionsByRole);
     }
 
-    protected static ResourceTestRule setupResourceTestRule(List<Object> resourceList, List<Object> filters, ApiKey apiKey, ApiKey unauthorizedKey, String typeName) {
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(apiKey);
-        authIdentityManager.updateIdentity(unauthorizedKey);
+    protected static ResourceTestRule setupResourceTestRule(List<Object> resourceList, List<Object> filters,
+                                                            Map<String, ApiKey> apiKeys,
+                                                            Multimap<String, String> permissionsByRole) {
+        //noinspection unchecked
+        Supplier<String> internalIdSupplier = mock(Supplier.class);
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(internalIdSupplier);
+        for (Map.Entry<String, ApiKey> entry : apiKeys.entrySet()) {
+            String key = entry.getKey();
+            ApiKey apiKey = entry.getValue();
+            when(internalIdSupplier.get()).thenReturn(apiKey.getInternalId());
+            authIdentityManager.createIdentity(key,
+                    new ApiKeyModification()
+                            .withOwner(apiKey.getOwner())
+                            .withDescription(apiKey.getDescription())
+                            .addRoles(apiKey.getRoles()));
+        }
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         RoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        createRole(roleManager, null, typeName + "-role", ImmutableSet.of(typeName + "|*|*"));
+        for (Map.Entry<String, Collection<String>> entry : permissionsByRole.asMap().entrySet()) {
+            createRole(roleManager, null, entry.getKey(), ImmutableSet.copyOf(entry.getValue()));
+        }
 
         return setupResourceTestRule(resourceList, filters, authIdentityManager, permissionManager);
     }

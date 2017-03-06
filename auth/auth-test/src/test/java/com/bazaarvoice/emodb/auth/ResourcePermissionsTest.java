@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
@@ -11,7 +12,6 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
@@ -165,7 +165,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithMissingPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+        _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions("testrole", new PermissionUpdateRequest().permit("country|get|Spain"));
 
         ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
@@ -188,7 +188,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithMatchingPermissions(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+        _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
@@ -212,7 +212,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithMatchingWildcardPermissions(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+        _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|*", "country|*|*"));
 
@@ -236,7 +236,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithNonMatchingWildcardPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+        _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|*|Portugal"));
 
@@ -260,7 +260,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithEscapedPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+        _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Pipe\\|Town", "country|get|Star\\*Nation"));
 
@@ -284,7 +284,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testAnonymousWithPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("anon", "id1", ImmutableSet.of("anonrole")));
+        _authIdentityDAO.createIdentity("anon", new ApiKeyModification().addRoles("anonrole"));
         _permissionDAO.updatePermissions(PermissionIDs.forRole("anonrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 

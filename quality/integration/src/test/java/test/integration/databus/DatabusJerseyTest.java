@@ -41,6 +41,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.sun.jersey.api.client.GenericType;
@@ -110,10 +111,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
-                    new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
-                    new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
-                    "databus");
+            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
+                    new DatabusResourcePoller(new MetricRegistry()))),
+            ImmutableMap.of(
+                    APIKEY_DATABUS, new ApiKey(INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
+                    APIKEY_UNAUTHORIZED, new ApiKey(INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role"))),
+            ImmutableMultimap.of("databus-role", "databus|*|*"));
 
     @After
     public void tearDownMocksAndClearState() {

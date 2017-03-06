@@ -15,6 +15,8 @@ import com.bazaarvoice.emodb.web.auth.DefaultRoles;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.databus.ReplicationResource1;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -39,23 +41,14 @@ public class ReplicationJerseyTest extends ResourceTest {
     private final ReplicationSource _server = mock(ReplicationSource.class);
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupReplicationResourceTestRule(ImmutableList.<Object>of(new ReplicationResource1(_server)),
-            new ApiKey(APIKEY_REPLICATION, "repl", ImmutableSet.of("replication-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")));
-
-    protected static ResourceTestRule setupReplicationResourceTestRule(List<Object> resourceList, ApiKey apiKey, ApiKey unauthorizedKey) {
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(apiKey);
-        authIdentityManager.updateIdentity(unauthorizedKey);
-
-        EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
-        InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        RoleManager roleManager = new InMemoryRoleManager(permissionManager);
-
-        createRole(roleManager, null, "replication-role", DefaultRoles.replication.getPermissions());
-
-        return setupResourceTestRule(resourceList, authIdentityManager, permissionManager);
-    }
+    public ResourceTestRule _resourceTestRule = setupResourceTestRule(
+            ImmutableList.<Object>of(new ReplicationResource1(_server)),
+            ImmutableMap.of(
+                    APIKEY_REPLICATION, new ApiKey("repl", ImmutableSet.of("replication-role")),
+                    APIKEY_UNAUTHORIZED, new ApiKey("unauth", ImmutableSet.of("unauthorized-role"))),
+            ImmutableMultimap.<String, String>builder()
+                    .putAll("replication-role", DefaultRoles.replication.getPermissions())
+                    .build());
 
     @After
     public void tearDownMocksAndClearState() {

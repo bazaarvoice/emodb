@@ -2,8 +2,6 @@ package com.bazaarvoice.emodb.auth.identity;
 
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 
-import java.util.Set;
-
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -20,28 +18,48 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
     }
 
     @Override
-    public T getIdentity(String id) {
-        checkNotNull(id, "id");
-        return _manager.getIdentity(id);
-    }
-
-    @Override
-    public void updateIdentity(T identity) {
-        checkNotNull(identity);
-        _manager.updateIdentity(identity);
-        _cacheManager.invalidateAll();
-    }
-
-    @Override
-    public void deleteIdentity(String id) {
-        checkNotNull(id);
-        _manager.deleteIdentity(id);
-        _cacheManager.invalidateAll();
-    }
-
-    @Override
-    public Set<String> getRolesByInternalId(String internalId) {
+    public T getIdentity(String internalId) {
         checkNotNull(internalId, "internalId");
-        return _manager.getRolesByInternalId(internalId);
+        return _manager.getIdentity(internalId);
+    }
+
+    @Override
+    public T getIdentityByAuthenticationId(String authenticationId) {
+        return _manager.getIdentityByAuthenticationId(authenticationId);
+    }
+
+    @Override
+    public String createIdentity(String authenticationId, AuthIdentityModification<T> modification)
+            throws IdentityExistsException {
+        checkNotNull(authenticationId, "authenticationId");
+        checkNotNull(modification, "modification");
+        String internalId = _manager.createIdentity(authenticationId, modification);
+        _cacheManager.invalidateAll();
+        return internalId;
+    }
+
+    @Override
+    public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+            throws IdentityNotFoundException {
+        checkNotNull(internalId, "internalId");
+        checkNotNull(modification, "modification");
+        _manager.updateIdentity(internalId, modification);
+        _cacheManager.invalidateAll();
+    }
+
+    @Override
+    public void migrateIdentity(String internalId, String newAuthenticationId)
+            throws IdentityNotFoundException, IdentityExistsException {
+        checkNotNull(internalId);
+        checkNotNull(newAuthenticationId);
+        _manager.migrateIdentity(internalId, newAuthenticationId);
+        _cacheManager.invalidateAll();
+    }
+
+    @Override
+    public void deleteIdentity(String internalId) {
+        checkNotNull(internalId);
+        _manager.deleteIdentity(internalId);
+        _cacheManager.invalidateAll();
     }
 }

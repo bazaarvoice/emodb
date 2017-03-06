@@ -1,6 +1,7 @@
 package test.integration.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
@@ -62,7 +63,7 @@ public class RoleAdminTaskTest {
                         null));
 
         _task = new RoleAdminTask(securityManager, _roleManager, permissionManager.getPermissionResolver(), mock(TaskRegistry.class));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.createIdentity("test-admin", new ApiKeyModification().addRoles(DefaultRoles.admin.toString()));
     }
 
     @AfterMethod
