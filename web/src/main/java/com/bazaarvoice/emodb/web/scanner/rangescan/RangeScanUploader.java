@@ -19,8 +19,8 @@ public interface RangeScanUploader {
      * @param placement The placement to scan
      * @param scanRange The range to be scanned and uploaded
      * @param tableSet The TableSet to load table definitions from over the course of this scan.
-     * @param startTime The start time of the scan operation
+     * @param compactionControlTime The compaction control time for this scan operation.
      */
-    RangeScanUploaderResult scanAndUpload(int taskId, ScanOptions scanOptions, String placement, ScanRange scanRange, TableSet tableSet, Date startTime)
+    RangeScanUploaderResult scanAndUpload(int taskId, ScanOptions scanOptions, String placement, ScanRange scanRange, TableSet tableSet, Date compactionControlTime)
             throws IOException, InterruptedException;
 }

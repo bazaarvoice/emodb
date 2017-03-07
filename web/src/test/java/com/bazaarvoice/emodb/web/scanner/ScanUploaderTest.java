@@ -323,17 +323,17 @@ public class ScanUploaderTest {
         CompactionControlSource compactionControlSource = new InMemoryCompactionControlSource();
         // Create the instance and run the upload
         ScanUploader scanUploader = new ScanUploader(dataTools, scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
-        scanUploader.scanAndUpload("test1",
-                new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path"))));
+        // the default in code is 1 minute, but we don't want to wait that long in the test, so set to a smaller value.
+        scanUploader.setCompactionControlBufferTimeInMillis(Duration.standardSeconds(1).getMillis());
+        ScanStatus scanStatus = scanUploader.scanAndUpload("test1",
+                new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path")))).get();
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, mock(ScanTableSetManager.class),
                 scanWriterGenerator, stashStateListener, scanCountListener, dataTools, compactionControlSource, dataCenters);
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
 
-
         monitor.refreshScan("test1");
 
         // Verify the scan status was recorded and is consistent
-        ScanStatus scanStatus = scanStatusDAO.getScanStatus("test1");
         Date startTime = scanStatus.getStartTime();
         assertEquals(scanStatus.getPendingScanRanges().size(), 1);
         assertTrue(scanStatus.getActiveScanRanges().isEmpty());

@@ -21,6 +21,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -70,7 +71,14 @@ public class ScanUploadResource1 {
                 .setScanByAZ(byAZ)
                 .setMaxConcurrentSubRangeScans(maxConcurrency);
 
-        return _scanUploader.scanAndUpload(id, options, dryRun);
+        ScanStatus scanStatus;
+        try {
+            // TODO: This will take more than a minute if we want to grab the scanStatus. Can we escape here without waiting for the scanStatus :?
+            scanStatus = _scanUploader.scanAndUpload(id, options, dryRun).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new WebApplicationException();
+        }
+        return scanStatus;
     }
 
     @GET

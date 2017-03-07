@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.scanner;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.base.Objects;
@@ -20,6 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * POJO to hold the options for how a scan and upload operation is configured.
  */
+@JsonIgnoreProperties (ignoreUnknown = true)
 public class ScanOptions {
 
     private final static int DEFAULT_MAX_CONCURRENT_SUB_RANGE_SCANS = 4;

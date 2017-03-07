@@ -104,6 +104,7 @@ public class ScanStatus {
         _completeTime = completeTime;
     }
 
+    @JsonIgnore
     public Date getCompactionControlTime() {
         return _compactionControlTime;
     }
