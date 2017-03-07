@@ -68,7 +68,7 @@ public class TableRoleManagerDAO implements RoleManager {
     private String checkGroup(@Nullable String group) {
         // Role groups follow the same naming conventions as role names
         checkArgument(group == null || isLegalRoleGroupName(group), "Group cannot be named %s", group);
-        // Since legal role names cannot equal "_" if the previous check passed then there cannot be a conflict
+        // Since legal role group names cannot equal "_" if the previous check passed then there cannot be a conflict
         return group == null ? NO_GROUP_NAME : group;
     }
 
