@@ -3,6 +3,7 @@ package test.integration.sor;
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
@@ -110,6 +111,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_REVIEWS_ONLY = "reviews-only-key";
     private static final String APIKEY_STANDARD = "standard-key";
     private static final String APIKEY_STANDARD_UPDATE = "standard-update";
+    private static final String APIKEY_INACTIVE = "inactive";
 
     private DataStore _server = mock(DataStore.class);
     private DataCenters _dataCenters = mock(DataCenters.class);
@@ -118,14 +120,15 @@ public class DataStoreJerseyTest extends ResourceTest {
     public ResourceTestRule _resourceTestRule = setupDataStoreResourceTestRule();
 
     private ResourceTestRule setupDataStoreResourceTestRule() {
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_TABLE, "id0", ImmutableSet.of("table-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_A, "id1", ImmutableSet.of("tables-a-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_B, "id2", ImmutableSet.of("tables-b-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_FACADE, "id3", ImmutableSet.of("facade-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", ImmutableSet.of("reviews-only-role")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", ImmutableSet.of("standard")));
-        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", ImmutableSet.of("update-with-events")));
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_TABLE, "id0", IdentityState.ACTIVE, ImmutableSet.of("table-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_A, "id1", IdentityState.ACTIVE, ImmutableSet.of("tables-a-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_READ_TABLES_B, "id2", IdentityState.ACTIVE, ImmutableSet.of("tables-b-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_FACADE, "id3", IdentityState.ACTIVE, ImmutableSet.of("facade-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_REVIEWS_ONLY, "id4", IdentityState.ACTIVE, ImmutableSet.of("reviews-only-role")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD, "id5", IdentityState.ACTIVE, ImmutableSet.of("standard")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_STANDARD_UPDATE, "id5", IdentityState.ACTIVE, ImmutableSet.of("update-with-events")));
+        authIdentityManager.updateIdentity(new ApiKey(APIKEY_INACTIVE, "id6", IdentityState.INACTIVE, ImmutableSet.of("table-role")));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
@@ -1336,5 +1339,11 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test (expected = InvalidCredentialException.class)
     public void testClientWithEmptyApiKey() {
         sorClient("");
+    }
+
+    @Test (expected = UnauthorizedException.class)
+    public void testInactiveApiKey() {
+        // APIKEY_INACTIVE has permission to list tables, but since it is inactive this request should be denied
+        sorClient(APIKEY_INACTIVE).listTables(null, 10);
     }
 }

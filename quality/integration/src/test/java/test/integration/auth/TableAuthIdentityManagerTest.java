@@ -1,6 +1,8 @@
 package test.integration.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
+import com.bazaarvoice.emodb.auth.identity.InternalIdentity;
 import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManager;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -16,11 +18,12 @@ import com.google.common.hash.Hashing;
 import org.testng.annotations.Test;
 
 import java.util.Map;
-import java.util.Set;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 public class TableAuthIdentityManagerTest {
 
@@ -38,7 +41,7 @@ public class TableAuthIdentityManagerTest {
         TableAuthIdentityManager<ApiKey> tableAuthIdentityManager = new TableAuthIdentityManager<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys", Hashing.sha256());
 
-        ApiKey apiKey = new ApiKey("testkey", "id0", ImmutableSet.of("role1", "role2"));
+        ApiKey apiKey = new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2"));
         apiKey.setOwner("testowner");
         tableAuthIdentityManager.updateIdentity(apiKey);
 
@@ -59,8 +62,11 @@ public class TableAuthIdentityManagerTest {
                 new AuditBuilder().setComment("test delete").build());
 
         // Verify that a lookup by internal ID works
-        Set<String> roles = tableAuthIdentityManager.getRolesByInternalId("id0");
-        assertEquals(roles, ImmutableSet.of("role1", "role2"));
+        InternalIdentity internalIdentity = tableAuthIdentityManager.getInternalIdentity("id0");
+        assertEquals(internalIdentity.getInternalId(), "id0");
+        assertEquals(internalIdentity.getState(), IdentityState.ACTIVE);
+        assertEquals(internalIdentity.getOwner(), "testowner");
+        assertEquals(internalIdentity.getRoles(), ImmutableSet.of("role1", "role2"));
 
         // Verify that the index record is re-created
         indexMap = dataStore.get("__auth:internal_ids", "id0");
@@ -81,7 +87,8 @@ public class TableAuthIdentityManagerTest {
         String id = "aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllll";
         String hash = Hashing.sha256().hashUnencodedChars(id).toString();
 
-        // Write out a record which mimics the pre-internal-id format.  Notably missing is the "internalId" attribute.
+        // Write out a record which mimics the pre-internal-id format.  Notably missing are the "internalId"
+        // and "state" attributes.
         Map<String, Object> oldIdentityMap = ImmutableMap.<String, Object>builder()
                 .put("maskedId", "aaaa****************************************llll")
                 .put("owner", "someone")
@@ -102,8 +109,11 @@ public class TableAuthIdentityManagerTest {
         assertEquals(apiKey.getRoles(), ImmutableList.of("role1", "role2"));
 
         // Verify that a lookup by internal ID works
-        Set<String> roles = tableAuthIdentityManager.getRolesByInternalId(hash);
-        assertEquals(roles, ImmutableSet.of("role1", "role2"));
+        InternalIdentity internalIdentity = tableAuthIdentityManager.getInternalIdentity(hash);
+        assertEquals(internalIdentity.getInternalId(), hash);
+        assertEquals(internalIdentity.getState(), IdentityState.ACTIVE);
+        assertEquals(internalIdentity.getOwner(), "someone");
+        assertEquals(internalIdentity.getRoles(), ImmutableSet.of("role1", "role2"));
 
         // Verify that the index record was created with the hashed ID as the internal ID
         Map<String, Object> indexMap = dataStore.get("__auth:internal_ids", hash);
@@ -111,7 +121,32 @@ public class TableAuthIdentityManagerTest {
         assertEquals(indexMap.get("hashedId"), hash);
 
         // Verify lookup by internal ID still works with the index record in place
-        roles = tableAuthIdentityManager.getRolesByInternalId(hash);
-        assertEquals(roles, ImmutableSet.of("role1", "role2"));
+        internalIdentity = tableAuthIdentityManager.getInternalIdentity(hash);
+        assertEquals(internalIdentity.getInternalId(), hash);
+    }
+
+    @Test
+    public void testDeleteIdentityUnsafe() throws Exception {
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
+        TableAuthIdentityManager<ApiKey> tableAuthIdentityManager = new TableAuthIdentityManager<>(
+                ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys", Hashing.sha256());
+
+        ApiKey apiKey = new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2"));
+        apiKey.setOwner("testowner");
+        tableAuthIdentityManager.updateIdentity(apiKey);
+
+        String keyTableId = Hashing.sha256().hashUnencodedChars("testkey").toString();
+
+        assertFalse(Intrinsic.isDeleted(dataStore.get("__auth:keys", keyTableId)));
+        assertFalse(Intrinsic.isDeleted(dataStore.get("__auth:internal_ids", "id0")));
+        assertNotNull(tableAuthIdentityManager.getIdentity("testkey"));
+        assertNotNull(tableAuthIdentityManager.getInternalIdentity("id0"));
+
+        tableAuthIdentityManager.deleteIdentityUnsafe("testkey");
+
+        assertTrue(Intrinsic.isDeleted(dataStore.get("__auth:keys", keyTableId)));
+        assertTrue(Intrinsic.isDeleted(dataStore.get("__auth:internal_ids", "id0")));
+        assertNull(tableAuthIdentityManager.getIdentity("testkey"));
+        assertNull(tableAuthIdentityManager.getInternalIdentity("id0"));
     }
 }

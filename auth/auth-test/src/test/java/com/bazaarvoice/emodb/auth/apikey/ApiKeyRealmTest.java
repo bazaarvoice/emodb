@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.auth.apikey;
 
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
@@ -33,7 +34,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -51,7 +51,7 @@ public class ApiKeyRealmTest {
         CacheRegistry cacheRegistry = new DefaultCacheRegistry(new SimpleLifeCycleRegistry(), new MetricRegistry());
         InvalidatableCacheManager _cacheManager = new GuavaCacheManager(cacheRegistry);
 
-        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>();
+        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>(ApiKey.class);
         _authIdentityManager = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
 
         _permissionManager = mock(PermissionManager.class);
@@ -216,7 +216,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void testPermissionCheckByInternalId() {
-        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
+        ApiKey apiKey = new ApiKey("apikey0", "id0", IdentityState.ACTIVE, ImmutableList.of("role0"));
         _authIdentityManager.updateIdentity(apiKey);
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);
@@ -243,7 +243,7 @@ public class ApiKeyRealmTest {
 
     @Test
     public void testCachedPermissionCheckByInternalId() {
-        ApiKey apiKey = new ApiKey("apikey0", "id0", ImmutableList.of("role0"));
+        ApiKey apiKey = new ApiKey("apikey0", "id0", IdentityState.ACTIVE, ImmutableList.of("role0"));
         _authIdentityManager.updateIdentity(apiKey);
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);

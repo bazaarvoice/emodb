@@ -2,6 +2,7 @@ package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
@@ -111,8 +112,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
             Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
-                    new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
-                    new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
+                    new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, IdentityState.ACTIVE, ImmutableSet.of("databus-role")),
+                    new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, IdentityState.ACTIVE, ImmutableSet.of("unauthorized-role")),
                     "databus");
 
     @After

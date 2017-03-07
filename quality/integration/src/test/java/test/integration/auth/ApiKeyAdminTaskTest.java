@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
@@ -28,8 +29,10 @@ import java.io.StringWriter;
 
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 public class ApiKeyAdminTaskTest {
 
@@ -39,7 +42,7 @@ public class ApiKeyAdminTaskTest {
 
     @BeforeMethod
     public void setUp() {
-        _authIdentityManager = new InMemoryAuthIdentityManager<>();
+        _authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         _permissionManager = new InMemoryPermissionManager(permissionResolver);
 
@@ -50,7 +53,7 @@ public class ApiKeyAdminTaskTest {
 
         _task = new ApiKeyAdminTask(securityManager, mock(TaskRegistry.class), _authIdentityManager,
                 HostAndPort.fromParts("0.0.0.0", 8080), ImmutableSet.of("reservedrole"));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", IdentityState.ACTIVE, ImmutableSet.of(DefaultRoles.admin.toString())));
     }
 
     @AfterMethod
@@ -83,7 +86,7 @@ public class ApiKeyAdminTaskTest {
     public void testUpdateApiKey() throws Exception {
         String key = "updateapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, "id_update", ImmutableSet.of("role1", "role2", "role3")));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_update", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2", "role3")));
 
         _task.execute(ImmutableMultimap.<String, String>builder()
                 .put(ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin")
@@ -102,7 +105,7 @@ public class ApiKeyAdminTaskTest {
     public void testMigrateApiKey() throws Exception {
         String key = "migrateapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, "id_migrate", ImmutableSet.of("role1", "role2")));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_migrate", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2")));
         assertNotNull(_authIdentityManager.getIdentity(key));
 
         StringWriter output = new StringWriter();
@@ -114,22 +117,45 @@ public class ApiKeyAdminTaskTest {
 
         ApiKey apiKey = _authIdentityManager.getIdentity(newKey);
         assertNotNull(apiKey);
+        assertEquals(apiKey.getState(), IdentityState.ACTIVE);
         assertEquals(apiKey.getRoles(), ImmutableSet.of("role1", "role2"));
         assertEquals(apiKey.getInternalId(), "id_migrate");
-        assertNull(_authIdentityManager.getIdentity(key));
+        assertEquals(_authIdentityManager.getIdentity(key).getState(), IdentityState.MIGRATED);
+    }
+
+    @Test
+    public void testInactivateApiKey() throws Exception {
+        String key = "inactivateapikeytestkey";
+
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_inactive", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2")));
+        assertEquals(_authIdentityManager.getIdentity(key).getState(), IdentityState.ACTIVE);
+
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
+                "action", "inactivate", "key", key), mock(PrintWriter.class));
+        assertEquals(_authIdentityManager.getIdentity(key).getState(), IdentityState.INACTIVE);
     }
 
     @Test
     public void testDeleteApiKey() throws Exception {
         String key = "deleteapikeytestkey";
 
-        _authIdentityManager.updateIdentity(new ApiKey(key, "id_delete", ImmutableSet.of("role1", "role2")));
-        assertNotNull(_authIdentityManager.getIdentity(key));
+        _authIdentityManager.updateIdentity(new ApiKey(key, "id_delete", IdentityState.ACTIVE, ImmutableSet.of("role1", "role2")));
+        assertEquals(_authIdentityManager.getIdentity(key).getState(), IdentityState.ACTIVE);
 
+        // Attempt to delete the key without the confirmation parameter
         _task.execute(ImmutableMultimap.of(
                 ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
                 "action", "delete", "key", key), mock(PrintWriter.class));
+        // The key should be unchanged
+        assertEquals(_authIdentityManager.getIdentity(key).getState(), IdentityState.ACTIVE);
+
+        // Delete the key again, this time with the necessary confirmation parameter
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
+                "action", "delete", "key", key, "confirm", "true"), mock(PrintWriter.class));
         assertNull(_authIdentityManager.getIdentity(key));
+        assertNull(_authIdentityManager.getInternalIdentity("id_delete"));
     }
 
     @Test

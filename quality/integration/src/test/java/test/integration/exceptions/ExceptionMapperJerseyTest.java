@@ -1,6 +1,7 @@
 package test.integration.exceptions;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
 import com.bazaarvoice.emodb.blob.api.RangeNotSatisfiableException;
 import com.bazaarvoice.emodb.common.json.JsonStreamProcessingException;
@@ -39,8 +40,8 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new ExceptionResource()),
-            new ApiKey("unused", "id0", ImmutableSet.<String>of()),
-            new ApiKey("also-unused", "id1", ImmutableSet.<String>of()),
+            new ApiKey("unused", "id0", IdentityState.ACTIVE, ImmutableSet.<String>of()),
+            new ApiKey("also-unused", "id1", IdentityState.ACTIVE, ImmutableSet.<String>of()),
             "exception");
 
     @Test

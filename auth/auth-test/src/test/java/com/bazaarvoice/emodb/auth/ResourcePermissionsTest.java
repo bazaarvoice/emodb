@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
@@ -9,7 +10,7 @@ import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -19,6 +20,8 @@ import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -29,24 +32,53 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URLEncoder;
-import java.util.Map;
+import java.util.Collection;
 
 import static com.bazaarvoice.emodb.auth.permissions.MatchingPermission.escape;
 import static java.lang.String.format;
 import static org.testng.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class ResourcePermissionsTest {
 
-    private InMemoryAuthIdentityManager<ApiKey> _authIdentityDAO = new InMemoryAuthIdentityManager<>();
+    private InMemoryAuthIdentityManager<ApiKey> _authIdentityDAO = new InMemoryAuthIdentityManager<>(ApiKey.class);
     private InMemoryPermissionManager _permissionDAO = new InMemoryPermissionManager(new MatchingPermissionResolver());
+
+    private PermissionCheck _permissionCheck;
+
+    public ResourcePermissionsTest(PermissionCheck permissionCheck) {
+        _permissionCheck = permissionCheck;
+    }
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule();
 
+    /**
+     * Run each test using an endpoint that either uses an explicit permission check, an implicit permission check based
+     * on path values, or an implicit permission check based on query parameters.
+     */
     private enum PermissionCheck {
-        EXPLICIT,
-        PATH,
-        QUERY
+        EXPLICIT("/explicit/country/%s/city/%s"),
+        PATH("/path/country/%s/city/%s"),
+        QUERY("/query/welcome?country=%s&city=%s");
+
+        private String uriFormat;
+
+        PermissionCheck(String format) {
+            this.uriFormat = format;
+        }
+
+        public String getUri(String country, String city) throws Exception {
+            return format(uriFormat, URLEncoder.encode(country, "UTF-8"), URLEncoder.encode(city, "UTF-8"));
+        }
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> permissionChecks() {
+        return ImmutableList.of(
+                new Object[] { PermissionCheck.EXPLICIT },
+                new Object[] { PermissionCheck.PATH },
+                new Object[] { PermissionCheck.QUERY });
     }
 
     @Path ("explicit/country/{country}")
@@ -109,216 +141,100 @@ public class ResourcePermissionsTest {
     }
 
     @Test
-    public void testGetWithMissingIdentityExplicit() throws Exception {
-        testGetWithMissingIdentity(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithMissingIdentityPath() throws Exception {
-        testGetWithMissingIdentity(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithMissingIdentityQuery() throws Exception {
-        testGetWithMissingIdentity(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithMissingIdentity(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+    public void testGetWithMissingIdentity() throws Exception {
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", null);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
     @Test
-    public void testGetWithNonExistentIdentityExplicit() throws Exception {
-        testGetWithNonExistentIdentity(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithNonExistentIdentityPath() throws Exception {
-        testGetWithNonExistentIdentity(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithNonExistentIdentityQuery() throws Exception {
-        testGetWithNonExistentIdentity(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithNonExistentIdentity(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+    public void testGetWithNonExistentIdentity() throws Exception {
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
     @Test
-    public void testGetWithMissingPermissionExplicit() throws Exception {
-        testGetWithMissingPermission(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithMissingPermissionPath() throws Exception {
-        testGetWithMissingPermission(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithMissingPermissionQuery() throws Exception {
-        testGetWithMissingPermission(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithMissingPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+    public void testGetWithMissingPermission() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
         _permissionDAO.updateForRole("testrole", new PermissionUpdateRequest().permit("country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
     @Test
-    public void testGetWithMatchingPermissionsExplicit() throws Exception {
-        testGetWithMatchingPermissions(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithMatchingPermissionsPath() throws Exception {
-        testGetWithMatchingPermissions(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithMatchingPermissionsQuery() throws Exception {
-        testGetWithMatchingPermissions(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithMatchingPermissions(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+    public void testGetWithMatchingPermissions() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
         _permissionDAO.updateForRole("testrole",
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
         assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
-    public void testGetWithMatchingWildcardPermissionsExplicit() throws Exception {
-        testGetWithMatchingWildcardPermissions(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithMatchingWildcardPermissionsPath() throws Exception {
-        testGetWithMatchingWildcardPermissions(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithMatchingWildcardPermissionsQuery() throws Exception {
-        testGetWithMatchingWildcardPermissions(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithMatchingWildcardPermissions(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+    public void testGetWithMatchingWildcardPermissions() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
         _permissionDAO.updateForRole("testrole",
                 new PermissionUpdateRequest().permit("city|get|*", "country|*|*"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
         assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
-    public void testGetWithNonMatchingWildcardPermissionExplicit() throws Exception {
-        testGetWithNonMatchingWildcardPermission(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithNonMatchingWildcardPermissionPath() throws Exception {
-        testGetWithNonMatchingWildcardPermission(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithNonMatchingWildcardPermissionQuery() throws Exception {
-        testGetWithNonMatchingWildcardPermission(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithNonMatchingWildcardPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+    public void testGetWithNonMatchingWildcardPermission() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
         _permissionDAO.updateForRole("testrole",
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|*|Portugal"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
     @Test
-    public void testGetWithEscapedPermissionExplicit() throws Exception {
-        testGetWithEscapedPermission(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testGetWithEscapedPermissionPath() throws Exception {
-        testGetWithEscapedPermission(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testGetWithEscapedPermissionQuery() throws Exception {
-        testGetWithEscapedPermission(PermissionCheck.QUERY);
-    }
-
-    private void testGetWithEscapedPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", ImmutableSet.of("testrole")));
+    public void testGetWithEscapedPermission() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
         _permissionDAO.updateForRole("testrole",
                 new PermissionUpdateRequest().permit("city|get|Pipe\\|Town", "country|get|Star\\*Nation"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Star*Nation", "Pipe|Town", "testkey");
+        ClientResponse response = getCountryAndCity("Star*Nation", "Pipe|Town", "testkey");
         assertEquals(response.getEntity(String.class), "Welcome to Pipe|Town, Star*Nation");
     }
 
     @Test
-    public void testAnonymousWithPermissionExplicit() throws Exception {
-        testAnonymousWithPermission(PermissionCheck.EXPLICIT);
+    public void testGetWithInactiveAPIKey() throws Exception {
+        // API key has role that can do anything
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.ACTIVE, ImmutableSet.of("testrole")));
+        _permissionDAO.updateForRole("testrole", new PermissionUpdateRequest().permit("*"));
+
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", "testkey");
+        assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
+
+        // Inactivate the API key and try again
+        _authIdentityDAO.updateIdentity(new ApiKey("testkey", "id0", IdentityState.INACTIVE, ImmutableSet.of("testrole")));
+        response = getCountryAndCity("Spain", "Madrid", "testkey");
+        assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
     @Test
-    public void testAnonymousWithPermissionPath() throws Exception {
-        testAnonymousWithPermission(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testAnonymousWithPermissionQuery() throws Exception {
-        testAnonymousWithPermission(PermissionCheck.QUERY);
-    }
-
-    private void testAnonymousWithPermission(PermissionCheck permissionCheck) throws Exception {
-        _authIdentityDAO.updateIdentity(new ApiKey("anon", "id1", ImmutableSet.of("anonrole")));
+    public void testAnonymousWithPermission() throws Exception {
+        _authIdentityDAO.updateIdentity(new ApiKey("anon", "id1", IdentityState.ACTIVE, ImmutableSet.of("anonrole")));
         _permissionDAO.updateForRole("anonrole",
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", null);
         assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
-    public void testAnonymousWithoutPermissionExplicit() throws Exception {
-        testAnonymousWithoutPermission(PermissionCheck.EXPLICIT);
-    }
-
-    @Test
-    public void testAnonymousWithoutPermissionQuery() throws Exception {
-        testAnonymousWithoutPermission(PermissionCheck.PATH);
-    }
-
-    @Test
-    public void testAnonymousWithoutPermissionPath() throws Exception {
-        testAnonymousWithoutPermission(PermissionCheck.QUERY);
-    }
-
-    private void testAnonymousWithoutPermission(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+    public void testAnonymousWithoutPermission() throws Exception {
+        ClientResponse response = getCountryAndCity("Spain", "Madrid", null);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
-    private Map<PermissionCheck, String> _uriFormatMap = ImmutableMap.of(
-            PermissionCheck.EXPLICIT, "/explicit/country/%s/city/%s",
-            PermissionCheck.PATH, "/path/country/%s/city/%s",
-            PermissionCheck.QUERY, "/query/welcome?country=%s&city=%s");
-
-    private ClientResponse getCountryAndCity(PermissionCheck permissionCheck, String country, String city, String apiKey)
+    private ClientResponse getCountryAndCity(String country, String city, String apiKey)
             throws Exception {
-        String uri = format(_uriFormatMap.get(permissionCheck), URLEncoder.encode(country, "UTF-8"), URLEncoder.encode(city, "UTF-8"));
+        String uri = _permissionCheck.getUri(country, city);
         WebResource resource = _resourceTestRule.client().resource(uri);
         if (apiKey != null) {
             return resource.header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get(ClientResponse.class);

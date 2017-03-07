@@ -1,6 +1,7 @@
 package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.identity.IdentityState;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
@@ -38,11 +39,11 @@ public class ReplicationJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupReplicationResourceTestRule(ImmutableList.<Object>of(new ReplicationResource1(_server)),
-            new ApiKey(APIKEY_REPLICATION, "repl", ImmutableSet.of("replication-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")));
+            new ApiKey(APIKEY_REPLICATION, "repl", IdentityState.ACTIVE, ImmutableSet.of("replication-role")),
+            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", IdentityState.ACTIVE, ImmutableSet.of("unauthorized-role")));
 
     protected static ResourceTestRule setupReplicationResourceTestRule(List<Object> resourceList, ApiKey apiKey, ApiKey unauthorizedKey) {
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
         authIdentityManager.updateIdentity(apiKey);
         authIdentityManager.updateIdentity(unauthorizedKey);
 

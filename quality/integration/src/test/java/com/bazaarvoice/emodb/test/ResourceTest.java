@@ -38,7 +38,7 @@ public abstract class ResourceTest {
     }
 
     protected static ResourceTestRule setupResourceTestRule(List<Object> resourceList, List<Object> filters, ApiKey apiKey, ApiKey unauthorizedKey, String typeName) {
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(ApiKey.class);
         authIdentityManager.updateIdentity(apiKey);
         authIdentityManager.updateIdentity(unauthorizedKey);
 

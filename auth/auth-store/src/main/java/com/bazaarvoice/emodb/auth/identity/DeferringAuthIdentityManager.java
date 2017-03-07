@@ -1,14 +1,10 @@
 package com.bazaarvoice.emodb.auth.identity;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -64,20 +60,29 @@ public class DeferringAuthIdentityManager<T extends AuthIdentity> implements Aut
     }
 
     @Override
-    public void deleteIdentity(String id) {
-        checkNotNull(id);
-        checkArgument(!_identityMap.containsKey(id), "Cannot delete static identity: %s", id);
-        _manager.deleteIdentity(id);
+    public void migrateIdentity(String existingId, String newId) {
+        checkNotNull(existingId);
+        checkNotNull(newId);
+        checkArgument(!_identityMap.containsKey(existingId), "Cannot migrate from static identity: %s", existingId);
+        checkArgument(!_identityMap.containsKey(newId), "Cannot migrate to static identity: %s", newId);
+        _manager.migrateIdentity(existingId, newId);
     }
 
     @Override
-    public Set<String> getRolesByInternalId(String internalId) {
+    public void deleteIdentityUnsafe(String id) {
+        checkNotNull(id, "id");
+        checkArgument(!_identityMap.containsKey(id), "Cannot delete static identity: %s", id);
+        _manager.deleteIdentityUnsafe(id);
+    }
+
+    @Override
+    public InternalIdentity getInternalIdentity(String internalId) {
         checkNotNull(internalId, "internalId");
 
         T identity = _internalIdMap.get(internalId);
         if (identity != null) {
-            return identity.getRoles();
+            return identity;
         }
-        return _manager.getRolesByInternalId(internalId);
+        return _manager.getInternalIdentity(internalId);
     }
 }
