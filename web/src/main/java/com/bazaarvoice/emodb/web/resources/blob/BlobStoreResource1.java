@@ -22,12 +22,10 @@ import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
 import com.codahale.metrics.annotation.Timed;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.UnmodifiableIterator;
 import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.jersey.params.AbstractParam;
@@ -72,8 +70,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 
 import static java.lang.String.format;
 
@@ -109,13 +109,12 @@ public class BlobStoreResource1 {
     public Iterator<Table> listTables(@QueryParam("from") final String fromKeyExclusive,
                                       @QueryParam("limit") @DefaultValue("10") LongParam limit,
                                       final @Authenticated Subject subject) {
-        final Iterator<Table> tables = _blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), limit.get());
-        final UnmodifiableIterator<Table> permittedTables = Iterators.filter(tables, new Predicate<Table>() {
-            @Override public boolean apply(final Table input) {
-                return subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName())));
-            }
-        });
-        return streamingIterator(permittedTables);
+        return streamingIterator(
+            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
+                .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
+                .limit(limit.get())
+                .iterator()
+        );
     }
 
     @PUT

@@ -85,8 +85,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
@@ -119,16 +123,15 @@ public class DataStoreResource1 {
             response = Table.class
     )
     public Iterator<Table> listTables(final @QueryParam("from") String fromKeyExclusive,
-                                      final @QueryParam("limit") @DefaultValue("10") LongParam limit,
+                                      final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
                                       final @Authenticated Subject subject) {
         return streamingIterator(
-                Iterators.filter(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), limit.get()), new Predicate<Table>() {
-                    @Override
-                    public boolean apply(final Table input) {
-                        return subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName())));
-                    }
-                }),
-                null);
+            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
+                .filter(input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))))
+                .limit(limitParam.get())
+                .iterator(),
+            null
+        );
     }
 
     @PUT

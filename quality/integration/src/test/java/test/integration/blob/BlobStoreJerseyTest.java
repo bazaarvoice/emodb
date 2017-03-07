@@ -40,6 +40,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
@@ -139,25 +140,21 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test public void testListTablesRestricted() {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
-        final DefaultTable aTable = new DefaultTable("a-table-1", options, ImmutableMap.of("key", "value1"), availability);
-        final DefaultTable bTable = new DefaultTable("b-table-2", options, ImmutableMap.of("key", "value2"), availability);
-        final List<Table> expected = ImmutableList.<Table>of(aTable, bTable);
+        final DefaultTable aTable1 = new DefaultTable("a-table-1", options, ImmutableMap.of("key", "value1"), availability);
+        final DefaultTable aTable2 = new DefaultTable("a-table-2", options, ImmutableMap.of("key", "value1"), availability);
+        final DefaultTable bTable1 = new DefaultTable("b-table-1", options, ImmutableMap.of("key", "value2"), availability);
+        final DefaultTable bTable2 = new DefaultTable("b-table-2", options, ImmutableMap.of("key", "value2"), availability);
+        final DefaultTable aTable3 = new DefaultTable("a-table-3", options, ImmutableMap.of("key", "value1"), availability);
+        final List<Table> expected = ImmutableList.<Table>of(aTable1, aTable2, bTable1, bTable2, aTable3);
 
-        when(_server.listTables(null, Long.MAX_VALUE)).thenAnswer(new Answer<Iterator<Table>>() {
-            @Override public Iterator<Table> answer(final InvocationOnMock invocation) throws Throwable {
-                return expected.iterator();
-            }
-        });
+        when(_server.listTables(null, Long.MAX_VALUE)).thenAnswer(invocation -> expected.iterator());
 
         {
-            List<Table> actual = Lists.newArrayList(BlobStoreStreaming.listTables(blobClient(APIKEY_BLOB_A)));
-            assertEquals(actual, ImmutableList.of(aTable));
+            List<Table> actual = Lists.newArrayList(blobClient(APIKEY_BLOB_A).listTables(null, 3));
+            assertEquals(ImmutableList.of(aTable1, aTable2, aTable3), actual);
         }
-        {
-            List<Table> actual = Lists.newArrayList(BlobStoreStreaming.listTables(blobClient(APIKEY_BLOB_B)));
-            assertEquals(actual, ImmutableList.of(bTable));
-        }
-        verify(_server, times(2)).listTables(null, Long.MAX_VALUE);
+
+        verify(_server, times(1)).listTables(null, Long.MAX_VALUE);
     }
 
     @Test public void getTableAttributesRestricted() {
@@ -351,13 +348,13 @@ public class BlobStoreJerseyTest extends ResourceTest {
         List<Table> expected = ImmutableList.<Table>of(
             new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
             new DefaultTable("blob-id-2", options, ImmutableMap.of("key", "value2"), availability));
-        when(_server.listTables("from-key", 1234L)).thenReturn(expected.iterator());
+        when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
             BlobStoreStreaming.listTables(blobClient(), "from-key", 1234L));
 
         assertEquals(actual, expected);
-        verify(_server).listTables("from-key", 1234L);
+        verify(_server).listTables("from-key", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
 
