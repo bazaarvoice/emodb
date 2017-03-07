@@ -11,18 +11,18 @@ import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.DeferringAuthIdentityManager;
-import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManagerDAO;
 import com.bazaarvoice.emodb.auth.permissions.CacheManagingPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.DeferringPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
-import com.bazaarvoice.emodb.auth.permissions.TablePermissionManager;
+import com.bazaarvoice.emodb.auth.permissions.TablePermissionManagerDAO;
 import com.bazaarvoice.emodb.auth.role.DataCenterSynchronizedRoleManager;
 import com.bazaarvoice.emodb.auth.role.DeferringRoleManager;
 import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.auth.role.TableRoleManager;
+import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
@@ -187,7 +187,7 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash) {
-        return new TableAuthIdentityManager<>(ApiKey.class, dataStore, config.getIdentityTable(),
+        return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
                 config.getInternalIdIndexTable(), config.getTablePlacement(), hash);
     }
 
@@ -219,7 +219,7 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     PermissionManager providePermissionManagerDAO(
             AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore) {
-        return new TablePermissionManager(
+        return new TablePermissionManagerDAO(
                 permissionResolver, dataStore, config.getPermissionsTable(), config.getTablePlacement());
     }
 
@@ -257,7 +257,7 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     RoleManager provideRoleManagerDAO(AuthorizationConfiguration config, DataStore dataStore,
                                       PermissionManager permissionManager) {
-        return new TableRoleManager(dataStore, config.getRoleTable(), config.getRoleGroupTable(),
+        return new TableRoleManagerDAO(dataStore, config.getRoleTable(), config.getRoleGroupTable(),
                 config.getTablePlacement(), permissionManager);
     }
 

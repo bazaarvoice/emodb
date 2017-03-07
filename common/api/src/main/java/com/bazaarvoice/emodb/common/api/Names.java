@@ -39,13 +39,20 @@ public abstract class Names {
 
     /**
      * Role names mostly follow the same conventions as table names except, since they are only used internally, are
-     * slightly more permissive, such as allowing capital letters.  Although "_" is a valid part of a role name it
-     * can't be used as the first character.
+     * slightly more permissive, such as allowing capital letters.
      */
     public static boolean isLegalRoleName(String role) {
         return role != null &&
                 role.length() > 0 && role.length() <= 255 &&
-                !role.startsWith("_") &&
                 ROLE_NAME_ALLOWED.matchesAllOf(role);
+    }
+
+    /**
+     * Role group names mostly follow the same conventions as role names.  The only difference is that the role group
+     * "_" is a reserved null-substitution for the absence of a group.
+     */
+    public static boolean isLegalRoleGroupName(String group) {
+        return isLegalRoleName(group) &&
+                !"_".equals(group);
     }
 }

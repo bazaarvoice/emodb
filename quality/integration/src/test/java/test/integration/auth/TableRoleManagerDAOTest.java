@@ -8,7 +8,7 @@ import com.bazaarvoice.emodb.auth.role.RoleExistsException;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
-import com.bazaarvoice.emodb.auth.role.TableRoleManager;
+import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -19,7 +19,6 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -45,7 +44,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
-public class TableRoleManagerTest {
+public class TableRoleManagerDAOTest {
 
     private final static String ROLE_TABLE = "roles";
     private final static String GROUP_TABLE = "groups";
@@ -56,7 +55,7 @@ public class TableRoleManagerTest {
     private PermissionResolver _permissionResolver;
     private PermissionManager _backendPermissionManager;
     private PermissionManager _permissionManager;
-    private TableRoleManager _roleManager;
+    private TableRoleManagerDAO _roleManager;
 
     @BeforeMethod
     public void setUp() {
@@ -66,7 +65,7 @@ public class TableRoleManagerTest {
         _permissionResolver = new EmoPermissionResolver(null, null);
         _backendPermissionManager = new InMemoryPermissionManager(_permissionResolver);
         _permissionManager = spy(_backendPermissionManager);
-        _roleManager = new TableRoleManager(_dataStore, ROLE_TABLE, GROUP_TABLE, PLACEMENT, _permissionManager);
+        _roleManager = new TableRoleManagerDAO(_dataStore, ROLE_TABLE, GROUP_TABLE, PLACEMENT, _permissionManager);
     }
     
     @Test

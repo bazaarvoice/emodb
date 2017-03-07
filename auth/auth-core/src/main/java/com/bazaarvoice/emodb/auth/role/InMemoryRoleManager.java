@@ -75,6 +75,9 @@ public class InMemoryRoleManager implements RoleManager {
         if (role == null) {
             throw new RoleNotFoundException(id.getGroup(), id.getId());
         }
+        if (request.isNamePresent()) {
+            role.setName(request.getName());
+        }
         if (request.isDescriptionPresent()) {
             role.setDescription(request.getDescription());
         }

@@ -35,7 +35,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * With circular logic more deadly to a robot than saying "this statement is false" the application must have
  * permission to perform operations on the table in order to use this manager.
  */
-public class TableAuthIdentityManager<T extends AuthIdentity> implements AuthIdentityManager<T> {
+public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements AuthIdentityManager<T> {
 
     private final static String ID = "id";
     private final static String INTERNAL_ID = "internalId";
@@ -50,13 +50,13 @@ public class TableAuthIdentityManager<T extends AuthIdentity> implements AuthIde
     private final HashFunction _hash;
     private volatile boolean _tablesValidated;
 
-    public TableAuthIdentityManager(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
-                                    String internalIdIndexTableName, String placement) {
+    public TableAuthIdentityManagerDAO(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
+                                       String internalIdIndexTableName, String placement) {
         this(authIdentityClass, dataStore, identityTableName, internalIdIndexTableName, placement, null);
     }
 
-    public TableAuthIdentityManager(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
-                                    String internalIdIndexTableName, String placement, @Nullable HashFunction hash) {
+    public TableAuthIdentityManagerDAO(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
+                                       String internalIdIndexTableName, String placement, @Nullable HashFunction hash) {
         _authIdentityClass = checkNotNull(authIdentityClass, "authIdentityClass");
         _dataStore = checkNotNull(dataStore, "client");
         _identityTableName = checkNotNull(identityTableName, "identityTableName");

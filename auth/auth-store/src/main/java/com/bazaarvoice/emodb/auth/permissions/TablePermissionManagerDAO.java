@@ -32,7 +32,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * With a level of irony not seen since Alanis Morissette the application must have permission to perform operations
  * on the table in order to use this manager.
  */
-public class TablePermissionManager implements PermissionManager {
+public class TablePermissionManagerDAO implements PermissionManager {
 
     private final PermissionResolver _permissionResolver;
     private final DataStore _dataStore;
@@ -40,8 +40,8 @@ public class TablePermissionManager implements PermissionManager {
     private final String _placement;
     private volatile boolean _tableValidated;
 
-    public TablePermissionManager(PermissionResolver permissionResolver, DataStore dataStore,
-                                  String tableName, String placement) {
+    public TablePermissionManagerDAO(PermissionResolver permissionResolver, DataStore dataStore,
+                                     String tableName, String placement) {
         _permissionResolver = checkNotNull(permissionResolver, "permissionResolver");
         _dataStore = checkNotNull(dataStore, "dataStore");
         _tableName = checkNotNull(tableName, "tableName");

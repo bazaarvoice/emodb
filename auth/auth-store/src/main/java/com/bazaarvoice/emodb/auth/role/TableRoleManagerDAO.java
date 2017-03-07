@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static com.bazaarvoice.emodb.common.api.Names.isLegalRoleGroupName;
 import static com.bazaarvoice.emodb.common.api.Names.isLegalRoleName;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -35,7 +36,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * RoleManager implementation which persists roles using tables in a {@link DataStore}.
  */
-public class TableRoleManager implements RoleManager {
+public class TableRoleManagerDAO implements RoleManager {
 
     // Even roles with no group belong to a group, the catch-all "no group".  The name for this group is reserved
     // and cannot be explicitly used by the API.
@@ -54,8 +55,8 @@ public class TableRoleManager implements RoleManager {
     private final PermissionManager _permissionManager;
     private volatile boolean _tablesValidated;
 
-    public TableRoleManager(DataStore dataStore, String roleTableName, String groupTableName, String placement,
-                            PermissionManager permissionManager) {
+    public TableRoleManagerDAO(DataStore dataStore, String roleTableName, String groupTableName, String placement,
+                               PermissionManager permissionManager) {
         _dataStore = checkNotNull(dataStore, "dataStore");
         _roleTableName = checkNotNull(roleTableName, "roleTableName");
         _groupTableName = checkNotNull(groupTableName, "groupTableName");
@@ -66,8 +67,8 @@ public class TableRoleManager implements RoleManager {
 
     private String checkGroup(@Nullable String group) {
         // Role groups follow the same naming conventions as role names
-        checkArgument(group == null || isLegalRoleName(group), "Group cannot be named %s", group);
-        // Since legal role names cannot begin with a "_" if the previous check passed then there cannot be a conflict
+        checkArgument(group == null || isLegalRoleGroupName(group), "Group cannot be named %s", group);
+        // Since legal role names cannot equal "_" if the previous check passed then there cannot be a conflict
         return group == null ? NO_GROUP_NAME : group;
     }
 
