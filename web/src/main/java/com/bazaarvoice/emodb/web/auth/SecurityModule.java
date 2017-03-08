@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
@@ -58,6 +59,7 @@ import java.util.Set;
  * <ul>
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
+ * <li> @{@link CompControlApiKey} String
  * <li> @{@link SystemInternalId} String
  * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
@@ -97,6 +99,7 @@ public class SecurityModule extends PrivateModule {
 
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
+        expose(Key.get(String.class, CompControlApiKey.class));
         expose(Key.get(String.class, SystemInternalId.class));
         expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
@@ -131,6 +134,13 @@ public class SecurityModule extends PrivateModule {
     @ReplicationKey
     String provideReplicationKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
         return configurationKeyAsPlaintext(config.getReplicationApiKey(), encryption, "replication");
+    }
+
+    @Provides
+    @Singleton
+    @CompControlApiKey
+    String provideCompControlKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
+        return configurationKeyAsPlaintext(config.getCompControlApiKey(), encryption, "compaction-control");
     }
 
     @Provides

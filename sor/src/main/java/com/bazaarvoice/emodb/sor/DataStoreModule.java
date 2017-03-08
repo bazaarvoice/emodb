@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
@@ -137,6 +138,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> @{@link CqlForScans} Supplier&lt;Boolean&gt;
  * <li> {@link CqlDriverConfiguration}
  * <li> {@link Clock}
+ * <li> {@link CompactionControlSource}
  * </ul>
  * Exports the following:
  * <ul>

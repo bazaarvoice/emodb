@@ -31,9 +31,12 @@ import com.bazaarvoice.emodb.sor.DataStoreModule;
 import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
@@ -163,6 +166,9 @@ public class CasBlobStoreTest {
                 bind(ServiceRegistry.class).toInstance(mock(ServiceRegistry.class));
 
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
+
+                bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
+                bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

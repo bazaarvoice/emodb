@@ -80,6 +80,8 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
+import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
+import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
@@ -149,6 +151,8 @@ import java.util.concurrent.TimeUnit;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.compaction_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.compaction_control_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataCenter;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_module;
@@ -199,6 +203,8 @@ public class EmoModule extends AbstractModule {
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
         evaluate(dataStore_web, new DataStoreAsyncSetup());
+        evaluate(compaction_control, new CompactionControlSetup());
+        evaluate(compaction_control_web, new CompactionControlWebSetup());
     }
 
     private class CommonModuleSetup extends AbstractModule {
@@ -527,6 +533,20 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             install(new ReportsModule());
+        }
+    }
+
+    private class CompactionControlSetup extends AbstractModule  {
+        @Override
+        protected void configure() {
+            install(new CompactionControlModule());
+        }
+    }
+
+    private class CompactionControlWebSetup extends AbstractModule  {
+        @Override
+        protected void configure() {
+            bind(CompactionControlMonitorManager.class).asEagerSingleton();
         }
     }
 

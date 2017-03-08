@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.DedupQueueServiceAuthenticator;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
@@ -28,6 +29,7 @@ import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
 import com.bazaarvoice.emodb.web.cli.RegisterCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
@@ -230,8 +232,10 @@ public class EmoService extends Application<EmoConfiguration> {
         DataStore dataStore = _injector.getInstance(DataStore.class);
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
+        CompactionControlSource compactionControlSource = _injector.getInstance(Key.get(CompactionControlSource.class, LocalCompactionControl.class));
+
         // Start the System Of Record service
-        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync));
+        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource));
     }
 
     private void evaluateBlobStore()

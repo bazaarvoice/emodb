@@ -72,6 +72,8 @@ public class StashRoleInclusionTest extends BaseRoleRestHelper {
     public void testScanUploadResourceAccessible()
             throws Exception {
         String randomName = "test" + Integer.toString(new Random().nextInt());
+        // TODO: this is currently failing as the usual client time out is set at 10secs, and the POST takes more than a minute.
+        // DECISION is TODO.
         super.httpPost(ImmutableMap.<String, Object>of("placement", "catalog_global:cat", "dest", "null"),
                 false,
                 "scanner", "1", "upload", randomName);

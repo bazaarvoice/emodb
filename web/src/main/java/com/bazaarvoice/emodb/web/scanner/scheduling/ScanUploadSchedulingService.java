@@ -34,6 +34,7 @@ import java.time.Clock;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -223,7 +224,7 @@ public class ScanUploadSchedulingService extends LeaderService {
          * the scheduled time has already started.
          */
         @VisibleForTesting
-        synchronized ScanStatus startScheduledScan(ScheduledDailyScanUpload scheduledScan, DateTime scheduledTime)
+        synchronized Future<ScanStatus> startScheduledScan(ScheduledDailyScanUpload scheduledScan, DateTime scheduledTime)
                 throws RepeatScanException, ScanExecutionTimeException {
             // Name the scan ID and directory for when the scan was scheduled
             String scanId = scheduledScan.getScanIdFormat().print(scheduledTime);

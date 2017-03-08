@@ -21,6 +21,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -42,7 +43,6 @@ public class ScanUploadResource1 {
                                 @QueryParam ("dest") List<String> destinationParams,
                                 @QueryParam ("byAZ") @DefaultValue ("true") Boolean byAZ,
                                 @QueryParam ("maxConcurrency") @DefaultValue ("4") Integer maxConcurrency,
-                                @QueryParam ("compactionEnabled") @DefaultValue ("false") Boolean compactionEnabled,
                                 @QueryParam ("dryRun") @DefaultValue ("false") Boolean dryRun) {
 
         checkArgument(!placements.isEmpty(), "Placement is required");
@@ -69,10 +69,16 @@ public class ScanUploadResource1 {
         ScanOptions options = new ScanOptions(placements)
                 .addDestinations(destinations)
                 .setScanByAZ(byAZ)
-                .setMaxConcurrentSubRangeScans(maxConcurrency)
-                .setCompactionEnabled(compactionEnabled);
+                .setMaxConcurrentSubRangeScans(maxConcurrency);
 
-        return _scanUploader.scanAndUpload(id, options, dryRun);
+        ScanStatus scanStatus;
+        try {
+            // TODO: This will take more than a minute if we want to grab the scanStatus. Can we escape here without waiting for the scanStatus :?
+            scanStatus = _scanUploader.scanAndUpload(id, options, dryRun).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new WebApplicationException();
+        }
+        return scanStatus;
     }
 
     @GET

@@ -87,13 +87,12 @@ systemOfRecord:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: sor-cassandra
       keyspaces:
-        app_global:
-          healthCheckColumnFamily: default_delta
-        ugc_global:
-          healthCheckColumnFamily: ugc_delta
-        catalog_global:
-          healthCheckColumnFamily: cat_delta
+        app_global: {}
+        ugc_global: {}
+        catalog_global:  {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -113,9 +112,10 @@ databus:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: databus-cassandra
     keyspaces:
-      databus:
-        healthCheckColumnFamily: subscription
+      databus: {}
 
 
 blobStore:
@@ -150,13 +150,12 @@ blobStore:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: blob-cassandra
       keyspaces:
-        media_global:
-          healthCheckColumnFamily: ugc_blob
-        media_global_mirror:
-          healthCheckColumnFamily: media_blob
-        blob_global:
-          healthCheckColumnFamily: media_blob
+        media_global: {}
+        media_global_mirror: {}
+        blob_global: {}
 
 
 queueService:
@@ -172,9 +171,10 @@ queueService:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: queue-cassandra
     keyspaces:
-      queue:
-        healthCheckColumnFamily: manifest
+      queue: {}
 
 
 jobs:
@@ -195,6 +195,7 @@ auth:
   # IN A PRODUCTION ENVIRONMENT DO NOT INCLUDE THE UNENCRYPTED KEYS IN THIS FILE!
   adminApiKey:       "zl+p3AU4/EgT8OtR0ZmLrkL70j0SklugAzd+xxYR1Dz/rioe5aXo4yay7sKi7PSKD59h7/HumH7442nGhlR2rw"  # local_admin
   replicationApiKey: "iuOPUIfI0lyxRrNZ9j9Aa68m1yrALBbVMw8kdqb6FVhSwMgOXVsuUblLr9nL73D4xpMVEZZHZr50pCBy1gbjDg"  # local_replication
+  compControlApiKey: "local_admin" # compaction-control
   tablePlacement: "app_global:sys"
   allowAnonymousAccess: true
 
