@@ -1,7 +1,7 @@
 package test.integration.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManagerDAO;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
@@ -22,25 +22,25 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 
-public class TableAuthIdentityManagerTest {
+public class TableAuthIdentityManagerDAOTest {
 
     /**
-     * There are two tables which store identities in TableAuthIdentityManager: One table keyed by a hash of the
+     * There are two tables which store identities in TableAuthIdentityManagerDAO: One table keyed by a hash of the
      * API key, and an index table ID'd by the internal ID which contains the API key hash.  This second table is used
      * to look up API keys by internal ID.  It should be rare, but it is possible for an API key record to exist
      * without a corresponding internal ID.  One possible way for this to happen is grandfathered in API keys
-     * created before the introduction of internal IDs.  TableAuthIdentityManager should rebuild the index
+     * created before the introduction of internal IDs.  TableAuthIdentityManagerDAO should rebuild the index
      * when there is a missing or incorrect index record.  This test verifies that works as expected.
      */
     @Test
     public void testRebuildInternalIdIndex() {
         DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
-        TableAuthIdentityManager<ApiKey> tableAuthIdentityManager = new TableAuthIdentityManager<>(
+        TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys", Hashing.sha256());
 
         ApiKey apiKey = new ApiKey("testkey", "id0", ImmutableSet.of("role1", "role2"));
         apiKey.setOwner("testowner");
-        tableAuthIdentityManager.updateIdentity(apiKey);
+        tableAuthIdentityManagerDAO.updateIdentity(apiKey);
 
         // Verify both tables have been written
 
@@ -59,7 +59,7 @@ public class TableAuthIdentityManagerTest {
                 new AuditBuilder().setComment("test delete").build());
 
         // Verify that a lookup by internal ID works
-        Set<String> roles = tableAuthIdentityManager.getRolesByInternalId("id0");
+        Set<String> roles = tableAuthIdentityManagerDAO.getRolesByInternalId("id0");
         assertEquals(roles, ImmutableSet.of("role1", "role2"));
 
         // Verify that the index record is re-created
@@ -71,12 +71,12 @@ public class TableAuthIdentityManagerTest {
     @Test
     public void testGrandfatheredInInternalId() {
         DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
-        TableAuthIdentityManager<ApiKey> tableAuthIdentityManager = new TableAuthIdentityManager<>(
+        TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys", Hashing.sha256());
 
-        // Perform an operation on tableAuthIdentityManager to force it to create API key tables; the actual
+        // Perform an operation on tableAuthIdentityManagerDAO to force it to create API key tables; the actual
         // operation doesn't matter.
-        tableAuthIdentityManager.getIdentity("ignore");
+        tableAuthIdentityManagerDAO.getIdentity("ignore");
 
         String id = "aaaabbbbccccddddeeeeffffgggghhhhiiiijjjjkkkkllll";
         String hash = Hashing.sha256().hashUnencodedChars(id).toString();
@@ -93,7 +93,7 @@ public class TableAuthIdentityManagerTest {
                 new AuditBuilder().setComment("test grandfathering").build());
 
         // Verify the record can be read by ID.  The key's internal ID will be the hashed ID.
-        ApiKey apiKey = tableAuthIdentityManager.getIdentity(id);
+        ApiKey apiKey = tableAuthIdentityManagerDAO.getIdentity(id);
         assertNotNull(apiKey);
         assertEquals(apiKey.getId(), id);
         assertEquals(apiKey.getInternalId(), hash);
@@ -102,7 +102,7 @@ public class TableAuthIdentityManagerTest {
         assertEquals(apiKey.getRoles(), ImmutableList.of("role1", "role2"));
 
         // Verify that a lookup by internal ID works
-        Set<String> roles = tableAuthIdentityManager.getRolesByInternalId(hash);
+        Set<String> roles = tableAuthIdentityManagerDAO.getRolesByInternalId(hash);
         assertEquals(roles, ImmutableSet.of("role1", "role2"));
 
         // Verify that the index record was created with the hashed ID as the internal ID
@@ -111,7 +111,7 @@ public class TableAuthIdentityManagerTest {
         assertEquals(indexMap.get("hashedId"), hash);
 
         // Verify lookup by internal ID still works with the index record in place
-        roles = tableAuthIdentityManager.getRolesByInternalId(hash);
+        roles = tableAuthIdentityManagerDAO.getRolesByInternalId(hash);
         assertEquals(roles, ImmutableSet.of("role1", "role2"));
     }
 }

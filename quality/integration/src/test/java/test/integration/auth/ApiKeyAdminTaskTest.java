@@ -7,6 +7,9 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -35,17 +38,19 @@ public class ApiKeyAdminTaskTest {
 
     private ApiKeyAdminTask _task;
     private InMemoryAuthIdentityManager<ApiKey> _authIdentityManager;
-    private InMemoryPermissionManager _permissionManager;
 
     @BeforeMethod
     public void setUp() {
         _authIdentityManager = new InMemoryAuthIdentityManager<>();
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
-        _permissionManager = new InMemoryPermissionManager(permissionResolver);
+        InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
+        InMemoryRoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
-        _permissionManager.updateForRole(DefaultRoles.admin.toString(), new PermissionUpdateRequest().permit(Permissions.manageApiKeys()));
+        roleManager.createRole(new RoleIdentifier(null, DefaultRoles.admin.toString()),
+                new RoleUpdateRequest().withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.manageApiKeys()))));
+
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
-                new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, _permissionManager,
+                new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,
                         null));
 
         _task = new ApiKeyAdminTask(securityManager, mock(TaskRegistry.class), _authIdentityManager,

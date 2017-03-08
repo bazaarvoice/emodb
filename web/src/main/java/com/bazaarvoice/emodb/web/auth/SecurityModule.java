@@ -1,31 +1,39 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.AuthCacheRegistry;
+import com.bazaarvoice.emodb.auth.AuthZooKeeper;
 import com.bazaarvoice.emodb.auth.EmoSecurityManager;
 import com.bazaarvoice.emodb.auth.InternalAuthorizer;
 import com.bazaarvoice.emodb.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.DeferringAuthIdentityManager;
-import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.TableAuthIdentityManagerDAO;
 import com.bazaarvoice.emodb.auth.permissions.CacheManagingPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.DeferringPermissionManager;
+import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
-import com.bazaarvoice.emodb.auth.permissions.TablePermissionManager;
+import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
+import com.bazaarvoice.emodb.auth.permissions.TablePermissionManagerDAO;
+import com.bazaarvoice.emodb.auth.role.DataCenterSynchronizedRoleManager;
+import com.bazaarvoice.emodb.auth.role.DeferringRoleManager;
+import com.bazaarvoice.emodb.auth.role.Role;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
+import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemInternalId;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.inject.Exposed;
@@ -36,12 +44,15 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
+import org.apache.curator.framework.CuratorFramework;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.PermissionResolver;
 import org.apache.shiro.mgt.SecurityManager;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Guice module which configures security on the local server.
@@ -53,6 +64,7 @@ import java.util.Set;
  * <li> {@link com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry}
  * <li> @{@link com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort} HostAndPort
  * <li> @{@link com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster} String
+ * <li> @{@link com.bazaarvoice.emodb.auth.AuthZooKeeper} {@link CuratorFramework}
  * </ul>
  * Exports the following:
  * <ul>
@@ -82,7 +94,8 @@ public class SecurityModule extends PrivateModule {
         bind(ApiKeyEncryption.class).asEagerSingleton();
         bind(ApiKeyAdminTask.class).asEagerSingleton();
         bind(RoleAdminTask.class).asEagerSingleton();
-
+        bind(RebuildMissingRolesTask.class).asEagerSingleton();
+        
         bind(new TypeLiteral<Set<String>>() {})
                 .annotatedWith(ReservedRoles.class)
                 .toInstance(ImmutableSet.of(
@@ -92,6 +105,8 @@ public class SecurityModule extends PrivateModule {
         bind(PermissionResolver.class).to(EmoPermissionResolver.class).asEagerSingleton();
         bind(SecurityManager.class).to(EmoSecurityManager.class);
         bind(InternalAuthorizer.class).to(EmoSecurityManager.class);
+        bind(new TypeLiteral<AuthIdentityReader<ApiKey>>() {}).to(new TypeLiteral<AuthIdentityManager<ApiKey>>() {});
+        bind(PermissionReader.class).to(PermissionManager.class);
 
         bind(String.class).annotatedWith(SystemInternalId.class).toInstance(SYSTEM_INTERNAL_ID);
 
@@ -106,15 +121,15 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @Inject
     EmoSecurityManager provideSecurityManager(
-            AuthIdentityManager<ApiKey> authIdentityManager,
-            PermissionManager permissionManager,
+            AuthIdentityReader<ApiKey> authIdentityReader,
+            PermissionReader permissionReader,
             InvalidatableCacheManager cacheManager,
             @Named("AnonymousKey") Optional<String> anonymousKey) {
 
         return SecurityManagerBuilder.create()
                 .withRealmName(REALM_NAME)
-                .withAuthIdentityManager(authIdentityManager)
-                .withPermissionManager(permissionManager)
+                .withAuthIdentityReader(authIdentityReader)
+                .withPermissionReader(permissionReader)
                 .withAnonymousAccessAs(anonymousKey.orNull())
                 .withCacheManager(cacheManager)
                 .build();
@@ -172,7 +187,7 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash) {
-        return new TableAuthIdentityManager<>(ApiKey.class, dataStore, config.getIdentityTable(),
+        return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
                 config.getInternalIdIndexTable(), config.getTablePlacement(), hash);
     }
 
@@ -204,7 +219,7 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     PermissionManager providePermissionManagerDAO(
             AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore) {
-        return new TablePermissionManager(
+        return new TablePermissionManagerDAO(
                 permissionResolver, dataStore, config.getPermissionsTable(), config.getTablePlacement());
     }
 
@@ -223,23 +238,44 @@ public class SecurityModule extends PrivateModule {
                                                final PermissionResolver permissionResolver) {
         ImmutableMap.Builder<String, Set<Permission>> defaultRolePermissions = ImmutableMap.builder();
 
-        Function<String, Permission> toPermission = new Function<String, Permission>() {
-            @Override
-            public Permission apply(String permissionString) {
-                return permissionResolver.resolvePermission(permissionString);
-            }
-        };
-
         for (DefaultRoles defaultRole : DefaultRoles.values()) {
-            Set<Permission> rolePermissions = FluentIterable.from(defaultRole.getPermissions())
-                    .transform(toPermission)
-                    .toSet();
+            Set<Permission> rolePermissions = defaultRole.getPermissions()
+                    .stream()
+                    .map(permissionResolver::resolvePermission)
+                    .collect(Collectors.toSet());
 
-            defaultRolePermissions.put(defaultRole.toString(), rolePermissions);
+            defaultRolePermissions.put(PermissionIDs.forRole(defaultRole.toString()), rolePermissions);
         }
 
         PermissionManager deferring = new DeferringPermissionManager(permissionManager, defaultRolePermissions.build());
 
         return new CacheManagingPermissionManager(deferring, cacheManager);
+    }
+
+    @Provides
+    @Singleton
+    @Named("dao")
+    RoleManager provideRoleManagerDAO(AuthorizationConfiguration config, DataStore dataStore,
+                                      PermissionManager permissionManager) {
+        return new TableRoleManagerDAO(dataStore, config.getRoleTable(), config.getRoleGroupTable(),
+                config.getTablePlacement(), permissionManager);
+    }
+
+    @Provides
+    @Singleton
+    @Named("withDefaults")
+    RoleManager provideRoleManagerWithDefaultRoles(@Named("dao") RoleManager delegate) {
+        List<Role> defaultRoles = Lists.newArrayList();
+        for (DefaultRoles defaultRole : DefaultRoles.values()) {
+            // Use the default role's name as both the role's identifier and name attribute
+            defaultRoles.add(new Role(null, defaultRole.name(), defaultRole.name(),"Reserved role"));
+        }
+        return new DeferringRoleManager(delegate, defaultRoles);
+    }
+
+    @Provides
+    @Singleton
+    RoleManager provideRoleManager(@Named("withDefaults") RoleManager delegate, @AuthZooKeeper CuratorFramework curator) {
+        return new DataCenterSynchronizedRoleManager(delegate, curator);
     }
 }

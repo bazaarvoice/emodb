@@ -10,6 +10,8 @@ public class AuthorizationConfiguration {
     private final static String DEFAULT_IDENTITY_TABLE = "__auth:keys";
     private final static String DEFAULT_INTERNAL_ID_INDEX_TABLE = "__auth:internal_ids";
     private final static String DEFAULT_PERMISSION_TABLE = "__auth:permissions";
+    private final static String DEFAULT_ROLE_TABLE = "__auth:roles";
+    private final static String DEFAULT_ROLE_GROUP_TABLE = "__auth:role_groups";
 
     // Table for storing API keys
     @NotNull
@@ -20,6 +22,12 @@ public class AuthorizationConfiguration {
     // Table for storing permissions
     @NotNull
     private String _permissionsTable = DEFAULT_PERMISSION_TABLE;
+    // Table for storing roles
+    @NotNull
+    private String _roleTable = DEFAULT_ROLE_TABLE;
+    // Table for storing mappings of role groups to roles
+    @NotNull
+    private String _roleGroupTable = DEFAULT_ROLE_GROUP_TABLE;
     // Placement for preceding tables
     @NotNull
     private String _tablePlacement;
@@ -56,6 +64,24 @@ public class AuthorizationConfiguration {
 
     public AuthorizationConfiguration setPermissionsTable(String permissionsTable) {
         _permissionsTable = permissionsTable;
+        return this;
+    }
+
+    public String getRoleTable() {
+        return _roleTable;
+    }
+
+    public AuthorizationConfiguration setRoleTable(String roleTable) {
+        _roleTable = roleTable;
+        return this;
+    }
+
+    public String getRoleGroupTable() {
+        return _roleGroupTable;
+    }
+
+    public AuthorizationConfiguration setRoleGroupTable(String roleGroupTable) {
+        _roleGroupTable = roleGroupTable;
         return this;
     }
 

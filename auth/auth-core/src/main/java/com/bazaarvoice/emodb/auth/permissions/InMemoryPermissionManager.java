@@ -16,52 +16,44 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class InMemoryPermissionManager implements PermissionManager {
     private final PermissionResolver _permissionResolver;
-    private final SetMultimap<String, Permission> _principalPermissionMap = HashMultimap.create();
-    private final SetMultimap<String, Permission> _rolePermissionMap = HashMultimap.create();
+    private final SetMultimap<String, Permission> _permissionMap = HashMultimap.create();
 
     public InMemoryPermissionManager(PermissionResolver permissionResolver) {
         _permissionResolver = permissionResolver;
     }
 
     @Override
-    public Set<Permission> getAllForRole(String role) {
-        return getAll(_rolePermissionMap, role);
+    public Set<Permission> getPermissions(String id) {
+        checkNotNull(id, "id");
+        return _permissionMap.get(id);
     }
 
     @Override
-    public void updateForRole(String role, PermissionUpdateRequest updates) {
-        update(_rolePermissionMap, role, updates);
+    public void updatePermissions(String id, PermissionUpdateRequest updates) {
+        if (updates.isRevokeRest()) {
+            revokePermissions(id);
+        }
+        for (String permissionString : updates.getPermitted()) {
+            Permission permission = _permissionResolver.resolvePermission(permissionString);
+            _permissionMap.put(id, permission);
+        }
+        if (!updates.isRevokeRest()) {
+            for (String permissionString : updates.getRevoked()) {
+                Permission permission = _permissionResolver.resolvePermission(permissionString);
+                _permissionMap.remove(id, permission);
+            }
+        }
     }
 
     @Override
-    public void revokeAllForRole(String role) {
-        revokeAll(_rolePermissionMap, role);
+    public void revokePermissions(String id) {
+        checkNotNull(id, "id");
+        _permissionMap.removeAll(id);
     }
 
     @Override
     public Iterable<Map.Entry<String, Set<Permission>>> getAll() {
-        return Multimaps.asMap(_rolePermissionMap).entrySet();
-    }
-
-    private Set<Permission> getAll(SetMultimap<String, Permission> permissionMap, String key) {
-        checkNotNull(key, "key");
-        return permissionMap.get(key);
-    }
-
-    private void update(SetMultimap<String, Permission> permissionMap, String key, PermissionUpdateRequest request) {
-        for (String permissionString : request.getPermitted()) {
-            Permission permission = _permissionResolver.resolvePermission(permissionString);
-            permissionMap.put(key, permission);
-        }
-        for (String permissionString : request.getRevoked()) {
-            Permission permission = _permissionResolver.resolvePermission(permissionString);
-            permissionMap.remove(key, permission);
-        }
-    }
-
-    private void revokeAll(SetMultimap<String, Permission> permissionMap, String key) {
-        checkNotNull(key, "key");
-        permissionMap.removeAll(key);
+        return Multimaps.asMap(_permissionMap).entrySet();
     }
 
     @Override
@@ -70,7 +62,6 @@ public class InMemoryPermissionManager implements PermissionManager {
     }
 
     public void reset() {
-        _principalPermissionMap.clear();
-        _rolePermissionMap.clear();
+        _permissionMap.clear();
     }
 }

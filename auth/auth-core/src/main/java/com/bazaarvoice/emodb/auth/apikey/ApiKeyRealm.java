@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.auth.apikey;
 
-import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
+import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
+import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
+import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousCredentialsMatcher;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
@@ -43,8 +44,8 @@ public class ApiKeyRealm extends AuthorizingRealm {
 
     private final Logger _log = LoggerFactory.getLogger(getClass());
 
-    private final AuthIdentityManager<ApiKey> _authIdentityManager;
-    private final PermissionManager _permissionManager;
+    private final AuthIdentityReader<ApiKey> _authIdentityReader;
+    private final PermissionReader _permissionReader;
     private final String _anonymousId;
     private final boolean _clearCaches;
 
@@ -62,18 +63,18 @@ public class ApiKeyRealm extends AuthorizingRealm {
     private String _rolesCacheName;
     private String _internalAuthorizationCacheName;
 
-    public ApiKeyRealm(String name, CacheManager cacheManager, AuthIdentityManager<ApiKey> authIdentityManager,
-                       PermissionManager permissionManager, @Nullable String anonymousId) {
+    public ApiKeyRealm(String name, CacheManager cacheManager, AuthIdentityReader<ApiKey> authIdentityReader,
+                       PermissionReader permissionReader, @Nullable String anonymousId) {
         super(null, AnonymousCredentialsMatcher.anonymousOrMatchUsing(new SimpleCredentialsMatcher()));
 
 
-        _authIdentityManager = checkNotNull(authIdentityManager, "authIdentityManager");
-        _permissionManager = checkNotNull(permissionManager, "permissionManager");
+        _authIdentityReader = checkNotNull(authIdentityReader, "authIdentityReader");
+        _permissionReader = checkNotNull(permissionReader, "permissionReader");
         _anonymousId = anonymousId;
 
         setName(checkNotNull(name, "name"));
         setAuthenticationTokenClass(ApiKeyAuthenticationToken.class);
-        setPermissionResolver(permissionManager.getPermissionResolver());
+        setPermissionResolver(permissionReader.getPermissionResolver());
         setRolePermissionResolver(createRolePermissionResolver());
         setCacheManager(prepareCacheManager(cacheManager));
         setAuthenticationCachingEnabled(true);
@@ -154,7 +155,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
                         @Override
                         public boolean isCurrentValue(String key, RolePermissionSet value) {
                             // The key is the role name
-                            Set<Permission> currentPermissions = _permissionManager.getAllForRole(key);
+                            Set<Permission> currentPermissions = _permissionReader.getPermissions(PermissionIDs.forRole(key));
                             return value.permissions().equals(currentPermissions);
                         }
                     };
@@ -210,7 +211,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
      * Gets the authentication info for an API key from the source (not from cache).
      */
     private AuthenticationInfo getUncachedAuthenticationInfoForKey(String id) {
-        ApiKey apiKey = _authIdentityManager.getIdentity(id);
+        ApiKey apiKey = _authIdentityReader.getIdentity(id);
         if (apiKey == null) {
             return null;
         }
@@ -319,7 +320,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
         return new RolePermissionResolver () {
             @Override
             public Collection<Permission> resolvePermissionsInRole(String role) {
-                return getPermissions(role);
+                return getRolePermissions(role);
             }
         };
     }
@@ -327,20 +328,20 @@ public class ApiKeyRealm extends AuthorizingRealm {
     /**
      * Gets the permissions for a role.  If possible the permissions are cached for efficiency.
      */
-    protected Collection<Permission> getPermissions(String role) {
+    protected Collection<Permission> getRolePermissions(String role) {
         if (role == null) {
             return null;
         }
         Cache<String, RolePermissionSet> cache = getAvailableRolesCache();
 
         if (cache == null) {
-            return _permissionManager.getAllForRole(role);
+            return _permissionReader.getPermissions(PermissionIDs.forRole(role));
         }
 
         RolePermissionSet rolePermissionSet = cache.get(role);
 
         if (rolePermissionSet == null) {
-            Set<Permission> permissions = _permissionManager.getAllForRole(role);
+            Set<Permission> permissions = _permissionReader.getPermissions(PermissionIDs.forRole(role));
             rolePermissionSet = new SimpleRolePermissionSet(permissions);
             cache.put(role, rolePermissionSet);
         }
@@ -417,7 +418,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
      */
     private AuthorizationInfo getUncachedAuthorizationInfoByInternalId(String internalId) {
         // Retrieve the roles by internal ID
-        Set<String> roles = _authIdentityManager.getRolesByInternalId(internalId);
+        Set<String> roles = _authIdentityReader.getRolesByInternalId(internalId);
         if (roles == null) {
             _log.debug("Authorization info requested for non-existent internal id {}", internalId);
             return _nullAuthorizationInfo;

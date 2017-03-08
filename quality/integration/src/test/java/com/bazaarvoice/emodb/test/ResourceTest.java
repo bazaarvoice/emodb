@@ -7,6 +7,10 @@ import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -14,6 +18,7 @@ import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
@@ -22,9 +27,11 @@ import com.sun.jersey.spi.container.ResourceFilterFactory;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import test.integration.databus.DatabusJerseyTest;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.util.Set;
 import java.util.TimeZone;
 
 import static org.mockito.Mockito.mock;
@@ -44,8 +51,9 @@ public abstract class ResourceTest {
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole(
-                typeName + "-role", new PermissionUpdateRequest().permit(typeName + "|*|*"));
+        RoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        createRole(roleManager, null, typeName + "-role", ImmutableSet.of(typeName + "|*|*"));
 
         return setupResourceTestRule(resourceList, filters, authIdentityManager, permissionManager);
     }
@@ -87,8 +95,8 @@ public abstract class ResourceTest {
         resourceTestRuleBuilder.addProvider(new DatabusJerseyTest.ContextInjectableProvider<>(HttpServletRequest.class, mock(HttpServletRequest.class)));
 
         ResourceTestAuthUtil.setUpResources(resourceTestRuleBuilder, SecurityManagerBuilder.create()
-                .withAuthIdentityManager(authIdentityManager)
-                .withPermissionManager(permissionManager)
+                .withAuthIdentityReader(authIdentityManager)
+                .withPermissionReader(permissionManager)
                 .build());
 
         for (Object mapper : ExceptionMappers.getMappers()) {
@@ -106,5 +114,15 @@ public abstract class ResourceTest {
         resourceTestRule.getObjectMapper().setDateFormat(fmt);
 
         return resourceTestRule;
+    }
+
+    /**
+     * Convenience method to create a role with permissions.  It only delegates to a single method call, but that call
+     * is complex enough and creating roles is done with sufficient frequency that this method is beneficial to
+     * maintain readability.
+     */
+    protected static void createRole(RoleManager roleManager, @Nullable String group, String id,Set<String> permissions) {
+        roleManager.createRole(new RoleIdentifier(group, id),
+                new RoleUpdateRequest().withPermissionUpdate(new PermissionUpdateRequest().permit(permissions)));
     }
 }

@@ -23,20 +23,20 @@ public class CacheManagingPermissionManager implements PermissionManager {
     }
 
     @Override
-    public Set<Permission> getAllForRole(String role) {
-        checkNotNull(role, "role");
-        return _manager.getAllForRole(role);
+    public Set<Permission> getPermissions(String id) {
+        checkNotNull(id, "id");
+        return _manager.getPermissions(id);
     }
 
     @Override
-    public void updateForRole(String role, PermissionUpdateRequest updates) {
-        _manager.updateForRole(role, updates);
+    public void updatePermissions(String id, PermissionUpdateRequest updates) {
+        _manager.updatePermissions(id, updates);
         _cacheManager.invalidateAll();
     }
 
     @Override
-    public void revokeAllForRole(String role) {
-        _manager.revokeAllForRole(role);
+    public void revokePermissions(String id) {
+        _manager.revokePermissions(id);
         _cacheManager.invalidateAll();
     }
 

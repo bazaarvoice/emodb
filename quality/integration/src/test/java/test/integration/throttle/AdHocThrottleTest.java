@@ -3,7 +3,8 @@ package test.integration.throttle;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
@@ -29,6 +30,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.reflect.AbstractInvocationHandler;
@@ -103,8 +105,9 @@ public class AdHocThrottleTest extends ResourceTest {
         authIdentityManager.updateIdentity(new ApiKey(API_KEY, "id", ImmutableList.of("all-sor-role")));
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_dataStore, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole(
-                "all-sor-role", new PermissionUpdateRequest().permit("sor|*|*"));
+        InMemoryRoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        createRole(roleManager, null, "all-sor-role", ImmutableSet.of("sor|*|*"));
 
         return setupResourceTestRule(
                 Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)))),

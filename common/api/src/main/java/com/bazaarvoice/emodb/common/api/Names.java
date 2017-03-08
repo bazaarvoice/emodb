@@ -14,6 +14,14 @@ public abstract class Names {
                     .or(CharMatcher.anyOf("-.:_"))
                     .precomputed();
 
+    // Exclude whitespace, control chars, non-ascii, most punctuation.
+    private static final CharMatcher ROLE_NAME_ALLOWED =
+            CharMatcher.inRange('a', 'z')
+                    .or(CharMatcher.inRange('A', 'Z'))
+                    .or(CharMatcher.inRange('0', '9'))
+                    .or(CharMatcher.anyOf("-.:_"))
+                    .precomputed();
+
     /**
      * Table names must be lowercase ASCII strings. between 1 and 255 characters in length.  Whitespace, ISO control
      * characters and certain punctuation characters that aren't generally allowed in file names or in elasticsearch
@@ -27,5 +35,24 @@ public abstract class Names {
                 !(table.charAt(0) == '_' && !table.startsWith("__")) &&
                 !(table.charAt(0) == '.' && (".".equals(table) || "..".equals(table))) &&
                 TABLE_NAME_ALLOWED.matchesAllOf(table);
+    }
+
+    /**
+     * Role names mostly follow the same conventions as table names except, since they are only used internally, are
+     * slightly more permissive, such as allowing capital letters.
+     */
+    public static boolean isLegalRoleName(String role) {
+        return role != null &&
+                role.length() > 0 && role.length() <= 255 &&
+                ROLE_NAME_ALLOWED.matchesAllOf(role);
+    }
+
+    /**
+     * Role group names mostly follow the same conventions as role names.  The only difference is that the role group
+     * "_" is a reserved null-substitution for the absence of a group.
+     */
+    public static boolean isLegalRoleGroupName(String group) {
+        return isLegalRoleName(group) &&
+                !"_".equals(group);
     }
 }

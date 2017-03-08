@@ -3,7 +3,8 @@ package test.integration.blob;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
@@ -111,9 +112,11 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), _server);
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole("blob-role", new PermissionUpdateRequest().permit("blob|*|*"));
-        permissionManager.updateForRole("blob-role-a", new PermissionUpdateRequest().permit("blob|read|a*"));
-        permissionManager.updateForRole("blob-role-b", new PermissionUpdateRequest().permit("blob|read|b*"));
+        final RoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        createRole(roleManager, null, "blob-role", ImmutableSet.of("blob|*|*"));
+        createRole(roleManager, null, "blob-role-a", ImmutableSet.of("blob|read|a*"));
+        createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
             Collections.<Object>singletonList(new BlobStoreResource1(_server, _dataCenters, _approvedContentTypes)),

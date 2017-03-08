@@ -18,39 +18,39 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DeferringPermissionManager implements PermissionManager {
 
     private final PermissionManager _manager;
-    private final Map<String, Set<Permission>> _rolePermissions;
+    private final Map<String, Set<Permission>> _permissions;
 
-    public DeferringPermissionManager(PermissionManager manager, @Nullable Map<String, Set<Permission>> rolePermissions) {
+    public DeferringPermissionManager(PermissionManager manager, @Nullable Map<String, Set<Permission>> permissions) {
         _manager = checkNotNull(manager, "manager");
-        _rolePermissions = rolePermissions != null ? ImmutableMap.copyOf(rolePermissions) : ImmutableMap.<String, Set<Permission>>of();
+        _permissions = permissions != null ? ImmutableMap.copyOf(permissions) : ImmutableMap.<String, Set<Permission>>of();
     }
 
     @Override
-    public Set<Permission> getAllForRole(String role) {
-        checkNotNull(role, "role");
-        Set<Permission> permissions = _rolePermissions.get(role);
+    public Set<Permission> getPermissions(String id) {
+        checkNotNull(id, "id");
+        Set<Permission> permissions = _permissions.get(id);
         if (permissions == null) {
-            permissions = _manager.getAllForRole(role);
+            permissions = _manager.getPermissions(id);
         }
         return permissions;
     }
 
     @Override
-    public void updateForRole(String role, PermissionUpdateRequest updates) {
-        checkArgument(!_rolePermissions.containsKey(role), "Cannot update permissions for static role: %s", role);
-        _manager.updateForRole(role, updates);
+    public void updatePermissions(String id, PermissionUpdateRequest updates) {
+        checkArgument(!_permissions.containsKey(id), "Cannot update permissions for static id: %s", id);
+        _manager.updatePermissions(id, updates);
     }
 
     @Override
-    public void revokeAllForRole(String role) {
-        checkArgument(!_rolePermissions.containsKey(role), "Cannot revoke all permissions for static role: %s", role);
-        _manager.revokeAllForRole(role);
+    public void revokePermissions(String id) {
+        checkArgument(!_permissions.containsKey(id), "Cannot revoke permissions for static id: %s", id);
+        _manager.revokePermissions(id);
     }
 
     @Override
     public Iterable<Map.Entry<String, Set<Permission>>> getAll() {
         return Iterables.concat(
-                _rolePermissions.entrySet(),
+                _permissions.entrySet(),
                 _manager.getAll());
     }
 

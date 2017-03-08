@@ -3,7 +3,9 @@ package test.integration.databus;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
-import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationClient;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
@@ -48,8 +50,9 @@ public class ReplicationJerseyTest extends ResourceTest {
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
-        permissionManager.updateForRole(
-               "replication-role", new PermissionUpdateRequest().permit(DefaultRoles.replication.getPermissions()));
+        RoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        createRole(roleManager, null, "replication-role", DefaultRoles.replication.getPermissions());
 
         return setupResourceTestRule(resourceList, authIdentityManager, permissionManager);
     }

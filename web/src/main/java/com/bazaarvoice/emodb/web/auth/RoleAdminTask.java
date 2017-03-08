@@ -2,36 +2,36 @@ package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
-import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleExistsException;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.google.common.base.Function;
-import com.google.common.base.Functions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.FluentIterable;
+import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import org.apache.shiro.authc.AuthenticationException;
 import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.authz.Permission;
+import org.apache.shiro.authz.permission.PermissionResolver;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.io.PrintWriter;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -110,13 +110,16 @@ public class RoleAdminTask extends Task {
     }
 
     private final SecurityManager _securityManager;
-    private final PermissionManager _permissionManager;
+    private final RoleManager _roleManager;
+    private final PermissionResolver _permissionResolver;
 
     @Inject
-    public RoleAdminTask(SecurityManager securityManager, PermissionManager permissionManager, TaskRegistry taskRegistry) {
+    public RoleAdminTask(SecurityManager securityManager, RoleManager roleManager, PermissionResolver permissionResolver,
+                         TaskRegistry taskRegistry) {
         super("role");
         _securityManager = checkNotNull(securityManager, "securityManager");
-        _permissionManager = checkNotNull(permissionManager, "permissionManager");
+        _roleManager = checkNotNull(roleManager, "roleManager");
+        _permissionResolver = checkNotNull(permissionResolver, "permissionResolver");
 
         taskRegistry.addTask(this);
     }
@@ -141,7 +144,7 @@ public class RoleAdminTask extends Task {
                     viewRole(getRole(parameters), output);
                     break;
                 case UPDATE:
-                    updateRole(getRole(parameters), parameters, output);
+                    createOrUpdateRole(getRole(parameters), parameters, output);
                     break;
                 case DELETE:
                     deleteRole(getRole(parameters), output);
@@ -155,29 +158,43 @@ public class RoleAdminTask extends Task {
         } catch (AuthenticationException | AuthorizationException e) {
             _log.warn("Unauthorized attempt to access role management task");
             output.println("Not authorized");
+        } catch (Exception e) {
+            if (Throwables.getRootCause(e) instanceof TimeoutException) {
+                output.println("Timed out, try again later");
+            } else {
+                throw Throwables.propagate(e);
+            }
         } finally {
             subject.logout();
         }
     }
 
-    private String getRole(ImmutableMultimap<String, String> parameters) {
-        return getValueFromParams("role", parameters);
+    private RoleIdentifier getRole(ImmutableMultimap<String, String> parameters) {
+        // For legacy purposes the ID field can be named either the current "id" or the legacy "role".  Whichever is
+        // used the caller must provide exactly one value.
+        List<String> ids = ImmutableList.<String>builder()
+                .addAll(parameters.get("id"))
+                .addAll(parameters.get("role"))
+                .build();
+
+        checkArgument(ids.size() == 1, "A single 'id' parameter value is required");
+        String group = parameters.get("group").stream().findFirst().orElse(null);
+        return new RoleIdentifier(group, ids.get(0));
     }
 
-    private void viewRole(String role, PrintWriter output) {
-        List<String> permissions = FluentIterable.from(_permissionManager.getAllForRole(role))
-                .transform(Functions.toStringFunction())
-                .toSortedList(Ordering.natural());
-
-        output.println(String.format("%s has %d permissions", role, permissions.size()));
+    private void viewRole(RoleIdentifier id, PrintWriter output) {
+        Set<String> permissions = _roleManager.getPermissionsForRole(id);
+        output.println(String.format("%s has %d permissions", id, permissions.size()));
         for (String permission : permissions) {
             output.println("- " + permission);
         }
     }
 
-    private void updateRole(String role, ImmutableMultimap<String, String> parameters, PrintWriter output) {
-        checkArgument(!DefaultRoles.isDefaultRole(role), "Cannot update default role: %s", role);
+    private void createOrUpdateRole(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        checkArgument(!DefaultRoles.isDefaultRole(id), "Cannot update default role: %s", id);
 
+        String name = parameters.get("name").stream().findFirst().orElse(null);
+        String description = parameters.get("description").stream().findFirst().orElse(null);
         Set<String> permitSet = ImmutableSet.copyOf(parameters.get("permit"));
         Set<String> revokeSet = ImmutableSet.copyOf(parameters.get("revoke"));
 
@@ -189,7 +206,7 @@ public class RoleAdminTask extends Task {
         boolean allAssignable = true;
         for (String permit : permitSet) {
             // All permissions returned are EmoPermission instances.
-            EmoPermission resolved = (EmoPermission) _permissionManager.getPermissionResolver().resolvePermission(permit);
+            EmoPermission resolved = (EmoPermission) _permissionResolver.resolvePermission(permit);
             if (!resolved.isAssignable()) {
                 if (allAssignable) {
                     output.println("The following permission(s) cannot be assigned to a role:");
@@ -204,100 +221,80 @@ public class RoleAdminTask extends Task {
             return;
         }
 
-        _permissionManager.updateForRole(role,
-                new PermissionUpdateRequest()
-                        .permit(permitSet)
-                        .revoke(revokeSet));
+        RoleUpdateRequest request = new RoleUpdateRequest();
 
+        if (name != null) {
+            request = request.withName(Strings.emptyToNull(name));
+        }
+        if (description != null) {
+            request = request.withDescription(Strings.emptyToNull(description));
+        }
+        if (!permitSet.isEmpty() || !revokeSet.isEmpty()) {
+            request = request.withPermissionUpdate(new PermissionUpdateRequest()
+                    .permit(permitSet)
+                    .revoke(revokeSet));
+        }
+
+        // Although the backend distinguishes between creating and updating roles this task does not.  The long-term
+        // goal is to migrate away from using tasks to a proper REST API, at which time there would be distinct
+        // endpoints for creating versus updating a role.
+
+        try {
+            _roleManager.createRole(id, request);
+        } catch (RoleExistsException e) {
+            _roleManager.updateRole(id, request);
+        }
         output.println("Role updated.");
-        viewRole(role, output);
+        viewRole(id, output);
     }
 
-    private void deleteRole(String role, PrintWriter output) {
-        // A role technically cannot be deleted.  What this method does is revoke all permissions associated with
-        // the role.
-
-        checkArgument(!DefaultRoles.isDefaultRole(role), "Cannot delete default role: %s", role);
-
-        Set<Permission> permissions = _permissionManager.getAllForRole(role);
-
-        // Bound the number of times we'll try to revoke all permissions.
-        for (int attempt = 0; !permissions.isEmpty() && attempt < 10; attempt++) {
-            _permissionManager.updateForRole(role,
-                    new PermissionUpdateRequest()
-                            .revoke(FluentIterable.from(permissions)
-                                    .transform(Functions.toStringFunction())));
-
-            permissions = _permissionManager.getAllForRole(role);
-        }
-
-        if (permissions.isEmpty()) {
-            output.println("Role deleted");
-        } else {
-            output.println(String.format("WARNING:  Role still had %d permissions after 10 delete attempts", permissions.size()));
-        }
+    private void deleteRole(RoleIdentifier id, PrintWriter output) {
+        checkArgument(!DefaultRoles.isDefaultRole(id), "Cannot delete default role: %s", id);
+        _roleManager.deleteRole(id);
+        output.println("Role deleted");
     }
 
-    private void checkPermission(String role, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+    private void checkPermission(RoleIdentifier id, ImmutableMultimap<String, String> parameters, PrintWriter output) {
         String permissionStr = getValueFromParams("permission", parameters);
-        final Permission permission = _permissionManager.getPermissionResolver().resolvePermission(permissionStr);
+        final Permission permission = _permissionResolver.resolvePermission(permissionStr);
 
-        List<String> matchingPermissions = FluentIterable.from(_permissionManager.getAllForRole(role))
-                .filter(
-                        new Predicate<Permission>() {
-                                @Override
-                                public boolean apply(Permission grantedPermission) {
-                                    return grantedPermission.implies(permission);
-                                }
-                        })
-                .transform(Functions.toStringFunction())
-                .toSortedList(Ordering.natural());
+        List<String> matchingPermissions = _roleManager.getPermissionsForRole(id)
+                .stream()
+                .filter(p -> _permissionResolver.resolvePermission(p).implies(permission))
+                .sorted()
+                .collect(Collectors.toList());
 
         if (!matchingPermissions.isEmpty()) {
-            output.println(String.format("%s is permitted %s by the following:", role, permissionStr));
+            output.println(String.format("%s is permitted %s by the following:", id, permissionStr));
             for (String matchingPermission : matchingPermissions) {
                 output.println("- " + matchingPermission);
             }
         } else {
-            output.println(String.format("%s is not permitted %s", role, permissionStr));
+            output.println(String.format("%s is not permitted %s", id, permissionStr));
         }
     }
 
     private void findDeprecatedPermissions(PrintWriter output) {
-        Iterator<Map.Entry<String, Set<Permission>>> deprecatedPermissionsByRole =
-                FluentIterable.from(_permissionManager.getAll())
-                        .transform(new Function<Map.Entry<String, Set<Permission>>, Map.Entry<String, Set<Permission>>>() {
-                            @Nullable
-                            @Override
-                            public Map.Entry<String, Set<Permission>> apply(Map.Entry<String, Set<Permission>> rolePermissions) {
-                                Set<Permission> deprecatedPermissions = Sets.newLinkedHashSet();
-                                for (Permission permission : rolePermissions.getValue()) {
-                                    if (!((EmoPermission) permission).isAssignable()) {
-                                        deprecatedPermissions.add(permission);
-                                    }
-                                }
+        final AtomicBoolean anyDeprecated = new AtomicBoolean(false);
+        
+        _roleManager.getAll().forEachRemaining(role -> {
+            List<Permission> deprecatedPermissions = _roleManager.getPermissionsForRole(role.getRoleIdentifier())
+                    .stream()
+                    .map(p -> (EmoPermission) _permissionResolver.resolvePermission(p))
+                    .filter(p -> !p.isAssignable())
+                    .collect(Collectors.toList());
 
-                                if (deprecatedPermissions.isEmpty()) {
-                                    return null;
-                                }
-
-                                return Maps.immutableEntry(rolePermissions.getKey(), deprecatedPermissions);
-                            }
-                        })
-                        .filter(Predicates.notNull())
-                        .iterator();
-
-        if (!deprecatedPermissionsByRole.hasNext()) {
-            output.println("There are no roles with deprecated permissions.");
-        } else {
-            output.println("The following roles have deprecated permissions:\n");
-            while (deprecatedPermissionsByRole.hasNext()) {
-                Map.Entry<String, Set<Permission>> entry = deprecatedPermissionsByRole.next();
-                output.println(entry.getKey());
-                for (Permission permission : entry.getValue()) {
-                    output.println("- " + permission);
+            if (!deprecatedPermissions.isEmpty()) {
+                if (anyDeprecated.compareAndSet(false, true)) {
+                    output.println("The following roles have deprecated permissions:\n");
                 }
+                output.println(role.getRoleIdentifier());
+                deprecatedPermissions.forEach(p -> output.println("- " + p));
             }
+        });
+
+        if (!anyDeprecated.get()) {
+            output.println("There are no roles with deprecated permissions.");
         }
     }
 

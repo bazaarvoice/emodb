@@ -7,6 +7,9 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
+import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -22,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
-import org.apache.shiro.authz.Permission;
 import org.apache.shiro.cache.MemoryConstrainedCacheManager;
 import org.apache.shiro.util.ThreadContext;
 import org.testng.annotations.AfterMethod;
@@ -37,25 +39,29 @@ import java.util.Set;
 
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.fail;
 
 public class RoleAdminTaskTest {
     private RoleAdminTask _task;
     private InMemoryAuthIdentityManager<ApiKey> _authIdentityManager;
-    private InMemoryPermissionManager _permissionManager;
+    private InMemoryRoleManager _roleManager;
 
     @BeforeMethod
     public void setUp() {
         _authIdentityManager = new InMemoryAuthIdentityManager<>();
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
-        _permissionManager = new InMemoryPermissionManager(permissionResolver);
+        InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
+        _roleManager = new InMemoryRoleManager(permissionManager);
 
-        _permissionManager.updateForRole(DefaultRoles.admin.toString(), new PermissionUpdateRequest().permit(Permissions.manageRoles()));
+        RoleIdentifier adminId = new RoleIdentifier(null, DefaultRoles.admin.toString());
+        _roleManager.createRole(adminId, new RoleUpdateRequest()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.manageRoles()))));
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
-                new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, _permissionManager,
+                new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,
                         null));
 
-        _task = new RoleAdminTask(securityManager, _permissionManager, mock(TaskRegistry.class));
+        _task = new RoleAdminTask(securityManager, _roleManager, permissionManager.getPermissionResolver(), mock(TaskRegistry.class));
         _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
     }
 
@@ -80,9 +86,9 @@ public class RoleAdminTaskTest {
     @Test
     public void testViewRole()
             throws Exception {
-        _permissionManager.updateForRole("view-role",
-                new PermissionUpdateRequest()
-                        .permit("queue|post|foo", "queue|poll|foo", "sor|update|test:*", "blob|update|test:*"));
+        _roleManager.createRole(new RoleIdentifier(null, "view-role"), new RoleUpdateRequest()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("queue|post|foo", "queue|poll|foo", "sor|update|test:*", "blob|update|test:*"))));
 
         StringWriter out = new StringWriter();
 
@@ -112,22 +118,22 @@ public class RoleAdminTaskTest {
                 "permit", "queue|post|*"),
                 new PrintWriter(ByteStreams.nullOutputStream()));
 
-        Set<Permission> permissions = _permissionManager.getAllForRole("new-role");
-        Set<Permission> expected = toPermissionSet(ImmutableList.of(
+        Set<String> permissions = _roleManager.getPermissionsForRole(new RoleIdentifier(null, "new-role"));
+        Set<String> expected = ImmutableSet.of(
                 Permissions.updateSorTable(
                         new ConditionResource(Conditions.mapBuilder()
                                 .contains("foo", "bar")
                                 .build())),
-                Permissions.postQueue(Permissions.ALL)));
+                Permissions.postQueue(Permissions.ALL));
         assertEquals(permissions, expected);
     }
 
     @Test
     public void testUpdateRole()
             throws Exception {
-        _permissionManager.updateForRole("existing-role",
-                new PermissionUpdateRequest()
-                        .permit("queue|post|foo", "queue|post|bar"));
+        _roleManager.createRole(new RoleIdentifier(null, "existing-role"), new RoleUpdateRequest()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("queue|post|foo", "queue|post|bar"))));
 
         _task.execute(ImmutableMultimap.of(
                         ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
@@ -137,19 +143,19 @@ public class RoleAdminTaskTest {
                         "revoke", "queue|post|bar"),
                 new PrintWriter(ByteStreams.nullOutputStream()));
 
-        Set<Permission> permissions = _permissionManager.getAllForRole("existing-role");
-        Set<Permission> expected = toPermissionSet(ImmutableList.of(
+        Set<String> permissions = _roleManager.getPermissionsForRole(new RoleIdentifier(null, "existing-role"));
+        Set<String> expected = ImmutableSet.of(
                 Permissions.postQueue(new NamedResource("foo")),
-                Permissions.postQueue(new NamedResource("baz"))));
+                Permissions.postQueue(new NamedResource("baz")));
         assertEquals(permissions, expected);
     }
 
     @Test
     public void testDeleteRole()
             throws Exception {
-        _permissionManager.updateForRole("delete-role",
-                new PermissionUpdateRequest()
-                        .permit("queue|post|foo", "queue|post|bar"));
+        _roleManager.createRole(new RoleIdentifier(null, "delete-role"), new RoleUpdateRequest()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("queue|post|foo", "queue|post|bar"))));
 
         _task.execute(ImmutableMultimap.of(
                         ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
@@ -157,8 +163,7 @@ public class RoleAdminTaskTest {
                         "role", "delete-role"),
                 new PrintWriter(ByteStreams.nullOutputStream()));
 
-        Set<Permission> permissions = _permissionManager.getAllForRole("delete-role");
-        assertEquals(permissions, ImmutableList.<Permission>of());
+        assertNull(_roleManager.getRole(new RoleIdentifier(null, "delete-role")));
     }
 
     @Test
@@ -194,10 +199,9 @@ public class RoleAdminTaskTest {
     @Test
     public void testCheckRole()
             throws Exception {
-
-        _permissionManager.updateForRole("check-role",
-                new PermissionUpdateRequest()
-                        .permit("sor|update|c*", "sor|update|ch*"));
+        _roleManager.createRole(new RoleIdentifier("check-group", "check-role"), new RoleUpdateRequest()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("sor|update|c*", "sor|update|ch*"))));
 
         Map<String, List<String>> expected = ImmutableMap.<String, List<String>> of(
                 "sor|update|check", ImmutableList.of("- sor|update|c*", "- sor|update|ch*"),
@@ -211,6 +215,7 @@ public class RoleAdminTaskTest {
                             ApiKeyRequest.AUTHENTICATION_PARAM, "test-admin",
                             "action", "check",
                             "role", "check-role",
+                            "group", "check-group",
                             "permission", entry.getKey()),
                     new PrintWriter(out));
 
@@ -219,13 +224,5 @@ public class RoleAdminTaskTest {
             // The first line is a header; skip it and check the remaining lines
             assertEquals(actual.subList(1, actual.size()), entry.getValue());
         }
-    }
-
-    private Set<Permission> toPermissionSet(Iterable<String> permissionStrings) {
-        ImmutableSet.Builder<Permission> builder = ImmutableSet.builder();
-        for (String permissionString : permissionStrings) {
-            builder.add(_permissionManager.getPermissionResolver().resolvePermission(permissionString));
-        }
-        return builder.build();
     }
 }

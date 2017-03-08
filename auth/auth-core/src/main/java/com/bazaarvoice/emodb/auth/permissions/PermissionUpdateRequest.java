@@ -9,11 +9,12 @@ import java.util.Map;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Helper class for updating permissions using {@link PermissionManager#updateForRole(String, PermissionUpdateRequest)}
+ * Helper class for updating permissions using {@link PermissionManager#updatePermissions(String, PermissionUpdateRequest)}
  */
 public class PermissionUpdateRequest {
 
     private final Map<String, Boolean> _permissions = Maps.newLinkedHashMap();
+    private boolean _revokeRest = false;
 
     public PermissionUpdateRequest permit(Iterable<String> permissions) {
         update(Boolean.TRUE, permissions);
@@ -46,5 +47,14 @@ public class PermissionUpdateRequest {
 
     public Iterable<String> getRevoked() {
         return Maps.filterValues(_permissions, Predicates.equalTo(Boolean.FALSE)).keySet();
+    }
+
+    public PermissionUpdateRequest revokeRest() {
+        _revokeRest = true;
+        return this;
+    }
+
+    public boolean isRevokeRest() {
+        return _revokeRest;
     }
 }

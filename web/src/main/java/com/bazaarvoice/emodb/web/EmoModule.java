@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web;
 
 import com.bazaarvoice.curator.dropwizard.ZooKeeperConfiguration;
 import com.bazaarvoice.emodb.auth.AuthCacheRegistry;
+import com.bazaarvoice.emodb.auth.AuthZooKeeper;
 import com.bazaarvoice.emodb.blob.BlobStoreConfiguration;
 import com.bazaarvoice.emodb.blob.BlobStoreModule;
 import com.bazaarvoice.emodb.blob.BlobStoreZooKeeper;
@@ -554,6 +555,11 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @AuthCacheRegistry
         CacheRegistry provideCacheRegistry(CacheRegistry cacheRegistry) {
             return cacheRegistry.withNamespace("auth");
+        }
+
+        @Provides @Singleton @AuthZooKeeper
+        CuratorFramework provideAuthZooKeeperConnection(@Global CuratorFramework curator) {
+            return withComponentNamespace(curator, "auth");
         }
     }
 

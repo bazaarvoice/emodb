@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermissionResolver;
+import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
@@ -62,23 +63,23 @@ public class ApiKeyRealmTest {
                 _cacheManager, _authIdentityManager, _permissionManager, null);
         LifecycleUtils.init(_underTest);
 
-//        _permissionCaching.updateForRole("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
+//        _permissionCaching.updatePermissions("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
 
     }
 
 //    @Test
 //    public void simpleNull() {
 //        assertNotNull(_underTest.getAvailableRolesCache(), "precondition: there is a cache");
-//        when(_permissionManager.getAllForRole("role")).thenReturn(null);
-//        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+//        when(_permissionReader.getPermissions(PermissionIDs.forRole("role"))).thenReturn(null);
+//        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
 //        assertNull(resultPerms, "should be no permissions yet");
 //    }
 //
     @Test
     public void simpleEmpty() {
         assertNotNull(_underTest.getAvailableRolesCache(), "precondition: there is a cache");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.<Permission>newHashSet());
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.<Permission>newHashSet());
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertTrue(resultPerms.isEmpty(), "should be no permissions yet");
     }
 
@@ -87,8 +88,8 @@ public class ApiKeyRealmTest {
         Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1));
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet(p1));
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertNotNull(resultPerms.iterator().next(), "should have a permission");
         assertEquals(cache.size(), 1, "side effect: cache has an element");
     }
@@ -99,18 +100,18 @@ public class ApiKeyRealmTest {
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1));
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet(p1));
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
         Permission p2 = mock(Permission.class);
         when(p2.toString()).thenReturn("p2");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p2));
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet(p2));
         cache.clear();
-        Collection<Permission> resultPerms2 = _underTest.getPermissions("role");
+        Collection<Permission> resultPerms2 = _underTest.getRolePermissions("role");
         assertEquals(resultPerms2.iterator().next(), p2, "should have the second permission we added");
         assertEquals(cache.size(), 1, "side effect: cache still has one element");
-        resultPerms2 = _underTest.getPermissions("role");
+        resultPerms2 = _underTest.getRolePermissions("role");
         assertEquals(resultPerms2.iterator().next(), p2, "should still have the second permission we added");
         assertEquals(cache.size(), 1, "side effect: cache still has one element");
     }
@@ -121,13 +122,13 @@ public class ApiKeyRealmTest {
 //        assertEquals(cache.size(), 0, "precondition: cache is empty");
 //        Permission p1 = mock(Permission.class);
 //        when(p1.toString()).thenReturn("p1");
-//        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.<Permission>newHashSet(p1));
-//        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+//        when(_permissionReader.getRolePermissions("role")).thenReturn(Sets.<Permission>newHashSet(p1));
+//        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
 //        assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
 //        assertEquals(cache.size(), 1, "side effect: cache has one element");
-//        when(_permissionManager.getAllForRole("role")).thenReturn(null);
+//        when(_permissionReader.getRolePermissions("role")).thenReturn(null);
 //        cache.clear();
-//        resultPerms = _underTest.getPermissions("role");
+//        resultPerms = _underTest.getRolePermissions("role");
 //        assertNull(resultPerms, "now should have null");
 //        assertEquals(cache.size(), 0, "side effect: cache has nothing");
 //    }
@@ -138,13 +139,13 @@ public class ApiKeyRealmTest {
         assertEquals(cache.size(), 0, "precondition: cache is empty");
         Permission p1 = mock(Permission.class);
         when(p1.toString()).thenReturn("p1");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1));
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet(p1));
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.<Permission>newHashSet());
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.<Permission>newHashSet());
         cache.clear();
-        resultPerms = _underTest.getPermissions("role");
+        resultPerms = _underTest.getRolePermissions("role");
         assertTrue(resultPerms.isEmpty(), "now should have empty");
         assertEquals(cache.size(), 1, "side effect: cache has empty permission");
     }
@@ -157,11 +158,11 @@ public class ApiKeyRealmTest {
         when(p1.toString()).thenReturn("p1");
         Permission p2 = mock(Permission.class);
         when(p2.toString()).thenReturn("p2");
-        when(_permissionManager.getAllForRole("role")).thenReturn(Sets.newHashSet(p1), Sets.newHashSet(p2));
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet(p1), Sets.newHashSet(p2));
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
-        resultPerms = _underTest.getPermissions("role");
+        resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p2, "should have the last permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
     }
@@ -174,14 +175,14 @@ public class ApiKeyRealmTest {
         when(p1.toString()).thenReturn("p1");
         Permission p2 = mock(Permission.class);
         when(p2.toString()).thenReturn("p2");
-        when(_permissionManager.getAllForRole("role"))
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role")))
                 .thenReturn(Sets.newHashSet(p1))
                 .thenReturn(Sets.newHashSet(p2));
-        Collection<Permission> resultPerms = _underTest.getPermissions("role");
+        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p1, "should have the last permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
         cache.clear();
-        resultPerms = _underTest.getPermissions("role");
+        resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p2, "should again have the last permission we added");
         assertEquals(cache.size(), 1, "side effect: cache again has one element");
     }
@@ -194,7 +195,7 @@ public class ApiKeyRealmTest {
         when(p1.toString()).thenReturn("p1");
         final Permission p2 = mock(Permission.class);
         when(p2.toString()).thenReturn("p2");
-        when(_permissionManager.getAllForRole("role"))
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role")))
                 .thenReturn(Sets.newHashSet(p1))
                 .thenAnswer(new Answer<Set<Permission>>() {
                     @Override
@@ -204,11 +205,11 @@ public class ApiKeyRealmTest {
                     }
                 })
                 .thenReturn(Sets.newHashSet(p2));
-        Permission resultPerm = _underTest.getPermissions("role").iterator().next();
+        Permission resultPerm = _underTest.getRolePermissions("role").iterator().next();
         assertEquals(resultPerm, p1, "should have permission p1");
-        resultPerm = _underTest.getPermissions("role").iterator().next();
+        resultPerm = _underTest.getRolePermissions("role").iterator().next();
         assertEquals(resultPerm, p2, "should have permission p2");
-        resultPerm = _underTest.getPermissions("role").iterator().next();
+        resultPerm = _underTest.getRolePermissions("role").iterator().next();
         assertEquals(resultPerm, p2, "should have permission p2");
         assertNotNull(cache.get("role"), "Cached value for role should have been present");
         assertEquals(cache.get("role").permissions(), ImmutableSet.of(p2), "Cached values incorrect");
@@ -223,7 +224,7 @@ public class ApiKeyRealmTest {
         Permission negativePermission = mock(Permission.class);
         when(rolePermission.implies(positivePermission)).thenReturn(true);
         when(rolePermission.implies(not(eq(positivePermission)))).thenReturn(false);
-        when(_permissionManager.getAllForRole("role0")).thenReturn(ImmutableSet.of(rolePermission));
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role0"))).thenReturn(ImmutableSet.of(rolePermission));
 
         // Verify the internal ID is not cached
         assertNull(_underTest.getInternalAuthorizationCache().get("id0"));
@@ -249,7 +250,7 @@ public class ApiKeyRealmTest {
         Permission positivePermission = mock(Permission.class);
         when(rolePermission.implies(positivePermission)).thenReturn(true);
         when(rolePermission.implies(not(eq(positivePermission)))).thenReturn(false);
-        when(_permissionManager.getAllForRole("role0")).thenReturn(ImmutableSet.of(rolePermission));
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role0"))).thenReturn(ImmutableSet.of(rolePermission));
 
         // Verify permission is granted using the API key
         PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
