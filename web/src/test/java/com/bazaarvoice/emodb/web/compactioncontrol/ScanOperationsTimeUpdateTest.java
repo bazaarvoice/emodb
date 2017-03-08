@@ -32,6 +32,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.Assert;
@@ -49,7 +50,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class ScanOperationsTest {
+public class ScanOperationsTimeUpdateTest {
 
     @Test
     public void testTimeIsUpdatedWhenScanStartsAndItsDeletedAfterScanIsFinished()
@@ -67,7 +68,11 @@ public class ScanOperationsTest {
 
         // start the scan
         ScanUploader scanUploader = new ScanUploader(getDataTools(), scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
+        // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
+        scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
         scanUploader.scanAndUpload("test1", scanOptions);
+        // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
+        Thread.sleep(Duration.standardSeconds(1).getMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 1);
         Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), true);
 
@@ -95,12 +100,15 @@ public class ScanOperationsTest {
 
         // start the scan which will throw an exception
         ScanUploader scanUploader = new ScanUploader(getDataTools(), scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
+        // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
+        scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
         try {
             scanUploader.scanAndUpload("test1", scanOptions);
         } catch (Exception e) {
             // expected as the exception is propagated.
         }
-
+        // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
+        Thread.sleep(Duration.standardSeconds(1).getMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
         Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), false);
     }

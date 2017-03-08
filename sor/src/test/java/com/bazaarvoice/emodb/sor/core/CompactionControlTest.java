@@ -137,7 +137,6 @@ public class CompactionControlTest {
         // Verify that there are all 3 keys for deletion.
         // In the DistributedCompactor, at first 3 keys will be selected for deletion, and later no keys get filtered out from the deletionList based on the compactionControlTimestamp.
         assertTrue(expanded.getPendingCompaction() != null);
-        assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 3, "All 3 deltas should up for deletion.");
         assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t1, t2, t3)));
     }
 
@@ -195,7 +194,6 @@ public class CompactionControlTest {
         // Verify that there is exactly 1 key to be deleted
         // In the DistributedCompactor, at first 3 keys will be selected for deletion, and later 2 keys get filtered out based on the compactionControlTimestamp.
         assertTrue(expanded.getPendingCompaction() != null);
-        assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 1, "Only 1 delta should up for deletion.");
         assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t3)));
     }
 }
