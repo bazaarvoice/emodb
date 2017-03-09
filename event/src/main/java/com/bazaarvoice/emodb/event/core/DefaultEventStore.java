@@ -293,6 +293,15 @@ public class DefaultEventStore implements EventStore {
                 // that clients will abuse renew() compared to poll().
 
                 claims.renewAll(toClaimIds(eventIdObjects), claimTtl, extendOnly);
+
+                // If the claim TTL is zero then renewing these events effectively makes them available again immediately
+                if (claimTtl.getMillis() == 0) {
+                    // Mark the events as unread
+                    _readerDao.markUnread(channel, eventIdObjects);
+                    // Remove the channel from the empty cache, or no-op if it wasn't cached as empty
+                    _emptyCache.invalidate(channel);
+                }
+
                 return null;
             }
         });

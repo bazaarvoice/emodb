@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.event.db;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 
@@ -30,4 +31,12 @@ public interface EventReaderDAO {
      * @return true if all events were definitely moved, false if some events might not have been moved.
      */
     boolean moveIfFast(String fromChannel, String toChannel);
+
+    /**
+     * Returns events previous read using one of the read operations to the unread state.  This hints to the reader that
+     * if it has cached these events as read then it can clear that cache.  There are no guarantees whether this will
+     * have any effect on the reader, and calling this method on an event that has been deleted via
+     * {@link EventWriterDAO#delete(String, Collection)} has no effect.  
+     */
+    void markUnread(String channel, Collection<EventId> events);
 }
