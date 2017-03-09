@@ -8,7 +8,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Authenticating interface to {@link Databus}.  This method should exactly mirror Databus except with added credentials
@@ -54,7 +53,7 @@ public interface AuthDatabus {
      * Note that there is no API for paging through all events.  The {@code limit} argument is limited by the amount
      * of memory required to hold the event data on the server and, in practice, should be no more than a few hundred.
      */
-    List<Event> peek(@Credential String apiKey, String subscription, int limit);
+    Iterator<Event> peek(@Credential String apiKey, String subscription, int limit);
 
     /**
      * Claim events for the specified subscription and return it.  The caller must call {@link #acknowledge} with the

@@ -12,6 +12,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -142,13 +143,13 @@ public class DatabusResourcePoller {
                         // We're in an async context and have already returned a 200 response.  Since we can't
                         // retroactively change to 500 finish the request with an empty response and log the error.
                         _log.error("Failed to perform asynchronous poll on subscription {}", _subscription, e);
-                        result = new PollResult(ImmutableList.of(), false);
+                        result = new PollResult(Iterators.emptyIterator(), 0, false);
                         pollFailed = true;
                     }
 
                     // Go ahead and output the response if we either 1.) find events to output, 2.) exceed our time
                     // limit, or 3.) received an exception during the last poll
-                    if (result.getEvents().size() > 0
+                    if (result.getEventStream().hasNext()
                             || (System.currentTimeMillis() + LONG_POLL_RETRY_TIME.getMillis()) >= _longPollStopTime
                             || pollFailed) {
                         // Lock the context before writing the response to ensure that the KeepAliveRunnable doesn't
@@ -249,7 +250,7 @@ public class DatabusResourcePoller {
 
     private static void populateResponse(PollResult result, HttpServletResponse response, PeekOrPollResponseHelper helper) {
         try {
-            helper.getJson().writeJson(response.getOutputStream(), result.getEvents());
+            helper.getJson().writeJson(response.getOutputStream(), result.getEventStream());
         } catch (IOException ex) {
             _log.error("Failed to write response to the client");
         }
@@ -280,12 +281,12 @@ public class DatabusResourcePoller {
             // response - however, since we use the server-side client we know that it will always execute synchronously
             // itself (no long-polling) and return in a reasonable period of time.
             PollResult result = databus.poll(subject, subscription, claimTtl, limit);
-            if (ignoreLongPoll || !result.getEvents().isEmpty() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
+            if (ignoreLongPoll || result.getEventStream().hasNext() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
                 // If ignoreLongPoll == true or we have no executor services to schedule long-polling on then always
                 // return a response, even if it's empty. Alternatively, if we have data to return - return it!
                 response = Response.ok()
                         .header(POLL_DATABUS_EMPTY_HEADER, String.valueOf(!result.hasMoreEvents()))
-                        .entity(helper.asEntity(result.getEvents()))
+                        .entity(helper.asEntity(result.getEventStream()))
                         .build();
             } else {
                 // If the response is empty then go into async-mode and start up the runnables for our long-polling.

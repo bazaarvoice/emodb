@@ -11,15 +11,17 @@ import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -109,9 +111,15 @@ public class Canary extends AbstractScheduledService {
     private boolean pollAndAckEvents() {
         // Poll for events on the canary bus subscription
         long startTime = System.nanoTime();
+        List<String> eventKeys = Lists.newArrayList();
         PollResult result = _databus.poll(_subscriptionName, CLAIM_TTL, EVENTS_LIMIT);
+        // Get the keys for all events polled.  This also forces resolution of all events for timing metrics
+        Iterator<Event> events = result.getEventStream();
+        while (events.hasNext()) {
+            eventKeys.add(events.next().getEventKey());
+        }
         long endTime = System.nanoTime();
-        trackAverageEventDuration(endTime - startTime, result.getEvents().size());
+        trackAverageEventDuration(endTime - startTime, eventKeys.size());
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
         if (!isRunning()) {
@@ -119,9 +127,8 @@ public class Canary extends AbstractScheduledService {
         }
 
         // Ack these events
-        if (!result.getEvents().isEmpty()) {
-            _databus.acknowledge(_subscriptionName,
-                    result.getEvents().stream().map(Event::getEventKey).collect(Collectors.toList()));
+        if (!eventKeys.isEmpty()) {
+            _databus.acknowledge(_subscriptionName, eventKeys);
         }
 
         return result.hasMoreEvents();

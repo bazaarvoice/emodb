@@ -203,7 +203,7 @@ public class DatabusResource1 {
         // For backwards compatibility with older clients only include tags if explicitly requested
         // (default is false).
         PeekOrPollResponseHelper helper = getPeekOrPollResponseHelper(includeTags.get());
-        List<Event> events = getClient(partitioned).peek(subject, subscription, limit.get());
+        Iterator<Event> events = getClient(partitioned).peek(subject, subscription, limit.get());
         return Response.ok().entity(helper.asEntity(events)).build();
     }
 

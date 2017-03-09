@@ -48,8 +48,11 @@ import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -78,6 +81,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -419,14 +423,13 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
     @Override
-    public List<Event> peek(String ownerId, final String subscription, int limit) {
+    public Iterator<Event> peek(String ownerId, final String subscription, int limit) {
         checkLegalSubscriptionName(subscription);
         checkArgument(limit > 0, "Limit must be >0");
         checkSubscriptionOwner(ownerId, subscription);
 
         PollResult result = peekOrPoll(subscription, null, limit);
-        _peekedMeter.mark(result.getEvents().size());
-        return result.getEvents();
+        return result.getEventStream();
     }
 
     @Override
@@ -436,26 +439,36 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkArgument(limit > 0, "Limit must be >0");
         checkSubscriptionOwner(ownerId, subscription);
 
-        PollResult result = peekOrPoll(subscription, claimTtl, limit);
-        _polledMeter.mark(result.getEvents().size());
-        return result;
+        return peekOrPoll(subscription, claimTtl, limit);
     }
 
     /** Implements peek() or poll() based on whether claimTtl is null or non-null. */
     private PollResult peekOrPoll(String subscription, @Nullable Duration claimTtl, int limit) {
-        List<Item> items = Lists.newArrayList();
+        int remaining = limit;
+        Map<Coordinate, EventList> rawEvents = ImmutableMap.of();
         Map<Coordinate, Item> uniqueItems = Maps.newHashMap();
-        Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
         boolean isPeek = claimTtl == null;
         boolean repeatable = !isPeek && claimTtl.getMillis() > 0;
         boolean eventsAvailableForNextPoll = false;
         boolean noMaxPollTimeOut = true;
         boolean itemsDiscarded = false;
+        Meter eventMeter = isPeek ? _peekedMeter : _polledMeter;
+
+        // Reading raw events from the event store is a significantly faster operation than resolving the events into
+        // databus poll events.  This is because the former sequentially loads small event references while the latter
+        // requires reading and resolving the effectively random objects associated with those references from the data
+        // store.
+        //
+        // To make the process more efficient this method first polls for "limit" raw events from the event store.
+        // Then, up to the first 10 of those raw events are resolved synchronously with a time limit of MAX_POLL_TIME.
+        // Any remaining raw events are resolved lazily as the event list is consumed by the caller.  This makes the
+        // return time for this method faster and more predictable while supporting polls for more events than can
+        // be resolved within MAX_POLL_TIME.  This is especially beneficial for REST clients which may otherwise time
+        // out while waiting for "limit" events to be read and resolved.
 
         Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
         int padding = 0;
         do {
-            int remaining = limit - items.size();
             if (remaining == 0) {
                 break;  // Don't need any more events.
             }
@@ -465,7 +478,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             boolean more = isPeek ?
                     _eventStore.peek(subscription, sink) :
                     _eventStore.poll(subscription, claimTtl, sink);
-            Map<Coordinate, EventList> rawEvents = sink.getEvents();
+            rawEvents = sink.getEvents();
 
             if (rawEvents.isEmpty()) {
                 // No events to be had.
@@ -473,165 +486,291 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 break;
             }
 
-            List<String> eventIdsToDiscard = Lists.newArrayList();
-            List<String> recentUnknownEventIds = Lists.newArrayList();
-            List<String> eventIdsToUnclaim = Lists.newArrayList();
-
-            // There's a delicate balance being targeted here for polls.  On the one hand we want to query the events
-            // from the data store in batch to reduce latency.  On the other hand querying too many large records at
-            // once may adversely delay a response.  Therefore, polls query for the annotated content in batches
-            // of 10 and return if more than MAX_POLL_TIME has elapsed.
-            //
-            // Peeks, on the other hand, are generally performed for debugging or investigation and therefore
-            // should favor returning the requested number of events over returning quickly.
-
-            Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
-
+            // Resolve the raw events in batches of 10 until at least one response item is found for a maximum time of MAX_POLL_TIME.
             do {
-                int annotatedBatchRemaining = isPeek ? rawEvents.size() : 10;
-
-                DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
-                while (rawEventIterator.hasNext() && annotatedBatchRemaining != 0) {
-                    Map.Entry<Coordinate, EventList> entry = rawEventIterator.next();
-                    Coordinate coord = entry.getKey();
-
-                    // Query the table/key pair.
-                    try {
-                        annotatedGet.add(coord.getTable(), coord.getId());
-                        annotatedBatchRemaining -= 1;
-                    } catch (UnknownTableException e) {
-                        // It's likely the table was dropped since the event was queued.  Discard the events.
-                        EventList list = entry.getValue();
-                        for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
-                            eventIdsToDiscard.add(pair.first());
-                        }
-                        _discardedMeter.mark(list.size());
-                    }
-
-                    // Keep track of the order in which we received the events from the EventStore.
-                    if (!eventOrder.containsKey(coord)) {
-                        eventOrder.put(coord, eventOrder.size());
-                    }
-                }
-                Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
-
-                // Loop through the results of the data store query.
-                while (readResultIter.hasNext()) {
-                    DataProvider.AnnotatedContent readResult = readResultIter.next();
-
-                    // Get the JSON System of Record entity for this piece of content
-                    Map<String, Object> content = readResult.getContent();
-
-                    // Find the original event IDs that correspond to this piece of content
-                    Coordinate coord = Coordinate.fromJson(content);
-                    EventList eventList = rawEvents.get(coord);
-
-                    // Get all databus event tags for the original event(s) for this coordinate
-                    List<List<String>> tags = eventList.getTags();
-
-                    // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
-                    for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
-                        String eventId = eventData.first();
-                        UUID changeId = eventData.second();
-
-                        // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
-                        if (readResult.isChangeDeltaPending(changeId)) {
-                            if (isRecent(changeId)) {
-                                recentUnknownEventIds.add(eventId);
-                                _recentUnknownMeter.mark();
+                boolean batchItemsDiscarded = resolvePeekOrPollEvents(subscription, rawEvents, Math.min(10, remaining),
+                        (coord, item) -> {
+                            // Check whether we've already added this piece of content to the poll result.  If so, consolidate
+                            // the two together to reduce the amount of work a client must do.  Note that the previous item
+                            // would be from a previous batch of events and it's possible that we have read two different
+                            // versions of the same item of content.  This will prefer the most recent.
+                            Item previousItem = uniqueItems.get(coord);
+                            if (previousItem != null && previousItem.consolidateWith(item)) {
+                                _consolidatedMeter.mark();
                             } else {
-                                _staleUnknownMeter.mark();
+                                // We have found a new item of content to return!
+                                uniqueItems.put(coord, item);
                             }
-                            continue;
-                        }
+                        });
+                remaining = limit - uniqueItems.size();
+                itemsDiscarded = itemsDiscarded || batchItemsDiscarded;
+            } while (!rawEvents.isEmpty() && remaining > 0 && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
 
-                        // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
-                        if (readResult.isChangeDeltaRedundant(changeId)) {
-                            eventIdsToDiscard.add(eventId);
-                            _redundantMeter.mark();
-                            continue;
-                        }
-
-                        // Check whether we've already added this piece of content to the poll result.  If so, consolidate
-                        // the two together to reduce the amount of work a client must do.  Note that the previous item
-                        // might be from a previous batch of events and it's possible that we have read two different
-                        // versions of the same item of content.  This will prefer the most recent.
-                        Item previousItem = uniqueItems.get(coord);
-                        if (previousItem != null && previousItem.consolidateWith(eventId, content, tags)) {
-                            _consolidatedMeter.mark();
-                            continue;
-                        }
-
-                        // If, due to "padding" we asked for too many events, release the claims for the next poll().
-                        if (items.size() == limit) {
-                            eventIdsToUnclaim.add(eventId);
-                            continue;
-                        }
-
-                        // We have found a new item of content to return!
-                        Item item = new Item(eventId, eventOrder.get(coord), content, tags);
-                        items.add(item);
-                        uniqueItems.put(coord, item);
-                    }
-                }
-            } while (rawEventIterator.hasNext() && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
-
-            // Abandon claims in excess of what could be resolved within a reasonable amount of time
-            if (rawEventIterator.hasNext()) {
-                _log.debug("Subscriber polled for more events than could be resolved in {}: {}", MAX_POLL_TIME, subscription);
-                rawEventIterator.forEachRemaining(entry ->
-                        entry.getValue()
-                                .getEventAndChangeIds()
-                                .stream()
-                                .map(Pair::first)
-                                .forEach(eventIdsToUnclaim::add));
-            }
-            // Abandon claims from above plus if we claimed more items than necessary to satisfy the specified limit.
-            if (!eventIdsToUnclaim.isEmpty()) {
-                _eventStore.renew(subscription, eventIdsToUnclaim, Duration.ZERO, false);
-            }
-            // Reduce the claim length on recent unknown IDs so we look for them again soon.
-            if (!recentUnknownEventIds.isEmpty()) {
-                _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
-            }
-            // Ack events we never again want to see.
-            if (!eventIdsToDiscard.isEmpty()) {
-                _eventStore.delete(subscription, eventIdsToDiscard, true);
-                itemsDiscarded = true;
-            }
-            if (more) {
-                // As of this iteration if the cycle were to break without polling the raw event store again there are
-                // still more events
-                eventsAvailableForNextPoll = true;
-            } else {
-                // Didn't get a full batch, that means there are no more events to be had.
-                // If we unclaimed any events then the result should indicate there are more events
-                eventsAvailableForNextPoll = !eventIdsToUnclaim.isEmpty();
+            // There are more events for the next poll if either the event store explicitly said so or if, due to padding,
+            // we got more events than "limit", in which case we're likely to unclaim at last one.
+            eventsAvailableForNextPoll = more || rawEvents.size() + uniqueItems.size() > limit;
+            if (!more) {
+                // There are no more events to be had, so exit now
                 break;
             }
 
             // Note: Due to redundant/unknown events, it's possible that the 'events' list is empty even though, if we
-            // tried again, we'd find more events.  Try again a few times, but not for more than 250ms so clients don't
-            // timeout the request.  This helps move through large amounts of redundant deltas relatively quickly while
-            // also putting a bound on the total amount of work done by a single call to poll().
+            // tried again, we'd find more events.  Try again a few times, but not for more than MAX_POLL_TIME so clients
+            // don't timeout the request.  This helps move through large amounts of redundant deltas relatively quickly
+            // while also putting a bound on the total amount of work done by a single call to poll().
             padding = 10;
         } while (repeatable && (noMaxPollTimeOut = stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis()));
 
-        // Try draining the queue asynchronously if NO items were returned within the MAX_POLL_TIME.
-        // Doing this only in the poll case for now.
-        if (repeatable && items.size() == 0 && itemsDiscarded && !noMaxPollTimeOut) {
-            drainQueueAsync(subscription);
+        Iterator<Event> events;
+        int approximateSize;
+        if (uniqueItems.isEmpty()) {
+            // Either there were no raw events or all events found were for redundant or unknown changes.  It's possible
+            // that eventually there will be more events, but to prevent a lengthy delay iterating the remaining events
+            // quit now and return an empty result.  The caller can always poll again to try to pick up any more events,
+            // and if necessary an async drain will kick off a few lines down to assist in clearing the redundant update
+            // wasteland.
+            events = Iterators.emptyIterator();
+            approximateSize = 0;
+
+            // If there are still more unresolved events claimed then unclaim them now
+            if (repeatable && !rawEvents.isEmpty()) {
+                unclaim(subscription, rawEvents.values());
+            }
+
+            // Try draining the queue asynchronously if NO items were returned within the MAX_POLL_TIME.
+            // Doing this only in the poll case for now.
+            if (repeatable && itemsDiscarded && !noMaxPollTimeOut) {
+                drainQueueAsync(subscription);
+            }
+        } else if (rawEvents.isEmpty()) {
+            // All events have been resolved
+            events = toEvents(uniqueItems.values()).iterator();
+            approximateSize = uniqueItems.size();
+            eventMeter.mark(approximateSize);
+        } else {
+            // Return an event list which contains the first events which were resolved synchronously plus the
+            // remaining events from the peek or poll which will be resolved lazily in batches of 25.
+
+            final Map<Coordinate, EventList> deferredRawEvents = Maps.newLinkedHashMap(rawEvents);
+            final int initialDeferredLimit = remaining;
+
+            Iterator<Event> deferredEvents = new AbstractIterator<Event>() {
+                private Iterator<Event> currentBatch = Iterators.emptyIterator();
+                private int remaining = initialDeferredLimit;
+
+                @Override
+                protected Event computeNext() {
+                    Event next = null;
+
+                    if (currentBatch.hasNext()) {
+                        next = currentBatch.next();
+                    } else if (!deferredRawEvents.isEmpty() && remaining > 0) {
+                        // Resolve the next batch of events
+                        try {
+                            final List<Item> items = Lists.newArrayList();
+                            do {
+                                resolvePeekOrPollEvents(subscription, deferredRawEvents, Math.min(remaining, 25),
+                                        (coord, item) -> {
+                                            // Unlike with the original batch the deferred batch's events are always
+                                            // already de-duplicated by coordinate, so there is no need to maintain
+                                            // a coordiate-to-item uniqueness map.
+                                            items.add(item);
+                                        });
+
+                                if (!items.isEmpty()) {
+                                    remaining -= items.size();
+                                    currentBatch = toEvents(items).iterator();
+                                    next = currentBatch.next();
+                                }
+                            } while (next == null && !deferredRawEvents.isEmpty() && remaining > 0);
+                        } catch (Exception e) {
+                            // Don't fail; the caller has already received some events.  Just cut the result stream short
+                            // now and throw back any remaining events for a future poll.
+                            _log.warn("Failed to load additional events during peek/poll for subscription {}", subscription, e);
+                        }
+                    }
+
+                    if (next != null) {
+                        return next;
+                    }
+
+                    if (!deferredRawEvents.isEmpty()) {
+                        // If we padded the number of raw events it's possible there are more than the caller actually
+                        // requested.  Release the extra padded events now.
+                        try {
+                            unclaim(subscription, deferredRawEvents.values());
+                        } catch (Exception e) {
+                            // Don't fail, just log a warning.  The claims will eventually time out on their own.
+                            _log.warn("Failed to unclaim {} events from subscription {}", deferredRawEvents.size(), subscription, e);
+                        }
+                    }
+
+                    // Update the metric for the actual number of events returned
+                    eventMeter.mark(limit - remaining);
+
+                    return endOfData();
+                }
+            };
+
+            events = Iterators.concat(toEvents(uniqueItems.values()).iterator(), deferredEvents);
+            approximateSize = uniqueItems.size() + deferredRawEvents.size();
+        }
+
+        return new PollResult(events, approximateSize, eventsAvailableForNextPoll);
+    }
+
+    /**
+     * Resolves events found during a peek or poll and converts them into items.  No more than <code>limit</code>
+     * events are read, not including events which are skipped because they come from dropped tables.
+     *
+     * Any events for content which has not yet been replicated to the local data center are excluded and set to retry
+     * in RECENT_UNKNOWN_RETRY.  Any events for redundant changes are automatically deleted.
+     *
+     * To make use of this method more efficient it is not idempotent.  This method has the following side effect:
+     *
+     * <ol>
+     *     <li>All events processed are removed from <code>rawEvents</code>.</li>
+     * </ol>
+     *
+     * Finally, this method returns true if any redundant events were found and deleted, false otherwise.
+     */
+    private boolean resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
+                                            ResolvedItemSink sink) {
+        Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
+        List<String> eventIdsToDiscard = Lists.newArrayList();
+        List<String> recentUnknownEventIds = Lists.newArrayList();
+        int remaining = limit;
+        boolean itemsDiscarded = false;
+
+        DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
+        Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
+
+        while (rawEventIterator.hasNext() && remaining != 0) {
+            Map.Entry<Coordinate, EventList> entry = rawEventIterator.next();
+            Coordinate coord = entry.getKey();
+
+            // Query the table/key pair.
+            try {
+                annotatedGet.add(coord.getTable(), coord.getId());
+                remaining -= 1;
+            } catch (UnknownTableException e) {
+                // It's likely the table was dropped since the event was queued.  Discard the events.
+                EventList list = entry.getValue();
+                for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
+                    eventIdsToDiscard.add(pair.first());
+                }
+                _discardedMeter.mark(list.size());
+            }
+
+            // Keep track of the order in which we received the events from the EventStore.
+            eventOrder.put(coord, eventOrder.size());
+        }
+        Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
+
+        // Loop through the results of the data store query.
+        while (readResultIter.hasNext()) {
+            DataProvider.AnnotatedContent readResult = readResultIter.next();
+
+            // Get the JSON System of Record entity for this piece of content
+            Map<String, Object> content = readResult.getContent();
+
+            // Find the original event IDs that correspond to this piece of content
+            Coordinate coord = Coordinate.fromJson(content);
+            EventList eventList = rawEvents.get(coord);
+
+            // Get all databus event tags for the original event(s) for this coordinate
+            List<List<String>> tags = eventList.getTags();
+
+            Item item = null;
+
+            // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
+            for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
+                String eventId = eventData.first();
+                UUID changeId = eventData.second();
+
+                // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
+                if (readResult.isChangeDeltaPending(changeId)) {
+                    if (isRecent(changeId)) {
+                        recentUnknownEventIds.add(eventId);
+                        _recentUnknownMeter.mark();
+                    } else {
+                        _staleUnknownMeter.mark();
+                    }
+                    continue;
+                }
+
+                // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
+                if (readResult.isChangeDeltaRedundant(changeId)) {
+                    eventIdsToDiscard.add(eventId);
+                    _redundantMeter.mark();
+                    continue;
+                }
+
+                Item eventItem = new Item(eventId, eventOrder.get(coord), content, tags);
+                if (item == null) {
+                    item = eventItem;
+                } else if (item.consolidateWith(eventItem)) {
+                    _consolidatedMeter.mark();
+                } else {
+                    sink.accept(coord, item);
+                    item = eventItem;
+                }
+            }
+
+            if (item != null) {
+                sink.accept(coord, item);
+            }
+        }
+
+        // Reduce the claim length on recent unknown IDs so we look for them again soon.
+        if (!recentUnknownEventIds.isEmpty()) {
+            _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
+        }
+        // Ack events we never again want to see.
+        if (!eventIdsToDiscard.isEmpty()) {
+            _eventStore.delete(subscription, eventIdsToDiscard, true);
+            itemsDiscarded = true;
+        }
+        // Remove all coordinates from rawEvents which were processed by this method
+        for (Coordinate coord : eventOrder.keySet()) {
+            rawEvents.remove(coord);
+        }
+
+        return itemsDiscarded;
+    }
+
+    /**
+     * Simple interface for the event sink in {@link #resolvePeekOrPollEvents(String, Map, int, ResolvedItemSink)}
+     */
+    private interface ResolvedItemSink {
+        void accept(Coordinate coordinate, Item item);
+    }
+
+    /**
+     * Converts a collection of Items to Events.
+     */
+    private List<Event> toEvents(Collection<Item> items) {
+        if (items.isEmpty()) {
+            return ImmutableList.of();
         }
 
         // Sort the items to match the order of their events in an attempt to get first-in-first-out.
-        Collections.sort(items);
+        return items.stream().sorted().map(Item::toEvent).collect(Collectors.toList());
+    }
 
-        // Return the final list of events.
-        List<Event> events = Lists.newArrayListWithCapacity(items.size());
-        for (Item item : items) {
-            events.add(item.toEvent());
+    /**
+     * Convenience method to unclaim all of the events from a collection of event lists.  This is to unclaim excess
+     * events when a padded poll returns more events than the requested limit.
+     */
+    private void unclaim(String subscription, Collection<EventList> eventLists) {
+        List<String> eventIdsToUnclaim = Lists.newArrayList();
+        for (EventList unclaimEvents : eventLists) {
+            for (Pair<String, UUID> eventAndChangeId : unclaimEvents.getEventAndChangeIds()) {
+                eventIdsToUnclaim.add(eventAndChangeId.first());
+            }
         }
-        return new PollResult(events, eventsAvailableForNextPoll);
+        _eventStore.renew(subscription, eventIdsToUnclaim, Duration.ZERO, false);
+
     }
 
     private boolean isRecent(UUID changeId) {
@@ -1015,22 +1154,22 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             _tags = tags;
         }
 
-        boolean consolidateWith(String eventId, Map<String, Object> content, List<List<String>> tags) {
+        boolean consolidateWith(Item other) {
             if (_consolidatedEventIds.size() >= MAX_EVENTS_TO_CONSOLIDATE) {
                 return false;
             }
 
             // We'll construct an event key that combines all the duplicate events.  Unfortunately we can't discard/ack
             // the extra events at this time, subtle race conditions result that can cause clients to miss events.
-            _consolidatedEventIds.add(eventId);
+            _consolidatedEventIds.addAll(other._consolidatedEventIds);
 
             // Pick the newest version of the content.  There's no reason to return stale stuff.
-            if (Intrinsic.getVersion(_content) < Intrinsic.getVersion(content)) {
-                _content = content;
+            if (Intrinsic.getVersion(_content) < Intrinsic.getVersion(other._content)) {
+                _content = other._content;
             }
 
             // Combine tags from the other event
-            for (List<String> tagList : tags) {
+            for (List<String> tagList : other._tags) {
                 // The contents of "tagList" are already sorted, no need to sort again.
                 _tags = sortedTagUnion(_tags, tagList);
             }

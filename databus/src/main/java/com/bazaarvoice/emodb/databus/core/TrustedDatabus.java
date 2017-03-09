@@ -16,7 +16,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -46,7 +45,7 @@ public class TrustedDatabus implements AuthDatabus {
         return _databus.moveAsync(from, to);
     }
 
-    public List<Event> peek(@Credential String apiKey, String subscription, int limit) {
+    public Iterator<Event> peek(@Credential String apiKey, String subscription, int limit) {
         return _databus.peek(subscription, limit);
     }
 

@@ -71,7 +71,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
-        List<Event> events = result.getEvents();
+        List<Event> events = ImmutableList.copyOf(result.getEventStream());
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -102,7 +102,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
-        List<Event> events = result.getEvents();
+        List<Event> events = ImmutableList.copyOf(result.getEventStream());
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -135,7 +135,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
-        List<Event> events = result.getEvents();
+        List<Event> events = ImmutableList.copyOf(result.getEventStream());
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -179,7 +179,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
-        List<Event> events = result.getEvents();
+        List<Event> events = ImmutableList.copyOf(result.getEventStream());
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -237,7 +237,7 @@ public class ConsolidationTest {
 
         // Use a limit of 2 to force multiple calls to the event store.
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 2);
-        List<Event> events = result.getEvents();
+        List<Event> events = ImmutableList.copyOf(result.getEventStream());
 
         Event first = events.get(0);
         assertEquals(first.getContent(), content);
@@ -278,7 +278,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(annotatedContent));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 2);
-        assertTrue(result.getEvents().isEmpty());
+        assertFalse(result.getEventStream().hasNext());
         assertFalse(result.hasMoreEvents());
 
         // Since all events came from the same batch from the underlying event store they should all be deleted in one call.
@@ -316,7 +316,7 @@ public class ConsolidationTest {
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(annotatedContent));
 
         PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
-        assertTrue(result.getEvents().isEmpty());
+        assertFalse(result.getEventStream().hasNext());
         assertFalse(result.hasMoreEvents());
 
         // Since each event came from a separate batch from the underlying event store they should each be deleted

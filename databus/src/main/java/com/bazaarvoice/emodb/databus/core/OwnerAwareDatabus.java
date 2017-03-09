@@ -48,7 +48,7 @@ public interface OwnerAwareDatabus {
     long getClaimCount(String ownerId, String subscription)
         throws UnauthorizedSubscriptionException;
 
-    List<Event> peek(String ownerId, String subscription, int limit)
+    Iterator<Event> peek(String ownerId, String subscription, int limit)
         throws UnauthorizedSubscriptionException;
 
     PollResult poll(String ownerId, String subscription, Duration claimTtl, int limit)

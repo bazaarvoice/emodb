@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
@@ -13,6 +14,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -21,6 +24,7 @@ class TestDataProvider implements DataProvider {
     private final Map<String, Table> _cannedTables = Maps.newHashMap();
     private final Map<Coordinate, AnnotatedContent> _cannedContent = Maps.newHashMap();
     private final Map<Coordinate, UnknownTableException> _cannedExceptions = Maps.newHashMap();
+    private final List<List<Coordinate>> _executions = Lists.newArrayList();
 
     public TestDataProvider addTable(String table, Table response) {
         _cannedTables.put(table, response);
@@ -65,6 +69,7 @@ class TestDataProvider implements DataProvider {
 
             @Override
             public Iterator<AnnotatedContent> execute() {
+                _executions.add(_contents.stream().map(AnnotatedContent::getContent).map(Coordinate::fromJson).collect(Collectors.toList()));
                 Collections.shuffle(_contents);
                 return _contents.iterator();
             }
@@ -78,5 +83,9 @@ class TestDataProvider implements DataProvider {
             throw new UnknownTableException(table);
         }
         return response;
+    }
+
+    public List<List<Coordinate>> getExecutions() {
+        return _executions;
     }
 }

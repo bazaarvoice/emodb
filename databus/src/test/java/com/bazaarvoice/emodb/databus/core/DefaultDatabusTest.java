@@ -2,8 +2,12 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.model.DefaultOwnedSubscription;
 import com.bazaarvoice.emodb.event.api.DedupEventStore;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
@@ -16,6 +20,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
+import com.beust.jcommander.internal.Sets;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -25,11 +30,19 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.MoreExecutors;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
 import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,13 +50,20 @@ import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.Matchers.anyCollectionOf;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.argThat;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 public class DefaultDatabusTest {
@@ -221,6 +241,138 @@ public class DefaultDatabusTest {
         assertEquals(testDatabus.getDrainedSubscriptionsMap().size(), 0);
     }
 
+    @Test
+    public void testLazyPollResult() {
+        Supplier<Condition> acceptAll = Suppliers.ofInstance(Conditions.alwaysTrue());
+        TestDataProvider testDataProvider = new TestDataProvider();
+
+        final Set<String> expectedIds = Sets.newHashSet();
+        
+        DatabusEventStore eventStore = mock(DatabusEventStore.class);
+        when(eventStore.poll(eq("subscription"), eq(Duration.standardMinutes(1)), any(EventSink.class)))
+                .thenAnswer(invocationOnMock -> {
+                    EventSink sink = (EventSink) invocationOnMock.getArguments()[2];
+                    // Return 40 updates for records from 40 unique tables
+                    for (int iteration = 1; iteration <= 40; iteration++) {
+                        String id = "a" + iteration;
+                        addToPoll(id, "table-" + iteration, "key-" + iteration, false, sink, testDataProvider);
+                        expectedIds.add(id);
+                    }
+                    return false;
+                });
+        SubscriptionDAO subscriptionDAO = mock(SubscriptionDAO.class);
+        when(subscriptionDAO.getSubscription("subscription")).thenReturn(
+                new DefaultOwnedSubscription("subscription", Conditions.alwaysTrue(), new Date(1489090060000L),
+                        Duration.standardSeconds(30), "owner"));
+
+        DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
+
+        // Use a clock that advances 1 second after the first call
+        Clock clock = mock(Clock.class);
+        when(clock.millis())
+                .thenReturn(1489090000000L)
+                .thenReturn(1489090001000L);
+
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
+                eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                new MetricRegistry(), clock);
+
+        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 500);
+        assertFalse(pollResult.hasMoreEvents());
+
+        Iterator<Event> events = pollResult.getEventStream();
+        Set<String> actualIds = Sets.newHashSet();
+        // Read the entire event list
+        while (events.hasNext()) {
+            actualIds.add(events.next().getEventKey());
+        }
+        assertEquals(actualIds, expectedIds);
+        // Events should have been loaded in 3 batches.  The first was a synchronous batch that loaded the first 10 events.
+        // The seconds should have loaded 25 more events.  The third loaded the final 5 events;
+        List<List<Coordinate>> executions = testDataProvider.getExecutions();
+        assertEquals(executions.size(), 3);
+        assertEquals(executions.get(0).size(), 10);
+        assertEquals(executions.get(1).size(), 25);
+        assertEquals(executions.get(2).size(), 5);
+    }
+
+    @Test
+    public void testLazyPollResultWithPaddedEvents() {
+        Supplier<Condition> acceptAll = Suppliers.ofInstance(Conditions.alwaysTrue());
+        TestDataProvider testDataProvider = new TestDataProvider();
+
+        final Set<String> expectedPollIds = Sets.newHashSet();
+        final Set<String> expectedDeleteIds = Sets.newHashSet();
+        final Set<String> expectedUnclaimIds = Sets.newHashSet();
+
+        DatabusEventStore eventStore = mock(DatabusEventStore.class);
+        when(eventStore.poll(eq("subscription"), eq(Duration.standardMinutes(1)), any(EventSink.class)))
+                .thenAnswer(invocationOnMock -> {
+                    // For the first poll, return 10 events which will all be redundant
+                    EventSink sink = (EventSink) invocationOnMock.getArguments()[2];
+                    for (int iteration = 1; iteration <= 10; iteration++) {
+                        String id = "a" + iteration;
+                        addToPoll(id, "test-" + iteration, "key-" + iteration, true, sink, testDataProvider);
+                        expectedDeleteIds.add(id);
+                    }
+                    return true;
+                })
+                .thenAnswer(invocationOnMock -> {
+                    // For the second poll, return 20 events which are all not redundant, though only the first 10
+                    // of which should be returned with a poll limit of 10.  The remaining 10 are padding.
+                    EventSink sink = (EventSink) invocationOnMock.getArguments()[2];
+                    for (int iteration = 11; iteration <= 20; iteration++) {
+                        String id = "a" + iteration;
+                        addToPoll(id, "test-" + iteration, "key-" + iteration, false, sink, testDataProvider);
+                        expectedPollIds.add(id);
+                    }
+                    for (int iteration = 21; iteration <= 30; iteration++) {
+                        String id = "a" + iteration;
+                        addToPoll(id, "test-" + iteration, "key-" + iteration, false, sink, testDataProvider);
+                        expectedUnclaimIds.add(id);
+                    }
+                    return false;
+                });
+
+        SubscriptionDAO subscriptionDAO = mock(SubscriptionDAO.class);
+        when(subscriptionDAO.getSubscription("subscription")).thenReturn(
+                new DefaultOwnedSubscription("subscription", Conditions.alwaysTrue(), new Date(1489090060000L),
+                        Duration.standardSeconds(30), "owner"));
+
+        DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
+        Clock clock = Clock.fixed(Instant.now(), ZoneId.systemDefault());
+
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
+                eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                new MetricRegistry(), clock);
+
+        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 10);
+        // Because of padding all events were read from the event store.  However, since the padded events will be
+        // unclaimed the result should return that there are more events.
+        assertTrue(pollResult.hasMoreEvents());
+
+        // Verify that the redundant events where deleted
+        verify(eventStore).delete(eq("subscription"), argThat(containsExactly(expectedDeleteIds)), eq(true));
+        // Padded events will be unclaimed lazily upon iterating over the event list, so verify they haven't been unclaimed yet
+        verify(eventStore, never()).renew(anyString(), anyCollectionOf(String.class), any(Duration.class), anyBoolean());
+        
+        Iterator<Event> events = pollResult.getEventStream();
+        // Read the entire event list
+        Set<String> actualIds = Sets.newHashSet();
+        while (events.hasNext()) {
+            actualIds.add(events.next().getEventKey());
+        }
+
+        assertEquals(actualIds, expectedPollIds);
+
+        // Verify the padded events were unclaimed
+        verify(eventStore).renew(eq("subscription"), argThat(containsExactly(expectedUnclaimIds)), eq(Duration.ZERO), eq(false));
+    }
+
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {
         return newEvent(id, table, key, changeId, ImmutableSet.<String>of());
     }
@@ -246,5 +398,35 @@ public class DefaultDatabusTest {
                 .putAll(data)
                 .putAll(Coordinate.of(table, key).asJson())
                 .build();
+    }
+
+    private static void addToPoll(String eventId, String table, String key, boolean redundant, EventSink sink,
+                                  TestDataProvider testDataProvider) {
+        assertTrue(sink.remaining() > 0);
+        EventSink.Status status = sink.accept(newEvent(eventId, table, key, TimeUUIDs.newUUID()));
+        assertEquals(status, EventSink.Status.ACCEPTED_CONTINUE);
+
+        Map<String, Object> content = entity(table, key, ImmutableMap.of("rating", "5"));
+        DataProvider.AnnotatedContent annotatedContent = mock(DataProvider.AnnotatedContent.class);
+        when(annotatedContent.getContent()).thenReturn(content);
+        when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(redundant);
+        testDataProvider.add(annotatedContent);
+    }
+
+    private static <T> Matcher<Collection<T>> containsExactly(final Collection<T> expected) {
+        return new BaseMatcher<Collection<T>>() {
+            @Override
+            public boolean matches(Object o) {
+                return o != null &&
+                        o instanceof Collection &&
+                        ImmutableSet.copyOf((Collection) o).equals(ImmutableSet.copyOf(expected));
+            }
+
+            @Override
+            public void describeTo(Description description) {
+                description.appendText("contains exactly ").appendValue(expected);
+
+            }
+        };
     }
 }

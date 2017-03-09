@@ -119,14 +119,14 @@ public class SorStressTest  {
         loop(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                List<Event> events = _databus.poll(SUBSCRIPTION, Duration.standardSeconds(30), 10).getEvents();
-                if (events.isEmpty()) {
+                Iterator<Event> events = _databus.poll(SUBSCRIPTION, Duration.standardSeconds(30), 10).getEventStream();
+                if (!events.hasNext()) {
                     _numIdle.incrementAndGet();
                     return false;  // idle
                 }
                 List<String> eventKeys = Lists.newArrayList();
-                for (Event event : events) {
-                    eventKeys.add(event.getEventKey());
+                while (events.hasNext()) {
+                    eventKeys.add(events.next().getEventKey());
                 }
                 _databus.acknowledge(SUBSCRIPTION, eventKeys);
                 _numReads.addAndGet(eventKeys.size());
