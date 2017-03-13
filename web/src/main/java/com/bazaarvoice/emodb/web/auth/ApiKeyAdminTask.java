@@ -353,8 +353,18 @@ public class ApiKeyAdminTask extends Task {
     }
 
     private void deleteApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output) {
+        // Does the caller have permission to delete API keys?
         subject.checkPermission(Permissions.deleteApiKey());
+
         String key = getValueFromParams("key", parameters);
+        ApiKey apiKey = _authIdentityManager.getIdentity(key);
+        checkArgument(apiKey != null, "Unknown API key");
+
+        // Does the caller have permission to revoke every role from the API key?
+        for (String role : apiKey.getRoles()) {
+            subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+        }
+        
         _authIdentityManager.deleteIdentity(key);
         output.println("API key deleted");
     }
