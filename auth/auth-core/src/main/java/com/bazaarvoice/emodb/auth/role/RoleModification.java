@@ -3,10 +3,10 @@ package com.bazaarvoice.emodb.auth.role;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 
 /**
- * Request parameter for updating a role using {@link RoleManager#createRole(RoleIdentifier, RoleUpdateRequest)}
- * or {@link RoleManager#updateRole(RoleIdentifier, RoleUpdateRequest)}.
+ * Request parameter for updating a role using {@link RoleManager#createRole(RoleIdentifier, RoleModification)}
+ * or {@link RoleManager#updateRole(RoleIdentifier, RoleModification)}.
  */
-public class RoleUpdateRequest {
+public class RoleModification {
 
     private String _name;
     private boolean _namePresent = false;
@@ -14,19 +14,19 @@ public class RoleUpdateRequest {
     private boolean _descriptionPresent = false;
     private PermissionUpdateRequest _permissionUpdate;
 
-    public RoleUpdateRequest withName(String name) {
+    public RoleModification withName(String name) {
         _name = name;
         _namePresent = true;
         return this;
     }
 
-    public RoleUpdateRequest withDescription(String description) {
+    public RoleModification withDescription(String description) {
         _description = description;
         _descriptionPresent = true;
         return this;
     }
 
-    public RoleUpdateRequest withPermissionUpdate(PermissionUpdateRequest permissionUpdate) {
+    public RoleModification withPermissionUpdate(PermissionUpdateRequest permissionUpdate) {
         _permissionUpdate = permissionUpdate;
         return this;
     }

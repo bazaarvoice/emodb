@@ -54,14 +54,14 @@ public class InMemoryRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(RoleIdentifier id, RoleUpdateRequest request) {
+    public Role createRole(RoleIdentifier id, RoleModification modification) {
         if (getRole(id) != null) {
             throw new RoleExistsException(id.getGroup(), id.getId());
         }
-        Role role = new Role(id.getGroup(), id.getId(), request.getName(), request.getDescription());
+        Role role = new Role(id.getGroup(), id.getId(), modification.getName(), modification.getDescription());
         _rolesById.put(id, role);
-        if (request.getPermissionUpdate() != null) {
-            List<String> permissions = ImmutableList.copyOf(request.getPermissionUpdate().getPermitted());
+        if (modification.getPermissionUpdate() != null) {
+            List<String> permissions = ImmutableList.copyOf(modification.getPermissionUpdate().getPermitted());
             if (!permissions.isEmpty()) {
                 _permissionManager.updatePermissions(PermissionIDs.forRole(id), new PermissionUpdateRequest().permit(permissions));
             }
@@ -70,19 +70,19 @@ public class InMemoryRoleManager implements RoleManager {
     }
 
     @Override
-    public void updateRole(RoleIdentifier id, RoleUpdateRequest request) {
+    public void updateRole(RoleIdentifier id, RoleModification modification) {
         Role role = getRole(id);
         if (role == null) {
             throw new RoleNotFoundException(id.getGroup(), id.getId());
         }
-        if (request.isNamePresent()) {
-            role.setName(request.getName());
+        if (modification.isNamePresent()) {
+            role.setName(modification.getName());
         }
-        if (request.isDescriptionPresent()) {
-            role.setDescription(request.getDescription());
+        if (modification.isDescriptionPresent()) {
+            role.setDescription(modification.getDescription());
         }
-        if (request.getPermissionUpdate() != null) {
-            _permissionManager.updatePermissions(PermissionIDs.forRole(id), request.getPermissionUpdate());
+        if (modification.getPermissionUpdate() != null) {
+            _permissionManager.updatePermissions(PermissionIDs.forRole(id), modification.getPermissionUpdate());
         }
     }
 

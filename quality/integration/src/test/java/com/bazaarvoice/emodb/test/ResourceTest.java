@@ -11,7 +11,7 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -145,6 +145,6 @@ public abstract class ResourceTest {
      */
     protected static void createRole(RoleManager roleManager, @Nullable String group, String id,Set<String> permissions) {
         roleManager.createRole(new RoleIdentifier(group, id),
-                new RoleUpdateRequest().withPermissionUpdate(new PermissionUpdateRequest().permit(permissions)));
+                new RoleModification().withPermissionUpdate(new PermissionUpdateRequest().permit(permissions)));
     }
 }

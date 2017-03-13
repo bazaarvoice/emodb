@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.inject.Inject;
@@ -62,7 +62,7 @@ public class RebuildMissingRolesTask extends Task {
                 if (!existingRoles.contains(id)) {
                     // Permission exists for a role which does not exist.  Create the role now with reasonable defaults.
                     Set<String> initialPermissions = entry.getValue().stream().map(Object::toString).collect(Collectors.toSet());
-                    _roleManager.createRole(id, new RoleUpdateRequest()
+                    _roleManager.createRole(id, new RoleModification()
                             .withName(id.getId())
                             .withPermissionUpdate(new PermissionUpdateRequest()
                                     .permit(initialPermissions)));

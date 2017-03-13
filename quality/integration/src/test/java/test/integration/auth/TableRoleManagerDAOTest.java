@@ -7,7 +7,7 @@ import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleExistsException;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
-import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -180,7 +180,7 @@ public class TableRoleManagerDAOTest {
         createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
 
         // Modify the role
-        _roleManager.updateRole(id, new RoleUpdateRequest()
+        _roleManager.updateRole(id, new RoleModification()
                 .withName("new name")
                 .withDescription("new description")
                 .withPermissionUpdate(new PermissionUpdateRequest().revoke("p2").permit("p3")));
@@ -197,7 +197,7 @@ public class TableRoleManagerDAOTest {
     @Test
     public void testUpdateNonExistentRole() throws Exception {
         try {
-            _roleManager.updateRole(new RoleIdentifier("g1", "r1"), new RoleUpdateRequest()
+            _roleManager.updateRole(new RoleIdentifier("g1", "r1"), new RoleModification()
                     .withDescription("new description"));
             fail("RoleNotFoundException not thrown");
         } catch (RoleNotFoundException e) {
@@ -285,14 +285,14 @@ public class TableRoleManagerDAOTest {
     }
 
     private void createRole(RoleIdentifier id, String name, String description, Set<String> permissions) {
-        RoleUpdateRequest request = new RoleUpdateRequest()
+        RoleModification modification = new RoleModification()
                 .withName(name)
                 .withDescription(description);
 
         if (permissions != null) {
-            request = request.withPermissionUpdate(new PermissionUpdateRequest().permit(permissions));
+            modification = modification.withPermissionUpdate(new PermissionUpdateRequest().permit(permissions));
         }
 
-        _roleManager.createRole(id, request);
+        _roleManager.createRole(id, modification);
     }
 }

@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -40,7 +40,7 @@ public class RebuildMissingRolesTaskTest {
 
         // Create a role complete with permissions which should be untouched by the task
         roleManager.createRole(new RoleIdentifier(null, "role3"),
-                new RoleUpdateRequest()
+                new RoleModification()
                         .withName("role3")
                         .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of("role3|*"))));
 
