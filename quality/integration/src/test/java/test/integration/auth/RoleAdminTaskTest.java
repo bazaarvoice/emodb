@@ -56,7 +56,7 @@ public class RoleAdminTaskTest {
 
         RoleIdentifier adminId = new RoleIdentifier(null, DefaultRoles.admin.toString());
         _roleManager.createRole(adminId, new RoleUpdateRequest()
-                .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.manageRoles()))));
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.unlimitedRole()))));
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
                 new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,
                         null));
