@@ -14,7 +14,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Interface for providing owner-aware access to {@link com.bazaarvoice.emodb.databus.api.Databus} using an authenticated
@@ -55,7 +54,7 @@ public interface SubjectDatabus {
 
     long getClaimCount(Subject subject, String subscription);
 
-    List<Event> peek(Subject subject, String subscription, int limit);
+    Iterator<Event> peek(Subject subject, String subscription, int limit);
 
     PollResult poll(Subject subject, String subscription, Duration claimTtl, int limit);
 

@@ -33,7 +33,6 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
@@ -192,7 +191,7 @@ public class DatabusClient implements AuthDatabus {
     }
 
     @Override
-    public List<Event> peek(String apiKey, @PartitionKey String subscription, int limit) {
+    public Iterator<Event> peek(String apiKey, @PartitionKey String subscription, int limit) {
         checkNotNull(subscription, "subscription");
         try {
             URI uri = _databus.clone()
@@ -203,7 +202,7 @@ public class DatabusClient implements AuthDatabus {
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<List<Event>>() {});
+                    .get(new TypeReference<Iterator<Event>>() {});
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -225,7 +224,7 @@ public class DatabusClient implements AuthDatabus {
             throw convertException(new EmoClientException(response));
         }
 
-        List<Event> events = response.getEntity(new TypeReference<List<Event>>() {});
+        Iterator<Event> events = response.getEntity(new TypeReference<Iterator<Event>>() {});
 
         boolean moreEvents;
         String databusEmpty = response.getFirstHeader(POLL_DATABUS_EMPTY_HEADER);
@@ -235,10 +234,10 @@ public class DatabusClient implements AuthDatabus {
         } else {
             // Must be polling an older version of Emo which did not include this header.  Infer whether the queue
             // is empty based on whether any results were returned.
-            moreEvents = !events.isEmpty();
+            moreEvents = events.hasNext();
         }
 
-        return new PollResult(events, moreEvents);
+        return new PollResult(events, limit, moreEvents);
     }
 
     protected UriBuilder getPollUriBuilder(String subscription, Duration claimTtl, int limit) {

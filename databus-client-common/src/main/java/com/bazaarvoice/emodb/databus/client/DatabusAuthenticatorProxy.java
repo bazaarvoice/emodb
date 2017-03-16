@@ -16,7 +16,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Databus instance that takes an {@link AuthDatabus} and API key and proxies all calls using the API key.
@@ -90,7 +89,7 @@ class DatabusAuthenticatorProxy implements Databus {
     }
 
     @Override
-    public List<Event> peek(@PartitionKey String subscription, int limit) {
+    public Iterator<Event> peek(@PartitionKey String subscription, int limit) {
         return _authDatabus.peek(_apiKey, subscription, limit);
     }
 

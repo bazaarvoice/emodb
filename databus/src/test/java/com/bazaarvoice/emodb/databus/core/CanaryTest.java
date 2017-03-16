@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
@@ -85,7 +86,7 @@ public class CanaryTest {
     @Test
     public void testIterationWithNoEvents() throws Exception {
         when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
-                .thenReturn(new PollResult(ImmutableList.of(), false));
+                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 
@@ -102,7 +103,7 @@ public class CanaryTest {
             eventIds.add(eventId);
         }
         when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
-                .thenReturn(new PollResult(events, false));
+                .thenReturn(new PollResult(events.iterator(), events.size(), false));
 
         _iterationRunnable.run();
 
@@ -129,9 +130,9 @@ public class CanaryTest {
         }
 
         when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
-                .thenReturn(new PollResult(events.get(0), true))
-                .thenReturn(new PollResult(events.get(1), true))
-                .thenReturn(new PollResult(events.get(2), false));
+                .thenReturn(new PollResult(events.get(0).iterator(), events.get(0).size(), true))
+                .thenReturn(new PollResult(events.get(1).iterator(), events.get(1).size(), true))
+                .thenReturn(new PollResult(events.get(2).iterator(), events.get(2).size(), false));
 
         _iterationRunnable.run();
 
@@ -144,9 +145,9 @@ public class CanaryTest {
     @Test
     public void testIterationWithDiscardedEvents() throws Exception {
         when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
-                .thenReturn(new PollResult(ImmutableList.of(), true))
-                .thenReturn(new PollResult(ImmutableList.of(), true))
-                .thenReturn(new PollResult(ImmutableList.of(), false));
+                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
+                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
+                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 

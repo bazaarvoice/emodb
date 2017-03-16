@@ -16,7 +16,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Base implementation for {@link SubjectDatabus}.
@@ -68,7 +67,7 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
-    public List<Event> peek(Subject subject, @PartitionKey String subscription, int limit) {
+    public Iterator<Event> peek(Subject subject, @PartitionKey String subscription, int limit) {
         return databus(subject).peek(subscription, limit);
     }
 

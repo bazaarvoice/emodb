@@ -20,7 +20,9 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.netflix.astyanax.Execution;
@@ -43,14 +45,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxEventReaderDAO.class);
@@ -436,6 +443,39 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
             throw Throwables.propagate(e);
         }
         return operationResult.getResult();
+    }
+
+    /**
+     * When all events from a slab have been read via {@link #readNewer(String, EventSink)} _closedSlabCursors
+     * caches that the slab is empty for 10 seconds.  When a slab is marked as unread update the cursor, if present,
+     * such that it is rewound far enough to read the unread event again.
+     */
+    @Override
+    public void markUnread(String channel, Collection<EventId> events) {
+        // For each slab keep track of the earliest index for each unread event.
+        ConcurrentMap<ChannelSlab, Integer> channelSlabs = Maps.newConcurrentMap();
+        for (EventId event : events) {
+            AstyanaxEventId astyanaxEvent = (AstyanaxEventId) event;
+            checkArgument(channel.equals(astyanaxEvent.getChannel()));
+            channelSlabs.merge(new ChannelSlab(channel, astyanaxEvent.getSlabId()), astyanaxEvent.getEventIdx(), Ints::min);
+        }
+
+        for (Map.Entry<ChannelSlab, Integer> entry : channelSlabs.entrySet()) {
+            ChannelSlab channelSlab = entry.getKey();
+            int eventIdx = entry.getValue();
+            // Get the closed slab cursor, if any
+            SlabCursor cursor = _closedSlabCursors.getIfPresent(channelSlab);
+            // If the cursor exists and is beyond the lowest unread index, rewind it
+            if (cursor != null && (cursor.get() == SlabCursor.END || cursor.get() > eventIdx)) {
+                // Synchronize on the cursor before updating it to avoid concurrent updates with a read
+                //noinspection SynchronizationOnLocalVariableOrMethodParameter
+                synchronized (cursor) {
+                    if (cursor.get() == SlabCursor.END || cursor.get() > eventIdx) {
+                        cursor.set(eventIdx);
+                    }
+                }
+            }
+        }
     }
 
     private static class SlabCursor {

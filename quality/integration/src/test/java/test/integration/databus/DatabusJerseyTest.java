@@ -438,7 +438,7 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> peekResults = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
-        when(_client.peek(isSubject(), eq("queue-name"), eq(123))).thenReturn(peekResults);
+        when(_client.peek(isSubject(), eq("queue-name"), eq(123))).thenReturn(peekResults.iterator());
 
         List<Event> expected;
         List<Event> actual;
@@ -446,7 +446,7 @@ public class DatabusJerseyTest extends ResourceTest {
         if (includeTags) {
             // This is the default peek behavior
             expected = peekResults;
-            actual = databusClient().peek("queue-name", 123);
+            actual = ImmutableList.copyOf(databusClient().peek("queue-name", 123));
         } else {
             // Tags won't be returned
             expected = ImmutableList.of(
@@ -488,7 +488,7 @@ public class DatabusJerseyTest extends ResourceTest {
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
         when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
-                .thenReturn(new PollResult(pollResults, false));
+                .thenReturn(new PollResult(pollResults.iterator(), 2, false));
 
         List<Event> expected;
         List<Event> actual;
@@ -497,7 +497,7 @@ public class DatabusJerseyTest extends ResourceTest {
             // This is the default poll behavior
             PollResult pollResult = databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
             assertFalse(pollResult.hasMoreEvents());
-            actual = pollResult.getEvents();
+            actual = ImmutableList.copyOf(pollResult.getEventIterator());
             expected = pollResults;
         } else {
             // Tags won't be returned
@@ -542,13 +542,13 @@ public class DatabusJerseyTest extends ResourceTest {
                     Optional.of(new LongPollingExecutorServices(pollService, keepAliveService)), new MetricRegistry());
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
-            List<Event> emptyList = ImmutableList.of();
             List<Event> pollResults = ImmutableList.of(
                     new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                     new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
             //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(emptyList, false), new PollResult(pollResults, true));
+                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+                    .thenReturn(new PollResult(pollResults.iterator(), 2, true));
 
             List<Event> expected;
             Class<? extends EventViews.ContentOnly> view;
@@ -646,7 +646,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(ImmutableList.of(), false))
+                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();
@@ -746,11 +746,11 @@ public class DatabusJerseyTest extends ResourceTest {
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
         when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
-                .thenReturn(new PollResult(expected, true));
+                .thenReturn(new PollResult(expected.iterator(), 2, true));
 
         PollResult actual = databusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
 
-        assertEquals(actual.getEvents(), expected);
+        assertEquals(ImmutableList.copyOf(actual.getEventIterator()), expected);
         assertTrue(actual.hasMoreEvents());
         verify(_local).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
         verifyNoMoreInteractions(_local);

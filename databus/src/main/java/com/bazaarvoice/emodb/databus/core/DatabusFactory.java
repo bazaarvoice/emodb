@@ -15,7 +15,6 @@ import javax.inject.Inject;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -85,7 +84,7 @@ public class DatabusFactory {
             }
 
             @Override
-            public List<Event> peek(String subscription, int limit) {
+            public Iterator<Event> peek(String subscription, int limit) {
                 return _ownerAwareDatabus.peek(ownerId, subscription, limit);
             }
 
