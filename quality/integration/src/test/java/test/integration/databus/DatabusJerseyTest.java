@@ -497,7 +497,7 @@ public class DatabusJerseyTest extends ResourceTest {
             // This is the default poll behavior
             PollResult pollResult = databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
             assertFalse(pollResult.hasMoreEvents());
-            actual = ImmutableList.copyOf(pollResult.getEventStream());
+            actual = ImmutableList.copyOf(pollResult.getEventIterator());
             expected = pollResults;
         } else {
             // Tags won't be returned
@@ -750,7 +750,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         PollResult actual = databusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
 
-        assertEquals(ImmutableList.copyOf(actual.getEventStream()), expected);
+        assertEquals(ImmutableList.copyOf(actual.getEventIterator()), expected);
         assertTrue(actual.hasMoreEvents());
         verify(_local).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
         verifyNoMoreInteractions(_local);

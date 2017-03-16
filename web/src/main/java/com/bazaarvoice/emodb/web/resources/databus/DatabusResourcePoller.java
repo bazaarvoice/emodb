@@ -1,8 +1,6 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
 import com.bazaarvoice.emodb.auth.jersey.Subject;
-import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -11,7 +9,6 @@ import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import org.joda.time.DateTime;
@@ -24,7 +21,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -149,7 +145,7 @@ public class DatabusResourcePoller {
 
                     // Go ahead and output the response if we either 1.) find events to output, 2.) exceed our time
                     // limit, or 3.) received an exception during the last poll
-                    if (result.getEventStream().hasNext()
+                    if (result.getEventIterator().hasNext()
                             || (System.currentTimeMillis() + LONG_POLL_RETRY_TIME.getMillis()) >= _longPollStopTime
                             || pollFailed) {
                         // Lock the context before writing the response to ensure that the KeepAliveRunnable doesn't
@@ -250,7 +246,7 @@ public class DatabusResourcePoller {
 
     private static void populateResponse(PollResult result, HttpServletResponse response, PeekOrPollResponseHelper helper) {
         try {
-            helper.getJson().writeJson(response.getOutputStream(), result.getEventStream());
+            helper.getJson().writeJson(response.getOutputStream(), result.getEventIterator());
         } catch (IOException ex) {
             _log.error("Failed to write response to the client");
         }
@@ -281,12 +277,12 @@ public class DatabusResourcePoller {
             // response - however, since we use the server-side client we know that it will always execute synchronously
             // itself (no long-polling) and return in a reasonable period of time.
             PollResult result = databus.poll(subject, subscription, claimTtl, limit);
-            if (ignoreLongPoll || result.getEventStream().hasNext() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
+            if (ignoreLongPoll || result.getEventIterator().hasNext() || _keepAliveExecutorService == null || _pollingExecutorService == null) {
                 // If ignoreLongPoll == true or we have no executor services to schedule long-polling on then always
                 // return a response, even if it's empty. Alternatively, if we have data to return - return it!
                 response = Response.ok()
                         .header(POLL_DATABUS_EMPTY_HEADER, String.valueOf(!result.hasMoreEvents()))
-                        .entity(helper.asEntity(result.getEventStream()))
+                        .entity(helper.asEntity(result.getEventIterator()))
                         .build();
             } else {
                 // If the response is empty then go into async-mode and start up the runnables for our long-polling.

@@ -114,7 +114,7 @@ public class Canary extends AbstractScheduledService {
         List<String> eventKeys = Lists.newArrayList();
         PollResult result = _databus.poll(_subscriptionName, CLAIM_TTL, EVENTS_LIMIT);
         // Get the keys for all events polled.  This also forces resolution of all events for timing metrics
-        Iterator<Event> events = result.getEventStream();
+        Iterator<Event> events = result.getEventIterator();
         while (events.hasNext()) {
             eventKeys.add(events.next().getEventKey());
         }

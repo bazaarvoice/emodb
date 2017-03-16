@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *
  * <ol>
  *     <li>
- *         The an iterator of {@link Event} instances returned from the poll, returned by {@link #getEventStream()}.
+ *         The an iterator of {@link Event} instances returned from the poll, returned by {@link #getEventIterator()}.
  *     </li>
  *     <li>
  *         A boolean indicator for whether there are more events and the caller would benefit from immediately re-polling
@@ -47,7 +47,7 @@ public class PollResult {
         });
     }
 
-    public Iterator<Event> getEventStream() {
+    public Iterator<Event> getEventIterator() {
         return _eventIterator;
     }
 

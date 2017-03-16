@@ -282,7 +282,7 @@ public class DefaultDatabusTest {
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 500);
         assertFalse(pollResult.hasMoreEvents());
 
-        Iterator<Event> events = pollResult.getEventStream();
+        Iterator<Event> events = pollResult.getEventIterator();
         Set<String> actualIds = Sets.newHashSet();
         // Read the entire event list
         while (events.hasNext()) {
@@ -360,7 +360,7 @@ public class DefaultDatabusTest {
         // Padded events will be unclaimed lazily upon iterating over the event list, so verify they haven't been unclaimed yet
         verify(eventStore, never()).renew(anyString(), anyCollectionOf(String.class), any(Duration.class), anyBoolean());
         
-        Iterator<Event> events = pollResult.getEventStream();
+        Iterator<Event> events = pollResult.getEventIterator();
         // Read the entire event list
         Set<String> actualIds = Sets.newHashSet();
         while (events.hasNext()) {

@@ -429,7 +429,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkSubscriptionOwner(ownerId, subscription);
 
         PollResult result = peekOrPoll(subscription, null, limit);
-        return result.getEventStream();
+        return result.getEventIterator();
     }
 
     @Override
@@ -573,7 +573,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                                         (coord, item) -> {
                                             // Unlike with the original batch the deferred batch's events are always
                                             // already de-duplicated by coordinate, so there is no need to maintain
-                                            // a coordiate-to-item uniqueness map.
+                                            // a coordinate-to-item uniqueness map.
                                             items.add(item);
                                         });
 
