@@ -50,7 +50,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class AuthResourceFilterFactory implements ResourceFilterFactory {
 
-    private final static Pattern SUBSTITUTION_MATCHER = Pattern.compile("\\{(?<param>(\\?.|[^\\?]).*)\\}");
+    private final static Pattern SUBSTITUTION_MATCHER = Pattern.compile("\\{(?<param>(\\?[^}]|[^?}])[^}]*)}");
 
     private final SecurityManager _securityManager;
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
