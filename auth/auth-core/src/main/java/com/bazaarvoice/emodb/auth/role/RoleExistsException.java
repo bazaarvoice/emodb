@@ -11,7 +11,7 @@ public class RoleExistsException extends RuntimeException {
     private final String _id;
 
     public RoleExistsException(String group, String id) {
-        super("Role not found");
+        super("Role exists");
         _group = group;
         _id = id;
     }

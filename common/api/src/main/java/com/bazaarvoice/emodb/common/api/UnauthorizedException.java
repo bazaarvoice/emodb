@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.common.api;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -13,6 +14,7 @@ public class UnauthorizedException extends RuntimeException {
         super("not authorized");
     }
 
+    @JsonCreator
     public UnauthorizedException(@JsonProperty("reason") String message) {
         super(message);
     }
