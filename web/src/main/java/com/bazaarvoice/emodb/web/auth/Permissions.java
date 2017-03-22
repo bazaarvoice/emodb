@@ -49,6 +49,8 @@ public class Permissions {
     public final static String REPLICATE_DATABUS = "replicate_databus";
     public final static String RAW_DATABUS = "raw_databus";
     public final static String GRANT = "grant";
+    public final static String CREATE_EXACT = "create_exact";
+    public final static String VIEW_BY_KEY = "view_by_key";
 
     // Common resource values
     public final static AnyResource ALL = new AnyResource();
@@ -305,12 +307,20 @@ public class Permissions {
         return format("%s|%s", API_KEY, CREATE);
     }
 
+    public static String createExactApiKey() {
+        return format("%s|%s", API_KEY, CREATE_EXACT);
+    }
+
     public static String updateApiKey() {
         return format("%s|%s", API_KEY, UPDATE);
     }
 
     public static String deleteApiKey() {
         return format("%s|%s", API_KEY, DELETE);
+    }
+
+    public static String findApiKeyByKey() {
+        return format("%s|%s", API_KEY, VIEW_BY_KEY);
     }
 
     public static String unlimitedApiKey() {

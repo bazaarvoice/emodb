@@ -1,13 +1,15 @@
 package com.bazaarvoice.emodb.sdk;
 
+import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.Closeables;
 import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.curator.test.TestingServer;
@@ -30,6 +32,8 @@ import java.io.InputStream;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.Arrays.asList;
@@ -283,24 +287,27 @@ public class EmoStartMojo extends AbstractEmoMojo {
             // possible deserialize the yaml into the minimum representation required.
             ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
             MinimalEmoConfiguration config = objectMapper.readValue(new File(emoConfigurationDirectory(), "config.yaml"), MinimalEmoConfiguration.class);
-            URI adminUri = getAdminUri(config);
+            URI adminUri = getEmoUri(config);
             String adminApiKey = getAdminApiKey(config);
 
             for (RoleParameter role : roles) {
                 String name = checkNotNull(role.getName(), "Role configuration must include a name");
                 getLog().info("Creating role " + name);
 
-                WebResource request = client.resource(adminUri)
-                        .path("/tasks/role")
+                Map<String, Object> entity = ImmutableMap.of(
+                        "name", role.getName(),
+                        "permissions", ImmutableSet.copyOf(role.getPermissions()));
+
+                String response = client.resource(adminUri)
+                        .path("uac")
+                        .path("1")
+                        .path("role")
+                        .path("_")
+                        .path(name)
                         .queryParam("APIKey", adminApiKey)
-                        .queryParam("action", "update")
-                        .queryParam("role", name);
+                        .type("application/x.json-create-role")
+                        .put(String.class, JsonHelper.asJson(entity));
 
-                for (String permission : role.getPermissions()) {
-                    request = request.queryParam("permit", permission);
-                }
-
-                String response = request.post(String.class);
                 getLog().info("Response to create role " + name);
                 getLog().info(response);
             }
@@ -309,19 +316,21 @@ public class EmoStartMojo extends AbstractEmoMojo {
                 String value = checkNotNull(apiKey.getValue(), "API key configuration must include a value");
                 getLog().info("Creating API key " + value);
 
-                WebResource request = client.resource(adminUri)
-                        .path("/tasks/api-key")
+                Map<String, Object> entity = ImmutableMap.of(
+                        "owner", "emodb-sdk",
+                        "roles", Arrays.stream(apiKey.getRoles())
+                                .map(role -> ImmutableMap.of("id", role))
+                                .collect(Collectors.toList()));
+
+                String response = client.resource(adminUri)
+                        .path("uac")
+                        .path("1")
+                        .path("api-key")
                         .queryParam("APIKey", adminApiKey)
                         .queryParam("key", value)
-                        .queryParam("action", "create")
-                        .queryParam("owner", "emodb-sdk")
-                        .queryParam("description", "emodb-sdk");
+                        .type("application/x.json-create-api-key")
+                        .put(String.class, JsonHelper.asJson(entity));
 
-                for (String role : apiKey.getRoles()) {
-                    request = request.queryParam("role", role);
-                }
-
-                String response = request.post(String.class);
                 getLog().info("Response to create API key " + value);
                 getLog().info(response);
             }
@@ -332,8 +341,8 @@ public class EmoStartMojo extends AbstractEmoMojo {
         }
     }
 
-    private URI getAdminUri(MinimalEmoConfiguration config) {
-        return URI.create(String.format("http://localhost:%d", config.server.adminConnectors.get(0).port));
+    private URI getEmoUri(MinimalEmoConfiguration config) {
+        return URI.create(String.format("http://localhost:%d", config.server.applicationConnectors.get(0).port));
     }
 
     private String getAdminApiKey(MinimalEmoConfiguration config) {
@@ -354,11 +363,11 @@ public class EmoStartMojo extends AbstractEmoMojo {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class MinimalServerConfiguration {
-        public List<MinimalAdminConnectorConfiguration> adminConnectors;
+        public List<MinimalApplicationConnectorConfiguration> applicationConnectors;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public static class MinimalAdminConnectorConfiguration {
+    public static class MinimalApplicationConnectorConfiguration {
         public int port;
     }
 
