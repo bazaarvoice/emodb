@@ -20,33 +20,33 @@ persistence and cross-data center replication.
 Documentation
 -------------
 
-[Release Notes] (markdowns/ReleaseNotes.md)
+[Release Notes](markdowns/ReleaseNotes.md)
 
-[System of Record API] (https://bazaarvoice.github.io/emodb/sor/)
+[System of Record API](https://bazaarvoice.github.io/emodb/sor/)
 
-[System of Record Deltas] (https://bazaarvoice.github.io/emodb/deltas/)
+[System of Record Deltas](https://bazaarvoice.github.io/emodb/deltas/)
 
-[Databus API] (https://bazaarvoice.github.io/emodb/databus/)
+[Databus API](https://bazaarvoice.github.io/emodb/databus/)
 
-[BlobStore API] (https://bazaarvoice.github.io/emodb/blobstore/)
+[BlobStore API](https://bazaarvoice.github.io/emodb/blobstore/)
 
-[Queue API] (https://bazaarvoice.github.io/emodb/queue/)
+[Queue API](https://bazaarvoice.github.io/emodb/queue/)
 
-[Stash API] (https://bazaarvoice.github.io/emodb/stash/)
+[Stash API](https://bazaarvoice.github.io/emodb/stash/)
 
-[Hadoop and Hive Support] (https://bazaarvoice.github.io/emodb/mapreduce/)
+[Hadoop and Hive Support](https://bazaarvoice.github.io/emodb/mapreduce/)
 
-[Operations] (markdowns/Operations.md)
+[Operations](markdowns/Operations.md)
 
-[EmoDB SDK] (https://bazaarvoice.github.io/emodb/maven/)
+[EmoDB SDK](https://bazaarvoice.github.io/emodb/maven/)
 
-[API Keys] (https://bazaarvoice.github.io/emodb/security/)
+[API Keys](https://bazaarvoice.github.io/emodb/security/)
 
-[API Key Management] (https://bazaarvoice.github.io/emodb/securityadmin/)
+[API Key Management](https://bazaarvoice.github.io/emodb/securityadmin/)
 
-[Legacy Java Client Support] (markdowns/LegacyJavaClients.md)
+[Legacy Java Client Support](markdowns/LegacyJavaClients.md)
 
 Quick Start
 -----------
 
-[Quick Start Guide] (https://bazaarvoice.github.io/emodb/quickstart/)
+[Quick Start Guide](https://bazaarvoice.github.io/emodb/quickstart/)
