@@ -42,6 +42,7 @@
         <module>databus-api</module>
         <module>blob-api</module>
         <module>job-api</module>
+        <module>uac-api</module>
         <module>event</module>
         <module>table</module>
         <module>datacenter</module>
@@ -58,6 +59,7 @@
         <module>blob-client-common</module>
         <module>blob-client</module>
         <module>blob</module>
+        <module>uac-client</module>
         <module>shaded-clients</module>
         <module>plugins</module>
         <module>web</module>
