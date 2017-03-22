@@ -6,14 +6,15 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleExistsException;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
-import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.RoleModification;
+import com.bazaarvoice.emodb.auth.role.RoleNotFoundException;
 import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -22,25 +23,27 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import org.apache.shiro.authz.permission.PermissionResolver;
+import org.mockito.ArgumentCaptor;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertNull;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -67,7 +70,7 @@ public class TableRoleManagerDAOTest {
         _permissionManager = spy(_backendPermissionManager);
         _roleManager = new TableRoleManagerDAO(_dataStore, ROLE_TABLE, GROUP_TABLE, PLACEMENT, _permissionManager);
     }
-    
+
     @Test
     public void testCreatesTables() throws Exception {
         // For this test make a call to read a single role.  The actual role returned is irrelevant, this test verifies
@@ -80,7 +83,7 @@ public class TableRoleManagerDAOTest {
         }
 
         verify(_dataStore, times(3)).get(ROLE_TABLE, "g1/r1", ReadConsistency.STRONG);
-        
+
         // Each table is checked and created once
         verify(_dataStore).getTableExists(ROLE_TABLE);
         verify(_dataStore).createTable(
@@ -254,6 +257,7 @@ public class TableRoleManagerDAOTest {
         assertEquals(actual.stream().map(Role::getRoleIdentifier).collect(Collectors.toSet()), roleIds);
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testDeleteRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
@@ -263,6 +267,9 @@ public class TableRoleManagerDAOTest {
         assertNotNull(_roleManager.getRole(id));
         assertFalse(_roleManager.getPermissionsForRole(id).isEmpty());
 
+        // Clear method captures made while creating the role
+        reset(_permissionManager, _dataStore);
+
         _roleManager.deleteRole(id);
 
         // Test the interfaces
@@ -270,17 +277,31 @@ public class TableRoleManagerDAOTest {
         assertTrue(_roleManager.getPermissionsForRole(id).isEmpty());
 
         // Verify the expected API calls to the delegates were made
-        verify(_dataStore).update(eq(ROLE_TABLE), eq("g1/r1"), any(UUID.class), eq(Deltas.delete()),
-                any(Audit.class), eq(WriteConsistency.GLOBAL));
-        verify(_dataStore).update(eq(GROUP_TABLE), eq("g1"), any(UUID.class),
-                eq(Deltas.mapBuilder()
-                        .update("ids", Deltas.setBuilder()
-                                .remove("r1")
-                                .deleteIfEmpty()
-                                .build())
+        ArgumentCaptor<Iterable> updateCaptor = ArgumentCaptor.forClass(Iterable.class);
+
+        verify(_dataStore).updateAll(updateCaptor.capture());
+        List<Update> updates = ImmutableList.copyOf((Iterable<Update>) updateCaptor.getValue());
+        assertEquals(updates.size(), 2);
+        Map<String, Update> updateByTable = Maps.uniqueIndex(updates, Update::getTable);
+
+        Update update = updateByTable.get(ROLE_TABLE);
+        assertNotNull(update);
+        assertEquals(update.getKey(), "g1/r1");
+        assertEquals(update.getDelta(), Deltas.delete());
+        assertEquals(update.getConsistency(), WriteConsistency.GLOBAL);
+
+        update = updateByTable.get(GROUP_TABLE);
+        assertNotNull(update);
+        assertEquals(update.getKey(), "g1");
+        assertEquals(update.getDelta(), Deltas.mapBuilder()
+                .update("ids", Deltas.setBuilder()
+                        .remove("r1")
                         .deleteIfEmpty()
-                        .build()),
-                any(Audit.class), eq(WriteConsistency.GLOBAL));
+                        .build())
+                .deleteIfEmpty()
+                .build());
+        assertEquals(update.getConsistency(), WriteConsistency.GLOBAL);
+
         verify(_permissionManager).revokePermissions("role:g1/r1");
     }
 
