@@ -14,7 +14,7 @@ EmoDB is a RESTful HTTP server for storing JSON objects and for watching for cha
 to those events.
 
 It is designed to span multiple data centers, using eventual consistency (AP) and multi-master
-conflict resolution.  It relies on [Apache Cassandra] (http://cassandra.apache.org/) for
+conflict resolution.  It relies on [Apache Cassandra](http://cassandra.apache.org/) for
 persistence and cross-data center replication.
 
 Documentation
