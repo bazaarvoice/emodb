@@ -57,7 +57,9 @@ import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class UserAccessControlJerseyTest extends ResourceTest {
@@ -230,6 +232,15 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                         .setPermissions(ImmutableSet.of(unassignablePermission)));
     }
 
+    @Test(expected = InvalidEmoPermissionException.class)
+    public void testCreateRoleBadPermission() {
+        uacClient(UAC_ALL_API_KEY).createRole(
+                new CreateEmoRoleRequest(new EmoRoleKey("create5", "id5"))
+                        .setName("create_name")
+                        .setDescription("create_description")
+                        .setPermissions(ImmutableSet.of("sor|*|if({)")));
+    }
+
     @Test
     public void testUpdateRole() {
         createRole("update1", "id1", "name1", "perm1", "perm2");
@@ -277,6 +288,14 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                         .grantPermissions(ImmutableSet.of(unassignablePermission)));
     }
 
+    @Test(expected = InvalidEmoPermissionException.class)
+    public void testUpdateRoleBadPermission() {
+        createRole("update6", "id6", "name6");
+        uacClient(UAC_ALL_API_KEY).updateRole(
+                new UpdateEmoRoleRequest(new EmoRoleKey("create6", "id6"))
+                        .grantPermissions(ImmutableSet.of("sor|*|if({)")));
+    }
+
     // TODO:  Once permission creation checks are in place add unit tests
     //        See issue https://github.com/bazaarvoice/emodb/issues/63
 
@@ -299,7 +318,32 @@ public class UserAccessControlJerseyTest extends ResourceTest {
     public void testDeleteRoleNotFound() {
         uacClient(UAC_ALL_API_KEY).deleteRole(new EmoRoleKey("delete3", "id3"));
     }
-    
+
+    @Test
+    public void testRoleHasPermissionCheck() {
+        createRole("perm1", "id1", "name1", "sor|read|table1", "sor|read|table2");
+        EmoRoleKey roleKey = new EmoRoleKey("perm1", "id1");
+        UserAccessControl uac = uacClient(UAC_ALL_API_KEY);
+        assertTrue(uac.checkRoleHasPermission(roleKey, "sor|read|table1"));
+        assertTrue(uac.checkRoleHasPermission(roleKey, "sor|read|table2"));
+        assertFalse(uac.checkRoleHasPermission(roleKey, "sor|read|table3"));
+    }
+
+    @Test(expected = EmoRoleNotFoundException.class)
+    public void testRoleHasPermissionNoRole() {
+        uacClient(UAC_ALL_API_KEY).checkRoleHasPermission(new EmoRoleKey("perm2", "id2"), "sor|read|*");
+    }
+
+    @Test(expected = UnauthorizedException.class)
+    public void testRoleHasPermissionNoPermission() {
+        uacClient(UAC_NONE_API_KEY).checkRoleHasPermission(new EmoRoleKey("perm3", "id3"), "sor|read|*");
+    }
+
+    @Test(expected = InvalidEmoPermissionException.class)
+    public void testRoleHasPermissionBadPermission() {
+        uacClient(UAC_ALL_API_KEY).checkRoleHasPermission(new EmoRoleKey("perm4", "id4"), "sor|read|if({)");
+    }
+
     @Test
     public void testGetApiKey() {
         String id = createApiKey("key1", "owner1", "description1", "group1/role1", "role2");
@@ -615,6 +659,35 @@ public class UserAccessControlJerseyTest extends ResourceTest {
     @Test(expected = EmoApiKeyNotFoundException.class)
     public void testDeleteApiKeyNotFound() {
         uacClient(UAC_ALL_API_KEY).deleteApiKey("no_such_id");
+    }
+
+    @Test
+    public void testApiKeyHasPermissionCheck() {
+        createRole("perm1", "id1", "name1", "sor|read|table1");
+        createRole("perm2", "id2", "name2", "sor|read|table2");
+        String id = createApiKey("perm-key1", null, null, "perm1/id1", "perm2/id2", "no_such_role");
+
+        UserAccessControl uac = uacClient(UAC_ALL_API_KEY);
+        assertTrue(uac.checkApiKeyHasPermission(id, "sor|read|table1"));
+        assertTrue(uac.checkApiKeyHasPermission(id, "sor|read|table2"));
+        assertFalse(uac.checkApiKeyHasPermission(id, "sor|read|table3"));
+    }
+
+    @Test(expected = EmoApiKeyNotFoundException.class)
+    public void testApiKeyHasPermissionNoApiKey() {
+        uacClient(UAC_ALL_API_KEY).checkApiKeyHasPermission("no_such_id", "sor|read|*");
+    }
+
+    @Test(expected = UnauthorizedException.class)
+    public void testApiKeyHasPermissionNoPermission() {
+        String id = createApiKey("perm-key2", "owner2", "description2");
+        uacClient(UAC_NONE_API_KEY).checkApiKeyHasPermission(id, "sor|read|*");
+    }
+
+    @Test(expected = InvalidEmoPermissionException.class)
+    public void testApiKeyHasPermissionBadPermission() {
+        String id = createApiKey("perm-key3", "owner3", "description3");
+        uacClient(UAC_ALL_API_KEY).checkApiKeyHasPermission(id, "sor|read|if({)");
     }
 
     //******************************************************************************************************************

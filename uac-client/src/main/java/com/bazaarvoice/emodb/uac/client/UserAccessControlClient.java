@@ -178,6 +178,28 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     }
 
     @Override
+    public boolean checkRoleHasPermission(String apiKey, EmoRoleKey roleKey, String permission)
+            throws EmoRoleNotFoundException {
+        checkNotNull(roleKey, "roleKey");
+        checkNotNull(permission, "permission");
+        try {
+            URI uri = _uac.clone()
+                    .segment("role")
+                    .segment(roleKey.getGroup())
+                    .segment(roleKey.getId())
+                    .segment("permitted")
+                    .queryParam("permission", permission)
+                    .build();
+            return _client.resource(uri)
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .get(Boolean.class);
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
+    @Override
     public EmoApiKey getApiKey(String apiKey, String id) {
         checkNotNull(id, "id");
         URI uri = _uac.clone()
@@ -312,6 +334,27 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .delete();
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
+    @Override
+    public boolean checkApiKeyHasPermission(String apiKey, String id, String permission)
+            throws EmoApiKeyNotFoundException {
+        checkNotNull(id, "id");
+        checkNotNull(permission, "permission");
+        try {
+            URI uri = _uac.clone()
+                    .segment("api-key")
+                    .segment(id)
+                    .segment("permitted")
+                    .queryParam("permission", permission)
+                    .build();
+            return _client.resource(uri)
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .get(Boolean.class);
         } catch (EmoClientException e) {
             throw convertException(e);
         }

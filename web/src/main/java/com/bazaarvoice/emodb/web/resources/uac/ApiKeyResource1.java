@@ -140,4 +140,11 @@ public class ApiKeyResource1 {
         _uac.deleteApiKey(subject, id);
         return SuccessResponse.instance();
     }
+
+    @GET
+    @Path("{id}/permitted")
+    public boolean checkPermission(@PathParam("id") String id, @QueryParam("permission") String permission,
+                                   @Authenticated Subject subject) {
+        return _uac.checkApiKeyHasPermission(subject, id, permission);
+    }
 }

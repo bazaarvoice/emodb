@@ -41,6 +41,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 import org.apache.shiro.authz.permission.PermissionResolver;
 
@@ -200,16 +201,53 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     private void verifyAllPermissionsAssignable(Iterable<String> permissions) {
         // Check each permission to ensure it is assignable
         for (String permission : permissions) {
-            try {
-                // All permissions returned by the resolver are EmoPermissions
-                if (!((EmoPermission) _permissionResolver.resolvePermission(permission)).isAssignable()) {
-                    throw new InvalidEmoPermissionException("Permission cannot be assigned", permission);
-                }
-            } catch (InvalidPermissionStringException e) {
-                // Permission string was invalid; convert to the API exception
-                throw new InvalidEmoPermissionException(e.getMessage(), e.getPermissionString());
+            if (!resolvePermission(permission).isAssignable()) {
+                throw new InvalidEmoPermissionException("Permission cannot be assigned", permission);
             }
         }
+    }
+
+    private EmoPermission resolvePermission(String permission) {
+        try {
+            // All permissions returned by the resolver are EmoPermissions
+            return (EmoPermission) _permissionResolver.resolvePermission(permission);
+        } catch (InvalidPermissionStringException e) {
+            // Permission string was invalid; convert to the API exception
+            throw new InvalidEmoPermissionException(e.getMessage(), e.getPermissionString());
+        }
+    }
+
+    @Override
+    public boolean checkRoleHasPermission(Subject subject, EmoRoleKey roleKey, String permission) {
+        RoleIdentifier convertedId = convert(roleKey);
+        // Permission for this action is tied to the ability to read the role
+        verifyPermission(subject, Permissions.readRole(convertedId));
+
+        return checkRoleHasPermission(convertedId, resolvePermission(permission), true);
+    }
+
+    private boolean checkRoleHasPermission(RoleIdentifier roleId, Permission permission, boolean raiseRoleNotFoundException) {
+        Set<String> rolePermissions = _roleManager.getPermissionsForRole(roleId);
+        if (rolePermissions.isEmpty()) {
+            if (raiseRoleNotFoundException) {
+                // Check whether the role exists and, if not, raise the appropriate exception
+                if (_roleManager.getRole(roleId) == null) {
+                    EmoRoleKey roleKey = convert(roleId);
+                    throw new EmoRoleNotFoundException(roleKey.getGroup(), roleKey.getId());
+                }
+            }
+            // Either the role exists but has no permissions or the role doesn't exist.  Either way return false
+            return false;
+        }
+
+
+        for (String rolePermission : rolePermissions) {
+            if (resolvePermission(rolePermission).implies(permission)) {
+                // All it takes is one
+                return true;
+            }
+        }
+        return false;
     }
 
     //******************************************************************************************************************
@@ -483,6 +521,30 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         } catch (Exception e) {
             throw convertUncheckedException(e);
         }
+    }
+
+    @Override
+    public boolean checkApiKeyHasPermission(Subject subject, String id, String permission) {
+        // Permission for this action is tied to the ability to read the key
+        if (!subject.getId().equals(id)) {
+            verifyPermission(subject, Permissions.readApiKey());
+        }
+        ApiKey apiKey = _authIdentityManager.getIdentity(id);
+        if (apiKey == null) {
+            throw new EmoApiKeyNotFoundException();
+        }
+
+        Permission resolvedPermission = resolvePermission(permission);
+        for (String role : apiKey.getRoles()) {
+            // We don't care if the API key has a non-existent role assigned, so don't raise an exception, just
+            // move on to the next role.
+            if (checkRoleHasPermission(RoleIdentifier.fromString(role), resolvedPermission, false)) {
+                // All it takes is one
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

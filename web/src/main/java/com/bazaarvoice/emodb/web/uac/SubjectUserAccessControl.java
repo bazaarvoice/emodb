@@ -43,6 +43,8 @@ public interface SubjectUserAccessControl {
 
     void deleteRole(Subject subject, EmoRoleKey roleKey);
 
+    boolean checkRoleHasPermission(Subject subject, EmoRoleKey roleKey, String permission);
+
     EmoApiKey getApiKeyByKey(Subject subject, String key);
 
     EmoApiKey getApiKey(Subject subject, String id);
@@ -54,4 +56,6 @@ public interface SubjectUserAccessControl {
     String migrateApiKey(Subject subject, MigrateEmoApiKeyRequest request);
 
     void deleteApiKey(Subject subject, String id);
+
+    boolean checkApiKeyHasPermission(Subject subject, String id, String permission);
 }

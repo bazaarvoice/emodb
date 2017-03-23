@@ -64,6 +64,17 @@ public interface AuthUserAccessControl {
             throws EmoRoleNotFoundException;
 
     /**
+     * Checks whether a role permits a specific permission.  This doesn't mean that the role directly has the requested
+     * permission, but rather that any of the permissions it does have would permit it.  For example, if a role
+     * has the single permission "sor|read|*" then this method would return true for the permission parameter
+     * "sor|read|table1" but not for "blob|read|table1".
+     * @throws EmoRoleNotFoundException No role with the provided key exists
+     * @throws UnauthorizedException Caller doesn't have permission to check permissions for this role
+     */
+    boolean checkRoleHasPermission(@Credential String apiKey, EmoRoleKey roleKey, String permission)
+            throws EmoRoleNotFoundException;
+
+    /**
      * Gets an API key by its ID, or null if the API key doesn't exist.
      * @throws UnauthorizedException Caller doesn't have permission to view this key
      */
@@ -137,5 +148,16 @@ public interface AuthUserAccessControl {
      *                               unassign one of the currently assigned roles
      */
     void deleteApiKey(@Credential String apiKey, String id)
-            throws EmoApiKeyNotFoundException;     
+            throws EmoApiKeyNotFoundException;
+
+    /**
+     * Checks whether an API key is permitted a specific permission.  This is functionally equivalent to looping over
+     * every role assigned to the API key and returning true if any of them would return true from
+     * {@link #checkRoleHasPermission(String, EmoRoleKey, String)}.
+     *
+     * @throws EmoApiKeyNotFoundException No API key with the provided ID exists
+     * @throws UnauthorizedException Caller doesn't have permission to check permissions for this API key
+     */
+    boolean checkApiKeyHasPermission(@Credential String apiKey, String id, String permission)
+            throws EmoApiKeyNotFoundException;
 }

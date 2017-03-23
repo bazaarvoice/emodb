@@ -62,6 +62,11 @@ public class UserAccessControlAuthenticatorProxy implements UserAccessControl {
     }
 
     @Override
+    public boolean checkRoleHasPermission(EmoRoleKey roleKey, String permission) throws EmoRoleNotFoundException {
+        return _delegate.checkRoleHasPermission(_apiKey, roleKey, permission);
+    }
+
+    @Override
     public EmoApiKey getApiKey(String id) {
         return _delegate.getApiKey(_apiKey, id);
     }
@@ -94,5 +99,10 @@ public class UserAccessControlAuthenticatorProxy implements UserAccessControl {
     @Override
     public void deleteApiKey(String id) throws EmoApiKeyNotFoundException {
         _delegate.deleteApiKey(_apiKey, id);
+    }
+
+    @Override
+    public boolean checkApiKeyHasPermission(String id, String permission) throws EmoApiKeyNotFoundException {
+        return _delegate.checkApiKeyHasPermission(_apiKey, id, permission);
     }
 }

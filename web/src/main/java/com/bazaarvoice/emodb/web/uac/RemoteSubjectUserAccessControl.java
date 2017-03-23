@@ -59,6 +59,11 @@ public class RemoteSubjectUserAccessControl implements SubjectUserAccessControl 
     }
 
     @Override
+    public boolean checkRoleHasPermission(Subject subject, EmoRoleKey roleKey, String permission) {
+        return _client.checkRoleHasPermission(subject.getAuthenticationId(), roleKey, permission);
+    }
+
+    @Override
     public EmoApiKey getApiKey(Subject subject, String id) {
         return _client.getApiKey(subject.getAuthenticationId(), id);
     }
@@ -86,5 +91,10 @@ public class RemoteSubjectUserAccessControl implements SubjectUserAccessControl 
     @Override
     public void deleteApiKey(Subject subject, String id) {
         _client.deleteApiKey(subject.getAuthenticationId(), id);
+    }
+
+    @Override
+    public boolean checkApiKeyHasPermission(Subject subject, String id, String permission) {
+        return _client.checkApiKeyHasPermission(subject.getAuthenticationId(), id, permission);
     }
 }

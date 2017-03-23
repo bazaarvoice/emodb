@@ -44,6 +44,11 @@ public interface UserAccessControl {
     void deleteRole(EmoRoleKey roleKey) throws EmoRoleNotFoundException;
 
     /**
+     * @see AuthUserAccessControl#checkRoleHasPermission(String, EmoRoleKey, String)
+     */
+    boolean checkRoleHasPermission(EmoRoleKey roleKey, String permission) throws EmoRoleNotFoundException;
+
+    /**
      * @see AuthUserAccessControl#getApiKey(String, String)
      */
     EmoApiKey getApiKey(String id);
@@ -77,4 +82,9 @@ public interface UserAccessControl {
      * @see AuthUserAccessControl#deleteApiKey(String, String) 
      */
     void deleteApiKey(String id) throws EmoApiKeyNotFoundException;
+
+    /**
+     * @see AuthUserAccessControl#checkApiKeyHasPermission(String, String, String) 
+     */
+    boolean checkApiKeyHasPermission(String id, String permission) throws EmoApiKeyNotFoundException;
 }

@@ -65,6 +65,11 @@ public class ReadWriteDelegatingSubjectUserAccessControl implements SubjectUserA
     }
 
     @Override
+    public boolean checkRoleHasPermission(Subject subject, EmoRoleKey roleKey, String permission) {
+        return _read.checkRoleHasPermission(subject, roleKey, permission);
+    }
+
+    @Override
     public EmoApiKey getApiKey(Subject subject, String id) {
         return _read.getApiKey(subject, id);
     }
@@ -92,5 +97,10 @@ public class ReadWriteDelegatingSubjectUserAccessControl implements SubjectUserA
     @Override
     public void deleteApiKey(Subject subject, String id) {
         _write.deleteApiKey(subject, id);
+    }
+
+    @Override
+    public boolean checkApiKeyHasPermission(Subject subject, String id, String permission) {
+        return _read.checkApiKeyHasPermission(subject, id, permission);
     }
 }

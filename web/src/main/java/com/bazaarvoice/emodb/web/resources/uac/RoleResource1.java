@@ -20,6 +20,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
@@ -151,5 +152,12 @@ public class RoleResource1 {
                                       final @Authenticated Subject subject) {
         _uac.deleteRole(subject, new EmoRoleKey(group, id));
         return SuccessResponse.instance();
+    }
+
+    @GET
+    @Path("{group}/{id}/permitted")
+    public boolean checkPermission(@PathParam("group") String group, @PathParam("id") String id,
+                                   @QueryParam("permission") String permission, @Authenticated Subject subject) {
+        return _uac.checkRoleHasPermission(subject, new EmoRoleKey(group, id), permission);
     }
 }
