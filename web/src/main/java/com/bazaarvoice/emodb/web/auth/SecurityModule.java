@@ -49,6 +49,7 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -72,6 +73,7 @@ import org.apache.shiro.mgt.SecurityManager;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -247,16 +249,25 @@ public class SecurityModule extends PrivateModule {
 
         ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
         reservedIdentities.put(replicationKey,
-                new ApiKey(REPLICATION_ID, ImmutableSet.of(DefaultRoles.replication.toString())));
+                createReservedApiKey(REPLICATION_ID, "replication", ImmutableSet.of(DefaultRoles.replication.toString())));
         reservedIdentities.put(adminKey,
-                new ApiKey(ADMIN_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
+                createReservedApiKey(ADMIN_ID, "admin", ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
             reservedIdentities.put(anonymousKey.get(),
-                    new ApiKey(ANONYMOUS_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
+                    createReservedApiKey(ANONYMOUS_ID, "anonymous", ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
         return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
+    }
+
+    private ApiKey createReservedApiKey(String id, String description, Set<String> roles) {
+        ApiKey apiKey = new ApiKey(id, roles);
+        apiKey.setOwner("emodb");
+        apiKey.setDescription(description);
+        apiKey.setIssued(new Date(1471898640000L));
+        apiKey.setMaskedId(Strings.repeat("*", 48));
+        return apiKey;
     }
 
     @Provides
