@@ -2,17 +2,26 @@ package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
+import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
+import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
+import com.bazaarvoice.emodb.auth.role.RoleManager;
+import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
+import com.bazaarvoice.emodb.databus.api.BlobCSVEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.DefaultSubscription;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -21,11 +30,13 @@ import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.test.ResourceTest;
+import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.partition.PartitionForwardingException;
 import com.bazaarvoice.emodb.web.resources.databus.AbstractSubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResource1;
@@ -109,11 +120,26 @@ public class DatabusJerseyTest extends ResourceTest {
     private final SubjectDatabus _client = mock(SubjectDatabus.class);
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
-                    new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
-                    new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role")),
-                    "databus");
+    public ResourceTestRule _resourceTestRule = setupDatabusResourceTestRule();
+
+    private ResourceTestRule setupDatabusResourceTestRule() {
+        ApiKey authorizedKey = new ApiKey(APIKEY_DATABUS, INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role"));
+        ApiKey unauthorizedKey = new ApiKey(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role"));
+
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
+        authIdentityManager.updateIdentity(authorizedKey);
+        authIdentityManager.updateIdentity(unauthorizedKey);
+
+        EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
+        InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
+        RoleManager roleManager = new InMemoryRoleManager(permissionManager);
+
+        createRole(roleManager, null, "databus-role", ImmutableSet.of("databus|*", "blob|update|trace:table"));
+
+        return setupResourceTestRule(
+                Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class), new DatabusResourcePoller(new MetricRegistry()))),
+                authIdentityManager, permissionManager);
+    }
 
     @After
     public void tearDownMocksAndClearState() {
@@ -829,10 +855,10 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testReplay() {
-        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class))).thenReturn("replayId1");
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class), isNull(DatabusEventTracerSpec.class))).thenReturn("replayId1");
         String replayId = databusClient().replayAsync("queue-name");
 
-        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class));
+        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class), isNull(DatabusEventTracerSpec.class));
         verifyNoMoreInteractions(_local);
         assertEquals(replayId, "replayId1");
     }
@@ -840,10 +866,10 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testReplaySince() {
         Date now = DateTime.now().toDate();
-        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(now))).thenReturn("replayId1");
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(now), isNull(DatabusEventTracerSpec.class))).thenReturn("replayId1");
         String replayId = databusClient().replayAsyncSince("queue-name", now);
 
-        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now));
+        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now), isNull(DatabusEventTracerSpec.class));
         verifyNoMoreInteractions(_local);
         assertEquals(replayId, "replayId1");
     }
@@ -852,8 +878,20 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testReplaySinceWithSinceTooFarBackInTime() {
         Date since = DateTime.now()
                 .minus(DatabusChannelConfiguration.REPLAY_TTL).toDate();
-        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(since))).thenReturn("replayId1");
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(since), isNull(DatabusEventTracerSpec.class))).thenReturn("replayId1");
         databusClient().replayAsyncSince("queue-name", since);
+    }
+
+    @Test
+    public void testReplayWithTracer() {
+        BlobCSVEventTracerSpec tracer = new BlobCSVEventTracerSpec("trace:table", "trace_id").ttl(Duration.standardDays(1));
+        Date now = DateTime.now().toDate();
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(now), eq(tracer))).thenReturn("replayId1");
+        String replayId = databusClient().replayAsync(new ReplaySubscriptionRequest("queue-name").since(now).withTracing(tracer));
+
+        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now), eq(tracer));
+        verifyNoMoreInteractions(_local);
+        assertEquals(replayId, "replayId1");
     }
 
     @Test
@@ -871,11 +909,23 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testMove() {
-        when(_local.moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"))).thenReturn("moveId1");
+        when(_local.moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"), isNull(DatabusEventTracerSpec.class))).thenReturn("moveId1");
 
         String moveId = databusClient().moveAsync("queue-src", "queue-dest");
 
-        verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"));
+        verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"), isNull(DatabusEventTracerSpec.class));
+        verifyNoMoreInteractions(_local);
+        assertEquals(moveId, "moveId1");
+    }
+
+    @Test
+    public void testMoveWithTracer() {
+        BlobCSVEventTracerSpec tracer = new BlobCSVEventTracerSpec("trace:table", "trace_id").ttl(Duration.standardDays(1));
+        when(_local.moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"), eq(tracer))).thenReturn("moveId1");
+
+        String moveId = databusClient().moveAsync(new MoveSubscriptionRequest("queue-src", "queue-dest").withTracing(tracer));
+
+        verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"), eq(tracer));
         verifyNoMoreInteractions(_local);
         assertEquals(moveId, "moveId1");
     }
@@ -893,6 +943,7 @@ public class DatabusJerseyTest extends ResourceTest {
         assertEquals(status.getTo(), "queue-dest");
         assertEquals(status.getStatus(), MoveSubscriptionStatus.Status.IN_PROGRESS);
     }
+
 
     @Test
     public void testUnclaimAllPartitionContext() {

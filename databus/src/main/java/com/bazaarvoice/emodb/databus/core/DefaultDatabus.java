@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemInternalId;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
@@ -20,9 +21,12 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
+import com.bazaarvoice.emodb.databus.tracer.DatabusEventTracerFactory;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.bazaarvoice.emodb.event.core.SizeCacheKey;
+import com.bazaarvoice.emodb.event.tracer.SafeEventTracer;
 import com.bazaarvoice.emodb.job.api.JobHandler;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
@@ -145,6 +149,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final Clock _clock;
     private ExecutorService _drainService;
     private ConcurrentMap<String, Long> _drainedSubscriptionsMap = Maps.newConcurrentMap();
+    private DatabusEventTracerFactory _eventTracerFactory;
 
     @Inject
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
@@ -198,6 +203,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
     }
 
+    /**
+     * The ability to trace events is optional, so use method injection.
+     */
+    @Inject
+    public void setEventTracerFactory(DatabusEventTracerFactory eventTracerFactory) {
+        _eventTracerFactory = eventTracerFactory;
+    }
+
     private void registerMoveSubscriptionJobHandler(JobHandlerRegistry jobHandlerRegistry) {
         jobHandlerRegistry.addHandler(
                 MoveSubscriptionJob.INSTANCE,
@@ -213,7 +226,16 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                                     checkSubscriptionOwner(request.getOwnerId(), request.getFrom());
                                     checkSubscriptionOwner(request.getOwnerId(), request.getTo());
 
-                                    _eventStore.move(request.getFrom(), request.getTo());
+                                    EventTracer tracer = null;
+                                    if (_eventTracerFactory != null && request.getTracer() != null) {
+                                        tracer = new SafeEventTracer(_eventTracerFactory.createTracer(request.getTracer()));
+                                    }
+
+                                    _eventStore.move(request.getFrom(), request.getTo(), tracer);
+
+                                    if (tracer != null) {
+                                        tracer.close();
+                                    }
                                 } catch (ReadOnlyQueueException e) {
                                     // The from queue is not owned by this server.
                                     return notOwner();
@@ -239,7 +261,16 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                                     // Last chance to verify the subscription's owner before doing anything mutative
                                     checkSubscriptionOwner(request.getOwnerId(), request.getSubscription());
 
-                                    replay(request.getSubscription(), request.getSince());
+                                    EventTracer tracer = null;
+                                    if (_eventTracerFactory != null && request.getTracer() != null) {
+                                        tracer = new SafeEventTracer(_eventTracerFactory.createTracer(request.getTracer()));
+                                    }
+
+                                    replay(request.getSubscription(), request.getSince(), tracer);
+
+                                    if (tracer != null) {
+                                        tracer.close();
+                                    }
                                 } catch (ReadOnlyQueueException e) {
                                     // The subscription is not owned by this server.
                                     return notOwner();
@@ -799,23 +830,22 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
     @Override
-    public String replayAsync(String ownerId, String subscription) {
-        return replayAsyncSince(ownerId, subscription, null);
-    }
-
-    @Override
-    public String replayAsyncSince(String ownerId, String subscription, Date since) {
+    public String replayAsyncSince(String ownerId, String subscription, Date since, DatabusEventTracerSpec tracer) {
         checkLegalSubscriptionName(subscription);
         checkSubscriptionOwner(ownerId, subscription);
 
+        ReplaySubscriptionRequest request = new ReplaySubscriptionRequest(ownerId, subscription, since);
+        if (tracer != null) {
+            request.setTracer(tracer);
+        }
+
         JobIdentifier<ReplaySubscriptionRequest, ReplaySubscriptionResult> jobId =
-                _jobService.submitJob(
-                        new JobRequest<>(ReplaySubscriptionJob.INSTANCE, new ReplaySubscriptionRequest(ownerId, subscription, since)));
+                _jobService.submitJob(new JobRequest<>(ReplaySubscriptionJob.INSTANCE, request));
 
         return jobId.toString();
     }
 
-    public void replay(String subscription, Date since) {
+    public void replay(String subscription, Date since, @Nullable EventTracer tracer) {
         // Make sure since is within Replay TTL
         checkState(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
                 "Since timestamp is outside the replay TTL.");
@@ -824,7 +854,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
         _eventStore.copy(source, subscription,
                 (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
-                since);
+                since,
+                tracer);
     }
 
     @Override
@@ -865,15 +896,19 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
     @Override
-    public String moveAsync(String ownerId, String from, String to) {
+    public String moveAsync(String ownerId, String from, String to, DatabusEventTracerSpec tracer) {
         checkLegalSubscriptionName(from);
         checkLegalSubscriptionName(to);
         checkSubscriptionOwner(ownerId, from);
         checkSubscriptionOwner(ownerId, to);
 
+        MoveSubscriptionRequest request = new MoveSubscriptionRequest(ownerId, from, to);
+        if (tracer != null) {
+            request.setTracer(tracer);
+        }
+
         JobIdentifier<MoveSubscriptionRequest, MoveSubscriptionResult> jobId =
-                _jobService.submitJob(new JobRequest<>(
-                        MoveSubscriptionJob.INSTANCE, new MoveSubscriptionRequest(ownerId, from, to)));
+                _jobService.submitJob(new JobRequest<>(MoveSubscriptionJob.INSTANCE, request));
 
         return jobId.toString();
     }

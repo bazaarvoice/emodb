@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.metrics.ParameterizedTimed;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
 import com.bazaarvoice.emodb.event.api.EventStore;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.bazaarvoice.emodb.event.api.ScanSink;
 import com.bazaarvoice.emodb.event.api.SimpleEventSink;
 import com.bazaarvoice.emodb.event.db.EventId;
@@ -376,7 +377,8 @@ public class DefaultEventStore implements EventStore {
 
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
-    public void copy(String fromChannel, final String toChannel, final Predicate<ByteBuffer> filter, Date since) {
+    public void copy(String fromChannel, final String toChannel, final Predicate<ByteBuffer> filter, Date since,
+                     @Nullable EventTracer tracer) {
         checkNotNull(fromChannel, "fromChannel");
         checkNotNull(toChannel, "toChannel");
         checkNotNull(filter, "filter");
@@ -385,17 +387,17 @@ public class DefaultEventStore implements EventStore {
             _log.debug("copy from={} to={}", fromChannel, toChannel);
         }
 
-        scanInternal(fromChannel, filter, new ScanSink() {
-            @Override
-            public void accept(List<ByteBuffer> events) {
-                _writerDao.addAll(toEventsByChannel(toChannel, events), null);
+        scanInternal(fromChannel, filter, events -> {
+            if (tracer != null) {
+                events.forEach(event -> tracer.trace("DefaultEventStore#copy", event));
             }
+            _writerDao.addAll(toEventsByChannel(toChannel, events), null);
         }, MAX_COPY_LIMIT, since);
     }
 
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
-    public void move(final String fromChannel, final String toChannel) {
+    public void move(final String fromChannel, final String toChannel, @Nullable EventTracer tracer) {
         checkNotNull(fromChannel, "fromChannel");
         checkNotNull(toChannel, "toChannel");
 
@@ -412,7 +414,7 @@ public class DefaultEventStore implements EventStore {
         // Note that, because the slabId doesn't change and EventId embeds the slabId, "event=poll(from)" followed by
         // "move(from, to)" followed by "delete(event)" may delete from the "to" channel.  This race condition is
         // likely to be confusing but harmless so we're willing to live with it to get good move performance.
-        boolean movedAll = _readerDao.moveIfFast(fromChannel, toChannel);
+        boolean movedAll = _readerDao.moveIfFast(fromChannel, toChannel, tracer);
         if (movedAll) {
             return;
         }
@@ -423,6 +425,10 @@ public class DefaultEventStore implements EventStore {
         _readerDao.readAll(fromChannel, new com.bazaarvoice.emodb.event.db.EventSink() {
             @Override
             public boolean accept(EventId eventId, ByteBuffer eventData) {
+                if (tracer != null) {
+                    tracer.trace("DefaultEventStore#move", eventData);
+                }
+
                 eventsToCopy.add(eventData);
                 eventsToDelete.add(eventId);
                 if (eventsToCopy.size() >= MAX_COPY_LIMIT) {

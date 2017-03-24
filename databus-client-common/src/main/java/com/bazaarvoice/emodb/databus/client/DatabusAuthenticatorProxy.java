@@ -3,8 +3,10 @@ package com.bazaarvoice.emodb.databus.client;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -69,6 +71,11 @@ class DatabusAuthenticatorProxy implements Databus {
     }
 
     @Override
+    public String moveAsync(MoveSubscriptionRequest request) {
+        return _authDatabus.moveAsync(_apiKey, request);
+    }
+
+    @Override
     public void unclaimAll(@PartitionKey String subscription) {
         _authDatabus.unclaimAll(_apiKey, subscription);
     }
@@ -121,6 +128,11 @@ class DatabusAuthenticatorProxy implements Databus {
     @Override
     public String replayAsyncSince(String subscription, Date since) {
         return _authDatabus.replayAsyncSince(_apiKey, subscription, since);
+    }
+
+    @Override
+    public String replayAsync(ReplaySubscriptionRequest request) {
+        return _authDatabus.replayAsync(_apiKey, request);
     }
 
     @Override

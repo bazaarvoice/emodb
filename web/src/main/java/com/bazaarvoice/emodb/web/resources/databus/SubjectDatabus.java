@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
 import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
@@ -62,13 +63,11 @@ public interface SubjectDatabus {
 
     void acknowledge(Subject subject, String subscription, Collection<String> eventKeys);
 
-    String replayAsync(Subject subject, String subscription);
-
-    String replayAsyncSince(Subject subject, String subscription, Date since);
+    String replayAsyncSince(Subject subject, String subscription, Date since, DatabusEventTracerSpec tracer);
 
     ReplaySubscriptionStatus getReplayStatus(Subject subject, String reference);
 
-    String moveAsync(Subject subject, String from, String to);
+    String moveAsync(Subject subject, String from, String to, DatabusEventTracerSpec tracer);
 
     MoveSubscriptionStatus getMoveStatus(Subject subject, String reference);
 

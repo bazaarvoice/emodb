@@ -38,6 +38,7 @@ import com.bazaarvoice.emodb.databus.repl.DefaultReplicationManager;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationSource;
 import com.bazaarvoice.emodb.databus.repl.ReplicationEnabledTask;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
+import com.bazaarvoice.emodb.databus.tracer.DatabusEventTracerFactory;
 import com.bazaarvoice.emodb.event.DedupEnabled;
 import com.bazaarvoice.emodb.event.EventStoreHostDiscovery;
 import com.bazaarvoice.emodb.event.EventStoreModule;
@@ -99,6 +100,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> DataStore {@link DataStoreConfiguration}
  * <li> {@link com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer}
  * <li> @{@link DefaultJoinFilter} Supplier&lt;{@link Condition}&gt;
+ * <li> {@link com.bazaarvoice.emodb.blob.api.BlobStore}
  * <li> {@link Clock}
  * </ul>
  * Exports the following:
@@ -151,7 +153,8 @@ public class DatabusModule extends PrivateModule {
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
-
+        bind(DatabusEventTracerFactory.class).asEagerSingleton();
+        
         // Expose the event store directly for use by debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);

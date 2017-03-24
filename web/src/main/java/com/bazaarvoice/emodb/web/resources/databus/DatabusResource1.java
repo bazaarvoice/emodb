@@ -2,7 +2,10 @@ package com.bazaarvoice.emodb.web.resources.databus;
 
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
+import com.bazaarvoice.emodb.databus.api.BlobCSVEventTracerSpec;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -12,6 +15,8 @@ import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.web.auth.Permissions;
+import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.codahale.metrics.annotation.Timed;
@@ -280,13 +285,15 @@ public class DatabusResource1 {
     )
     public Map<String, Object> replay(@PathParam ("subscription") String subscription,
                                       @QueryParam ("since") DateTimeParam sinceParam,
+                                      @QueryParam ("tracer") TracerParam tracerParam,
                                       @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(subscription), "subscription is required");
         Date since = (sinceParam == null) ? null : sinceParam.get().toDate();
+        DatabusEventTracerSpec tracer = getTracer(subject, tracerParam);
         // Make sure since is within Replay TTL
         checkArgument(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
                 "Since timestamp is outside the replay TTL. Use null 'since' if you want to replay all events.");
-        String id = _databus.replayAsyncSince(subject, subscription, since);
+        String id = _databus.replayAsyncSince(subject, subscription, since, tracer);
         return ImmutableMap.<String, Object>of("id", id);
     }
 
@@ -311,12 +318,14 @@ public class DatabusResource1 {
             response = Map.class
     )
     public Map<String, Object> move(@QueryParam ("from") String from, @QueryParam ("to") String to,
+                                    @QueryParam ("tracer") TracerParam tracerParam,
                                     @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(from), "from is required");
         checkArgument(!Strings.isNullOrEmpty(to), "to is required");
         checkArgument(!from.equals(to), "cannot move subscription to itself");
+        DatabusEventTracerSpec tracer = getTracer(subject, tracerParam);
 
-        String id = _databus.moveAsync(subject, from, to);
+        String id = _databus.moveAsync(subject, from, to, tracer);
         return ImmutableMap.<String, Object>of("id", id);
     }
 
@@ -393,5 +402,26 @@ public class DatabusResource1 {
         }
 
         return new LoggingIterator<>(peekingIterator, _log);
+    }
+
+    private DatabusEventTracerSpec getTracer(Subject subject, TracerParam param) {
+        if (param == null) {
+            return null;
+        }
+
+        DatabusEventTracerSpec tracer = param.get();
+
+        // If it is a blob store tracer ensure the that caller has permission to write to it.  Whether the table exists
+        // or not will be determined at the time of asynchronous execution.  No point validating now; if not it may created
+        // by the time the operation executes, and if so it may be dropped by then.
+        
+        if (tracer instanceof BlobCSVEventTracerSpec) {
+            BlobCSVEventTracerSpec blobTracer = (BlobCSVEventTracerSpec) tracer;
+            if (!subject.hasPermission(Permissions.updateBlobTable(new NamedResource(blobTracer.getTable())))) {
+                throw new UnauthorizedException("Not authorized to write trace to table " + blobTracer.getTable());
+            }
+        }
+
+        return tracer;
     }
 }

@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus;
 
+import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
@@ -112,7 +113,8 @@ public class DatabusModuleTest {
                 bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
                 bind(DatabusAuthorizer.class).toInstance(mock(DatabusAuthorizer.class));
-
+                bind(BlobStore.class).toInstance(mock(BlobStore.class));
+                
                 MetricRegistry metricRegistry = new MetricRegistry();
                 bind(MetricRegistry.class).toInstance(metricRegistry);
                 bind(Clock.class).toInstance(mock(Clock.class));

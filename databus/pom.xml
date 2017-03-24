@@ -52,6 +52,11 @@
             <artifactId>emodb-auth-client</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-blob-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>

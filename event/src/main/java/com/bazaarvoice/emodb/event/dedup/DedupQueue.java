@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.event.api.DedupEventStore;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
 import com.bazaarvoice.emodb.event.api.EventStore;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.bazaarvoice.emodb.event.api.SimpleEventSink;
 import com.bazaarvoice.emodb.event.core.Limits;
 import com.bazaarvoice.emodb.sortedq.api.Consumer;
@@ -113,8 +114,8 @@ public class DedupQueue extends AbstractIdleService {
         _eventStore.delete(_readChannel, eventIds, cancelClaims);
     }
 
-    /** Implementation of {@link DedupEventStore#moveToRawChannel(String, String)}. */
-    public void moveToRawChannel(final String toChannel) {
+    /** Implementation of {@link DedupEventStore#moveToRawChannel(String, String, EventTracer)}. */
+    public void moveToRawChannel(final String toChannel, EventTracer tracer) {
         // Pause the asynchronous filler; it is not thread safe to fill while the move is taking place.  This is
         // because the move process may reassign slabs from this queue's write channel to toChannel's write channel. If the filler
         // is running it will poll the write channel (which is safe) and then delete the events it polled after they
@@ -124,14 +125,14 @@ public class DedupQueue extends AbstractIdleService {
         _asyncFiller.pause();
         try {
             SortedQueue queue = getQueue();
-            _eventStore.move(_writeChannel, toChannel);
-            queue.drainTo(new Consumer() {
-                @Override
-                public void consume(List<ByteBuffer> records) {
-                    _eventStore.addAll(toChannel, records);
+            _eventStore.move(_writeChannel, toChannel, tracer);
+            queue.drainTo(records -> {
+                if (tracer != null) {
+                    records.forEach(event -> tracer.trace("DedupQueue#moveToRawChannel", event));
                 }
+                _eventStore.addAll(toChannel, records);
             }, Long.MAX_VALUE);
-            _eventStore.move(_readChannel, toChannel);
+            _eventStore.move(_readChannel, toChannel, tracer);
         } finally {
             _asyncFiller.resume();
         }

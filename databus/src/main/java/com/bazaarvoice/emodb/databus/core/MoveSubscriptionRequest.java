@@ -1,7 +1,10 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import javax.annotation.Nullable;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -10,6 +13,8 @@ public class MoveSubscriptionRequest {
     private final String _ownerId;
     private final String _from;
     private final String _to;
+    @Nullable
+    private DatabusEventTracerSpec _tracer;
 
     @JsonCreator
     public MoveSubscriptionRequest(@JsonProperty ("ownerId") String ownerId,
@@ -30,5 +35,14 @@ public class MoveSubscriptionRequest {
 
     public String getTo() {
         return _to;
+    }
+
+    @Nullable
+    public DatabusEventTracerSpec getTracer() {
+        return _tracer;
+    }
+
+    public void setTracer(DatabusEventTracerSpec tracer) {
+        _tracer = tracer;
     }
 }

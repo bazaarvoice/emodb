@@ -9,10 +9,14 @@ import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
+import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
@@ -294,13 +298,27 @@ public class DatabusClient implements AuthDatabus {
 
     @Override
     public String replayAsyncSince(String apiKey, String subscription, Date since) {
-        checkNotNull(subscription, "subscription");
+        return replayAsync(apiKey,
+                new ReplaySubscriptionRequest(subscription)
+                        .since(since));
+    }
+
+    @Override
+    public String replayAsync(@Credential String apiKey, ReplaySubscriptionRequest request) {
+        checkNotNull(request, "request");
+        String subscription = checkNotNull(request.getSubscription(), "subscription");
+        Date since = request.getSince();
+        DatabusEventTracerSpec tracer = request.getTracer();
+
         try {
             UriBuilder uriBuilder = _databus.clone().segment(subscription, "replay");
             if (since != null) {
                 SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
                 dateFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
                 uriBuilder.queryParam("since", dateFmt.format(since));
+            }
+            if (tracer != null) {
+                uriBuilder.queryParam("tracer", RisonHelper.asORison(tracer));
             }
             URI uri = uriBuilder.build();
             Map<String, Object> response = _client.resource(uri)
@@ -332,14 +350,24 @@ public class DatabusClient implements AuthDatabus {
     // Any server can initiate a move request, no need for @PartitionKey
     @Override
     public String moveAsync(String apiKey, String from, String to) {
-        checkNotNull(from, "from");
-        checkNotNull(to, "to");
+        return moveAsync(apiKey, new MoveSubscriptionRequest(from, to));
+    }
+
+    @Override
+    public String moveAsync(@Credential String apiKey, MoveSubscriptionRequest request) {
+        checkNotNull(request, "request");
+        String from = checkNotNull(request.getFrom(), "from");
+        String to = checkNotNull(request.getTo(), "to");
+        DatabusEventTracerSpec tracer = request.getTracer();
         try {
-            URI uri = _databus.clone()
+            UriBuilder uriBuilder = _databus.clone()
                     .segment("_move")
                     .queryParam("from", from)
-                    .queryParam("to", to)
-                    .build();
+                    .queryParam("to", to);
+            if (tracer != null) {
+                uriBuilder.queryParam("tracer", RisonHelper.asORison(tracer));
+            }
+            URI uri = uriBuilder.build();
             Map<String, Object> response = _client.resource(uri)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .post(new TypeReference<Map<String, Object>>(){}, null);

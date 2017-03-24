@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.event.api.DedupEventStoreChannels;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
 import com.bazaarvoice.emodb.event.api.EventStore;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.bazaarvoice.emodb.event.api.ScanSink;
 import com.bazaarvoice.emodb.event.api.SimpleEventSink;
 import com.bazaarvoice.emodb.event.core.DefaultEventStore;
@@ -378,11 +379,11 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
      * drain it and move its data to a sorted queue.
      */
     @Override
-    public void copy(String from, String to, Predicate<ByteBuffer> filter, Date since) {
+    public void copy(String from, String to, Predicate<ByteBuffer> filter, Date since, @Nullable EventTracer tracer) {
         checkNotNull(from, "from");
         checkNotNull(to, "to");
 
-        ScanSink sink = newCopySink(to);
+        ScanSink sink = newCopySink(to, tracer, "DefaultDedupEventStore#copy");
 
         _delegate.scan(_channels.writeChannel(from), filter, sink, COPY_BATCH_SIZE, since);
 
@@ -397,14 +398,14 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
     }
 
     @Override
-    public void copyFromRawChannel(String from, String to, Predicate<ByteBuffer> filter, Date since) {
+    public void copyFromRawChannel(String from, String to, Predicate<ByteBuffer> filter, Date since, @Nullable EventTracer tracer) {
         checkNotNull(from, "from");
         checkNotNull(to, "to");
 
-        _delegate.scan(from, filter, newCopySink(to), COPY_BATCH_SIZE, since);
+        _delegate.scan(from, filter, newCopySink(to, tracer, "DefaultDedupEventStore#copyFromRawChannel"), COPY_BATCH_SIZE, since);
     }
 
-    private ScanSink newCopySink(final String to) {
+    private ScanSink newCopySink(final String to, final EventTracer tracer, final String tracerContext) {
         // Copy to one of 2 destinations: "to" write channel, sorted queue.  Either would be correct.
         //
         // This operation runs most efficiently when this server owns the "to" queue.  This avoids an extra copy later
@@ -426,6 +427,10 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
             private final String _toChannel = _channels.writeChannel(to);
             @Override
             public void accept(List<ByteBuffer> events) {
+                if (tracer != null) {
+                    events.forEach(event -> tracer.trace(tracerContext, event));
+                }
+
                 // Try to write to the dedup queue.
                 if (_toQueue != null) {
                     try {
@@ -444,15 +449,15 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
     }
 
     @Override
-    public void move(String from, String to) {
+    public void move(String from, String to, @Nullable EventTracer tracer) {
         checkNotNull(from, "from");
         checkNotNull(to, "to");
 
-        moveToRawChannel(from, _channels.writeChannel(to));
+        moveToRawChannel(from, _channels.writeChannel(to), tracer);
     }
 
     @Override
-    public void moveToRawChannel(String from, String to) {
+    public void moveToRawChannel(String from, String to, @Nullable EventTracer tracer) {
         checkNotNull(from, "from");
         checkNotNull(to, "to");
 
@@ -460,7 +465,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
         if (source == null) {
             throw new ReadOnlyQueueException("Cannot move from server that does not own the source queue: " + from);
         }
-        source.moveToRawChannel(to);
+        source.moveToRawChannel(to, tracer);
     }
 
     @Override

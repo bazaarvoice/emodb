@@ -4,8 +4,10 @@ import com.bazaarvoice.emodb.auth.proxy.Credential;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -45,6 +47,11 @@ public class TrustedDatabus implements AuthDatabus {
         return _databus.moveAsync(from, to);
     }
 
+    @Override
+    public String moveAsync(@Credential String apiKey, MoveSubscriptionRequest request) {
+        return _databus.moveAsync(request);
+    }
+
     public Iterator<Event> peek(@Credential String apiKey, String subscription, int limit) {
         return _databus.peek(subscription, limit);
     }
@@ -60,6 +67,11 @@ public class TrustedDatabus implements AuthDatabus {
     @Override
     public String replayAsync(@Credential String apiKey, String subscription) {
         return _databus.replayAsync(subscription);
+    }
+
+    @Override
+    public String replayAsync(@Credential String apiKey, ReplaySubscriptionRequest request) {
+        return _databus.replayAsync(request);
     }
 
     @Override

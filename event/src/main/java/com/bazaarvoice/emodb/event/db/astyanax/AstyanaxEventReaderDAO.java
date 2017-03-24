@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.InstrumentedCache;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.ParameterizedTimed;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.bazaarvoice.emodb.event.core.MetricsGroupName;
 import com.bazaarvoice.emodb.event.db.EventId;
 import com.bazaarvoice.emodb.event.db.EventReaderDAO;
@@ -44,6 +45,7 @@ import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Date;
@@ -198,7 +200,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     }
 
     @Override
-    public boolean moveIfFast(String fromChannel, String toChannel) {
+    public boolean moveIfFast(String fromChannel, String toChannel, @Nullable EventTracer tracer) {
         Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(fromChannel)
@@ -215,6 +217,17 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                 movedAll = false;  // All events in the open slab might be deleted, but don't check for that here.
                 continue;
             }
+
+            if (tracer != null) {
+                // Normally the whole "if fast" part of this operation is achieved by NOT reading the entire contents of
+                // each closed slab as it is moved to "toChannel".  However, if tracing is enabled then take the hit
+                // of reading the slab to trace those events which are moved as a result.
+                readSlab(fromChannel, slabId, new SlabCursor(), false, (eventId, eventData) -> {
+                    tracer.trace("AsytanaxDataReaderDAO#moveIfFast", eventData);
+                    return true;
+                });
+            }
+
             closedSlabs.add(slabId);
             if (closedSlabs.size() >= SLAB_MOVE_BATCH) {
                 _manifestPersister.move(fromChannel, toChannel, closedSlabs, false);

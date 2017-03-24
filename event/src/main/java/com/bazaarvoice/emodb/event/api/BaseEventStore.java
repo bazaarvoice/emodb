@@ -4,6 +4,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Multimap;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Date;
@@ -48,10 +49,10 @@ public interface BaseEventStore {
      * Copies events matching the specified predicate from one channel to another.
      * If a non-null "since" timestamp is provided, only events since that time will be copied.
      */
-    void copy(String from, String to, Predicate<ByteBuffer> filter, Date since);
+    void copy(String from, String to, Predicate<ByteBuffer> filter, Date since, @Nullable EventTracer tracer);
 
     /** Moves all events from one channel to another. */
-    void move(String from, String to);
+    void move(String from, String to, @Nullable EventTracer trace);
 
     void unclaimAll(String channel);
 

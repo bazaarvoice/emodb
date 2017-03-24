@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.event.api.DedupEventStore;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
 import com.bazaarvoice.emodb.event.api.EventStore;
+import com.bazaarvoice.emodb.event.api.EventTracer;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
@@ -14,6 +15,7 @@ import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Date;
@@ -131,23 +133,23 @@ public class DatabusEventStore implements BaseEventStore {
     }
 
     @Override
-    public void copy(String from, String to, Predicate<ByteBuffer> filter, Date since) {
+    public void copy(String from, String to, Predicate<ByteBuffer> filter, Date since, @Nullable EventTracer tracer) {
         // This implements strategies for non-dedup->non-dedup, non-dedup->dedup, dedup->dedup, but not dedup->non-dedup.
         checkArgument(ChannelNames.isNonDeduped(from) || !ChannelNames.isNonDeduped(to),
                 "May not copy from regular (deduped) subscription to system (non-deduped) queue: %s -> %s", from, to);
         BaseEventStore eventStore = select(to);
         if (ChannelNames.isNonDeduped(from) && eventStore instanceof DedupEventStore) {
-            ((DedupEventStore) eventStore).copyFromRawChannel(from, to, filter, since);
+            ((DedupEventStore) eventStore).copyFromRawChannel(from, to, filter, since, tracer);
         } else {
-            eventStore.copy(from, to, filter, since);
+            eventStore.copy(from, to, filter, since, tracer);
         }
     }
 
     @Override
-    public void move(String from, String to) {
+    public void move(String from, String to, @Nullable EventTracer tracer) {
         checkArgument(!ChannelNames.isNonDeduped(from), "May not move from a system (non-deduped) queue: %s -> %s", from, to);
         checkArgument(!ChannelNames.isNonDeduped(to), "May not move to a system (non-deduped) queue: %s -> %s", from, to);
-        select(from).move(from, to);
+        select(from).move(from, to, tracer);
     }
 
     @Override

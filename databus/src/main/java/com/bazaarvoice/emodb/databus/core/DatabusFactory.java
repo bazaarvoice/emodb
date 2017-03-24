@@ -2,8 +2,10 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -105,12 +107,18 @@ public class DatabusFactory {
 
             @Override
             public String replayAsync(String subscription) {
-                return _ownerAwareDatabus.replayAsync(ownerId, subscription);
+                return replayAsync(new ReplaySubscriptionRequest(subscription));
             }
 
             @Override
             public String replayAsyncSince(String subscription, Date since) {
-                return _ownerAwareDatabus.replayAsyncSince(ownerId, subscription, since);
+                return replayAsync(new ReplaySubscriptionRequest(subscription).since(since));
+            }
+
+            @Override
+            public String replayAsync(ReplaySubscriptionRequest request) {
+                return _ownerAwareDatabus.replayAsyncSince(
+                        ownerId, request.getSubscription(), request.getSince(), request.getTracer());
             }
 
             @Override
@@ -120,7 +128,12 @@ public class DatabusFactory {
 
             @Override
             public String moveAsync(String from, String to) {
-                return _ownerAwareDatabus.moveAsync(ownerId, from, to);
+                return moveAsync(new MoveSubscriptionRequest(from, to));
+            }
+
+            @Override
+            public String moveAsync(MoveSubscriptionRequest request) {
+                return _ownerAwareDatabus.moveAsync(ownerId, request.getFrom(), request.getTo(), request.getTracer());
             }
 
             @Override

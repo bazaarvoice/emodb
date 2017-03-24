@@ -1,5 +1,6 @@
 package test.integration.databus;
 
+import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
@@ -117,7 +118,8 @@ public class CasDatabusTest {
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
                         .setHistoryTtl(Period.days(2)));
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
-
+                bind(BlobStore.class).toInstance(mock(BlobStore.class));
+                
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setCurrentDataCenter("datacenter1")
                         .setSystemDataCenter("datacenter1")

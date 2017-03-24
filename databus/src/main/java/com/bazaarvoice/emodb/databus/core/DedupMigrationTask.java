@@ -122,7 +122,7 @@ public class DedupMigrationTask extends Task {
         out.flush();
 
         try {
-            _eventStore.moveToRawChannel(queue, queue);
+            _eventStore.moveToRawChannel(queue, queue, null);
             out.println(" COMPLETE");
         } catch (ReadOnlyQueueException e) {
             out.println(" skipped");

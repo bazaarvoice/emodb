@@ -2,9 +2,12 @@ package com.bazaarvoice.emodb.web.resources.databus;
 
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionRequest;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
@@ -87,13 +90,11 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
-    public String replayAsync(Subject subject, String subscription) {
-        return databus(subject).replayAsync(subscription);
-    }
-
-    @Override
-    public String replayAsyncSince(Subject subject, String subscription, Date since) {
-        return databus(subject).replayAsyncSince(subscription, since);
+    public String replayAsyncSince(Subject subject, String subscription, Date since, DatabusEventTracerSpec tracer) {
+        return databus(subject).replayAsync(
+                new ReplaySubscriptionRequest(subscription)
+                        .since(since)
+                        .withTracing(tracer));
     }
 
     @Override
@@ -102,8 +103,8 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
-    public String moveAsync(Subject subject, String from, String to) {
-        return databus(subject).moveAsync(from, to);
+    public String moveAsync(Subject subject, String from, String to, DatabusEventTracerSpec tracer) {
+        return databus(subject).moveAsync(new MoveSubscriptionRequest(from, to).withTracing(tracer));
     }
 
     @Override

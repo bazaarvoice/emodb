@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.event.db;
 
+import com.bazaarvoice.emodb.event.api.EventTracer;
+
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
@@ -30,7 +32,7 @@ public interface EventReaderDAO {
      * individual event data.  At best this will move all the events, at worst it will move zero events.
      * @return true if all events were definitely moved, false if some events might not have been moved.
      */
-    boolean moveIfFast(String fromChannel, String toChannel);
+    boolean moveIfFast(String fromChannel, String toChannel, @Nullable EventTracer tracer);
 
     /**
      * Returns events previous read using one of the read operations to the unread state.  This hints to the reader that

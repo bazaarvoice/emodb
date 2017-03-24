@@ -82,7 +82,7 @@ abstract class AbstractQueueService implements BaseQueueService {
                             public MoveQueueResult run(MoveQueueRequest request)
                                     throws Exception {
                                 try {
-                                    _eventStore.move(request.getFrom(), request.getTo());
+                                    _eventStore.move(request.getFrom(), request.getTo(), null);
                                 } catch (ReadOnlyQueueException e) {
                                     // The from queue is not owned by this server.
                                     return notOwner();

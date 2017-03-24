@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -18,6 +19,8 @@ public class ReplaySubscriptionRequest {
     private String _subscription;
     @Nullable
     private Date _since;
+    @Nullable
+    private DatabusEventTracerSpec _tracer;
 
     @JsonCreator
     public ReplaySubscriptionRequest(@JsonProperty ("ownerId") String ownerId,
@@ -38,5 +41,14 @@ public class ReplaySubscriptionRequest {
 
     public Date getSince() {
         return _since;
+    }
+
+    @Nullable
+    public DatabusEventTracerSpec getTracer() {
+        return _tracer;
+    }
+
+    public void setTracer(@Nullable DatabusEventTracerSpec tracer) {
+        _tracer = tracer;
     }
 }

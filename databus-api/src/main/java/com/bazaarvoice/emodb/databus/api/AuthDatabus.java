@@ -79,19 +79,28 @@ public interface AuthDatabus {
     void acknowledge(@Credential String apiKey, String subscription, Collection<String> eventKeys);
 
     /**
-     * Replays events from the last two days for the given subscription.  This method returns immediately with
-     * a reference that can be used to query the progress of the replay.
+     * Replays events from the last two days for the given subscription.  Functionally equivalent to:
+     * <code>
+     *     replayAsync(apiKey, new ReplaySubscriptionRequest(subscription))
+     * </code>
      */
     String replayAsync(@Credential String apiKey, String subscription);
+
+    /**
+     * Replays events since a given timestamp within the last two days for the given subscription.  Functionally equivalent to:
+     * <code>
+     *     replayAsync(apiKey, new ReplaySubscriptionRequest(subscription).since(since))
+     * </code>
+     */
+    String replayAsyncSince(@Credential String apiKey, String subscription, Date since);
 
     /**
      * Replays events since a given timestamp within the last two days for the given subscription.
      * This method returns immediately with a reference that can be used to query the progress of the replay.
      * NOTE: This may replay some extra events that are before the 'since' timestamp (no more than 999 previous events),
      + but guarantees that any events on or after 'since' will be replayed.
-     * @param since Specifies timestamp since when the events will be replayed (inclusive)
      */
-    String replayAsyncSince(@Credential String apiKey, String subscription, Date since);
+    String replayAsync(@Credential String apiKey, ReplaySubscriptionRequest request);
 
     /**
      * Checks the status of a replay operation.  If the reference is unknown or the replay failed then this method will
@@ -100,13 +109,20 @@ public interface AuthDatabus {
     ReplaySubscriptionStatus getReplayStatus(@Credential String apiKey, String reference);
 
     /**
+     * Moves events from one subscription to another.  Functionally equivalent to:
+     * <code>
+     *     moveAsync(apiKey, new MoveSubscriptionReqeust(from, to))
+     * </code>
+     */
+    String moveAsync(@Credential String apiKey, String from, String to);
+
+    /**
      * Moves events from one subscription to another.  This moves all currently un-acked events and does not filter
      * by the destination subscription table filter.  Future events are not affected.  No guarantees are made
      * regarding event TTLs--an event about to expire may or may not have its TTL reset.
      * This method returns immediately with a reference that can be used to query the progress of the move.
      */
-    String moveAsync(@Credential String apiKey, String from, String to);
-
+    String moveAsync(@Credential String apiKey, MoveSubscriptionRequest request);
     /**
      * Checks the status of a move operation.  If the reference is unknown or the move failed then this method will throw an exception.
      */

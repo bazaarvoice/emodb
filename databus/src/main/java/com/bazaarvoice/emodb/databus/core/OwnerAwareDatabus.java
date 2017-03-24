@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.databus.api.DatabusEventTracerSpec;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
@@ -14,7 +15,6 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.List;
 
 /**
  * Parallel interface for {@link com.bazaarvoice.emodb.databus.api.Databus} that includes the owner's internal ID
@@ -60,16 +60,13 @@ public interface OwnerAwareDatabus {
     void acknowledge(String ownerId, String subscription, Collection<String> eventKeys)
         throws UnauthorizedSubscriptionException;
 
-    String replayAsync(String ownerId, String subscription)
-        throws UnauthorizedSubscriptionException;
-
-    String replayAsyncSince(String ownerId, String subscription, Date since)
+    String replayAsyncSince(String ownerId, String subscription, Date since, DatabusEventTracerSpec tracer)
         throws UnauthorizedSubscriptionException;
 
     ReplaySubscriptionStatus getReplayStatus(String ownerId, String reference)
         throws UnauthorizedSubscriptionException;
 
-    String moveAsync(String ownerId, String from, String to)
+    String moveAsync(String ownerId, String from, String to, DatabusEventTracerSpec tracer)
         throws UnauthorizedSubscriptionException;
 
     MoveSubscriptionStatus getMoveStatus(String ownerId, String reference)
