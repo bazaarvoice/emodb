@@ -417,7 +417,7 @@ public class ApiKeyRealm extends AuthorizingRealm {
      * Gets the authorization info for an API key's internal ID from the source (not from cache).
      */
     private AuthorizationInfo getUncachedAuthorizationInfoByInternalId(String internalId) {
-        // Retrieve the roles by internal ID
+        // Retrieve the API key by internal ID
         ApiKey apiKey = _authIdentityReader.getIdentity(internalId);
         if (apiKey == null) {
             _log.debug("Authorization info requested for non-existent internal id {}", internalId);

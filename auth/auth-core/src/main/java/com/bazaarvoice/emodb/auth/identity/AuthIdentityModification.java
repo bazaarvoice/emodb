@@ -10,7 +10,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * AuthIdentityModification is the base class for storing partial updates to an {@link AuthIdentity} as part of a create
- * or update operation using {@link AuthIdentityManager#createIdentity(String, String, AuthIdentityModification)} or
+ * or update operation using {@link AuthIdentityManager#createIdentity(String, AuthIdentityModification)}  or
  * {@link AuthIdentityManager#updateIdentity(String, AuthIdentityModification)}, respectively.  Subclasses should
  * override to instantiate a new instance from one of the build methods, as well as add any additional modifiers
  * for attributes specific to the AuthIdentity implementation if necessary.
@@ -93,11 +93,11 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
      *      AuthIdentityImpl identity = createAuthIdentityImplModification()
      *          .withOwner("owner@example.com")
      *          .addRoles("role1")
-     *          .buildFrom("123");
+     *          .buildNew("123");
      *
      *      assert identity.getInternalId().equals("123");
      *      assert identity.getOwner().equals("owner@example.com");
-     *      assert identity.getRoles().equals(ImmtuableSet.of("role1"));
+     *      assert identity.getRoles().equals(ImmutableSet.of("role1"));
      *      assert identity.getDescription() == null;
      * </code>
      */

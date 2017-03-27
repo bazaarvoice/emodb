@@ -18,6 +18,7 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
     private final String _credentials;
 
     public ApiKeyAuthenticationInfo(String authenticationId, ApiKey apiKey, String realm) {
+        checkNotNull(authenticationId, "authenticationId");
         checkNotNull(apiKey, "apiKey");
         checkNotNull(realm, "realm");
         // Identify the principal by API key
