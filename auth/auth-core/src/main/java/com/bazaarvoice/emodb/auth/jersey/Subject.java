@@ -20,12 +20,12 @@ public class Subject {
         _principals = principals;
     }
 
-    public String getId() {
+    public String getAuthenticationId() {
         return ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getName();
     }
 
-    public String getInternalId() {
-        return ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getInternalId();
+    public String getId() {
+        return ((PrincipalWithRoles) _principals.getPrimaryPrincipal()).getId();
     }
 
     public boolean hasRole(String role) {

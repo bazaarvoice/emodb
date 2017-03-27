@@ -22,13 +22,12 @@ abstract public class AuthIdentity {
      * <ol>
      *     <li>
      *         Parts of the system may need associate resources with an ID.  For example, each databus subscription
-     *         is associated with an API key.  By using an internal ID these parts of the system don't need to
-     *         be concerned with safely storing the API key, since the internal ID is essentially a reference to
-     *         the key.
+     *         is associated with an API key.  By using a distinct  ID these parts of the system don't need to
+     *         be concerned with safely storing the API key, since the ID is essentially a reference to the key.
      *     </li>
      *     <li>
      *         Parts of the system may need to determine whether an ID has permission to perform certain actions
-     *         without actually logging the user in.  Databus fanout is a prime example of this.  Using internal IDs
+     *         without actually logging the user in.  Databus fanout is a prime example of this.  Using IDs
      *         in the interface allows those parts of the system to validate authorization for permission without
      *         the ability to impersonate that user by logging them in.
      *     </li>
@@ -41,12 +40,8 @@ abstract public class AuthIdentity {
      *         such as over a chat client or in an email.
      *     </li>
      * </ol>
-     *
-     * In the original design this ID was only used internally, but over time it has become an accepted public-facing
-     * identifier for identities.  This is why for historical reasons this field is called "internalId" even though
-     * it is used as both the unique internal and external identifier for this identity.
      */
-    private final String _internalId;
+    private final String _id;
 
     // Roles assigned to the identity
     private final Set<String> _roles;
@@ -59,14 +54,14 @@ abstract public class AuthIdentity {
     // Masked version of the authentication ID.
     private String _maskedId;
 
-    protected AuthIdentity(String internalId, Set<String> roles) {
-        checkArgument(!Strings.isNullOrEmpty(internalId), "id");
-        _internalId = internalId;
+    protected AuthIdentity(String id, Set<String> roles) {
+        checkArgument(!Strings.isNullOrEmpty(id), "id");
+        _id = id;
         _roles = ImmutableSet.copyOf(checkNotNull(roles, "roles"));
     }
 
-    public String getInternalId() {
-        return _internalId;
+    public String getId() {
+        return _id;
     }
 
     public Set<String> getRoles() {

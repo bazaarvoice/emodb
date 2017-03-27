@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth;
+package com.bazaarvoice.emodb.databus;
 
 import com.google.inject.BindingAnnotation;
 
@@ -12,5 +12,5 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
-public @interface InternalIdSupplier {
+public @interface SystemIdentity {
 }

@@ -22,7 +22,7 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
         checkNotNull(apiKey, "apiKey");
         checkNotNull(realm, "realm");
         // Identify the principal by API key
-        PrincipalWithRoles principal = new PrincipalWithRoles(authenticationId, apiKey.getInternalId(), apiKey.getRoles());
+        PrincipalWithRoles principal = new PrincipalWithRoles(authenticationId, apiKey.getId(), apiKey.getRoles());
         _principals = new SimplePrincipalCollection(principal, realm);
         // Use the API key as the credentials
         _credentials = authenticationId;

@@ -23,7 +23,7 @@ import java.util.Iterator;
  *
  * <ul>
  *     <li>If the local server is the partition for the subscription then requests should be forwarded to a local
- *         databus implementation.  In this case the authentication credential is the subject's internal ID.</li>
+ *         databus implementation.  In this case the authentication credential is the subject's ID.</li>
  *     <li>If a remote server is the partition for the subscription then requests should be forwarded to that server
  *         using its databus REST API.  In this case the authentication credential is the subject's ID, which is the
  *         API key.</li>

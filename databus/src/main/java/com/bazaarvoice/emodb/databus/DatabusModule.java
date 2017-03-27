@@ -93,7 +93,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> @{@link Global} {@link CuratorFramework}
  * <li> Jersey {@link Client}
  * <li> @{@link ReplicationKey} String
- * <li> @{@link SystemInternalId} String
+ * <li> @{@link SystemIdentity} String
  * <li> DataStore {@link DataProvider}
  * <li> DataStore {@link EventBus}
  * <li> DataStore {@link DataStoreConfiguration}

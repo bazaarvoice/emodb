@@ -18,9 +18,9 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
     }
 
     @Override
-    public T getIdentity(String internalId) {
-        checkNotNull(internalId, "internalId");
-        return _manager.getIdentity(internalId);
+    public T getIdentity(String id) {
+        checkNotNull(id, "id");
+        return _manager.getIdentity(id);
     }
 
     @Override
@@ -33,33 +33,33 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
             throws IdentityExistsException {
         checkNotNull(authenticationId, "authenticationId");
         checkNotNull(modification, "modification");
-        String internalId = _manager.createIdentity(authenticationId, modification);
+        String id = _manager.createIdentity(authenticationId, modification);
         _cacheManager.invalidateAll();
-        return internalId;
+        return id;
     }
 
     @Override
-    public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        checkNotNull(internalId, "internalId");
+        checkNotNull(id, "id");
         checkNotNull(modification, "modification");
-        _manager.updateIdentity(internalId, modification);
+        _manager.updateIdentity(id, modification);
         _cacheManager.invalidateAll();
     }
 
     @Override
-    public void migrateIdentity(String internalId, String newAuthenticationId)
+    public void migrateIdentity(String id, String newAuthenticationId)
             throws IdentityNotFoundException, IdentityExistsException {
-        checkNotNull(internalId);
+        checkNotNull(id);
         checkNotNull(newAuthenticationId);
-        _manager.migrateIdentity(internalId, newAuthenticationId);
+        _manager.migrateIdentity(id, newAuthenticationId);
         _cacheManager.invalidateAll();
     }
 
     @Override
-    public void deleteIdentity(String internalId) {
-        checkNotNull(internalId);
-        _manager.deleteIdentity(internalId);
+    public void deleteIdentity(String id) {
+        checkNotNull(id);
+        _manager.deleteIdentity(id);
         _cacheManager.invalidateAll();
     }
 }

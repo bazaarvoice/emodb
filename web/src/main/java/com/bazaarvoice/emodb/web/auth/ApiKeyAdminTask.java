@@ -199,7 +199,7 @@ public class ApiKeyAdminTask extends Task {
 
         checkArgument(Sets.intersection(roles, _reservedRoles).isEmpty(), "Cannot assign reserved role");
 
-        String internalId;
+        String id;
         String key;
         if (providedKey.isPresent()) {
             key = providedKey.get();
@@ -207,18 +207,18 @@ public class ApiKeyAdminTask extends Task {
                 output.println("Error:  Provided key is not valid");
                 return;
             }
-            if ((internalId = createApiKeyIfAvailable(key, owner, roles, description)) == null) {
+            if ((id = createApiKeyIfAvailable(key, owner, roles, description)) == null) {
                 output.println("Error:  Provided key exists");
                 return;
             }
         } else {
             String[] result = createRandomApiKey(owner, roles, description);
-            internalId = result[0];
+            id = result[0];
             key = result[1];
         }
 
         output.println("API key: " + key);
-        output.println("ID: " + internalId);
+        output.println("ID: " + id);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
@@ -234,19 +234,19 @@ public class ApiKeyAdminTask extends Task {
         }
     }
 
-    // Returns a String array of length two containing: { internalId, key }
+    // Returns a String array of length two containing: { id, key }
     private String[] createRandomApiKey(String owner, Set<String> roles, String description) {
         // Since API keys are stored hashed we create them in a loop to ensure we don't grab one that is already picked
 
         String key = null;
-        String internalId = null;
+        String id = null;
 
-        while (internalId == null) {
+        while (id == null) {
             key = generateRandomApiKey();
-            internalId = createApiKeyIfAvailable(key, owner, roles, description);
+            id = createApiKeyIfAvailable(key, owner, roles, description);
         }
 
-        return new String[] { internalId, key };
+        return new String[] { id, key };
     }
 
     private String generateRandomApiKey() {
@@ -371,7 +371,7 @@ public class ApiKeyAdminTask extends Task {
             // Must convert key to ID
             ApiKey apiKey = _authIdentityManager.getIdentityByAuthenticationId(Iterables.getFirst(keys, null));
             if (apiKey != null) {
-                id = apiKey.getInternalId();
+                id = apiKey.getId();
             } else {
                 throw new IdentityNotFoundException();
             }

@@ -16,12 +16,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements AuthIdentityManager<T> {
 
-    private final Map<String, String> _authenticationToInternalIdMap = Maps.newConcurrentMap();
+    private final Map<String, String> _authenticationToIdMap = Maps.newConcurrentMap();
     private final Map<String, T> _identityMap = Maps.newConcurrentMap();
-    private final Supplier<String> _internalIdSupplier;
+    private final Supplier<String> _uniqueIdSupplier;
 
     /**
-     * Default constructor assigns incremental integer internal IDs.  For more control over internal ID generation
+     * Default constructor assigns incremental integer IDs.  For more control over ID generation
      * use {@link #InMemoryAuthIdentityManager(Supplier)}.
      */
     public InMemoryAuthIdentityManager() {
@@ -35,27 +35,27 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
         });
     }
 
-    public InMemoryAuthIdentityManager(Supplier<String> internalIdSupplier) {
-        _internalIdSupplier = internalIdSupplier;
+    public InMemoryAuthIdentityManager(Supplier<String> uniqueIdSupplier) {
+        _uniqueIdSupplier = uniqueIdSupplier;
     }
 
     @Override
     synchronized public String createIdentity(String authenticationId, AuthIdentityModification<T> modification)
             throws IdentityExistsException {
-        if (_authenticationToInternalIdMap.containsKey(authenticationId)) {
+        if (_authenticationToIdMap.containsKey(authenticationId)) {
             throw new IdentityExistsException();
         }
-        String internalId = _internalIdSupplier.get();
-        T identity = modification.buildNew(internalId);
+        String id = _uniqueIdSupplier.get();
+        T identity = modification.buildNew(id);
         identity.setIssued(new Date());
-        _authenticationToInternalIdMap.put(authenticationId, internalId);
-        _identityMap.put(internalId, identity);
-        return internalId;
+        _authenticationToIdMap.put(authenticationId, id);
+        _identityMap.put(id, identity);
+        return id;
     }
 
     @Override
     public T getIdentityByAuthenticationId(String authenticationId) {
-        String id = _authenticationToInternalIdMap.get(authenticationId);
+        String id = _authenticationToIdMap.get(authenticationId);
         if (id == null) {
             return null;
         }
@@ -63,44 +63,44 @@ public class InMemoryAuthIdentityManager<T extends AuthIdentity> implements Auth
     }
 
     @Override
-    public T getIdentity(String internalId) {
-        checkNotNull(internalId, "internalId");
-        return _identityMap.get(internalId);
+    public T getIdentity(String id) {
+        checkNotNull(id, "id");
+        return _identityMap.get(id);
     }
 
     @Override
-    synchronized public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+    synchronized public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        T existing = _identityMap.get(internalId);
+        T existing = _identityMap.get(id);
         if (existing == null) {
             throw new IdentityNotFoundException();
         }
-        _identityMap.put(internalId, modification.buildFrom(existing));
+        _identityMap.put(id, modification.buildFrom(existing));
     }
 
     @Override
-    synchronized public void migrateIdentity(String internalId, String newAuthenticationId) {
-        if (_authenticationToInternalIdMap.containsKey(newAuthenticationId)) {
+    synchronized public void migrateIdentity(String id, String newAuthenticationId) {
+        if (_authenticationToIdMap.containsKey(newAuthenticationId)) {
             throw new IdentityExistsException();
         }
-        if (!_identityMap.containsKey(internalId)) {
+        if (!_identityMap.containsKey(id)) {
             throw new IdentityNotFoundException();
         }
-        deleteAuthenticationReferenceToInternalId(internalId);
-        _authenticationToInternalIdMap.put(newAuthenticationId, internalId);
+        deleteAuthenticationReferenceToId(id);
+        _authenticationToIdMap.put(newAuthenticationId, id);
     }
 
     @Override
-    synchronized public void deleteIdentity(String internalId) {
-        checkNotNull(internalId, "internalId");
-        _identityMap.remove(internalId);
-        deleteAuthenticationReferenceToInternalId(internalId);
+    synchronized public void deleteIdentity(String id) {
+        checkNotNull(id, "id");
+        _identityMap.remove(id);
+        deleteAuthenticationReferenceToId(id);
     }
 
-    private void deleteAuthenticationReferenceToInternalId(String internalId) {
-        for (Map.Entry<String, String> entry : _authenticationToInternalIdMap.entrySet()) {
-            if (entry.getValue().equals(internalId)) {
-                _authenticationToInternalIdMap.remove(entry.getKey());
+    private void deleteAuthenticationReferenceToId(String id) {
+        for (Map.Entry<String, String> entry : _authenticationToIdMap.entrySet()) {
+            if (entry.getValue().equals(id)) {
+                _authenticationToIdMap.remove(entry.getKey());
                 return;
             }
         }

@@ -22,7 +22,7 @@ public class SubjectDatabusClient extends AbstractSubjectDatabus {
 
     @Override
     protected Databus databus(Subject subject) {
-        return _authenticator.usingCredentials(subject.getId());
+        return _authenticator.usingCredentials(subject.getAuthenticationId());
     }
 
     AuthDatabus getClient() {

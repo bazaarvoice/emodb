@@ -16,37 +16,37 @@ public class DeferringAuthIdentityManager<T extends AuthIdentity> implements Aut
 
     private final AuthIdentityManager<T> _manager;
     private final Map<String, T> _identitiesByAuthenticationId;
-    private final Map<String, T> _identitiesByInternalId;
+    private final Map<String, T> _identitiesById;
 
     public DeferringAuthIdentityManager(AuthIdentityManager<T> manager, @Nullable Map<String, T> identities) {
         _manager = checkNotNull(manager);
         if (identities == null) {
             _identitiesByAuthenticationId = ImmutableMap.of();
-            _identitiesByInternalId = ImmutableMap.of();
+            _identitiesById = ImmutableMap.of();
         } else {
             ImmutableMap.Builder<String, T> authIdMapBuilder = ImmutableMap.builder();
-            ImmutableMap.Builder<String, T> internalIdMapBuilder = ImmutableMap.builder();
+            ImmutableMap.Builder<String, T> idMapBuilder = ImmutableMap.builder();
 
             for (Map.Entry<String, T> entry : identities.entrySet()) {
                 String authenticationId = entry.getKey();
                 T identity = entry.getValue();
 
                 authIdMapBuilder.put(authenticationId, identity);
-                internalIdMapBuilder.put(identity.getInternalId(), identity);
+                idMapBuilder.put(identity.getId(), identity);
             }
 
             _identitiesByAuthenticationId = authIdMapBuilder.build();
-            _identitiesByInternalId = internalIdMapBuilder.build();
+            _identitiesById = idMapBuilder.build();
         }
     }
 
     @Override
-    public T getIdentity(String internalId) {
-        checkNotNull(internalId, "internalId");
+    public T getIdentity(String id) {
+        checkNotNull(id, "id");
 
-        T identity = _identitiesByInternalId.get(internalId);
+        T identity = _identitiesById.get(id);
         if (identity == null) {
-            identity = _manager.getIdentity(internalId);
+            identity = _manager.getIdentity(id);
         }
         return identity;
     }
@@ -68,28 +68,28 @@ public class DeferringAuthIdentityManager<T extends AuthIdentity> implements Aut
         checkNotNull(authenticationId);
         checkNotNull(modification);
         checkArgument(!_identitiesByAuthenticationId.containsKey(authenticationId), "Cannot update static identity: %s", authenticationId);
-        String internalId = _manager.createIdentity(authenticationId, modification);
-        assert !_identitiesByInternalId.containsKey(internalId) : "Delegate should never return an static internal ID";
-        return internalId;
+        String id = _manager.createIdentity(authenticationId, modification);
+        assert !_identitiesById.containsKey(id) : "Delegate should never return an static ID";
+        return id;
     }
 
     @Override
-    public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        checkNotNull(internalId);
+        checkNotNull(id);
         checkNotNull(modification);
-        checkArgument(!_identitiesByInternalId.containsKey(internalId), "Cannot use internal ID from static identity: %s", internalId);
-        _manager.updateIdentity(internalId, modification);
+        checkArgument(!_identitiesById.containsKey(id), "Cannot use ID from static identity: %s", id);
+        _manager.updateIdentity(id, modification);
     }
 
     @Override
-    public void migrateIdentity(String internalId, String newAuthenticationId)
+    public void migrateIdentity(String id, String newAuthenticationId)
             throws IdentityNotFoundException, IdentityExistsException {
-        checkNotNull(internalId);
+        checkNotNull(id);
         checkNotNull(newAuthenticationId);
         checkArgument(!_identitiesByAuthenticationId.containsKey(newAuthenticationId), "Cannot update static identity: %s", newAuthenticationId);
-        checkArgument(!_identitiesByInternalId.containsKey(internalId), "Cannot use internal ID from static identity: %s", internalId);
-        _manager.migrateIdentity(internalId, newAuthenticationId);
+        checkArgument(!_identitiesById.containsKey(id), "Cannot use ID from static identity: %s", id);
+        _manager.migrateIdentity(id, newAuthenticationId);
     }
 
     @Override

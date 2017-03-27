@@ -29,7 +29,7 @@ import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
-import com.bazaarvoice.emodb.databus.SystemInternalId;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -75,7 +75,7 @@ import java.util.stream.Collectors;
  * <ul>
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
- * <li> @{@link SystemInternalId} String
+ * <li> @{@link SystemIdentity} String
  * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
  * </ul>
@@ -86,9 +86,9 @@ public class SecurityModule extends PrivateModule {
     private final static String ANONYMOUS_KEY = "anonymous";
 
     // Internal identifiers for reserved API keys
-    private final static String ADMIN_INTERNAL_ID = "__admin";
-    private final static String REPLICATION_INTERNAL_ID = "__replication";
-    private final static String ANONYMOUS_INTERNAL_ID = "__anonymous";
+    private final static String ADMIN_ID = "__admin";
+    private final static String REPLICATION_ID = "__replication";
+    private final static String ANONYMOUS_ID = "__anonymous";
 
     // Internal identifier for reserved internal processes that do not have a public facing API key
     private final static String SYSTEM_INTERNAL_ID = "__system";
@@ -113,11 +113,11 @@ public class SecurityModule extends PrivateModule {
         bind(new TypeLiteral<AuthIdentityReader<ApiKey>>() {}).to(new TypeLiteral<AuthIdentityManager<ApiKey>>() {});
         bind(PermissionReader.class).to(PermissionManager.class);
 
-        bind(String.class).annotatedWith(SystemInternalId.class).toInstance(SYSTEM_INTERNAL_ID);
+        bind(String.class).annotatedWith(SystemIdentity.class).toInstance(SYSTEM_INTERNAL_ID);
 
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
-        expose(Key.get(String.class, SystemInternalId.class));
+        expose(Key.get(String.class, SystemIdentity.class));
         expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
     }
@@ -188,13 +188,13 @@ public class SecurityModule extends PrivateModule {
     }
 
     /**
-     * Supplier for generating internal IDs for API keys.  Note that, critically, the values returned will never
+     * Supplier for generating uniquey IDs for API keys.  Note that, critically, the values returned will never
      * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, AuthIdentityManager)}
      */
     @Provides
     @Singleton
-    @InternalIdSupplier
-    Supplier<String> provideInternalIdSupplier() {
+    @IdentityIdSupplier
+    Supplier<String> provideIdentityIdSupplier() {
         return () -> {
             // This is effectively a TimeUUID but condensed to a slightly smaller String representation.
             UUID uuid = TimeUUIDs.newUUID();
@@ -210,9 +210,9 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash,
-            @InternalIdSupplier Supplier<String> internalIdSupplier) {
+            @IdentityIdSupplier Supplier<String> identityIdSupplier) {
         return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
-                config.getInternalIdIndexTable(), config.getTablePlacement(), internalIdSupplier, hash);
+                config.getIdIndexTable(), config.getTablePlacement(), identityIdSupplier, hash);
     }
 
     @Provides
@@ -225,13 +225,13 @@ public class SecurityModule extends PrivateModule {
 
         ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
         reservedIdentities.put(replicationKey,
-                new ApiKey(REPLICATION_INTERNAL_ID, ImmutableSet.of(DefaultRoles.replication.toString())));
+                new ApiKey(REPLICATION_ID, ImmutableSet.of(DefaultRoles.replication.toString())));
         reservedIdentities.put(adminKey,
-                new ApiKey(ADMIN_INTERNAL_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
+                new ApiKey(ADMIN_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
             reservedIdentities.put(anonymousKey.get(),
-                    new ApiKey(ANONYMOUS_INTERNAL_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
+                    new ApiKey(ANONYMOUS_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
         return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());

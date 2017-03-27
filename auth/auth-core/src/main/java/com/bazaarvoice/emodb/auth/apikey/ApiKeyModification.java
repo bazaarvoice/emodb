@@ -13,15 +13,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ApiKeyModification extends AuthIdentityModification<ApiKey> {
 
     @Override
-    public ApiKey buildNew(String internalId) {
-        checkNotNull(internalId, "internalId");
-        return buildFrom(new ApiKey(internalId, getUpdatedRolesFrom(ImmutableSet.of())));
+    public ApiKey buildNew(String id) {
+        checkNotNull(id, "id");
+        return buildFrom(new ApiKey(id, getUpdatedRolesFrom(ImmutableSet.of())));
     }
 
     @Override
     public ApiKey buildFrom(ApiKey identity) {
         checkNotNull(identity, "identity");
-        ApiKey apiKey = new ApiKey(identity.getInternalId(), getUpdatedRolesFrom(identity.getRoles()));
+        ApiKey apiKey = new ApiKey(identity.getId(), getUpdatedRolesFrom(identity.getRoles()));
         apiKey.setOwner(isOwnerPresent() ? getOwner() : identity.getOwner());
         apiKey.setDescription(isDescriptionPresent() ? getDescription() : identity.getDescription());
         apiKey.setIssued(identity.getIssued());

@@ -87,7 +87,7 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
 
     /**
      * Subclasses should return a new AuthIdentity instance based only on the attributes set in this object with
-     * the provided internal ID.  For example:
+     * the provided ID.  For example:
      *
      * <code>
      *      AuthIdentityImpl identity = createAuthIdentityImplModification()
@@ -95,13 +95,13 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
      *          .addRoles("role1")
      *          .buildNew("123");
      *
-     *      assert identity.getInternalId().equals("123");
+     *      assert identity.getId().equals("123");
      *      assert identity.getOwner().equals("owner@example.com");
      *      assert identity.getRoles().equals(ImmutableSet.of("role1"));
      *      assert identity.getDescription() == null;
      * </code>
      */
-    abstract public T buildNew(String internalId);
+    abstract public T buildNew(String id);
 
     /**
      * Subclasses should return a new AuthIdentity instance matching the provided entity plus any modifications
@@ -109,7 +109,7 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
      *
      * <code>
      *      AuthIdentityImpl before = getAuthIdentityImplFromSomewhere();
-     *      assert before.getInternalId().equals("123");
+     *      assert before.getId().equals("123");
      *      assert before.getOwner.equals("owner@example.com");
      *      assert before.getDescription.equals("Old description");
      *      assert before.getRoles().equals(ImmutableSet.of("role1"));
@@ -120,7 +120,7 @@ abstract public class AuthIdentityModification<T extends AuthIdentity> {
      *          .removeRoles("role1")
      *          .buildFrom(before);
      *
-     *      assert after.getInternalId().equals("123");
+     *      assert after.getId().equals("123");
      *      assert after.getOwner.equals("owner@example.com");
      *      assert after.getDescription.equals("New description");
      *      assert after.getRoles().equals(ImmutableSet.of("role2"));

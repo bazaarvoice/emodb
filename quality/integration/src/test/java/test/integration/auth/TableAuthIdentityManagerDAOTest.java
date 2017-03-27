@@ -16,9 +16,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.Hashing;
 import org.testng.annotations.Test;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -28,19 +30,19 @@ public class TableAuthIdentityManagerDAOTest {
 
     /**
      * There are two tables which store identities in TableAuthIdentityManagerDAO: One table keyed by a hash of the
-     * API key, and an index table ID'd by the internal ID which contains the API key hash.  This second table is used
-     * to look up API keys by internal ID.  It should be rare, but it is possible for an API key record tNAo exist
-     * without a corresponding internal ID.  One possible way for this to happen is grandfathered in API keys
-     * created before the introduction of internal IDs.  TableAuthIdentityManagerDAO should rebuild the index
+     * API key, and an index table ID'd by the identity ID which contains the API key hash.  This second table is used
+     * to look up API keys by ID.  It should be rare, but it is possible for an API key record tNAo exist
+     * without a corresponding ID.  One possible way for this to happen is grandfathered in API keys
+     * created before the introduction of IDs.  TableAuthIdentityManagerDAO should rebuild the index
      * when there is a missing or incorrect index record.  This test verifies that works as expected.
      */
     @Test
-    public void testRebuildInternalIdIndex() {
+    public void testRebuildIdIndex() {
         DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
-        Supplier<String> internalIdSupplier = () -> "id0";
+        Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
-                internalIdSupplier, Hashing.sha256());
+                idSupplier, Hashing.sha256());
 
         tableAuthIdentityManagerDAO.createIdentity("testkey",
                 new ApiKeyModification()
@@ -73,12 +75,12 @@ public class TableAuthIdentityManagerDAOTest {
     }
 
     @Test
-    public void testGrandfatheredInInternalId() {
+    public void testGrandfatheredInId() {
         DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
-        Supplier<String> internalIdSupplier = () -> "id0";
+        Supplier<String> idSupplier = () -> "id0";
         TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
                 ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
-                internalIdSupplier, Hashing.sha256());
+                idSupplier, Hashing.sha256());
 
         // Perform an operation on tableAuthIdentityManagerDAO to force it to create API key tables; the actual
         // operation doesn't matter.
@@ -101,26 +103,78 @@ public class TableAuthIdentityManagerDAOTest {
         for (int i=0; i < 2; i++) {
             ApiKey apiKey;
             if (i == 0) {
-                // Verify the record can be read by ID.  The key's internal ID will be the hashed ID.
+                // Verify the record can be read by authentication ID.  The key's ID will be the hashed ID.
                 apiKey = tableAuthIdentityManagerDAO.getIdentityByAuthenticationId(id);
             } else {
-                // Verify that a lookup by internal ID works
+                // Verify that a lookup by ID works
                 apiKey = tableAuthIdentityManagerDAO.getIdentity(hash);
             }
             assertNotNull(apiKey);
-            assertEquals(apiKey.getInternalId(), hash);
+            assertEquals(apiKey.getId(), hash);
             assertEquals(apiKey.getOwner(), "someone");
             assertEquals(apiKey.getDescription(), "something");
             assertEquals(apiKey.getRoles(), ImmutableList.of("role1", "role2"));
         }
 
-        // Verify that the index record was created with the hashed ID as the internal ID
+        // Verify that the index record was created with the hashed ID as the ID
         Map<String, Object> indexMap = dataStore.get("__auth:internal_ids", hash);
         assertFalse(Intrinsic.isDeleted(indexMap));
         assertEquals(indexMap.get("hashedId"), hash);
 
-        // Verify lookup by internal ID still works with the index record in place
+        // Verify lookup by ID still works with the index record in place
         ApiKey apiKey = tableAuthIdentityManagerDAO.getIdentity(hash);
         assertEquals(apiKey.getRoles(), ImmutableSet.of("role1", "role2"));
+    }
+
+    @Test
+    public void testIdAttributeCompatibility() {
+        DataStore dataStore = new InMemoryDataStore(new MetricRegistry());
+        Supplier<String> idSupplier = () -> "id0";
+        TableAuthIdentityManagerDAO<ApiKey> tableAuthIdentityManagerDAO = new TableAuthIdentityManagerDAO<>(
+                ApiKey.class, dataStore, "__auth:keys", "__auth:internal_ids", "app_global:sys",
+                idSupplier, Hashing.sha256());
+
+        // Perform an operation on tableAuthIdentityManagerDAO to force it to create API key tables; the actual
+        // operation doesn't matter.
+        tableAuthIdentityManagerDAO.getIdentity("ignore");
+
+        List<String> keys = ImmutableList.of(
+                "000000000000000000000000000000000000000000000000", "000000000000000000000000000000000000000000000001");
+        List<String> hashes = keys.stream().map(id -> Hashing.sha256().hashUnencodedChars(id).toString()).collect(Collectors.toList());
+        List<String> ids = ImmutableList.of("id0", "id1");
+
+        // Write out two records: one with the legacy "internalId" and one with the forward-compatible "id" attribute
+        for (int i=0; i < 2; i++) {
+            String key = keys.get(i);
+            String hash = hashes.get(i);
+            String id = ids.get(i);
+
+            Map<String, Object> map = ImmutableMap.<String, Object>builder()
+                    .put("maskedId", "****")
+                    .put("owner", "someone")
+                    .put("description", "something")
+                    .put("roles", ImmutableList.of("role1", "role2"))
+                    .put(i == 0 ? "internalId" : "id", id)
+                    .build();
+
+            dataStore.update("__auth:keys", hash, TimeUUIDs.newUUID(), Deltas.literal(map),
+                    new AuditBuilder().setComment("test grandfathering").build());
+
+            for (int j = 0; j < 2; j++) {
+                ApiKey apiKey;
+                if (j == 0) {
+                    // Verify the record can be read by authentication ID.
+                    apiKey = tableAuthIdentityManagerDAO.getIdentityByAuthenticationId(key);
+                } else {
+                    // Verify that a lookup by ID works
+                    apiKey = tableAuthIdentityManagerDAO.getIdentity(id);
+                }
+                assertNotNull(apiKey);
+                assertEquals(apiKey.getId(), id);
+                assertEquals(apiKey.getOwner(), "someone");
+                assertEquals(apiKey.getDescription(), "something");
+                assertEquals(apiKey.getRoles(), ImmutableList.of("role1", "role2"));
+            }
+        }
     }
 }

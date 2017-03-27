@@ -11,7 +11,7 @@ public interface AuthIdentityReader<T extends AuthIdentity> {
     T getIdentityByAuthenticationId(String authenticationId);
 
     /**
-     * Gets an entity by its internal ID, or null if no such identity exists.
+     * Gets an entity by its ID, or null if no such identity exists.
      */
-    T getIdentity(String internalId);
+    T getIdentity(String id);
 }

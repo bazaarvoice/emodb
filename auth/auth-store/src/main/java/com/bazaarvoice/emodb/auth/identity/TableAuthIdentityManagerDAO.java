@@ -40,11 +40,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *         "identityTable" stores the identity document and is keyed by a hash of the authentication ID.
  *     </li>
  *     <li>
- *         "internalIdIndexTable" stores the hash of the authentication ID and is keyed by the internal ID.
+ *         "idIndexTable" stores the hash of the authentication ID and is keyed by the identity's ID.
  *     </li>
  * </ol>
  *
- * This may seem backwards to most CRUD systems, since looking up the identity by its immutable key, internal ID, requires
+ * This may seem backwards to most CRUD systems, since looking up the identity by its immutable key, the ID, requires
  * two lookups, while looking it by a mutable attribute, authentication ID, requires only one.  This was done to optimize
  * the most common use case.  API keys are created and updated infrequently.  However, they are frequently looked up by
  * authentication ID for authentication and resolving the roles associated with the identity.  Therefore the table
@@ -55,6 +55,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements AuthIdentityManager<T> {
 
+    private final static String ID = "id";
     private final static String INTERNAL_ID = "internalId";
     private final static String HASHED_ID = "hashedId";
 
@@ -62,33 +63,33 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     private final DataStore _dataStore;
     // Table keyed by a hash of the authentication ID which contains the identity
     private final String _identityTableName;
-    // Table keyed by the internal ID which contains the authentication ID hash for lookup up the identity
+    // Table keyed by the identity ID which contains the authentication ID hash for lookup up the identity
     // in the _identityTableName table.
-    private final String _internalIdIndexTableName;
+    private final String _idIndexTableName;
     private final String _placement;
-    // Supplier which returns a globally unique internal ID on every call.
-    private final Supplier<String> _internalIdSupplier;
+    // Supplier which returns a globally unique ID on every call.
+    private final Supplier<String> _uniqueIdSupplier;
     private final HashFunction _hash;
     private volatile boolean _tablesValidated;
 
     public TableAuthIdentityManagerDAO(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
-                                       String internalIdIndexTableName, String placement,
-                                       Supplier<String> internalIdSupplier) {
-        this(authIdentityClass, dataStore, identityTableName, internalIdIndexTableName, placement, internalIdSupplier,null);
+                                       String idIndexTableName, String placement,
+                                       Supplier<String> uniqueIdSupplier) {
+        this(authIdentityClass, dataStore, identityTableName, idIndexTableName, placement, uniqueIdSupplier,null);
     }
 
     public TableAuthIdentityManagerDAO(Class<T> authIdentityClass, DataStore dataStore, String identityTableName,
-                                       String internalIdIndexTableName, String placement, Supplier<String> internalIdSupplier,
+                                       String idIndexTableName, String placement, Supplier<String> uniqueIdSupplier,
                                        @Nullable HashFunction hash) {
         _authIdentityClass = checkNotNull(authIdentityClass, "authIdentityClass");
         _dataStore = checkNotNull(dataStore, "client");
         _identityTableName = checkNotNull(identityTableName, "identityTableName");
-        _internalIdIndexTableName = checkNotNull(internalIdIndexTableName, "internalIdIndexTableName");
+        _idIndexTableName = checkNotNull(idIndexTableName, "idIndexTableName");
         _placement = checkNotNull(placement, "placement");
-        _internalIdSupplier = checkNotNull(internalIdSupplier, "internalIdSupplier");
+        _uniqueIdSupplier = checkNotNull(uniqueIdSupplier, "uniqueIdSupplier");
         _hash = hash;
 
-        checkArgument(!_identityTableName.equals(internalIdIndexTableName), "Identity and internal ID index tables must be distinct");
+        checkArgument(!_identityTableName.equals(idIndexTableName), "Identity and ID index tables must be distinct");
     }
 
     @Override
@@ -109,10 +110,17 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         // Make a copy of the map to avoid mutating the method parameter as a side-effect
         Map<String, Object> identityMap = Maps.newHashMap(map);
 
-        // Identities have been in use since before internal IDs were introduced.  To grandfather in those keys we'll
-        // use the hash of the identity's authentication ID as the internal ID.
-        if (!identityMap.containsKey(INTERNAL_ID)) {
-            identityMap.put(INTERNAL_ID, Intrinsic.getId(map));
+        // Historically the ID attribute used to be called "internalId".  For backwards compatibility with the legacy
+        // "internalId" attribute name and forwards compatibility with the "id" attribute name accept either one.
+        String legacyInternalId = (String) identityMap.remove(INTERNAL_ID);
+        if (!identityMap.containsKey(ID)) {
+            if (legacyInternalId != null) {
+                identityMap.put(ID, legacyInternalId);
+            } else {
+                // Identities have been in use since before non-authentication IDs were introduced.  To grandfather in
+                // those keys we'll use the hash of the identity's authentication ID as the identity's ID.
+                identityMap.put(ID, Intrinsic.getId(map));
+            }
         }
 
         // Remove all intrinsics
@@ -121,9 +129,21 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         return JsonHelper.convert(identityMap, _authIdentityClass);
     }
 
+    private Map<String, Object> convertIdentityToDataStoreEntry(T identity) {
+        Map<String, Object> map = JsonHelper.convert(identity, new TypeReference<Map<String, Object>>(){});
+
+        // The ID attribute for an identity used to be called "internalId".  To support a rolling update where legacy and
+        // current Emo instances may be running side-by-side continue to write the ID attribute name as "internalId".
+        // Note that the deserialization algorithm in convertDataStoreEntryToIdentity() supports either an "id" or
+        // "internalId" attribute name for the ID, so in a future release this conversion can be removed.
+        map.put(INTERNAL_ID, map.remove(ID));
+
+        return map;
+    }
+
     @Override
-    public T getIdentity(String internalId) {
-        ResolvedIdentity resolvedIdentity = resolveIdentityByInternalId(internalId);
+    public T getIdentity(String id) {
+        ResolvedIdentity resolvedIdentity = resolveIdentityById(id);
         if (resolvedIdentity == null) {
             return null;
         }
@@ -143,35 +163,35 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         if (getIdentityByAuthenticationId(authenticationId) != null) {
             throw new IdentityExistsException();
         }
-        String internalId = _internalIdSupplier.get();
+        String id = _uniqueIdSupplier.get();
         String hashedAuthenticationId = hash(authenticationId);
         UUID changeId = TimeUUIDs.newUUID();
         Audit audit = new AuditBuilder().setLocalHost().setComment("create identity").build();
 
-        T identity = modification.buildNew(internalId);
+        T identity = modification.buildNew(id);
         // Ignore whatever masked ID was set; mask it now
         identity.setMaskedId(mask(authenticationId));
         identity.setIssued(new Date());
 
-        Map<String, Object> map = JsonHelper.convert(identity, new TypeReference<Map<String, Object>>(){});
-
+        Map<String, Object> map = convertIdentityToDataStoreEntry(identity);
+        
         Update identityUpdate = new Update(_identityTableName, hashedAuthenticationId, changeId, Deltas.literal(map),
                 audit, WriteConsistency.GLOBAL);
 
         map = ImmutableMap.<String, Object>of(HASHED_ID, hashedAuthenticationId);
-        Update internalIdUpdate = new Update(_internalIdIndexTableName, internalId, changeId, Deltas.literal(map),
+        Update idUpdate = new Update(_idIndexTableName, id, changeId, Deltas.literal(map),
                 audit, WriteConsistency.GLOBAL);
 
-        // Update the identity and internal ID index in a single update
-        _dataStore.updateAll(ImmutableList.of(identityUpdate, internalIdUpdate));
+        // Update the identity and ID index in a single update
+        _dataStore.updateAll(ImmutableList.of(identityUpdate, idUpdate));
 
-        return internalId;
+        return id;
     }
 
     @Override
-    public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        checkNotNull(internalId, "internalId");
+        checkNotNull(id, "id");
         checkNotNull(modification, "modification");
         validateTables();
 
@@ -179,7 +199,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         // Note that we can't protect from a race condition here; we rely on this method being run inside a global
         // synchronization lock.
 
-        ResolvedIdentity resolvedIdentity = resolveIdentityByInternalId(internalId);
+        ResolvedIdentity resolvedIdentity = resolveIdentityById(id);
         if (resolvedIdentity == null) {
             throw new IdentityNotFoundException();
         }
@@ -190,17 +210,17 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         Audit audit = new AuditBuilder().setLocalHost().setComment("update identity").build();
 
         String hashedAuthenticationId = resolvedIdentity.hashedAuthenticationId;
-        Map<String, Object> map = JsonHelper.convert(identity, new TypeReference<Map<String,Object>>(){});
+        Map<String, Object> map = convertIdentityToDataStoreEntry(identity);
 
-        // Only need to update the identity table; the internal ID table is unchanged.
+        // Only need to update the identity table; the ID table is unchanged.
         _dataStore.update(_identityTableName, hashedAuthenticationId, changeId, Deltas.literal(map),
                 audit, WriteConsistency.GLOBAL);
     }
 
     @Override
-    public void migrateIdentity(String internalId, String newAuthenticationId)
+    public void migrateIdentity(String id, String newAuthenticationId)
             throws IdentityNotFoundException, IdentityExistsException {
-        checkNotNull(internalId, "internalId");
+        checkNotNull(id, "id");
         checkNotNull(newAuthenticationId, newAuthenticationId);
 
         // Check the new authentication ID conflicts with an existing identity.  Note that we can't protect from a race
@@ -210,7 +230,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
             throw new IdentityExistsException();
         }
 
-        ResolvedIdentity resolvedIdentity = resolveIdentityByInternalId(internalId);
+        ResolvedIdentity resolvedIdentity = resolveIdentityById(id);
         if (resolvedIdentity == null) {
             throw new IdentityNotFoundException();
         }
@@ -224,7 +244,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         // Change the masked ID to reflect the new value
         identity.setMaskedId(mask(newAuthenticationId));
 
-        Map<String, Object> map = JsonHelper.convert(identity, new TypeReference<Map<String, Object>>(){});
+        Map<String, Object> map = convertIdentityToDataStoreEntry(identity);
 
         // Store the new identity
         Update newIdentityCreate = new Update(_identityTableName, newHashedAuthenticationId, changeId, Deltas.literal(map),
@@ -234,20 +254,20 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         Update oldIdentityDelete = new Update(_identityTableName, oldHashedAuthenticationId, changeId, Deltas.delete(),
                 audit, WriteConsistency.GLOBAL);
 
-        // Update the internal ID index table
+        // Update the ID index table
         map = ImmutableMap.<String, Object>of(HASHED_ID, newHashedAuthenticationId);
-        Update internalIdUpdate = new Update(_internalIdIndexTableName, internalId, changeId, Deltas.literal(map),
+        Update idUpdate = new Update(_idIndexTableName, id, changeId, Deltas.literal(map),
                 audit, WriteConsistency.GLOBAL);
 
-        _dataStore.updateAll(ImmutableList.of(newIdentityCreate, oldIdentityDelete, internalIdUpdate));
+        _dataStore.updateAll(ImmutableList.of(newIdentityCreate, oldIdentityDelete, idUpdate));
     }
 
     @Override
-    public void deleteIdentity(String internalId) {
-        checkNotNull(internalId, "internalId");
+    public void deleteIdentity(String id) {
+        checkNotNull(id, "id");
         validateTables();
 
-        ResolvedIdentity resolvedIdentity = resolveIdentityByInternalId(internalId);
+        ResolvedIdentity resolvedIdentity = resolveIdentityById(id);
         if (resolvedIdentity == null) {
             // Don't raise an exception, just return taking no action
             return;
@@ -261,33 +281,33 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
                 new AuditBuilder().setLocalHost().setComment("delete identity").build(),
                 WriteConsistency.GLOBAL);
 
-        // Don't delete the entry from the internal ID index table; it will be lazily deleted next time it is used.
+        // Don't delete the entry from the ID index table; it will be lazily deleted next time it is used.
         // Otherwise there may be a race condition when an API key is migrated.
     }
 
-    private ResolvedIdentity resolveIdentityByInternalId(String internalId) {
-        checkNotNull(internalId, "internalId");
+    private ResolvedIdentity resolveIdentityById(String id) {
+        checkNotNull(id, "id");
         validateTables();
         
         String hashedAuthenticationId = null;
         T identity = null;
 
         // First try using the index table to determine the hashed ID.
-        Map<String, Object> internalIdRecord = _dataStore.get(_internalIdIndexTableName, internalId);
-        if (!Intrinsic.isDeleted(internalIdRecord)) {
-            hashedAuthenticationId = (String) internalIdRecord.get(HASHED_ID);
+        Map<String, Object> idRecord = _dataStore.get(_idIndexTableName, id);
+        if (!Intrinsic.isDeleted(idRecord)) {
+            hashedAuthenticationId = (String) idRecord.get(HASHED_ID);
             Map<String, Object> identityEntry = _dataStore.get(_identityTableName, hashedAuthenticationId);
             identity = convertDataStoreEntryToIdentity(identityEntry);
 
-            if (identity == null || !identity.getInternalId().equals(internalId)) {
-                // The internal ID index table entry was stale.  Delete it.
+            if (identity == null || !identity.getId().equals(id)) {
+                // The ID index table entry was stale.  Delete it.
                 Delta deleteIndexRecord = Deltas.conditional(
                         Conditions.mapBuilder()
                                 .matches(HASHED_ID, Conditions.equal(hashedAuthenticationId))
                                 .build(),
                         Deltas.delete());
 
-                _dataStore.update(_internalIdIndexTableName, internalId, TimeUUIDs.newUUID(), deleteIndexRecord,
+                _dataStore.update(_idIndexTableName, id, TimeUUIDs.newUUID(), deleteIndexRecord,
                         new AuditBuilder().setLocalHost().setComment("delete stale identity").build());
 
                 // Disregard the value
@@ -303,16 +323,16 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
             while (entries.hasNext() && identity == null) {
                 Map<String, Object> entry = entries.next();
                 T potentialIdentity = convertDataStoreEntryToIdentity(entry);
-                if (potentialIdentity != null && internalId.equals(potentialIdentity.getInternalId())) {
+                if (potentialIdentity != null && id.equals(potentialIdentity.getId())) {
                     // We found the identity
                     hashedAuthenticationId = Intrinsic.getId(entry);
                     identity = potentialIdentity;
 
-                    // Update the internal ID index.  There is a possible race condition if the identity is being
+                    // Update the ID index.  There is a possible race condition if the identity is being
                     // migrated concurrent to this update.  If that happens, however, the next time it is read the
                     // index will be incorrect and it will be lazily updated at that time.
                     Delta updateIndexRecord = Deltas.literal(ImmutableMap.of(HASHED_ID, hashedAuthenticationId));
-                    _dataStore.update(_internalIdIndexTableName, internalId, TimeUUIDs.newUUID(), updateIndexRecord,
+                    _dataStore.update(_idIndexTableName, id, TimeUUIDs.newUUID(), updateIndexRecord,
                             new AuditBuilder().setLocalHost().setComment("update identity").build());
                 }
             }
@@ -340,12 +360,12 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
                         new AuditBuilder().setLocalHost().setComment("create identity table").build());
             }
 
-            if (!_dataStore.getTableExists(_internalIdIndexTableName)) {
+            if (!_dataStore.getTableExists(_idIndexTableName)) {
                 _dataStore.createTable(
-                        _internalIdIndexTableName,
+                        _idIndexTableName,
                         new TableOptionsBuilder().setPlacement(_placement).build(),
                         ImmutableMap.<String, Object>of(),
-                        new AuditBuilder().setLocalHost().setComment("create internal ID table").build());
+                        new AuditBuilder().setLocalHost().setComment("create ID table").build());
             }
 
             _tablesValidated = true;
@@ -367,7 +387,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
     }
 
     /**
-     * Helper class for resolving an identity by its internal ID.
+     * Helper class for resolving an identity by its ID.
      */
     private class ResolvedIdentity {
         String hashedAuthenticationId;

@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,12 +55,12 @@ public abstract class ResourceTest {
                                                             Map<String, ApiKey> apiKeys,
                                                             Multimap<String, String> permissionsByRole) {
         //noinspection unchecked
-        Supplier<String> internalIdSupplier = mock(Supplier.class);
-        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(internalIdSupplier);
+        Supplier<String> idSupplier = mock(Supplier.class);
+        InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>(idSupplier);
         for (Map.Entry<String, ApiKey> entry : apiKeys.entrySet()) {
             String key = entry.getKey();
             ApiKey apiKey = entry.getValue();
-            when(internalIdSupplier.get()).thenReturn(apiKey.getInternalId());
+            when(idSupplier.get()).thenReturn(apiKey.getId());
             authIdentityManager.createIdentity(key,
                     new ApiKeyModification()
                             .withOwner(apiKey.getOwner())

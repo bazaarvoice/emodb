@@ -13,14 +13,14 @@ import java.util.Set;
  */
 public class ApiKey extends AuthIdentity {
 
-    public ApiKey(String internalId, Set<String> roles) {
-        super(internalId, roles);
+    public ApiKey(String id, Set<String> roles) {
+        super(id, roles);
     }
 
     @JsonCreator
-    public ApiKey(@JsonProperty("internalId") String internalId,
+    public ApiKey(@JsonProperty("id") String id,
                   @JsonProperty("roles") List<String> roles) {
 
-        this(internalId, ImmutableSet.copyOf(roles));
+        this(id, ImmutableSet.copyOf(roles));
     }
 }

@@ -138,7 +138,7 @@ public class QueueResource1 {
     public long getClaimCount(@QueryParam("partitioned") BooleanParam partitioned,
                               @PathParam("queue") String queue,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getId()).getClaimCount(queue);
+        return getService(partitioned, subject.getAuthenticationId()).getClaimCount(queue);
     }
 
     @GET
@@ -168,7 +168,7 @@ public class QueueResource1 {
                               @QueryParam("ttl") @DefaultValue("30") SecondsParam claimTtl,
                               @QueryParam("limit") @DefaultValue("10") IntParam limit,
                               @Authenticated Subject subject) {
-        return getService(partitioned, subject.getId()).poll(queue, claimTtl.get(), limit.get());
+        return getService(partitioned, subject.getAuthenticationId()).poll(queue, claimTtl.get(), limit.get());
     }
 
     @POST
@@ -187,7 +187,7 @@ public class QueueResource1 {
                                  @Authenticated Subject subject) {
         // Check for null parameters, which will throw a 400, otherwise it throws a 5xx error
         checkArgument(messageIds != null, "Missing message Ids");
-        getService(partitioned, subject.getId()).renew(queue, messageIds, claimTtl.get());
+        getService(partitioned, subject.getAuthenticationId()).renew(queue, messageIds, claimTtl.get());
         return SuccessResponse.instance();
     }
 
@@ -206,7 +206,7 @@ public class QueueResource1 {
                                        @Authenticated Subject subject) {
         // Check for null parameters, which will throw a 400, otherwise it throws a 5xx error
         checkArgument(messageIds != null, "Missing message Ids");
-        getService(partitioned, subject.getId()).acknowledge(queue, messageIds);
+        getService(partitioned, subject.getAuthenticationId()).acknowledge(queue, messageIds);
         return SuccessResponse.instance();
     }
 
@@ -249,7 +249,7 @@ public class QueueResource1 {
     public SuccessResponse unclaimAll(@QueryParam("partitioned") BooleanParam partitioned,
                                       @PathParam("queue") String queue,
                                       @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).unclaimAll(queue);
+        getService(partitioned, subject.getAuthenticationId()).unclaimAll(queue);
         return SuccessResponse.instance();
     }
 
@@ -264,7 +264,7 @@ public class QueueResource1 {
     public SuccessResponse purge(@QueryParam("partitioned") BooleanParam partitioned,
                                  @PathParam("queue") String queue,
                                  @Authenticated Subject subject) {
-        getService(partitioned, subject.getId()).purge(queue);
+        getService(partitioned, subject.getAuthenticationId()).purge(queue);
         return SuccessResponse.instance();
     }
 

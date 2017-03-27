@@ -82,10 +82,10 @@ public class CachingTest {
         _cacheManager = new GuavaCacheManager(cacheRegistry);
 
         //noinspection unchecked
-        Supplier<String> internalIdSupplier = mock(Supplier.class);
-        when(internalIdSupplier.get()).thenReturn("id0", "id1").thenThrow(new IllegalStateException("Unexpected createIdentity call"));
+        Supplier<String> idSupplier = mock(Supplier.class);
+        when(idSupplier.get()).thenReturn("id0", "id1").thenThrow(new IllegalStateException("Unexpected createIdentity call"));
         
-        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>(internalIdSupplier);
+        InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>(idSupplier);
         _authIdentityCaching = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
         _authIdentityManager = spy(_authIdentityCaching);
 

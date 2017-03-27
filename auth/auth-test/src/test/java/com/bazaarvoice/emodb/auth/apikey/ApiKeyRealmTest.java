@@ -13,7 +13,6 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.core.DefaultCacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
 import org.apache.shiro.authz.Permission;
@@ -216,8 +215,8 @@ public class ApiKeyRealmTest {
     }
 
     @Test
-    public void testPermissionCheckByInternalId() {
-        String internalId = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
+    public void testPermissionCheckById() {
+        String id = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);
         Permission negativePermission = mock(Permission.class);
@@ -225,25 +224,25 @@ public class ApiKeyRealmTest {
         when(rolePermission.implies(not(eq(positivePermission)))).thenReturn(false);
         when(_permissionManager.getPermissions(PermissionIDs.forRole("role0"))).thenReturn(ImmutableSet.of(rolePermission));
 
-        // Verify the internal ID is not cached
-        assertNull(_underTest.getInternalAuthorizationCache().get(internalId));
+        // Verify the ID is not cached
+        assertNull(_underTest.getIdAuthorizationCache().get(id));
         // Verify permission was granted
-        assertTrue(_underTest.hasPermissionByInternalId(internalId, positivePermission));
-        // Verify the internal ID was cached
-        assertNotNull(_underTest.getInternalAuthorizationCache().get(internalId));
+        assertTrue(_underTest.hasPermissionById(id, positivePermission));
+        // Verify the ID was cached
+        assertNotNull(_underTest.getIdAuthorizationCache().get(id));
         // Verify no API key information was cached
         assertTrue(_underTest.getAuthenticationCache().keys().isEmpty());
         // Verify permission is granted using the API key
         PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
         assertTrue(_underTest.isPermitted(principals, positivePermission));
         // Negative tests
-        assertFalse(_underTest.hasPermissionByInternalId(internalId, negativePermission));
+        assertFalse(_underTest.hasPermissionById(id, negativePermission));
         assertFalse(_underTest.isPermitted(principals, negativePermission));
     }
 
     @Test
-    public void testCachedPermissionCheckByInternalId() {
-        String internalId = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
+    public void testCachedPermissionCheckById() {
+        String id = _authIdentityManager.createIdentity("apikey0", new ApiKeyModification().addRoles("role0"));
         Permission rolePermission = mock(Permission.class);
         Permission positivePermission = mock(Permission.class);
         when(rolePermission.implies(positivePermission)).thenReturn(true);
@@ -253,19 +252,19 @@ public class ApiKeyRealmTest {
         // Verify permission is granted using the API key
         PrincipalCollection principals = _underTest.getAuthenticationInfo(new ApiKeyAuthenticationToken("apikey0")).getPrincipals();
         assertTrue(_underTest.isPermitted(principals, positivePermission));
-        // Verify the internal ID was cached
-        assertNotNull(_underTest.getInternalAuthorizationCache().get(internalId));
+        // Verify the ID was cached
+        assertNotNull(_underTest.getIdAuthorizationCache().get(id));
         // Verify permission was granted
-        assertTrue(_underTest.hasPermissionByInternalId(internalId, positivePermission));
+        assertTrue(_underTest.hasPermissionById(id, positivePermission));
     }
 
     @Test
-    public void testCachedPermissionCheckByInvalidInternalId() {
-        // Verify permission is not granted to a non-existing internal ID
-        assertFalse(_underTest.hasPermissionByInternalId("id0", mock(Permission.class)));
-        // Verify the internal ID was cached
-        assertNotNull(_underTest.getInternalAuthorizationCache().get("id0"));
+    public void testCachedPermissionCheckByInvalidId() {
+        // Verify permission is not granted to a non-existing ID
+        assertFalse(_underTest.hasPermissionById("id0", mock(Permission.class)));
+        // Verify the ID was cached
+        assertNotNull(_underTest.getIdAuthorizationCache().get("id0"));
         // Test again now that the authentication info is cached
-        assertFalse(_underTest.hasPermissionByInternalId("id0", mock(Permission.class)));
+        assertFalse(_underTest.hasPermissionById("id0", mock(Permission.class)));
     }
 }

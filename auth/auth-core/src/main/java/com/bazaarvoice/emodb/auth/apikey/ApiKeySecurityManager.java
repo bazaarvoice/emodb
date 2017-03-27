@@ -31,22 +31,22 @@ public class ApiKeySecurityManager extends DefaultSecurityManager implements Emo
     }
 
     @Override
-    public boolean hasPermissionByInternalId(String internalId, String permission) {
-        return getRealm().hasPermissionByInternalId(internalId, permission);
+    public boolean hasPermissionById(String id, String permission) {
+        return getRealm().hasPermissionById(id, permission);
     }
 
     @Override
-    public boolean hasPermissionByInternalId(String internalId, Permission permission) {
-        return getRealm().hasPermissionByInternalId(internalId, permission);
+    public boolean hasPermissionById(String id, Permission permission) {
+        return getRealm().hasPermissionById(id, permission);
     }
 
     @Override
-    public boolean hasPermissionsByInternalId(String internalId, String... permissions) {
-        return getRealm().hasPermissionsByInternalId(internalId, permissions);
+    public boolean hasPermissionsById(String id, String... permissions) {
+        return getRealm().hasPermissionsById(id, permissions);
     }
 
     @Override
-    public boolean hasPermissionsByInternalId(String internalId, Permission... permissions) {
-        return getRealm().hasPermissionsByInternalId(internalId, permissions);
+    public boolean hasPermissionsById(String id, Permission... permissions) {
+        return getRealm().hasPermissionsById(id, permissions);
     }
 }

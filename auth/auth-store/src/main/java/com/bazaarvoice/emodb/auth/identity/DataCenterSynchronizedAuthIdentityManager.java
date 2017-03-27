@@ -22,8 +22,8 @@ public class DataCenterSynchronizedAuthIdentityManager<T extends AuthIdentity> i
     }
 
     @Override
-    public T getIdentity(String internalId) {
-        return _delegate.getIdentity(internalId);
+    public T getIdentity(String id) {
+        return _delegate.getIdentity(id);
     }
 
     @Override
@@ -38,19 +38,19 @@ public class DataCenterSynchronizedAuthIdentityManager<T extends AuthIdentity> i
     }
 
     @Override
-    public void updateIdentity(String internalId, AuthIdentityModification<T> modification)
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
             throws IdentityNotFoundException {
-        _synchronizer.inMutex(() -> _delegate.updateIdentity(internalId, modification));
+        _synchronizer.inMutex(() -> _delegate.updateIdentity(id, modification));
     }
 
     @Override
-    public void migrateIdentity(String internalId, String newAuthenticationId)
+    public void migrateIdentity(String id, String newAuthenticationId)
             throws IdentityNotFoundException, IdentityExistsException {
-        _synchronizer.inMutex(() -> _delegate.migrateIdentity(internalId, newAuthenticationId));
+        _synchronizer.inMutex(() -> _delegate.migrateIdentity(id, newAuthenticationId));
     }
 
     @Override
-    public void deleteIdentity(String internalId) {
-        _synchronizer.inMutex(() -> _delegate.deleteIdentity(internalId));
+    public void deleteIdentity(String id) {
+        _synchronizer.inMutex(() -> _delegate.deleteIdentity(id));
     }
 }

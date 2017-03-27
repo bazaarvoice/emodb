@@ -139,12 +139,12 @@ public class DatabusJerseyTest extends ResourceTest {
                 .usingCredentials(APIKEY_UNAUTHORIZED);
     }
 
-    private Matcher<Subject> matchesSubject(final String apiKey, final String internalId) {
+    private Matcher<Subject> matchesSubject(final String apiKey, final String id) {
         return new BaseMatcher<Subject>() {
             @Override
             public boolean matches(Object o) {
                 Subject subject = (Subject) o;
-                return subject != null && subject.getId().equals(apiKey) && subject.getInternalId().equals(internalId);
+                return subject != null && subject.getAuthenticationId().equals(apiKey) && subject.getId().equals(id);
             }
 
             @Override
@@ -164,8 +164,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
     private Subject createSubject() {
         Subject subject = mock(Subject.class);
-        when(subject.getId()).thenReturn(APIKEY_DATABUS);
-        when(subject.getInternalId()).thenReturn(INTERNAL_ID_DATABUS);
+        when(subject.getAuthenticationId()).thenReturn(APIKEY_DATABUS);
+        when(subject.getId()).thenReturn(INTERNAL_ID_DATABUS);
         return subject;
     }
 

@@ -165,7 +165,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
         @Override
         public boolean canAccessSubscription(OwnedSubscription subscription) {
             return _ownerId.equals(subscription.getOwnerId()) ||
-                    _internalAuthorizer.hasPermissionByInternalId(_ownerId,
+                    _internalAuthorizer.hasPermissionById(_ownerId,
                             Permissions.assumeDatabusSubscriptionOwnership(new NamedResource(subscription.getName())));
         }
 
@@ -185,7 +185,7 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
      * return a cached value.
      */
     private boolean ownerCanReadTable(String ownerId, String table) {
-        return _internalAuthorizer.hasPermissionByInternalId(ownerId, getReadPermission(table));
+        return _internalAuthorizer.hasPermissionById(ownerId, getReadPermission(table));
     }
 
     /**

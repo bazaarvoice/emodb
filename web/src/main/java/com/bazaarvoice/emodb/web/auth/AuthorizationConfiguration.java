@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull;
 public class AuthorizationConfiguration {
 
     private final static String DEFAULT_IDENTITY_TABLE = "__auth:keys";
-    private final static String DEFAULT_INTERNAL_ID_INDEX_TABLE = "__auth:internal_ids";
+    private final static String DEFAULT_ID_INDEX_TABLE = "__auth:internal_ids";
     private final static String DEFAULT_PERMISSION_TABLE = "__auth:permissions";
     private final static String DEFAULT_ROLE_TABLE = "__auth:roles";
     private final static String DEFAULT_ROLE_GROUP_TABLE = "__auth:role_groups";
@@ -16,9 +16,9 @@ public class AuthorizationConfiguration {
     // Table for storing API keys
     @NotNull
     private String _identityTable = DEFAULT_IDENTITY_TABLE;
-    // Table for storing index of internal IDs to hashed identity keys
+    // Table for storing index of IDs to hashed identity keys
     @NotNull
-    private String _internalIdIndexTable = DEFAULT_INTERNAL_ID_INDEX_TABLE;
+    private String _idIndexTable = DEFAULT_ID_INDEX_TABLE;
     // Table for storing permissions
     @NotNull
     private String _permissionsTable = DEFAULT_PERMISSION_TABLE;
@@ -49,12 +49,12 @@ public class AuthorizationConfiguration {
         return this;
     }
 
-    public String getInternalIdIndexTable() {
-        return _internalIdIndexTable;
+    public String getIdIndexTable() {
+        return _idIndexTable;
     }
 
-    public AuthorizationConfiguration setInternalIdIndexTable(String internalIdIndexTable) {
-        _internalIdIndexTable = internalIdIndexTable;
+    public AuthorizationConfiguration setIdIndexTable(String idIndexTable) {
+        _idIndexTable = idIndexTable;
         return this;
     }
 

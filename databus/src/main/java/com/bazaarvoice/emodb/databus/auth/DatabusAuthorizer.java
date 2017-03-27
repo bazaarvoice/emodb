@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 
 /**
  * This interface defines the interactions for authorizing databus subscription and fanout operations.
- * In all cases the ownerId is the internal ID for a user.
+ * In all cases the ownerId is the ID for a user.
  */
 public interface DatabusAuthorizer {
 
