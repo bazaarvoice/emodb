@@ -29,15 +29,15 @@ systemOfRecord:
                table.audit: sys_audit
                table.delta: sys_delta
                table.history: sys_history
-      pii_us:
+      pii_eu:
          replicationFactor: 1
          tables:
             default:
-               keyspace: pii_us
+               keyspace: pii_eu
                table.audit: pii_audit
                table.delta: pii_delta
                table.history: pii_history
-
+                     
 databus:
    keyspaces:
       databus:

@@ -34,7 +34,7 @@ cluster: local_default
 
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter1
+  currentDataCenter: datacenter2
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
   cassandraDataCenter: datacenter1
@@ -43,10 +43,10 @@ dataCenter:
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8080
+  dataCenterServiceUri: http://localhost:9090
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8081
+  dataCenterAdminUri: http://localhost:9091
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
@@ -68,7 +68,6 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
-  - "pii_us:pii"
   - "pii_eu:pii"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
@@ -94,7 +93,7 @@ systemOfRecord:
         app_global: {}
         ugc_global: {}
         catalog_global:  {}
-        pii_us: {}
+        pii_eu: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -103,9 +102,6 @@ systemOfRecord:
 
 
 databus:
-  longPollPollingThreadCount: 0
-  longPollKeepAliveThreadCount: 0
-
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
@@ -230,10 +226,10 @@ auth:
 server:
   applicationConnectors:
     - type: instrumentedHttp
-      port: 8080
+      port: 9090
   adminConnectors:
     - type: instrumentedHttp
-      port: 8081
+      port: 9091
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
