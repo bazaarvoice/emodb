@@ -18,6 +18,8 @@
         <mavenVersion>3.1.1</mavenVersion>
         <mavenPluginAnnotationsVersion>3.2</mavenPluginAnnotationsVersion>
         <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
+        <config.file>config-local.yaml</config.file>
+        <ddl.file>config-ddl-local.yaml</ddl.file>
     </properties>
 
     <dependencies>
@@ -145,8 +147,8 @@
                                     <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
                                     <arguments>
                                         <argument>server</argument>
-                                        <argument>${project.basedir}/config-local.yaml</argument>
-                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>${project.basedir}/${config.file}</argument>
+                                        <argument>${project.basedir}/${ddl.file}</argument>
                                         <argument>-z</argument>
                                     </arguments>
                                 </configuration>
