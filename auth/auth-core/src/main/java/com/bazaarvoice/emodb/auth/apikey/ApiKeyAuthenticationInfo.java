@@ -17,14 +17,15 @@ public class ApiKeyAuthenticationInfo implements AuthenticationInfo {
     private final PrincipalCollection _principals;
     private final String _credentials;
 
-    public ApiKeyAuthenticationInfo(ApiKey apiKey, String realm) {
+    public ApiKeyAuthenticationInfo(String authenticationId, ApiKey apiKey, String realm) {
+        checkNotNull(authenticationId, "authenticationId");
         checkNotNull(apiKey, "apiKey");
         checkNotNull(realm, "realm");
         // Identify the principal by API key
-        PrincipalWithRoles principal = new PrincipalWithRoles(apiKey.getId(), apiKey.getInternalId(), apiKey.getRoles());
+        PrincipalWithRoles principal = new PrincipalWithRoles(authenticationId, apiKey.getId(), apiKey.getRoles());
         _principals = new SimplePrincipalCollection(principal, realm);
         // Use the API key as the credentials
-        _credentials = apiKey.getId();
+        _credentials = authenticationId;
     }
 
     @Override

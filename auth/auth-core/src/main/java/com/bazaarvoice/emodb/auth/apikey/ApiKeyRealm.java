@@ -40,7 +40,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class ApiKeyRealm extends AuthorizingRealm {
 
     private static final String DEFAULT_ROLES_CACHE_SUFFIX = ".rolesCache";
-    private static final String DEFAULT_INTERNAL_AUTHORIZATION_CACHE_SUFFIX = ".internalAuthorizationCache";
+    private static final String DEFAULT_ID_AUTHORIZATION_CACHE_SUFFIX = ".idAuthorizationCache";
 
     private final Logger _log = LoggerFactory.getLogger(getClass());
 
@@ -50,18 +50,18 @@ public class ApiKeyRealm extends AuthorizingRealm {
     private final boolean _clearCaches;
 
     /**
-     * Internal AuthorizationInfo instance used to cache when an internal ID does not map to a user.
+     * Reserved AuthorizationInfo instance used to cache when an ID does not map to a user.
      * Necessary because our cache implementation cannot store nulls.  This instance has no roles or permissions.
      */
     private final AuthorizationInfo _nullAuthorizationInfo = new SimpleAuthorizationInfo(ImmutableSet.<String>of());
 
     // Cache for permissions by role.
     private Cache<String, RolePermissionSet> _rolesCache;
-    // Cache for authorization info by user's internal ID.
-    private Cache<String, AuthorizationInfo> _internalAuthorizationCache;
+    // Cache for authorization info by user's ID.
+    private Cache<String, AuthorizationInfo> _idAuthorizationCache;
 
     private String _rolesCacheName;
-    private String _internalAuthorizationCacheName;
+    private String _idAuthorizationCacheName;
 
     public ApiKeyRealm(String name, CacheManager cacheManager, AuthIdentityReader<ApiKey> authIdentityReader,
                        PermissionReader permissionReader, @Nullable String anonymousId) {
@@ -136,13 +136,13 @@ public class ApiKeyRealm extends AuthorizingRealm {
                     };
                 }
 
-                cacheName = getInternalAuthorizationCacheName();
+                cacheName = getIdAuthorizationCacheName();
                 if (cacheName != null && name.equals(cacheName)) {
                     return new ValidatingCacheManager.CacheValidator<String, AuthorizationInfo>(String.class, AuthorizationInfo.class) {
                         @Override
                         public boolean isCurrentValue(String key, AuthorizationInfo value) {
-                            // Key is the internal ID
-                            AuthorizationInfo authorizationInfo = getUncachedAuthorizationInfoByInternalId(key);
+                            // Key is the identity's ID
+                            AuthorizationInfo authorizationInfo = getUncachedAuthorizationInfoById(key);
                             // Only the roles are used for authorization
                             return authorizationInfo != null && authorizationInfo.getRoles().equals(value.getRoles());
                         }
@@ -171,8 +171,8 @@ public class ApiKeyRealm extends AuthorizingRealm {
         super.onInit();
         // Force creation of the roles cache on initialization
         getAvailableRolesCache();
-        // Create a cache for internal IDs
-        getAvailableInternalAuthorizationCache();
+        // Create a cache for IDs
+        getAvailableIdAuthorizationCache();
     }
 
     /**
@@ -210,20 +210,20 @@ public class ApiKeyRealm extends AuthorizingRealm {
     /**
      * Gets the authentication info for an API key from the source (not from cache).
      */
-    private AuthenticationInfo getUncachedAuthenticationInfoForKey(String id) {
-        ApiKey apiKey = _authIdentityReader.getIdentity(id);
+    private AuthenticationInfo getUncachedAuthenticationInfoForKey(String authenicationId) {
+        ApiKey apiKey = _authIdentityReader.getIdentityByAuthenticationId(authenicationId);
         if (apiKey == null) {
             return null;
         }
 
-        return createAuthenticationInfo(apiKey);
+        return createAuthenticationInfo(authenicationId, apiKey);
     }
 
     /**
      * Simple method to build and AuthenticationInfo instance from an API key.
      */
-    private ApiKeyAuthenticationInfo createAuthenticationInfo(ApiKey apiKey) {
-        return new ApiKeyAuthenticationInfo(apiKey, getName());
+    private ApiKeyAuthenticationInfo createAuthenticationInfo(String authenticationId, ApiKey apiKey) {
+        return new ApiKeyAuthenticationInfo(authenticationId, apiKey, getName());
     }
 
     /**
@@ -235,12 +235,12 @@ public class ApiKeyRealm extends AuthorizingRealm {
 
         AuthorizationInfo authorizationInfo = getUncachedAuthorizationInfoFromPrincipals(principals);
 
-        Cache<String, AuthorizationInfo> internalAuthorizationCache = getAvailableInternalAuthorizationCache();
-        if (internalAuthorizationCache != null) {
-            // Proactively cache any internal ID authorization info not already in cache
+        Cache<String, AuthorizationInfo> idAuthorizationCache = getAvailableIdAuthorizationCache();
+        if (idAuthorizationCache != null) {
+            // Proactively cache any ID authorization info not already in cache
             for (PrincipalWithRoles principal : getPrincipalsFromPrincipalCollection(principals)) {
-                if (internalAuthorizationCache.get(principal.getInternalId()) == null) {
-                    cacheAuthorizationInfoByInternalId(principal.getInternalId(), authorizationInfo);
+                if (idAuthorizationCache.get(principal.getId()) == null) {
+                    cacheAuthorizationInfoById(principal.getId(), authorizationInfo);
                 }
             }
         }
@@ -270,22 +270,22 @@ public class ApiKeyRealm extends AuthorizingRealm {
     @Override
     public void setName(String name) {
         super.setName(name);
-        // Set reasonable defaults for the role and internal authorization caches.
+        // Set reasonable defaults for the role and ID authorization caches.
         _rolesCacheName = name + DEFAULT_ROLES_CACHE_SUFFIX;
-        _internalAuthorizationCacheName = name + DEFAULT_INTERNAL_AUTHORIZATION_CACHE_SUFFIX;
+        _idAuthorizationCacheName = name + DEFAULT_ID_AUTHORIZATION_CACHE_SUFFIX;
     }
 
     public String getRolesCacheName() {
         return _rolesCacheName;
     }
 
-    public void setInternalAuthorizationCacheName(String name) {
-        _internalAuthorizationCacheName = name + DEFAULT_INTERNAL_AUTHORIZATION_CACHE_SUFFIX;
-        getAvailableInternalAuthorizationCache();
+    public void setIdAuthorizationCacheName(String name) {
+        _idAuthorizationCacheName = name + DEFAULT_ID_AUTHORIZATION_CACHE_SUFFIX;
+        getAvailableIdAuthorizationCache();
     }
 
-    public String getInternalAuthorizationCacheName() {
-        return _internalAuthorizationCacheName;
+    public String getIdAuthorizationCacheName() {
+        return _idAuthorizationCacheName;
     }
 
     protected Cache<String, RolePermissionSet> getAvailableRolesCache() {
@@ -300,20 +300,20 @@ public class ApiKeyRealm extends AuthorizingRealm {
         return _rolesCache;
     }
 
-    public Cache<String, AuthorizationInfo> getInternalAuthorizationCache() {
-        return _internalAuthorizationCache;
+    public Cache<String, AuthorizationInfo> getIdAuthorizationCache() {
+        return _idAuthorizationCache;
     }
 
-    protected Cache<String, AuthorizationInfo> getAvailableInternalAuthorizationCache() {
+    protected Cache<String, AuthorizationInfo> getAvailableIdAuthorizationCache() {
         if (getCacheManager() == null) {
             return null;
         }
 
-        if (_internalAuthorizationCache == null) {
-            String cacheName = getInternalAuthorizationCacheName();
-            _internalAuthorizationCache = getCacheManager().getCache(cacheName);
+        if (_idAuthorizationCache == null) {
+            String cacheName = getIdAuthorizationCacheName();
+            _idAuthorizationCache = getCacheManager().getCache(cacheName);
         }
-        return _internalAuthorizationCache;
+        return _idAuthorizationCache;
     }
 
     private RolePermissionResolver createRolePermissionResolver() {
@@ -370,101 +370,100 @@ public class ApiKeyRealm extends AuthorizingRealm {
     }
 
     /**
-     * Gets the authorization info for a user by their internal ID.  If possible the value is cached for
-     * efficient lookup.
+     * Gets the authorization info for a user by their ID.  If possible the value is cached for efficient lookup.
      */
     @Nullable
-    private AuthorizationInfo getAuthorizationInfoByInternalId(String internalId) {
+    private AuthorizationInfo getAuthorizationInfoById(String id) {
         AuthorizationInfo authorizationInfo;
 
         // Search the cache first
-        Cache<String, AuthorizationInfo> internalAuthorizationCache = getAvailableInternalAuthorizationCache();
+        Cache<String, AuthorizationInfo> idAuthorizationCache = getAvailableIdAuthorizationCache();
 
-        if (internalAuthorizationCache != null) {
-            authorizationInfo = internalAuthorizationCache.get(internalId);
+        if (idAuthorizationCache != null) {
+            authorizationInfo = idAuthorizationCache.get(id);
 
             if (authorizationInfo != null) {
                 // Check whether it is the stand-in "null" cached value
                 if (authorizationInfo != _nullAuthorizationInfo) {
-                    _log.debug("Authorization info found cached for internal id {}", internalId);
+                    _log.debug("Authorization info found cached for id {}", id);
                     return authorizationInfo;
                 } else {
-                    _log.debug("Authorization info previously cached as not found for internal id {}", internalId);
+                    _log.debug("Authorization info previously cached as not found for id {}", id);
                     return null;
                 }
             }
         }
 
-        authorizationInfo = getUncachedAuthorizationInfoByInternalId(internalId);
-        cacheAuthorizationInfoByInternalId(internalId, authorizationInfo);
+        authorizationInfo = getUncachedAuthorizationInfoById(id);
+        cacheAuthorizationInfoById(id, authorizationInfo);
         return authorizationInfo;
     }
 
     /**
-     * If possible, this method caches the authorization info for an API key by its internal ID.  This may be called
-     * either by an explicit call to get the authorization info by internal ID or as a side effect of loading the
-     * authorization info by API key and proactive caching by internal ID.
+     * If possible, this method caches the authorization info for an API key by its ID.  This may be called
+     * either by an explicit call to get the authorization info by ID or as a side effect of loading the
+     * authorization info by API key and proactive caching by ID.
      */
-    private void cacheAuthorizationInfoByInternalId(String internalId, AuthorizationInfo authorizationInfo) {
-        Cache<String, AuthorizationInfo> internalAuthorizationCache = getAvailableInternalAuthorizationCache();
+    private void cacheAuthorizationInfoById(String id, AuthorizationInfo authorizationInfo) {
+        Cache<String, AuthorizationInfo> idAuthorizationCache = getAvailableIdAuthorizationCache();
 
-        if (internalAuthorizationCache != null) {
-            internalAuthorizationCache.put(internalId, authorizationInfo);
+        if (idAuthorizationCache != null) {
+            idAuthorizationCache.put(id, authorizationInfo);
         }
     }
 
     /**
-     * Gets the authorization info for an API key's internal ID from the source (not from cache).
+     * Gets the authorization info for an API key's ID from the source (not from cache).
      */
-    private AuthorizationInfo getUncachedAuthorizationInfoByInternalId(String internalId) {
-        // Retrieve the roles by internal ID
-        Set<String> roles = _authIdentityReader.getRolesByInternalId(internalId);
-        if (roles == null) {
-            _log.debug("Authorization info requested for non-existent internal id {}", internalId);
+    private AuthorizationInfo getUncachedAuthorizationInfoById(String id) {
+        // Retrieve the API key by ID
+        ApiKey apiKey = _authIdentityReader.getIdentity(id);
+        if (apiKey == null) {
+            _log.debug("Authorization info requested for non-existent id {}", id);
             return _nullAuthorizationInfo;
         }
 
-        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(roles));
+        return new SimpleAuthorizationInfo(ImmutableSet.copyOf(apiKey.getRoles()));
     }
 
     /**
-     * Test for whether an API key has a specific permission using its internal ID.
+     * Test for whether an API key has a specific permission using its ID.
      */
-    public boolean hasPermissionByInternalId(String internalId, String permission) {
+    public boolean hasPermissionById(String id, String permission) {
         Permission resolvedPermission = getPermissionResolver().resolvePermission(permission);
-        return hasPermissionByInternalId(internalId, resolvedPermission);
+        return hasPermissionById(id, resolvedPermission);
     }
 
     /**
-     * Test for whether an API key has a specific permission using its internal ID.
+     * Test for whether an API key has a specific permission using its ID.
      */
-    public boolean hasPermissionByInternalId(String internalId, Permission permission) {
-        return hasPermissionsByInternalId(internalId, ImmutableList.of(permission));
+    public boolean hasPermissionById(String id, Permission permission) {
+        return hasPermissionsById(id, ImmutableList.of(permission));
     }
 
     /**
-     * Test for whether an API key has specific permissions using its internal ID.
+     * Test for whether an API key has specific permissions using its ID.
      */
-    public boolean hasPermissionsByInternalId(String internalId, String... permissions) {
+    public boolean hasPermissionsById(String id, String... permissions) {
         List<Permission> resolvedPermissions = Lists.newArrayListWithCapacity(permissions.length);
         for (String permission : permissions) {
             resolvedPermissions.add(getPermissionResolver().resolvePermission(permission));
         }
-        return hasPermissionsByInternalId(internalId, resolvedPermissions);
+        return hasPermissionsById(id, resolvedPermissions);
     }
 
     /**
-     * Test for whether an API key has specific permissions using its internal ID.
+     * Test for whether an API key has specific permissions using its ID.
      */
-    public boolean hasPermissionsByInternalId(String internalId, Permission... permissions) {
-        return hasPermissionsByInternalId(internalId, Arrays.asList(permissions));
+    public boolean hasPermissionsById(String id, Permission... permissions) {
+        return hasPermissionsById(id, Arrays.asList(permissions));
     }
 
     /**
-     * Test for whether an API key has specific permissions using its internal ID.
+     * Test for whether an API key has specific permissions using its ID.
      */
-    public boolean hasPermissionsByInternalId(String internalId, Collection<Permission> permissions) {
-        AuthorizationInfo authorizationInfo = getAuthorizationInfoByInternalId(internalId);
+    public boolean hasPermissionsById(String id, Collection<Permission> permissions) {
+        AuthorizationInfo authorizationInfo = getAuthorizationInfoById(id);
         return authorizationInfo != null && isPermittedAll(permissions, authorizationInfo);
     }
 }

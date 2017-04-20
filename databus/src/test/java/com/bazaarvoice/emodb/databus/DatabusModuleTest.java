@@ -104,7 +104,7 @@ public class DatabusModuleTest {
                 bind(CuratorFramework.class).annotatedWith(DatabusZooKeeper.class).toInstance(curator);
                 bind(HostDiscovery.class).annotatedWith(DatabusHostDiscovery.class).toInstance(mock(HostDiscovery.class));
                 bind(String.class).annotatedWith(ReplicationKey.class).toInstance("password");
-                bind(String.class).annotatedWith(SystemInternalId.class).toInstance("system");
+                bind(String.class).annotatedWith(SystemIdentity.class).toInstance("system");
                 bind(new TypeLiteral<Collection<ClusterInfo>>(){}).annotatedWith(DatabusClusterInfo.class)
                         .toInstance(ImmutableList.of(new ClusterInfo("Test Cluster", "Test Metric Cluster")));
                 bind(JobService.class).toInstance(mock(JobService.class));

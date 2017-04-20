@@ -16,6 +16,8 @@ import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.bazaarvoice.emodb.test.ResourceTest;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.sun.jersey.api.client.ClientResponse;
@@ -39,9 +41,10 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new ExceptionResource()),
-            new ApiKey("unused", "id0", ImmutableSet.<String>of()),
-            new ApiKey("also-unused", "id1", ImmutableSet.<String>of()),
-            "exception");
+            ImmutableMap.of(
+                    "unused" , new ApiKey("id0", ImmutableSet.of()),
+                    "also-unused", new ApiKey("id1", ImmutableSet.<String>of())),
+            ImmutableMultimap.of());
 
     @Test
     public void testIllegalArgumentException() {

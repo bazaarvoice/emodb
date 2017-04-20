@@ -65,19 +65,19 @@ public class DeferringRoleManager implements RoleManager {
     }
 
     @Override
-    public Role createRole(RoleIdentifier id, RoleUpdateRequest request) {
+    public Role createRole(RoleIdentifier id, RoleModification modification) {
         checkNotNull(id, "id");
         if (_rolesById.containsKey(id)) {
             throw new RoleExistsException(id.getGroup(), id.getId());
         }
-        return _delegate.createRole(id, request);
+        return _delegate.createRole(id, modification);
     }
 
     @Override
-    public void updateRole(RoleIdentifier id, RoleUpdateRequest request) {
+    public void updateRole(RoleIdentifier id, RoleModification modification) {
         checkNotNull(id, "id");
         checkArgument(!_rolesById.containsKey(id), "Cannot update role %s", id);
-        _delegate.updateRole(id, request);
+        _delegate.updateRole(id, modification);
     }
 
     @Override

@@ -1,14 +1,9 @@
 package com.bazaarvoice.emodb.auth.identity;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -20,25 +15,28 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DeferringAuthIdentityManager<T extends AuthIdentity> implements AuthIdentityManager<T> {
 
     private final AuthIdentityManager<T> _manager;
-    private final Map<String, T> _identityMap;
-    private final Map<String, T> _internalIdMap;
+    private final Map<String, T> _identitiesByAuthenticationId;
+    private final Map<String, T> _identitiesById;
 
-    public DeferringAuthIdentityManager(AuthIdentityManager<T> manager, @Nullable List<T> identities) {
+    public DeferringAuthIdentityManager(AuthIdentityManager<T> manager, @Nullable Map<String, T> identities) {
         _manager = checkNotNull(manager);
         if (identities == null) {
-            _identityMap = ImmutableMap.of();
-            _internalIdMap = ImmutableMap.of();
+            _identitiesByAuthenticationId = ImmutableMap.of();
+            _identitiesById = ImmutableMap.of();
         } else {
-            ImmutableMap.Builder<String, T> identityMapBuilder = ImmutableMap.builder();
-            ImmutableMap.Builder<String, T> internalIdMapBuilder = ImmutableMap.builder();
+            ImmutableMap.Builder<String, T> authIdMapBuilder = ImmutableMap.builder();
+            ImmutableMap.Builder<String, T> idMapBuilder = ImmutableMap.builder();
 
-            for (T identity : identities) {
-                identityMapBuilder.put(identity.getId(), identity);
-                internalIdMapBuilder.put(identity.getInternalId(), identity);
+            for (Map.Entry<String, T> entry : identities.entrySet()) {
+                String authenticationId = entry.getKey();
+                T identity = entry.getValue();
+
+                authIdMapBuilder.put(authenticationId, identity);
+                idMapBuilder.put(identity.getId(), identity);
             }
 
-            _identityMap = identityMapBuilder.build();
-            _internalIdMap = internalIdMapBuilder.build();
+            _identitiesByAuthenticationId = authIdMapBuilder.build();
+            _identitiesById = idMapBuilder.build();
         }
     }
 
@@ -46,7 +44,7 @@ public class DeferringAuthIdentityManager<T extends AuthIdentity> implements Aut
     public T getIdentity(String id) {
         checkNotNull(id, "id");
 
-        T identity = _identityMap.get(id);
+        T identity = _identitiesById.get(id);
         if (identity == null) {
             identity = _manager.getIdentity(id);
         }
@@ -54,30 +52,50 @@ public class DeferringAuthIdentityManager<T extends AuthIdentity> implements Aut
     }
 
     @Override
-    public void updateIdentity(T identity) {
-        checkNotNull(identity);
-        String id = checkNotNull(identity.getId());
-        String internalId = checkNotNull(identity.getInternalId());
-        checkArgument(!_identityMap.containsKey(id), "Cannot update static identity: %s", id);
-        checkArgument(!_internalIdMap.containsKey(internalId), "Cannot use internal ID from static identity: %s", internalId);
-        _manager.updateIdentity(identity);
+    public T getIdentityByAuthenticationId(String authenticationId) {
+        checkNotNull(authenticationId, "authenticationId");
+
+        T identity = _identitiesByAuthenticationId.get(authenticationId);
+        if (identity == null) {
+            identity = _manager.getIdentityByAuthenticationId(authenticationId);
+        }
+        return identity;
+    }
+
+    @Override
+    public String createIdentity(String authenticationId, AuthIdentityModification<T> modification)
+            throws IdentityExistsException {
+        checkNotNull(authenticationId);
+        checkNotNull(modification);
+        checkArgument(!_identitiesByAuthenticationId.containsKey(authenticationId), "Cannot update static identity: %s", authenticationId);
+        String id = _manager.createIdentity(authenticationId, modification);
+        assert !_identitiesById.containsKey(id) : "Delegate should never return an static ID";
+        return id;
+    }
+
+    @Override
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
+            throws IdentityNotFoundException {
+        checkNotNull(id);
+        checkNotNull(modification);
+        checkArgument(!_identitiesById.containsKey(id), "Cannot use ID from static identity: %s", id);
+        _manager.updateIdentity(id, modification);
+    }
+
+    @Override
+    public void migrateIdentity(String id, String newAuthenticationId)
+            throws IdentityNotFoundException, IdentityExistsException {
+        checkNotNull(id);
+        checkNotNull(newAuthenticationId);
+        checkArgument(!_identitiesByAuthenticationId.containsKey(newAuthenticationId), "Cannot update static identity: %s", newAuthenticationId);
+        checkArgument(!_identitiesById.containsKey(id), "Cannot use ID from static identity: %s", id);
+        _manager.migrateIdentity(id, newAuthenticationId);
     }
 
     @Override
     public void deleteIdentity(String id) {
         checkNotNull(id);
-        checkArgument(!_identityMap.containsKey(id), "Cannot delete static identity: %s", id);
+        checkArgument(!_identitiesByAuthenticationId.containsKey(id), "Cannot delete static identity: %s", id);
         _manager.deleteIdentity(id);
-    }
-
-    @Override
-    public Set<String> getRolesByInternalId(String internalId) {
-        checkNotNull(internalId, "internalId");
-
-        T identity = _internalIdMap.get(internalId);
-        if (identity != null) {
-            return identity.getRoles();
-        }
-        return _manager.getRolesByInternalId(internalId);
     }
 }

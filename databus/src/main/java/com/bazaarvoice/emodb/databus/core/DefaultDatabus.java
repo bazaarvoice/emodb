@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
-import com.bazaarvoice.emodb.databus.SystemInternalId;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
@@ -151,7 +151,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, DatabusAuthorizer databusAuthorizer,
-                          @SystemInternalId String systemOwnerId,
+                          @SystemIdentity String systemOwnerId,
                           @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition,
                           @QueueDrainExecutorService ExecutorService drainService,
                           MetricRegistry metricRegistry, Clock clock) {

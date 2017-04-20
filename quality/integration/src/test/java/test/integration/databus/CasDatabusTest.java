@@ -14,7 +14,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.databus.SystemInternalId;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
@@ -153,7 +153,7 @@ public class CasDatabusTest {
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
                 bind(DatabusAuthorizer.class).toInstance(ConstantDatabusAuthorizer.ALLOW_ALL);
-                bind(String.class).annotatedWith(SystemInternalId.class).toInstance("system");
+                bind(String.class).annotatedWith(SystemIdentity.class).toInstance("system");
                 bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
                 bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)

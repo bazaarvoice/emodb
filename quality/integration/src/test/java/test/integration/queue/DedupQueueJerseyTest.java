@@ -18,6 +18,7 @@ import com.bazaarvoice.ostrich.pool.OstrichAccessors;
 import com.bazaarvoice.ostrich.pool.PartitionContextValidator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
@@ -33,7 +34,6 @@ import java.util.Map;
 
 import static junit.framework.Assert.fail;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -55,10 +55,12 @@ public class DedupQueueJerseyTest extends ResourceTest {
     private final AuthDedupQueueService _proxy = mock(AuthDedupQueueService.class);
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy))),
-            new ApiKey(APIKEY_QUEUE, "queue", ImmutableSet.of("queue-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
-            "queue");
+    public ResourceTestRule _resourceTestRule = setupResourceTestRule(
+            Collections.<Object>singletonList(new DedupQueueResource1(_server, DedupQueueServiceAuthenticator.proxied(_proxy))),
+            ImmutableMap.of(
+                    APIKEY_QUEUE, new ApiKey("queue", ImmutableSet.of("queue-role")),
+                    APIKEY_UNAUTHORIZED, new ApiKey("unauth", ImmutableSet.of("unauthorized-role"))),
+            ImmutableMultimap.of("queue-role", "queue|*|*"));
 
     @After
     public void tearDownMocksAndClearState() {

@@ -36,7 +36,7 @@ import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
-import com.bazaarvoice.emodb.databus.SystemInternalId;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.FilteredDatabusAuthorizer;
@@ -444,10 +444,10 @@ public class EmoModule extends AbstractModule {
 
         @Provides @Singleton
         DatabusAuthorizer provideDatabusAuthorizer(OwnerDatabusAuthorizer ownerDatabusAuthorizer,
-                                                   @SystemInternalId String systemInternalId) {
+                                                   @SystemIdentity String systemId) {
             return FilteredDatabusAuthorizer.builder()
                     .withDefaultAuthorizer(ownerDatabusAuthorizer)
-                    .withAuthorizerForOwner(systemInternalId, new SystemProcessDatabusAuthorizer(systemInternalId))
+                    .withAuthorizerForOwner(systemId, new SystemProcessDatabusAuthorizer(systemId))
                     .build();
         }
 

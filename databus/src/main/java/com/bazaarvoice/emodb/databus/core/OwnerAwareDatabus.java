@@ -17,7 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
- * Parallel interface for {@link com.bazaarvoice.emodb.databus.api.Databus} that includes the owner's internal ID
+ * Parallel interface for {@link com.bazaarvoice.emodb.databus.api.Databus} that includes the owner's ID
  * with each request.  This class is intended for internal use only and should not be exposed outside the databus
  * module.  External systems that require a databus connection should get one using
  * {@link DatabusFactory#forOwner(String)}.

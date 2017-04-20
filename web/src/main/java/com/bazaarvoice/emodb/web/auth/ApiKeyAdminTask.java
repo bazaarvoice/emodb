@@ -2,24 +2,24 @@ package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
+import com.bazaarvoice.emodb.auth.identity.IdentityExistsException;
+import com.bazaarvoice.emodb.auth.identity.IdentityNotFoundException;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
-import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.web.auth.resource.VerifiableResource;
 import com.google.common.base.Joiner;
-import com.google.common.base.Optional;
-import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.io.BaseEncoding;
 import com.google.common.net.HostAndPort;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import org.apache.shiro.authc.AuthenticationException;
@@ -31,9 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.security.SecureRandom;
-import java.util.Date;
+import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -166,20 +167,18 @@ public class ApiKeyAdminTask extends Task {
         } catch (AuthenticationException | AuthorizationException e) {
             _log.warn("Unauthorized attempt to access API key management task");
             output.println("Not authorized");
+        } catch (IdentityNotFoundException e) {
+            output.println("Unknown API key");
+        } catch (Exception e) {
+            if (Throwables.getRootCause(e) instanceof TimeoutException) {
+                output.println("Timed out, try again later");
+            } else {
+                throw Throwables.propagate(e);
+            }
         } finally {
             subject.logout();
         }
     }
-
-    private String createUniqueInternalId() {
-        // This is effectively a TimeUUID but condensed to a slightly smaller String representation.
-        UUID uuid = TimeUUIDs.newUUID();
-        byte[] b = new byte[16];
-        System.arraycopy(Longs.toByteArray(uuid.getMostSignificantBits()), 0, b, 0, 8);
-        System.arraycopy(Longs.toByteArray(uuid.getLeastSignificantBits()), 0, b, 8, 8);
-        return BaseEncoding.base32().omitPadding().encode(b);
-    }
-
     private void createApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output)
                 throws Exception {
         String owner = getValueFromParams("owner", parameters);
@@ -196,13 +195,11 @@ public class ApiKeyAdminTask extends Task {
         // If the caller provided a specific key then only use that one.  This isn't common and should be
         // restricted to integration tests where stable keys are desirable.  In production it is better
         // to let the system create random keys.
-        Optional<String> providedKey = Iterables.tryFind(parameters.get("key"), Predicates.alwaysTrue());
+        Optional<String> providedKey = parameters.get("key").stream().findFirst();
 
         checkArgument(Sets.intersection(roles, _reservedRoles).isEmpty(), "Cannot assign reserved role");
 
-        // Generate a unique internal ID for this new key
-        String internalId = createUniqueInternalId();
-
+        String id;
         String key;
         if (providedKey.isPresent()) {
             key = providedKey.get();
@@ -210,47 +207,46 @@ public class ApiKeyAdminTask extends Task {
                 output.println("Error:  Provided key is not valid");
                 return;
             }
-            if (!createApiKeyIfAvailable(key, internalId, owner, roles, description)) {
+            if ((id = createApiKeyIfAvailable(key, owner, roles, description)) == null) {
                 output.println("Error:  Provided key exists");
                 return;
             }
         } else {
-            key = createRandomApiKey(internalId, owner, roles, description);
+            String[] result = createRandomApiKey(owner, roles, description);
+            id = result[0];
+            key = result[1];
         }
 
         output.println("API key: " + key);
+        output.println("ID: " + id);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
-    private boolean createApiKeyIfAvailable(String key, String internalId, String owner, Set<String> roles, String description) {
-        boolean exists = _authIdentityManager.getIdentity(key) != null;
-
-        if (exists) {
-            return false;
+    private String createApiKeyIfAvailable(String key,String owner, Set<String> roles, String description) {
+        try {
+            return _authIdentityManager.createIdentity(key,
+                    new ApiKeyModification()
+                            .withOwner(owner)
+                            .withDescription(description)
+                            .addRoles(roles));
+        } catch (IdentityExistsException e) {
+            return null;
         }
-
-        ApiKey apiKey = new ApiKey(key, internalId, roles);
-        apiKey.setOwner(owner);
-        apiKey.setDescription(description);
-        apiKey.setIssued(new Date());
-
-        _authIdentityManager.updateIdentity(apiKey);
-
-        return true;
     }
 
-    private String createRandomApiKey(String internalId, String owner, Set<String> roles, String description) {
+    // Returns a String array of length two containing: { id, key }
+    private String[] createRandomApiKey(String owner, Set<String> roles, String description) {
         // Since API keys are stored hashed we create them in a loop to ensure we don't grab one that is already picked
 
         String key = null;
-        boolean apiKeyCreated = false;
+        String id = null;
 
-        while (!apiKeyCreated) {
+        while (id == null) {
             key = generateRandomApiKey();
-            apiKeyCreated = createApiKeyIfAvailable(key, internalId, owner, roles, description);
+            id = createApiKeyIfAvailable(key, owner, roles, description);
         }
 
-        return key;
+        return new String[] { id, key };
     }
 
     private String generateRandomApiKey() {
@@ -285,9 +281,15 @@ public class ApiKeyAdminTask extends Task {
     private void viewApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output)
             throws Exception {
         subject.checkPermission(Permissions.readApiKey());
-        String key = getValueFromParams("key", parameters);
+        ApiKey apiKey = null;
 
-        ApiKey apiKey = _authIdentityManager.getIdentity(key);
+        try {
+            String id = getIdFromParams(parameters);
+            apiKey = _authIdentityManager.getIdentity(id);
+        } catch (IdentityNotFoundException e) {
+            // Ok, api key will be null, so fall through
+        }
+        
         if (apiKey == null) {
             output.println("Unknown key");
         } else {
@@ -313,24 +315,14 @@ public class ApiKeyAdminTask extends Task {
             subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
         }
 
-        String key = getValueFromParams("key", parameters);
-        ApiKey apiKey = _authIdentityManager.getIdentity(key);
+        String id = getIdFromParams(parameters);
+        ApiKey apiKey = _authIdentityManager.getIdentity(id);
         checkArgument(apiKey != null, "Unknown API key");
 
-        //noinspection ConstantConditions
-        Set<String> roles = Sets.newHashSet(apiKey.getRoles());
-        roles.addAll(addRoles);
-        roles.removeAll(removeRoles);
-
-        if (!roles.equals(apiKey.getRoles())) {
-            ApiKey updatedKey = new ApiKey(key, apiKey.getInternalId(), roles);
-            updatedKey.setOwner(apiKey.getOwner());
-            updatedKey.setDescription(apiKey.getDescription());
-            updatedKey.setIssued(new Date());
-
-            _authIdentityManager.updateIdentity(updatedKey);
-        }
-
+        _authIdentityManager.updateIdentity(id,
+                new ApiKeyModification()
+                        .addRoles(addRoles)
+                        .removeRoles(removeRoles));
         output.println("API key updated");
     }
 
@@ -338,37 +330,54 @@ public class ApiKeyAdminTask extends Task {
         // Migrating a key is considered a key update operation, so check for update permission
         subject.checkPermission(Permissions.updateApiKey());
 
-        String key = getValueFromParams("key", parameters);
-        ApiKey apiKey = _authIdentityManager.getIdentity(key);
-        checkArgument(apiKey != null, "Unknown API key");
-
-        // Create a new key with the same information as the existing one
-        //noinspection ConstantConditions
-        String newKey = createRandomApiKey(apiKey.getInternalId(), apiKey.getOwner(), apiKey.getRoles(), apiKey.getDescription());
-        // Delete the existing key
-        _authIdentityManager.deleteIdentity(key);
-
+        String id = getIdFromParams(parameters);
+        String newKey = generateRandomApiKey();
+        _authIdentityManager.migrateIdentity(id, newKey);
         output.println("Migrated API key: " + newKey);
         output.println("\nWarning:  This is your only chance to see this key.  Save it somewhere now.");
     }
 
     private void deleteApiKey(Subject subject, ImmutableMultimap<String, String> parameters, PrintWriter output) {
-        // Does the caller have permission to delete API keys?
-        subject.checkPermission(Permissions.deleteApiKey());
+        try {
+            String id = getIdFromParams(parameters);
+            ApiKey apiKey = _authIdentityManager.getIdentity(id);
+            if (apiKey != null) {
+                // Does the caller have permission to revoke every role from the API key?
+                for (String role : apiKey.getRoles()) {
+                    subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+                }
 
-        String key = getValueFromParams("key", parameters);
-        ApiKey apiKey = _authIdentityManager.getIdentity(key);
-
-        if (apiKey != null) {
-            // Does the caller have permission to revoke every role from the API key?
-            for (String role : apiKey.getRoles()) {
-                subject.checkPermission(Permissions.grantRole(RoleIdentifier.fromString(role)));
+                _authIdentityManager.deleteIdentity(id);
             }
+        } catch (IdentityNotFoundException e) {
+            // Don't return an error to the caller if the API key already didn't exist.
+        }
+        output.println("API key deleted");
+    }
 
-            _authIdentityManager.deleteIdentity(key);
+    private String getIdFromParams(ImmutableMultimap<String, String> parameters) {
+        // The current preferred method is for the caller to provide the API key's ID rather than they key itself,
+        // which is supposed to be secret.  For continuity we'll accept both although IDs are preferred and there is
+        // no guarantee key's will continue to be supported.
+        Collection<String> ids = parameters.get("id");
+        Collection<String> keys = parameters.get("key");
+
+        checkArgument(ids.size() + keys.size() == 1, "Exactly one ID or key is required");
+
+        String id;
+        if (!ids.isEmpty()) {
+            id = Iterables.getFirst(ids, null);
+        } else {
+            // Must convert key to ID
+            ApiKey apiKey = _authIdentityManager.getIdentityByAuthenticationId(Iterables.getFirst(keys, null));
+            if (apiKey != null) {
+                id = apiKey.getId();
+            } else {
+                throw new IdentityNotFoundException();
+            }
         }
 
-        output.println("API key deleted");
+        return id;
     }
 
     private String getValueFromParams(String value, ImmutableMultimap<String, String> parameters) {

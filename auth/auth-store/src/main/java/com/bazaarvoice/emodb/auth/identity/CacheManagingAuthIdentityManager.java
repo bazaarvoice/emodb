@@ -2,8 +2,6 @@ package com.bazaarvoice.emodb.auth.identity;
 
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 
-import java.util.Set;
-
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -26,9 +24,35 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
     }
 
     @Override
-    public void updateIdentity(T identity) {
-        checkNotNull(identity);
-        _manager.updateIdentity(identity);
+    public T getIdentityByAuthenticationId(String authenticationId) {
+        return _manager.getIdentityByAuthenticationId(authenticationId);
+    }
+
+    @Override
+    public String createIdentity(String authenticationId, AuthIdentityModification<T> modification)
+            throws IdentityExistsException {
+        checkNotNull(authenticationId, "authenticationId");
+        checkNotNull(modification, "modification");
+        String id = _manager.createIdentity(authenticationId, modification);
+        _cacheManager.invalidateAll();
+        return id;
+    }
+
+    @Override
+    public void updateIdentity(String id, AuthIdentityModification<T> modification)
+            throws IdentityNotFoundException {
+        checkNotNull(id, "id");
+        checkNotNull(modification, "modification");
+        _manager.updateIdentity(id, modification);
+        _cacheManager.invalidateAll();
+    }
+
+    @Override
+    public void migrateIdentity(String id, String newAuthenticationId)
+            throws IdentityNotFoundException, IdentityExistsException {
+        checkNotNull(id);
+        checkNotNull(newAuthenticationId);
+        _manager.migrateIdentity(id, newAuthenticationId);
         _cacheManager.invalidateAll();
     }
 
@@ -37,11 +61,5 @@ public class CacheManagingAuthIdentityManager<T extends AuthIdentity> implements
         checkNotNull(id);
         _manager.deleteIdentity(id);
         _cacheManager.invalidateAll();
-    }
-
-    @Override
-    public Set<String> getRolesByInternalId(String internalId) {
-        checkNotNull(internalId, "internalId");
-        return _manager.getRolesByInternalId(internalId);
     }
 }

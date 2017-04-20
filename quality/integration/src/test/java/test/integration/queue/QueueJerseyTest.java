@@ -19,6 +19,7 @@ import com.bazaarvoice.ostrich.pool.OstrichAccessors;
 import com.bazaarvoice.ostrich.pool.PartitionContextValidator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
@@ -56,10 +57,12 @@ public class QueueJerseyTest extends ResourceTest {
     private final AuthQueueService _proxy = mock(AuthQueueService.class);
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new QueueResource1(_server, QueueServiceAuthenticator.proxied(_proxy))),
-            new ApiKey(APIKEY_QUEUE, "queue", ImmutableSet.of("queue-role")),
-            new ApiKey(APIKEY_UNAUTHORIZED, "unauth", ImmutableSet.of("unauthorized-role")),
-            "queue");
+    public ResourceTestRule _resourceTestRule = setupResourceTestRule(
+            Collections.<Object>singletonList(new QueueResource1(_server, QueueServiceAuthenticator.proxied(_proxy))),
+            ImmutableMap.of(
+                    APIKEY_QUEUE, new ApiKey("queue", ImmutableSet.of("queue-role")),
+                    APIKEY_UNAUTHORIZED, new ApiKey("unauth", ImmutableSet.of("unauthorized-role"))),
+            ImmutableMultimap.of("queue-role", "queue|*|*"));
 
     @After
     public void tearDownMocksAndClearState() {

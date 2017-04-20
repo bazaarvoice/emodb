@@ -1,6 +1,7 @@
 package test.integration.auth;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
@@ -9,7 +10,7 @@ import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
-import com.bazaarvoice.emodb.auth.role.RoleUpdateRequest;
+import com.bazaarvoice.emodb.auth.role.RoleModification;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -55,14 +56,14 @@ public class RoleAdminTaskTest {
         _roleManager = new InMemoryRoleManager(permissionManager);
 
         RoleIdentifier adminId = new RoleIdentifier(null, DefaultRoles.admin.toString());
-        _roleManager.createRole(adminId, new RoleUpdateRequest()
+        _roleManager.createRole(adminId, new RoleModification()
                 .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.unlimitedRole()))));
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
                 new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,
                         null));
 
         _task = new RoleAdminTask(securityManager, _roleManager, permissionManager.getPermissionResolver(), mock(TaskRegistry.class));
-        _authIdentityManager.updateIdentity(new ApiKey("test-admin", "id_admin", ImmutableSet.of(DefaultRoles.admin.toString())));
+        _authIdentityManager.createIdentity("test-admin", new ApiKeyModification().addRoles(DefaultRoles.admin.toString()));
     }
 
     @AfterMethod
@@ -86,7 +87,7 @@ public class RoleAdminTaskTest {
     @Test
     public void testViewRole()
             throws Exception {
-        _roleManager.createRole(new RoleIdentifier(null, "view-role"), new RoleUpdateRequest()
+        _roleManager.createRole(new RoleIdentifier(null, "view-role"), new RoleModification()
                 .withPermissionUpdate(new PermissionUpdateRequest().permit(
                         ImmutableSet.of("queue|post|foo", "queue|poll|foo", "sor|update|test:*", "blob|update|test:*"))));
 
@@ -131,7 +132,7 @@ public class RoleAdminTaskTest {
     @Test
     public void testUpdateRole()
             throws Exception {
-        _roleManager.createRole(new RoleIdentifier(null, "existing-role"), new RoleUpdateRequest()
+        _roleManager.createRole(new RoleIdentifier(null, "existing-role"), new RoleModification()
                 .withPermissionUpdate(new PermissionUpdateRequest().permit(
                         ImmutableSet.of("queue|post|foo", "queue|post|bar"))));
 
@@ -153,7 +154,7 @@ public class RoleAdminTaskTest {
     @Test
     public void testDeleteRole()
             throws Exception {
-        _roleManager.createRole(new RoleIdentifier(null, "delete-role"), new RoleUpdateRequest()
+        _roleManager.createRole(new RoleIdentifier(null, "delete-role"), new RoleModification()
                 .withPermissionUpdate(new PermissionUpdateRequest().permit(
                         ImmutableSet.of("queue|post|foo", "queue|post|bar"))));
 
@@ -199,7 +200,7 @@ public class RoleAdminTaskTest {
     @Test
     public void testCheckRole()
             throws Exception {
-        _roleManager.createRole(new RoleIdentifier("check-group", "check-role"), new RoleUpdateRequest()
+        _roleManager.createRole(new RoleIdentifier("check-group", "check-role"), new RoleModification()
                 .withPermissionUpdate(new PermissionUpdateRequest().permit(
                         ImmutableSet.of("sor|update|c*", "sor|update|ch*"))));
 

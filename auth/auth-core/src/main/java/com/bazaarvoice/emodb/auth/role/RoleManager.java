@@ -39,13 +39,13 @@ public interface RoleManager {
      * @return The role
      * @throws RoleExistsException Another role with the same ID exists
      */
-    Role createRole(RoleIdentifier id, RoleUpdateRequest request);
+    Role createRole(RoleIdentifier id, RoleModification modification);
 
     /**
      * Updates a role.  This method can be used to update the role's metadata and/or permissions.
      * @throws RoleNotFoundException No role with the ID exists
      */
-    void updateRole(RoleIdentifier id, RoleUpdateRequest request);
+    void updateRole(RoleIdentifier id, RoleModification modification);
 
     /**
      * Deletes a role.  If the role does not exist no action is performed.
