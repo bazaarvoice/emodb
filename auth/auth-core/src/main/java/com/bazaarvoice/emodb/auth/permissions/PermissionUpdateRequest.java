@@ -57,4 +57,12 @@ public class PermissionUpdateRequest {
     public boolean isRevokeRest() {
         return _revokeRest;
     }
+
+    /**
+     * Returns true if this request could potentially modify permissions if applied.  It returns true if there is at
+     * least one permission permitted or revoked, or {@link #revokeRest()} is true.
+     */
+    public boolean mayModifyPermissions() {
+        return !_permissions.isEmpty() || _revokeRest;
+    }
 }

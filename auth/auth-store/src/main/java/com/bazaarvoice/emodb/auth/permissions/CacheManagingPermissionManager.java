@@ -30,8 +30,12 @@ public class CacheManagingPermissionManager implements PermissionManager {
 
     @Override
     public void updatePermissions(String id, PermissionUpdateRequest updates) {
+        // If the request doesn't contain any modifications then still forward to the delegate but don't invalidate
+        // the cache.
         _manager.updatePermissions(id, updates);
-        _cacheManager.invalidateAll();
+        if (updates.mayModifyPermissions()) {
+            _cacheManager.invalidateAll();
+        }
     }
 
     @Override
