@@ -111,6 +111,19 @@ public class EmoStartMojo extends AbstractEmoMojo {
         }
     }
 
+    private void copyDdlConfigurationFile() throws MojoExecutionException, IOException {
+        if (StringUtils.isBlank(ddlConfigurationFile)) {
+            copyDefaultDdlConfigurationFile();
+        } else {
+            try {
+                // copy configuration file to well-known emodb DDL config directory and filename "config-ddl.yaml"
+                FileUtils.copyFile(new File(ddlConfigurationFile), new File(emoConfigurationDirectory(), "config-ddl.yaml"));
+            } catch (Exception e) {
+                throw new MojoExecutionException("failed to copy configuration file from " + ddlConfigurationFile, e);
+            }
+        }
+    }
+
     private void copyEmoServiceArtifactToWorkingDirectory() throws MojoExecutionException, MojoFailureException {
         // NOTE: this emo service artifact is an "uberjar" created by the maven-shade-plugin
         final ArtifactItem emoServiceArtifact = new ArtifactItem();
@@ -229,7 +242,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
         }
     }
 
-    private void copyDdlConfigurationFile() throws MojoFailureException, IOException {
+    private void copyDefaultDdlConfigurationFile() throws MojoExecutionException, IOException {
         InputStream source = null;
         FileOutputStream target = null;
         try {
@@ -237,7 +250,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
             target = new FileOutputStream(new File(emoConfigurationDirectory(), "config-ddl.yaml"));
             IOUtils.copy(source, target);
         } catch (IOException e) {
-            throw new MojoFailureException("could not find the ddl configuration file");
+            throw new MojoExecutionException("could not find the ddl configuration file");
         } finally {
             Closeables.close(source, false);
             Closeables.close(target, false);

@@ -77,6 +77,9 @@ public abstract class AbstractEmoMojo extends AbstractMojo {
     @Parameter
     protected String emoConfigurationFile;
 
+    @Parameter
+    protected String ddlConfigurationFile;
+
     @Parameter(property = "emo.maxMemory", defaultValue = "1000")
     protected int emoMaxMemory; // megabytes
 
