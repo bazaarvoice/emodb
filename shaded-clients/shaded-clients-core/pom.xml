@@ -200,6 +200,10 @@
                             <pattern>javax.validation</pattern>
                             <shadedPattern>shaded.emodb.javax.validation</shadedPattern>
                         </relocation>
+                        <relocation>
+                            <pattern>jline</pattern>
+                            <shadedPattern>shaded.emodb.jline</shadedPattern>
+                        </relocation>
                     </relocations>
                 </configuration>
                 <executions>
