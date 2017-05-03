@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
 
-import static com.bazaarvoice.emodb.web.auth.Permissions.ALL;
+import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_NON_PII_TABLE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_RESOURCE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_TABLE;
 
@@ -38,6 +38,15 @@ public enum DefaultRoles {
             ImmutableSet.of(sor_read, sor_update),
             Permissions.createSorTable(NON_SYSTEM_TABLE),
             Permissions.setSorTableAttributes(NON_SYSTEM_TABLE)),
+
+    // sor_standard with excluding pii tables/placements.
+    // Pii tables contain personally identifiable information, so in a way they are special compared to the rest of the sor tables.
+    // this role can be used where we would like to give standard permissions to all sor tables except the pii & system tables.
+    sor_standard_without_pii (
+            Permissions.readSorTable(NON_SYSTEM_NON_PII_TABLE),
+            Permissions.updateSorTable(NON_SYSTEM_NON_PII_TABLE),
+            Permissions.createSorTable(NON_SYSTEM_NON_PII_TABLE),
+            Permissions.setSorTableAttributes(NON_SYSTEM_NON_PII_TABLE)),
 
     // Can perform all actions on all system of record tables
     sor_admin (
@@ -126,11 +135,8 @@ public enum DefaultRoles {
 
     // Reserved role for anonymous access
     anonymous (
-            // TODO:  Lock this down.  For now this will permit all standard client operations.
-            //        Additionally, Shovel historically did not require permission to create facades, only to
-            //        update facade records.  To maintain backwards compatibility anonymous also has this permission.
-            ImmutableSet.of(standard),
-            Permissions.createFacade(ALL));
+            // TODO:  Lock this down.  For now this will permit all standard client operations with excluding pii tables/placements in SOR.
+            ImmutableSet.of(sor_standard_without_pii, blob_standard, queue_standard, databus_standard));
 
     private Set<String> _permissions;
 

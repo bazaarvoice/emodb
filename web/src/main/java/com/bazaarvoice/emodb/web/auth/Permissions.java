@@ -73,6 +73,17 @@ public class Permissions {
                             Conditions.intrinsic(Intrinsic.TABLE, Conditions.like("__*")),
                             Conditions.intrinsic(Intrinsic.PLACEMENT, Conditions.like("*:sys")))));
 
+    /**
+     * NON_SYSTEM_TABLE along with excluding PII table/placements.
+     */
+    public final static ConditionResource NON_SYSTEM_NON_PII_TABLE = new ConditionResource(
+            Conditions.not(
+                    Conditions.or(
+                            Conditions.intrinsic(Intrinsic.TABLE, Conditions.like("__*")),
+                            Conditions.intrinsic(Intrinsic.PLACEMENT, Conditions.like("*:sys")),
+                            Conditions.intrinsic(Intrinsic.TABLE, Conditions.like("pii:*")),
+                            Conditions.intrinsic(Intrinsic.PLACEMENT, Conditions.like("*:pii")))));
+
     public static String unlimited() {
         return ALL.toString();
     }
