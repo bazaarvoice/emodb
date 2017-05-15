@@ -42,6 +42,10 @@ public class InMemoryTable implements Table {
 
     @Override
     public TableAvailability getAvailability() {
+        if (!_facade) {
+            return new TableAvailability(_options.getPlacement(), false);
+        }
+        // Facades aren't fully supported
         throw new UnsupportedOperationException();
     }
 
