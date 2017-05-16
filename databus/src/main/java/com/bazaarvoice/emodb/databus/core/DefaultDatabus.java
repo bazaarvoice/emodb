@@ -32,6 +32,7 @@ import com.bazaarvoice.emodb.job.api.JobStatus;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
+import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -653,8 +654,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             try {
                 annotatedGet.add(coord.getTable(), coord.getId());
                 remaining -= 1;
-            } catch (UnknownTableException e) {
-                // It's likely the table was dropped since the event was queued.  Discard the events.
+            } catch (UnknownTableException | UnknownPlacementException e) {
+                // It's likely the table or facade was dropped since the event was queued.  Discard the events.
                 EventList list = entry.getValue();
                 for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
                     eventIdsToDiscard.add(pair.first());
@@ -1017,8 +1018,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // Query the table/key pair.
             try {
                 annotatedGet.add(coord.getTable(), coord.getId());
-            } catch (UnknownTableException e) {
-                // It's likely the table was dropped since the event was queued.  Discard the events.
+            } catch (UnknownTableException | UnknownPlacementException e) {
+                // It's likely the table or facade was dropped since the event was queued.  Discard the events.
                 EventList list = entry.getValue();
                 for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
                     eventIdsToDiscard.add(pair.first());

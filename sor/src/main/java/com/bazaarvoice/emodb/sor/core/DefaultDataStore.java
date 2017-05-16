@@ -16,6 +16,7 @@ import com.bazaarvoice.emodb.sor.api.Names;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
@@ -275,11 +276,21 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             private final List<Key> _keys = Lists.newArrayList();
 
             @Override
-            public AnnotatedGet add(String tableName, String key) throws UnknownTableException {
+            public AnnotatedGet add(String tableName, String key) throws UnknownTableException, UnknownPlacementException {
                 checkLegalTableName(tableName);
                 checkNotNull(key, "key");
 
-                _keys.add(new Key(_tableDao.get(tableName), key));
+                // The following call will throw UnknownTableException if the table doesn't currently exist.  This
+                // happens if the table was dropped prior to this call.
+                Table table =_tableDao.get(tableName);
+                // It's also possible that the table exists but is not available locally.  This happens if the table
+                // once had a locally available facade but the facade was since dropped.  Check if this is the case and,
+                // if so, raise UnknownPlacementException.
+                if (table.getAvailability() == null) {
+                    throw new UnknownPlacementException("Table unavailable locally and has no local facade",
+                            table.getOptions().getPlacement(), tableName);
+                }
+                _keys.add(new Key(table, key));
 
                 return this;
             }
