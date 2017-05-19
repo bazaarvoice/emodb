@@ -183,7 +183,10 @@ public class RoleAdminTask extends Task {
     }
 
     private void viewRole(Subject subject, RoleIdentifier id, PrintWriter output) {
-        subject.checkPermission(Permissions.readRole(id));
+        // Caller always has permission to view any role assigned to himself.  Otherwise read-role permission is required.
+        if (!subject.hasRole(id.toString())) {
+            subject.checkPermission(Permissions.readRole(id));
+        }
         Set<String> permissions = _roleManager.getPermissionsForRole(id);
         output.println(String.format("%s has %d permissions", id, permissions.size()));
         for (String permission : permissions) {

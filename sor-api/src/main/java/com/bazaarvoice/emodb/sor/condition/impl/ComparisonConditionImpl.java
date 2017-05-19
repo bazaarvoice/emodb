@@ -79,7 +79,7 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
     @SuppressWarnings("unchecked")
     @Override
     public boolean isSubsetOf(ComparisonCondition condition) {
-        Object lObject = getValue();
+        Object lObject = _value;
         Object rObject = condition.getValue();
 
         Comparable lValue;

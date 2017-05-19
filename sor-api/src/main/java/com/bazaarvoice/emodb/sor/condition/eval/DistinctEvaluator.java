@@ -438,7 +438,7 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
          */
         @Override
         public final Boolean visit(NotCondition right, ParameterOrder leftOrder) {
-            return false;
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -447,7 +447,7 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
          */
         @Override
         public final Boolean visit(AndCondition right, ParameterOrder leftOrder) {
-            return false;
+            throw new UnsupportedOperationException();
         }
 
         /**
@@ -456,7 +456,7 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
          */
         @Override
         public final Boolean visit(OrCondition right, ParameterOrder leftOrder) {
-            return false;
+            throw new UnsupportedOperationException();
         }
     }
 }

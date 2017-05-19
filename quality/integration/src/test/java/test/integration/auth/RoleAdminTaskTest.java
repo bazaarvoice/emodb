@@ -98,10 +98,23 @@ public class RoleAdminTaskTest {
         _task.execute(ImmutableMultimap.of(
                 ApiKeyRequest.AUTHENTICATION_PARAM, "insufficient-key",
                 "action", "view",
-                "role", "any-role"),
+                "role", "unpermitted-role"),
                 new PrintWriter(out));
 
         assertEquals(out.toString(), "Not authorized\n");
+
+        // Even without permission to view roles the API key should have permission to view it's own roles
+        out = new StringWriter();
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "insufficient-key",
+                "action", "view",
+                "role", "insufficient-role"),
+                new PrintWriter(out));
+
+        // First line is a header.  Skip this and verify the single permission for "insufficient-role" is present
+        String[] lines = out.toString().split("\\n");
+        assertEquals(lines.length, 2);
+        assertEquals(lines[1], "- sor|read|*");
     }
 
     @Test
