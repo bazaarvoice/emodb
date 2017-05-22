@@ -25,6 +25,7 @@ import com.bazaarvoice.emodb.uac.api.EmoRole;
 import com.bazaarvoice.emodb.uac.api.EmoRoleExistsException;
 import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.EmoRoleNotFoundException;
+import com.bazaarvoice.emodb.uac.api.InsufficientRolePermissionException;
 import com.bazaarvoice.emodb.uac.api.InvalidEmoPermissionException;
 import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
@@ -180,6 +181,18 @@ public class UserAccessControlJerseyTest extends ResourceTest {
     }
 
     @Test
+    public void testGetAssignedRoleNoPermission() {
+        String key = "group1-id1-role-only";
+        createRole("group1", "id1", "name1", "blob|*"); // No permission to read roles
+        createApiKey(key, null, null, "group1/id1");
+
+        // Even though key does not have permission to read roles it can view a role which is assigned to itself
+        EmoRole actualRole = uacClient(key).getRole(new EmoRoleKey("group1", "id1"));
+        assertEquals(actualRole.getName(), "name1");
+        assertEquals(actualRole.getPermissions(), ImmutableSet.of("blob|*"));
+    }
+
+    @Test
     public void testGetRoleNotFound() {
         EmoRole role = uacClient(UAC_ALL_API_KEY).getRole(new EmoRoleKey("no_such_group", "no_such_id"));
         assertNull(role);
@@ -187,18 +200,22 @@ public class UserAccessControlJerseyTest extends ResourceTest {
 
     @Test
     public void testCreateRole() {
-        uacClient(UAC_ALL_API_KEY).createRole(
+        String key = "create-role-key";
+        createRole(null, "id1", "name1", "role|*", "sor|*");
+        createApiKey(key, null, null, "id1");
+
+        uacClient(key).createRole(
                 new CreateEmoRoleRequest(new EmoRoleKey("create1", "id1"))
                         .setName("create_name")
                         .setDescription("create_description")
-                        .setPermissions(ImmutableSet.of("perm1", "perm2")));
+                        .setPermissions(ImmutableSet.of("sor|read|table1", "sor|update|table2")));
 
         Role role = _roleManager.getRole(new RoleIdentifier("create1", "id1"));
         assertEquals(role.getName(), "create_name");
         assertEquals(role.getDescription(), "create_description");
 
         Set<String> permissions = _roleManager.getPermissionsForRole(new RoleIdentifier("create1", "id1"));
-        assertEquals(permissions, ImmutableSet.of("perm1", "perm2"));
+        assertEquals(permissions, ImmutableSet.of("sor|read|table1", "sor|update|table2"));
     }
 
     @Test(expected = UnauthorizedException.class)
@@ -217,7 +234,7 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                 new CreateEmoRoleRequest(new EmoRoleKey("create3", "id3"))
                         .setName("create_name")
                         .setDescription("create_description")
-                        .setPermissions(ImmutableSet.of("perm1", "perm2")));
+                        .setPermissions(ImmutableSet.of("role|*")));
     }
 
     @Test(expected = InvalidEmoPermissionException.class)
@@ -241,23 +258,36 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                         .setPermissions(ImmutableSet.of("sor|*|if({)")));
     }
 
+    @Test(expected = InsufficientRolePermissionException.class)
+    public void testCreateInsufficientRolePermission() {
+        uacClient(UAC_ALL_API_KEY).createRole(
+                new CreateEmoRoleRequest(new EmoRoleKey("create6", "id6"))
+                        .setName("create_name")
+                        .setDescription("create_description")
+                        .setPermissions(ImmutableSet.of("sor|read|*")));
+    }
+
     @Test
     public void testUpdateRole() {
-        createRole("update1", "id1", "name1", "perm1", "perm2");
+        String key = "update-role-key";
+        createRole(null, "id1", "name1", "role|*", "sor|read|*");
+        createApiKey(key, null, null, "id1");
 
-        uacClient(UAC_ALL_API_KEY).updateRole(
+        createRole("update1", "id1", "name1", "sor|read|table1", "sor|read|table2");
+
+        uacClient(key).updateRole(
                 new UpdateEmoRoleRequest(new EmoRoleKey("update1", "id1"))
                         .setName("update_name")
                         .setDescription("update_description")
-                        .revokePermissions(ImmutableSet.of("perm1"))
-                        .grantPermissions(ImmutableSet.of("perm3")));
+                        .revokePermissions(ImmutableSet.of("sor|read|table1"))
+                        .grantPermissions(ImmutableSet.of("sor|read|table3")));
 
         Role role = _roleManager.getRole(new RoleIdentifier("update1", "id1"));
         assertEquals(role.getName(), "update_name");
         assertEquals(role.getDescription(), "update_description");
 
         Set<String> permissions = _roleManager.getPermissionsForRole(new RoleIdentifier("update1", "id1"));
-        assertEquals(permissions, ImmutableSet.of("perm2", "perm3"));
+        assertEquals(permissions, ImmutableSet.of("sor|read|table2", "sor|read|table3"));
     }
 
     @Test(expected = UnauthorizedException.class)
@@ -296,14 +326,23 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                         .grantPermissions(ImmutableSet.of("sor|*|if({)")));
     }
 
-    // TODO:  Once permission creation checks are in place add unit tests
-    //        See issue https://github.com/bazaarvoice/emodb/issues/63
+    @Test(expected = InsufficientRolePermissionException.class)
+    public void testUpdateInsufficientRolePermission() {
+        createRole("update6", "id6", "name6");
+        uacClient(UAC_ALL_API_KEY).updateRole(
+                new UpdateEmoRoleRequest(new EmoRoleKey("create7", "id7"))
+                        .grantPermissions(ImmutableSet.of("sor|read|*")));
+    }
 
     @Test
     public void testDeleteRole() {
-        createRole("delete1", "id1", "name1", "perm1", "perm2");
+        String key = "delete-role-key";
+        createRole(null, "id1", "name1", "role|*", "sor|*");
+        createApiKey(key, null, null, "id1");
 
-        uacClient(UAC_ALL_API_KEY).deleteRole(new EmoRoleKey("delete1", "id1"));
+        createRole("delete1", "id1", "name1", "sor|read|table1", "sor|update|table1");
+
+        uacClient(key).deleteRole(new EmoRoleKey("delete1", "id1"));
         Role role = _roleManager.getRole(new RoleIdentifier("delete1", "id1"));
         assertNull(role);
     }
@@ -317,6 +356,12 @@ public class UserAccessControlJerseyTest extends ResourceTest {
     @Test(expected = EmoRoleNotFoundException.class)
     public void testDeleteRoleNotFound() {
         uacClient(UAC_ALL_API_KEY).deleteRole(new EmoRoleKey("delete3", "id3"));
+    }
+
+    @Test(expected = InsufficientRolePermissionException.class)
+    public void testDeleteInsufficientRolePermission() {
+        createRole("delete4", "id4", "name4", "sor|read|*");
+        uacClient(UAC_ALL_API_KEY).deleteRole(new EmoRoleKey("delete4", "id4"));
     }
 
     @Test

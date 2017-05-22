@@ -27,6 +27,7 @@ import com.bazaarvoice.emodb.uac.api.EmoRole;
 import com.bazaarvoice.emodb.uac.api.EmoRoleExistsException;
 import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.EmoRoleNotFoundException;
+import com.bazaarvoice.emodb.uac.api.InsufficientRolePermissionException;
 import com.bazaarvoice.emodb.uac.api.InvalidEmoPermissionException;
 import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
@@ -97,7 +98,10 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     @Override
     public EmoRole getRole(Subject subject, EmoRoleKey roleKey) {
         RoleIdentifier roleId = convert(roleKey);
-        verifyPermission(subject, Permissions.readRole(roleId));
+        // Every API key has permission to view any of its assigned roles
+        if (!subject.hasRole(roleId.toString())) {
+            verifyPermission(subject, Permissions.readRole(roleId));
+        }
         Role role = _roleManager.getRole(roleId);
         if (role == null) {
             // Unlike the client counterpart raise the following exception instead of returning null.  This results
@@ -113,9 +117,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         RoleIdentifier roleId = convert(roleKey);
         verifyPermission(subject, Permissions.createRole(roleId));
         verifyAllPermissionsAssignable(request.getPermissions());
-
-        // TODO:  Once supported verify the caller has permission to create each permission granted for this role.
-        //        See issue https://github.com/bazaarvoice/emodb/issues/63
+        verifyAllowedToGrantOrRevokePermissions(subject, request.getPermissions(), true);
 
         RoleModification modification = new RoleModification()
                 .withName(request.getName())
@@ -143,9 +145,8 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         verifyPermission(subject, Permissions.updateRole(roleId));
         verifyAllPermissionsAssignable(request.getGrantedPermissions());
         verifyAllPermissionsAssignable(request.getRevokedPermissions());
-
-        // TODO:  Once supported verify the caller has permission to create each permission granted for this role.
-        //        See issue https://github.com/bazaarvoice/emodb/issues/63
+        verifyAllowedToGrantOrRevokePermissions(subject, request.getGrantedPermissions(), true);
+        verifyAllowedToGrantOrRevokePermissions(subject, request.getRevokedPermissions(), false);
 
         RoleModification modification = new RoleModification();
         if (request.isNamePresent()) {
@@ -191,6 +192,9 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
             throw new EmoRoleNotFoundException(roleKey.getGroup(), roleKey.getId());
         }
 
+        // Caller cannot delete a role unless he has permission to revoke every permission granted to the role
+        verifyAllowedToGrantOrRevokePermissions(subject, _roleManager.getPermissionsForRole(convertedId), false);
+
         try {
             _roleManager.deleteRole(convertedId);
         } catch (Exception e) {
@@ -203,6 +207,19 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         for (String permission : permissions) {
             if (!resolvePermission(permission).isAssignable()) {
                 throw new InvalidEmoPermissionException("Permission cannot be assigned", permission);
+            }
+        }
+    }
+
+    private void verifyAllowedToGrantOrRevokePermissions(Subject subject, Iterable<String> permissions, boolean isGrant) {
+        // Check each permission to ensure the permission is within the subject's own permissions
+        for (String permission : permissions) {
+            if (!subject.hasPermission(resolvePermission(permission))) {
+                if (isGrant) {
+                    throw new InsufficientRolePermissionException("Insufficient permission to grant permission to role: " + permission, permission);
+                } else {
+                    throw new InsufficientRolePermissionException("Insufficient permission to revoke permission from role: " + permission, permission);
+                }
             }
         }
     }

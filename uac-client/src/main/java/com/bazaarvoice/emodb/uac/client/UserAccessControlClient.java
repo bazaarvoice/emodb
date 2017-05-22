@@ -21,6 +21,7 @@ import com.bazaarvoice.emodb.uac.api.EmoRole;
 import com.bazaarvoice.emodb.uac.api.EmoRoleExistsException;
 import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.EmoRoleNotFoundException;
+import com.bazaarvoice.emodb.uac.api.InsufficientRolePermissionException;
 import com.bazaarvoice.emodb.uac.api.InvalidEmoPermissionException;
 import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
@@ -408,12 +409,19 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                 }
             }
 
-        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode() &&
-                UnauthorizedException.class.getName().equals(exceptionType)) {
-            if (response.hasEntity()) {
-                return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
-            } else {
-                return (RuntimeException) new UnauthorizedException().initCause(e);
+        } else if (response.getStatus() == Response.Status.FORBIDDEN.getStatusCode()) {
+            if (UnauthorizedException.class.getName().equals(exceptionType)) {
+                if (response.hasEntity()) {
+                    return (RuntimeException) response.getEntity(UnauthorizedException.class).initCause(e);
+                } else {
+                    return (RuntimeException) new UnauthorizedException().initCause(e);
+                }
+            } else if (InsufficientRolePermissionException.class.getName().equals(exceptionType)) {
+                if (response.hasEntity()) {
+                    return (RuntimeException) response.getEntity(InsufficientRolePermissionException.class).initCause(e);
+                } else {
+                    return (RuntimeException) new InsufficientRolePermissionException().initCause(e);
+                }
             }
 
         } else if (response.getStatus() == Response.Status.SERVICE_UNAVAILABLE.getStatusCode() &&
