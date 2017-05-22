@@ -7,7 +7,7 @@ import java.util.Set;
  */
 public interface ContainsCondition extends Condition {
 
-    public enum Containment {
+    enum Containment {
         ALL("All"),
         ANY("Any"),
         ONLY("Only");
@@ -27,4 +27,19 @@ public interface ContainsCondition extends Condition {
     Set<Object> getValues();
 
     Containment getContainment();
+
+    /**
+     * Returns true if for every value v which matches this condition v also matches the provided condition.
+     * For example, containsAll("a","b","c") is a subset of containsAll("a","b"), while containsAll("a","b") is not
+     * a subset of containsAll("a","b","c") since v exists, ["a","b"], which matches the former but not the latter.
+     */
+    boolean isSubsetOf(ContainsCondition condition);
+
+    /**
+     * Returns true if there exists a value v which matches both this condition and the provided condition.
+     * For example, containsAny("a","b") overlaps containsAny("c","d") since there exists a value, ["a","c"], which
+     * matches both, while containsOnly("a","b") does not overlap containsOnly("c","d") since they share no common
+     * values.
+     */
+    boolean overlaps(ContainsCondition condition);
 }

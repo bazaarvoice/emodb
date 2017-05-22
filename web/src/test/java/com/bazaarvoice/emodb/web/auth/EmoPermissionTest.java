@@ -347,6 +347,52 @@ public class EmoPermissionTest {
         assertTrue(globalPerm.implies(_resolver.resolvePermission("sor|drop_table|test:facade")));
     }
 
+    @Test
+    public void testConstantImpliesConditionPermission() {
+        assertTrue(_resolver.resolvePermission("sor|read|test:table").implies(
+                _resolver.resolvePermission("sor|if(\"read\")|if(intrinsic(\"~table\":\"test:table\"))")));
+        assertFalse(_resolver.resolvePermission("sor|read|other:table").implies(
+                _resolver.resolvePermission("sor|if(\"read\")|if(intrinsic(\"~table\":\"test:table\"))")));
+        assertFalse(_resolver.resolvePermission("sor|read|other:table").implies(
+                _resolver.resolvePermission("sor|if(\"update\")|if(intrinsic(\"~table\":\"test:table\"))")));
+        assertFalse(_resolver.resolvePermission("sor|read|test:table").implies(
+                _resolver.resolvePermission("sor|if(\"read\")|if(intrinsic(\"~table\":\"other:table\"))")));
+        assertFalse(_resolver.resolvePermission("sor|read|test:table").implies(
+                _resolver.resolvePermission("sor|if(alwaysTrue())|if(intrinsic(\"~table\":\"test:table\"))")));
+        assertFalse(_resolver.resolvePermission("sor|read|test:table").implies(
+                _resolver.resolvePermission("sor|if(alwaysTrue())|if(intrinsic(\"~table\":alwaysTrue()))")));
+    }
+
+    @Test
+    public void testConditionImpliesConditionPermission() {
+        assertTrue(_resolver.resolvePermission("sor|if(\"read\")").implies(_resolver.resolvePermission("sor|if(\"read\")")));
+        assertTrue(_resolver.resolvePermission("sor|if(in(\"read\",\"update\",\"delete\"))")
+                .implies(_resolver.resolvePermission("sor|if(in(\"read\",\"update\"))")));
+        assertTrue(_resolver.resolvePermission("sor|if(not(like(\"*delete*\")))")
+                .implies(_resolver.resolvePermission("sor|if(in(\"read\",\"update\"))")));
+        assertFalse(_resolver.resolvePermission("sor|if(\"read\")").implies(_resolver.resolvePermission("sor|if(\"update\")")));
+        assertFalse(_resolver.resolvePermission("sor|if(in(\"read\",\"update\"))")
+                .implies(_resolver.resolvePermission("sor|if(in(\"read\",\"update\",\"delete\"))")));
+        assertFalse(_resolver.resolvePermission("sor|if(not(like(\"*delete*\")))")
+                .implies(_resolver.resolvePermission("sor|if(in(\"read\",\"update\",\"delete\"))")));
+    }
+
+    @Test
+    public void testTableConditionImpliesTableConditionPermission() {
+        assertTrue(_resolver.resolvePermission("sor|read|if(intrinsic(\"~table\":not(like(\"private:*\"))))")
+                .implies(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")));
+        assertTrue(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")
+                .implies(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")));
+        assertTrue(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")
+                .implies(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":\":test:table\"),{..,\"type\":\"record\"}))")));
+        assertFalse(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")
+                .implies(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":\"private:table\"),{..,\"type\":\"record\"}))")));
+        assertFalse(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")
+                .implies(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":\":test:table\"),{..,\"type\":\"neither\"}))")));
+        assertFalse(_resolver.resolvePermission("sor|read|if(and(intrinsic(\"~table\":not(like(\"private:*\"))),{..,\"type\":in(\"record\",\"other\")}))")
+                .implies(_resolver.resolvePermission("sor|read|if(intrinsic(\"~table\":\":test:table\"))")));
+    }
+
     @Test (expectedExceptions = IllegalArgumentException.class)
     public void testNonConstantInitialScopeRejected() {
         _resolver.resolvePermission("s*");

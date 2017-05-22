@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
@@ -182,7 +183,10 @@ public class RoleAdminTask extends Task {
     }
 
     private void viewRole(Subject subject, RoleIdentifier id, PrintWriter output) {
-        subject.checkPermission(Permissions.readRole(id));
+        // Caller always has permission to view any role assigned to himself.  Otherwise read-role permission is required.
+        if (!subject.hasRole(id.toString())) {
+            subject.checkPermission(Permissions.readRole(id));
+        }
         Set<String> permissions = _roleManager.getPermissionsForRole(id);
         output.println(String.format("%s has %d permissions", id, permissions.size()));
         for (String permission : permissions) {
@@ -202,23 +206,36 @@ public class RoleAdminTask extends Task {
         checkArgument(Sets.intersection(permitSet, revokeSet).isEmpty(),
                 "Cannot permit and revoke the same permission in a single request");
 
-        // Verify that all permissions being permitted can be assigned to a role.
+        // Verify that all permissions being permitted can be assigned to a role and that the caller has permission
+        // to assign each one
 
-        boolean allAssignable = true;
+        List<String> unassignable = Lists.newArrayList();
+        List<String> notPermitted = Lists.newArrayList();
         for (String permit : permitSet) {
             // All permissions returned are EmoPermission instances.
             EmoPermission resolved = (EmoPermission) _permissionResolver.resolvePermission(permit);
             if (!resolved.isAssignable()) {
-                if (allAssignable) {
-                    output.println("The following permission(s) cannot be assigned to a role:");
-                    allAssignable = false;
-                }
-                output.println("- " + permit);
+                unassignable.add(permit);
+            } else if (!subject.isPermitted(resolved)) {
+                notPermitted.add(permit);
             }
         }
 
-        if (!allAssignable) {
+        if (!unassignable.isEmpty()) {
+            output.println("The following permission(s) cannot be assigned to a role:");
+            for (String permit : unassignable) {
+                output.println("- " + permit);
+            }
             output.println("Please rewrite the above permission(s) using constants, wildcard strings, or \"if()\" expressions");
+            return;
+        }
+
+        if (!notPermitted.isEmpty()) {
+            output.println("You do not has sufficient permissions to grant the following permission(s):");
+            for (String permit : notPermitted) {
+                output.println("- " + permit);
+            }
+            output.println("Please remove or rewrite the above permission(s) constrained within your permissions");
             return;
         }
 
@@ -286,7 +303,7 @@ public class RoleAdminTask extends Task {
         subject.checkPermission(Permissions.readRole(Permissions.ALL, Permissions.ALL));
 
         final AtomicBoolean anyDeprecated = new AtomicBoolean(false);
-        
+
         _roleManager.getAll().forEachRemaining(role -> {
             List<Permission> deprecatedPermissions = _roleManager.getPermissionsForRole(role.getRoleIdentifier())
                     .stream()

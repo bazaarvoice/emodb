@@ -57,7 +57,7 @@ public class RoleAdminTaskTest {
 
         RoleIdentifier adminId = new RoleIdentifier(null, DefaultRoles.admin.toString());
         _roleManager.createRole(adminId, new RoleModification()
-                .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.unlimitedRole()))));
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(ImmutableSet.of(Permissions.unlimited()))));
         ApiKeySecurityManager securityManager = new ApiKeySecurityManager(
                 new ApiKeyRealm("test", new MemoryConstrainedCacheManager(), _authIdentityManager, permissionManager,
                         null));
@@ -82,6 +82,39 @@ public class RoleAdminTaskTest {
                 new PrintWriter(out));
 
         assertEquals(out.toString(), "Not authorized\n");
+    }
+
+    @Test
+    public void testInsufficientPermissionsToManageRoles()
+            throws Exception {
+        // Notably this role does not have permission to view roles
+        _roleManager.createRole(new RoleIdentifier(null, "insufficient-role"), new RoleModification()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("sor|read|*"))));
+
+        _authIdentityManager.createIdentity("insufficient-key", new ApiKeyModification().addRoles("insufficient-role"));
+
+        StringWriter out = new StringWriter();
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "insufficient-key",
+                "action", "view",
+                "role", "unpermitted-role"),
+                new PrintWriter(out));
+
+        assertEquals(out.toString(), "Not authorized\n");
+
+        // Even without permission to view roles the API key should have permission to view it's own roles
+        out = new StringWriter();
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "insufficient-key",
+                "action", "view",
+                "role", "insufficient-role"),
+                new PrintWriter(out));
+
+        // First line is a header.  Skip this and verify the single permission for "insufficient-role" is present
+        String[] lines = out.toString().split("\\n");
+        assertEquals(lines.length, 2);
+        assertEquals(lines[1], "- sor|read|*");
     }
 
     @Test
@@ -225,5 +258,32 @@ public class RoleAdminTaskTest {
             // The first line is a header; skip it and check the remaining lines
             assertEquals(actual.subList(1, actual.size()), entry.getValue());
         }
+    }
+
+    @Test
+    public void testCreateRoleWithUnboundPermissions() throws Exception  {
+        // First, give a new role all permissions within the "sor" context
+        _roleManager.createRole(new RoleIdentifier(null, "sor-only"), new RoleModification()
+                .withPermissionUpdate(new PermissionUpdateRequest().permit(
+                        ImmutableSet.of("sor|*"))));
+
+        _authIdentityManager.createIdentity("sor-only-key", new ApiKeyModification().addRoles("sor-only"));
+
+        StringWriter out = new StringWriter();
+
+        _task.execute(ImmutableMultimap.of(
+                ApiKeyRequest.AUTHENTICATION_PARAM, "sor-only-key",
+                "action", "update",
+                "role", "new-role",
+                "permit", "sor|update|if({..,\"foo\":\"bar\"})",
+                "permit", "queue|post|*"),
+                new PrintWriter(out));
+
+        List<String> actual = ImmutableList.copyOf(out.toString().split("\n"));
+
+        assertEquals(actual, ImmutableList.of(
+                "You do not has sufficient permissions to grant the following permission(s):",
+                "- queue|post|*",
+                "Please remove or rewrite the above permission(s) constrained within your permissions"));
     }
 }
