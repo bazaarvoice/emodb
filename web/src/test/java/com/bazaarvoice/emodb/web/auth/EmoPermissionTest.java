@@ -414,6 +414,30 @@ public class EmoPermissionTest {
         _resolver.resolvePermission("sor|*|if(intrinsic(\"~id\":~))");
     }
 
+    @Test
+    public void testImpliedPartExistsPermission() {
+        assertTrue(_resolver.resolvePermission("sor|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|if(in(\"read\",\"update\"))|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|table1")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|if({..,\"type\":\"review\"}")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|if(alwaysTrue())")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|update|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("blob|read|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|if(in(\"update\",\"delete\"))|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|read|if(alwaysFalse())")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+    }
+
     private void addSorTable(String name, String placement, Map<String, Object> attributes) {
         TableAvailability availability = new TableAvailability(placement, false);
         addSorTable(name, placement, availability, attributes);

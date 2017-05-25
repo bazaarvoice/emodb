@@ -81,6 +81,9 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
 
     @Override
     public Iterator<EmoRole> getAllRoles(Subject subject) {
+        // If it's not possible for the subject to view _any_ roles then raise unauthorized exception
+        verifyPermission(subject, Permissions.readSomeRole());
+
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(_roleManager.getAll(), 0), false)
                 .filter(role -> subject.hasPermission(Permissions.readRole(role.getRoleIdentifier())))
                 .map(role -> convert(role, _roleManager.getPermissionsForRole(role.getRoleIdentifier())))
@@ -89,7 +92,12 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
 
     @Override
     public Iterator<EmoRole> getAllRolesInGroup(Subject subject, String group) {
-        return _roleManager.getRolesByGroup(convertUACGroup(group)).stream()
+        String convertedGroup = convertUACGroup(group);
+
+        // If it's not possible for the subject to view _any_ roles in the group then raise unauthorized exception
+        verifyPermission(subject, Permissions.readSomeRoleInGroup(Permissions.toRoleGroupResource(convertedGroup)));
+
+        return _roleManager.getRolesByGroup(convertedGroup).stream()
                 .filter(role -> subject.hasPermission(Permissions.readRole(role.getRoleIdentifier())))
                 .map(role -> convert(role, _roleManager.getPermissionsForRole(role.getRoleIdentifier())))
                 .iterator();

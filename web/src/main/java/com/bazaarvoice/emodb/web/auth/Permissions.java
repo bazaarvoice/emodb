@@ -247,6 +247,14 @@ public class Permissions {
         return readRole(toRoleGroupResource(roleIdentifier.getGroup()), new NamedResource(roleIdentifier.getId()));
     }
 
+    public static String readSomeRole() {
+        return format("%s|%s|?|?", ROLE, READ);
+    }
+
+    public static String readSomeRoleInGroup(VerifiableResource group) {
+        return format("%s|%s|%s|?", ROLE, READ, escapeSeparators(group.toString()));
+    }
+
     public static String createRole(VerifiableResource group) {
         return createRole(group, ALL);
     }

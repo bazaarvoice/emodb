@@ -238,7 +238,7 @@ uac.createRole(
 
 Permissions required:
 
-* None, although only roles for which you have `role|read|{group}|{id}` permission will be returned
+* `role|read` for at least one existing or potential role
 
 HTTP:
 

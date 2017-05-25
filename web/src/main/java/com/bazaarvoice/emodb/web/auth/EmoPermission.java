@@ -14,6 +14,7 @@ import com.bazaarvoice.emodb.web.auth.matching.ConditionPart;
 import com.bazaarvoice.emodb.web.auth.matching.CreateTablePart;
 import com.bazaarvoice.emodb.web.auth.matching.EmoAnyPart;
 import com.bazaarvoice.emodb.web.auth.matching.EmoConstantPart;
+import com.bazaarvoice.emodb.web.auth.matching.EmoImpliedPartExistsPart;
 import com.bazaarvoice.emodb.web.auth.matching.SorTableConditionPart;
 
 import javax.annotation.Nullable;
@@ -162,6 +163,14 @@ public class EmoPermission extends MatchingPermission {
                     return getAnyPart();
                 }
                 break;
+
+            case '?':
+                if (part.length() == 1) {
+                    // This is an "implied part exists" check
+                    return EmoImpliedPartExistsPart.instance();
+                }
+                break;
+
         }
 
         // All other strings shortcuts for either a resource name or a wildcard expression for matching the name.

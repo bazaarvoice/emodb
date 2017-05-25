@@ -136,6 +136,11 @@ public class UserAccessControlJerseyTest extends ResourceTest {
         assertEquals(actualRoles, expectedRoles);
     }
 
+    @Test(expected = UnauthorizedException.class)
+    public void testListRolesNoPermission() {
+        uacClient(UAC_NONE_API_KEY).getAllRoles();
+    }
+
     @Test
     public void testListRolesInGroup() {
         String key = "group1-roles-only";
@@ -152,6 +157,16 @@ public class UserAccessControlJerseyTest extends ResourceTest {
                 .stream().map(EmoRole::getId).map(Object::toString).collect(Collectors.toSet());
 
         assertEquals(actualRoles, expectedRoles);
+    }
+
+    @Test(expected = UnauthorizedException.class)
+    public void testListRolesInGroupNoPermission() {
+        // Create an API key which has permission to read roles in one group, but not the one we're going to query
+        String key = "othergroup-roles-only";
+        createRole(null, "othergroup-roles-only", null, "role|*|othergroup|*");
+        createApiKey(key, null, null, "othergroup-roles-only");
+
+        uacClient(key).getAllRolesInGroup("thisgroup");
     }
 
     @Test
