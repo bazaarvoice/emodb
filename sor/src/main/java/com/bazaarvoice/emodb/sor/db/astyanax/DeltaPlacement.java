@@ -16,7 +16,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 class DeltaPlacement implements Placement {
     private final String _name;
     private final CassandraKeyspace _keyspace;
-    private final ColumnFamily<ByteBuffer, UUID> _deltaColumnFamily;
+    private final ColumnFamily<ByteBuffer, DeltaKey> _deltaColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _auditColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _deltaHistoryColumnFamily;
     private final TableDDL _deltaTableDDL;
@@ -25,7 +25,7 @@ class DeltaPlacement implements Placement {
 
     DeltaPlacement(String name,
                    CassandraKeyspace keyspace,
-                   ColumnFamily<ByteBuffer, UUID> deltaColumnFamily,
+                   ColumnFamily<ByteBuffer, DeltaKey> deltaColumnFamily,
                    ColumnFamily<ByteBuffer, UUID> auditColumnFamily,
                    ColumnFamily<ByteBuffer, UUID> deltaHistoryColumnFamily) {
         _name = checkNotNull(name, "name");
@@ -34,7 +34,7 @@ class DeltaPlacement implements Placement {
         _auditColumnFamily = checkNotNull(auditColumnFamily, "auditColumnFamily");
         _deltaHistoryColumnFamily = checkNotNull(deltaHistoryColumnFamily, "deltaHistoryColumnFamily");
 
-        _deltaTableDDL = createTableDDL(_deltaColumnFamily.getName());
+        _deltaTableDDL = createDeltaTableDDL(_deltaColumnFamily.getName());
         _auditTableDDL = createTableDDL(_auditColumnFamily.getName());
         _deltaHistoryTableDDL = createTableDDL(_deltaHistoryColumnFamily.getName());
     }
@@ -42,13 +42,26 @@ class DeltaPlacement implements Placement {
     /**
      * All three placement tables -- delta, audit, and delta history -- follow the same DDL.
      */
+    /* NOT ANYMORE THEY DON"T! */
     private TableDDL createTableDDL(String tableName) {
+        System.out.println("create table ddl:" + tableName);
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
         String valueColumnName = tableMetadata.getColumns().get(2).getName();
 
         return new TableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName);
+    }
+
+    private TableDDL createDeltaTableDDL(String tableName) {
+        System.out.println("create DELTA table ddl:" + tableName);
+        TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
+        String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
+        String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
+        String blockColumnName = tableMetadata.getColumns().get(2).getName();
+        String valueColumnName = tableMetadata.getColumns().get(3).getName();
+
+        return new DeltaTableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName, blockColumnName);
     }
 
     @Override
@@ -61,7 +74,7 @@ class DeltaPlacement implements Placement {
         return _keyspace;
     }
 
-    ColumnFamily<ByteBuffer, UUID> getDeltaColumnFamily() {
+    ColumnFamily<ByteBuffer, DeltaKey> getDeltaColumnFamily() {
         return _deltaColumnFamily;
     }
 

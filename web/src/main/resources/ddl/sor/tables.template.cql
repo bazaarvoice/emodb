@@ -18,8 +18,9 @@ CREATE TABLE ${table.audit} (
 CREATE TABLE ${table.delta} (
     rowkey blob,
     changeid timeuuid,
+    block int,
     content text,
-    PRIMARY KEY (rowkey, changeid)
+    PRIMARY KEY (rowkey, changeid, block)
 ) WITH COMPACT STORAGE
   AND gc_grace_seconds = 172800
   AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}

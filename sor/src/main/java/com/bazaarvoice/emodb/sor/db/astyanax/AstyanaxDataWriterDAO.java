@@ -45,6 +45,7 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.AbstractThriftMutationBatchImpl;
 import org.apache.cassandra.thrift.Cassandra;
@@ -221,6 +222,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
+            Integer block = new Integer(0);
+            DeltaKey deltaKey = new DeltaKey(changeId, block);
 
             // Validate sizes of individual deltas and audits
             if (deltaSize > MAX_DELTA_SIZE) {
@@ -240,7 +243,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
+                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.cl, encodedDelta, null);
                 potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
                 if (getMutationBatchSize(potentiallyOversizeMutation) >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
@@ -252,7 +255,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
+            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey, encodedDelta, null);
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
             approxMutationSize += deltaSize + auditSize;
             updateCount += 1;

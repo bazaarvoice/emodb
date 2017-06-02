@@ -16,6 +16,7 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
@@ -89,7 +90,9 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
         }
 
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
-        ColumnFamily<ByteBuffer, UUID> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, TimeUUIDSerializer.get());
+        AnnotatedCompositeSerializer<DeltaKey> deltaKeySerializer = new AnnotatedCompositeSerializer<DeltaKey>(DeltaKey.class);
+
+        ColumnFamily<ByteBuffer, DeltaKey> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, deltaKeySerializer);
         ColumnFamily<ByteBuffer, UUID> auditCf = getColumnFamily(keyspaceDef, cfPrefix, "audit", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = getColumnFamily(keyspaceDef, cfPrefix, "history", placement, TimeUUIDSerializer.get());
 
