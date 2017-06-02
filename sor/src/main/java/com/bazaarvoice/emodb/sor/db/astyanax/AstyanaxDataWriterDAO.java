@@ -45,7 +45,6 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.AbstractThriftMutationBatchImpl;
 import org.apache.cassandra.thrift.Cassandra;
@@ -222,7 +221,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
-            Integer block = new Integer(0);
+            Integer block = 0;
             DeltaKey deltaKey = new DeltaKey(changeId, block);
 
             // Validate sizes of individual deltas and audits
@@ -243,7 +242,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.cl, encodedDelta, null);
+                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.clone(), encodedDelta, null);
                 potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
                 if (getMutationBatchSize(potentiallyOversizeMutation) >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
@@ -255,7 +254,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey, encodedDelta, null);
+            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.clone(), encodedDelta, null);
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
             approxMutationSize += deltaSize + auditSize;
             updateCount += 1;
@@ -303,11 +302,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private void writeCompaction(ByteBuffer rowKey, UUID compactionKey, Compaction compaction,
                                  WriteConsistency consistency, DeltaPlacement placement,
                                  CassandraKeyspace keyspace, Table table, String key) {
-            MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
-            ColumnListMutation<UUID> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
+
+        MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
+        ColumnListMutation<DeltaKey> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
 
         // Add the compaction record
-        rowMutation.putColumn(compactionKey, _changeEncoder.encodeCompaction(compaction), null);
+        // need to switch out the zero for an actual block separation
+        rowMutation.putColumn(new DeltaKey(compactionKey, 0), _changeEncoder.encodeCompaction(compaction), null);
         // Write the new compaction
         execute(mutation, "compact placement %s, table %s, key %s", placement.getName(), table.getName(), key);
     }
@@ -316,11 +317,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                        CassandraKeyspace keyspace, Collection<UUID> changesToDelete,
                                        List<History> historyList, Table table, String key) {
         MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
-        ColumnListMutation<UUID> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
+        ColumnListMutation<DeltaKey> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
 
         // delete the old deltas & compaction records
         for (UUID change : changesToDelete) {
-            rowMutation.deleteColumn(change);
+            rowMutation.deleteColumn(new DeltaKey(change, 0));
         }
 
         // Archive compacted deltas
