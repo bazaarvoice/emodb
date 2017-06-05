@@ -49,11 +49,7 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
-import com.netflix.astyanax.CassandraOperationType;
-import com.netflix.astyanax.ColumnListMutation;
-import com.netflix.astyanax.Execution;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.*;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
 import com.netflix.astyanax.connectionpool.ConnectionPool;
 import com.netflix.astyanax.connectionpool.OperationResult;
@@ -61,14 +57,9 @@ import com.netflix.astyanax.connectionpool.TokenRange;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.connectionpool.exceptions.IsTimeoutException;
 import com.netflix.astyanax.connectionpool.impl.TokenRangeImpl;
-import com.netflix.astyanax.model.ByteBufferRange;
-import com.netflix.astyanax.model.CfSplit;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.model.*;
+import com.netflix.astyanax.serializers.ByteBufferSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.AbstractKeyspaceOperationImpl;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
@@ -191,7 +182,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         ByteBuffer rowKey = storage.getRowKey(key.getKey());
 
         // Query for Delta & Compaction info, just the first 50 columns for now.
-        ColumnList<UUID> columns = execute(placement.getKeyspace()
+        ColumnList<DeltaKey> columns = execute(placement.getKeyspace()
                         .prepareQuery(placement.getDeltaColumnFamily(), SorConsistencies.toAstyanax(consistency))
                         .getKey(rowKey)
                         .withColumnRange(_maxColumnsRange),
@@ -1073,22 +1064,60 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         });
     }
 
-    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<UUID> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(columns.iterator(), cutoffTime));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(columns.iterator(), cutoffTime));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(columns.iterator(), cutoffTime));
+    private Iterator<Column<UUID>> convertColumnList(ColumnList<DeltaKey> columns) {
+        Iterator<Column<UUID>> transformedIterator = Iterators.transform(columns.iterator(), new Function<Column<DeltaKey>, Column<UUID>>() {
+            @Override
+            public Column<UUID> apply(Column<DeltaKey> input) {
+
+                Column<UUID> transformedCol = new AbstractColumnImpl<UUID>(input.getName().getChangeId()) {
+                    @Override
+                    public ByteBuffer getRawName() {
+                        return UUIDSerializer.get().toByteBuffer(input.getName().getChangeId());
+                    }
+
+                    @Override
+                    public long getTimestamp() {
+                        return input.getTimestamp();
+                    }
+
+                    @Override
+                    public <V> V getValue(Serializer<V> serializer) {
+                        return input.getValue(serializer);
+                    }
+
+                    @Override
+                    public int getTtl() {
+                        return input.getTtl();
+                    }
+
+                    @Override
+                    public boolean hasValue() {
+                        return input.hasValue();
+                    }
+                };
+
+                return transformedCol;
+            }
+        });
+        return transformedIterator;
+    }
+
+    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(convertColumnList(columns), cutoffTime));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(convertColumnList(columns), cutoffTime));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(convertColumnList(columns), cutoffTime));
 
         if (columns.size() >= largeRowThreshold) {
             // A large row such that the first query likely returned only a subset of all the columns.  Lazily fetch
             // the rest while ensuring we never load all columns into memory at the same time.  The current
             // Compactor+Resolver implementation must scan the row twice: once to find compaction records and once to
             // find deltas.  So we must call columnScan() twice, once for each.
-            UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
+            DeltaKey lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
 
             AstyanaxTable table = (AstyanaxTable) key.getTable();
             AstyanaxStorage storage = table.getReadStorage();
             DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
-            ColumnFamily<ByteBuffer, UUID> columnFamily = placement.getDeltaColumnFamily();
+            ColumnFamily<ByteBuffer, DeltaKey> columnFamily = placement.getDeltaColumnFamily();
 
             // Execute the same scan 3 times, returning 3 iterators that process the results in different ways.  In
             // practice at most two of the iterators are actually consumed (one or more is ignored) so the columnScan
@@ -1207,6 +1236,6 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         if (cutoffTime == null) {
             return columnIter;
         }
-        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getUUIDValue()) < cutoffTime.getMillis()));
+        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getName()) < cutoffTime.getMillis()));
     }
 }
