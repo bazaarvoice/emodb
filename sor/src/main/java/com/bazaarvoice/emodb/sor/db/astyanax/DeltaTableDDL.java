@@ -12,9 +12,6 @@ public class DeltaTableDDL extends TableDDL {
     public DeltaTableDDL(TableMetadata tableMetadata, String rowKeyColumnName, String changeIdColumnName, String valueColumnName, String blockColumnName) {
         super(tableMetadata, rowKeyColumnName, changeIdColumnName, valueColumnName);
         _blockColumnName = blockColumnName;
-        System.out.println("Delta TableDDL!");
-        System.out.println(rowKeyColumnName + " " + changeIdColumnName + " " + blockColumnName + " " + valueColumnName);
-
     }
 
     public String getBlockColumnName() {
