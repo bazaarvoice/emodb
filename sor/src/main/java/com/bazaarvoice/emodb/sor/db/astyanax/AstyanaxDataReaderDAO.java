@@ -36,18 +36,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.*;
 import com.google.inject.Inject;
 import com.netflix.astyanax.*;
 import com.netflix.astyanax.connectionpool.ConnectionContext;
@@ -733,6 +722,119 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         return decodeRows(keys, rows, _maxColumnsRange.getLimit(), consistency);
     }
 
+    private Column<UUID> convertColumn(Column<DeltaKey> col) {
+        return new AbstractColumnImpl<UUID>(col.getName().getChangeId()) {
+            @Override
+            public ByteBuffer getRawName() {
+                return UUIDSerializer.get().toByteBuffer(col.getName().getChangeId());
+            }
+
+            @Override
+            public long getTimestamp() {
+                return col.getTimestamp();
+            }
+
+            @Override
+            public <V> V getValue(Serializer<V> serializer) {
+                return col.getValue(serializer);
+            }
+
+            @Override
+            public int getTtl() {
+                return col.getTtl();
+            }
+
+            @Override
+            public boolean hasValue() {
+                return col.hasValue();
+            }
+        };
+    }
+
+    private ColumnList<UUID> convertColumnList(ColumnList<DeltaKey> list) {
+        return new AbstractColumnList<UUID>() {
+            @Override
+            public Collection<UUID> getColumnNames() {
+                return Collections2.transform(list.getColumnNames(), new Function<DeltaKey, UUID>() {
+                    @Override
+                    public UUID apply(DeltaKey d) {
+                        return d.getChangeId();
+                    }
+                });
+            }
+
+            @Override
+            public Column<UUID> getColumnByName(UUID uuid) {
+                Column<DeltaKey> col = list.getColumnByName(new DeltaKey(uuid, 0));
+                if (col == null) return null;
+                return convertColumn(col);
+            }
+
+            @Override
+            public Column<UUID> getColumnByIndex(int i) {
+                Column<DeltaKey> col = list.getColumnByIndex(i);
+                if (col == null) return null;
+                return convertColumn(col);
+            }
+
+            @Override
+            public <C2> Column<C2> getSuperColumn(UUID uuid, Serializer<C2> serializer) {
+                return list.getSuperColumn(new DeltaKey(uuid, 0), serializer);
+            }
+
+            @Override
+            public <C2> Column<C2> getSuperColumn(int i, Serializer<C2> serializer) {
+                return list.getSuperColumn(i, serializer);
+            }
+
+            @Override
+            public boolean isEmpty() {
+                return list.isEmpty();
+            }
+
+            @Override
+            public int size() {
+                return list.size();
+            }
+
+            @Override
+            public boolean isSuperColumn() {
+                return isSuperColumn();
+            }
+
+            @Override
+            public Iterator<Column<UUID>> iterator() {
+                return convertColumnListIterator(list.iterator());
+            }
+        };
+    }
+
+    private Iterator<Row<ByteBuffer, UUID>> convertRowIterator(Iterator<Row<ByteBuffer, DeltaKey>> iterator) {
+        Iterator<Row<ByteBuffer, UUID>> transformedIterator = Iterators.transform(iterator, new Function<Row<ByteBuffer, DeltaKey>, Row<ByteBuffer, UUID>>() {
+            @Override
+            public Row<ByteBuffer, UUID> apply(Row<ByteBuffer, DeltaKey> input) {
+                return new Row<ByteBuffer, UUID>() {
+                    @Override
+                    public ByteBuffer getKey() {
+                        return input.getKey();
+                    }
+
+                    @Override
+                    public ByteBuffer getRawKey() {
+                        return input.getRawKey();
+                    }
+
+                    @Override
+                    public ColumnList<UUID> getColumns() {
+                        ColumnList<DeltaKey> list = input.getColumns();
+                        return convertColumnList(list);
+                    }
+                };
+            }
+        });
+        return transformedIterator;
+    }
+
     /**
      * Scans for rows within the specified range, exclusive on start and inclusive on end.
      */
@@ -741,7 +843,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                                                     final ByteBufferRange columnRange,
                                                     final LimitCounter limit,
                                                     final ReadConsistency consistency) {
-        return rowScan(placement, placement.getDeltaColumnFamily(), rowRange, columnRange, limit, consistency);
+        return convertRowIterator(rowScan(placement, placement.getDeltaColumnFamily(), rowRange, columnRange, limit, consistency));
     }
 
     /**
@@ -985,7 +1087,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                 // Track metrics.  For rows w/more than 50 columns, count subsequent reads w/_largeRowReadMeter.
                 (_page == 0 ? _randomReadMeter : _largeRowReadMeter).mark();
 
-                return convertColumnList(columns.iterator());
+                return convertColumnListIterator(columns.iterator());
             }
         });
     }
@@ -1137,7 +1239,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         });
     }
 
-    private Iterator<Column<UUID>> convertColumnList(Iterator<Column<DeltaKey>> iterator) {
+    private Iterator<Column<UUID>> convertColumnListIterator(Iterator<Column<DeltaKey>> iterator) {
         Iterator<Column<UUID>> transformedIterator = Iterators.transform(iterator, new Function<Column<DeltaKey>, Column<UUID>>() {
             @Override
             public Column<UUID> apply(Column<DeltaKey> input) {
@@ -1176,9 +1278,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(convertColumnList(columns.iterator()), cutoffTime));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(convertColumnList(columns.iterator()), cutoffTime));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(convertColumnList(columns.iterator()), cutoffTime));
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
 
         if (columns.size() >= largeRowThreshold) {
             // A large row such that the first query likely returned only a subset of all the columns.  Lazily fetch
