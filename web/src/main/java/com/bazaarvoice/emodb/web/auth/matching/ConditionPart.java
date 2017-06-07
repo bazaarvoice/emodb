@@ -80,6 +80,13 @@ public class ConditionPart extends EmoMatchingPart {
     }
 
     @Override
+    public boolean impliedPartExists() {
+        // Although there are an infinite number of conditions which deny all inputs we only check for the
+        // most basic "not alwaysFalse()" condition.
+        return !_condition.equals(Conditions.alwaysFalse());
+    }
+
+    @Override
     public boolean impliesCondition(ConditionPart part, List<MatchingPart> leadingParts) {
         // This condition implies the other condition only if it is a subset of this condition.
         return SubsetEvaluator.isSubset(part.getCondition(), _condition);

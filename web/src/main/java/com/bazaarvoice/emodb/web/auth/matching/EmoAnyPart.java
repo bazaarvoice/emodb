@@ -30,4 +30,9 @@ public class EmoAnyPart extends AnyPart implements EmoImplier {
     public boolean impliesCreateTable(CreateTablePart part, List<MatchingPart> leadingParts) {
         return true;
     }
+
+    @Override
+    public boolean impliedPartExists() {
+        return true;
+    }
 }

@@ -25,7 +25,7 @@ public class AuthorizationExceptionHandler implements ExceptionMapper<Authorizat
     public Response toResponse(AuthorizationException exception) {
         // AuthorizationException is only used internally to propagate authorization errors.  Convert the
         // exception to the equivalent public-facing exception from the API.
-        UnauthorizedException apiException = new UnauthorizedException("not authorized");
+        UnauthorizedException apiException = new UnauthorizedException();
         return _providers.getExceptionMapper(UnauthorizedException.class).toResponse(apiException);
     }
 }

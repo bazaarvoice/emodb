@@ -4,18 +4,24 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionManager;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.Iterator;
@@ -37,6 +43,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * RoleManager implementation which persists roles using tables in a {@link DataStore}.
  */
 public class TableRoleManagerDAO implements RoleManager {
+
+    private final Logger _log = LoggerFactory.getLogger(TableRoleManagerDAO.class);
 
     // Even roles with no group belong to a group, the catch-all "no group".  The name for this group is reserved
     // and cannot be explicitly used by the API.
@@ -149,7 +157,7 @@ public class TableRoleManagerDAO implements RoleManager {
         if (existingRole != null) {
             throw new RoleExistsException(id.getGroup(), id.getId());
         }
-        
+
         // Without transactions it is not possible to ensure the role, group, and permissions are written without
         // failing independently.  Write the group entry first followed by the role.  This way if there is a failure
         // there won't be a dangling role with no group and the logic for role groups can tolerate missing references,
@@ -158,28 +166,50 @@ public class TableRoleManagerDAO implements RoleManager {
 
         UUID changeId = TimeUUIDs.newUUID();
 
-        _dataStore.update(_groupTableName, groupKey, changeId,
-                Deltas.mapBuilder()
-                        .update(IDS_ATTR, Deltas.setBuilder()
-                                .add(id.getId())
-                                .build())
-                        .build(),
-                new AuditBuilder().setLocalHost().setComment("Create role " + id).build(),
-                WriteConsistency.GLOBAL);
+        Delta groupTableDelta = Deltas.mapBuilder()
+                .update(IDS_ATTR, Deltas.setBuilder()
+                        .add(id.getId())
+                        .build())
+                .build();
 
-        _dataStore.update(_roleTableName, id.toString(), changeId,
-                Deltas.mapBuilder()
-                        .put(NAME_ATTR, modification.getName())
-                        .put(DESCRIPTION_ATTR, modification.getDescription())
-                        .build(),
-                new AuditBuilder().setLocalHost().setComment("Create role " + id).build(),
-                WriteConsistency.GLOBAL);
+        Delta roleTableDelta = Deltas.mapBuilder()
+                .put(NAME_ATTR, modification.getName())
+                .put(DESCRIPTION_ATTR, modification.getDescription())
+                .build();
+
+        Audit audit = new AuditBuilder().setLocalHost().setComment("Create role " + id).build();
+
+        _dataStore.updateAll(ImmutableList.of(
+                new Update(_groupTableName, groupKey, changeId, groupTableDelta, audit, WriteConsistency.GLOBAL),
+                new Update(_roleTableName, id.toString(), changeId, roleTableDelta, audit, WriteConsistency.GLOBAL)));
 
         if (modification.getPermissionUpdate() != null) {
-            List<String> permissions = ImmutableList.copyOf(modification.getPermissionUpdate().getPermitted());
-            if (!permissions.isEmpty()) {
+            try {
                 _permissionManager.updatePermissions(PermissionIDs.forRole(id),
-                        new PermissionUpdateRequest().permit(permissions));
+                        new PermissionUpdateRequest().permit(modification.getPermissionUpdate().getPermitted()));
+            } catch (Exception e) {
+                // Attempt to rollback the role's creation
+                try {
+                    changeId = TimeUUIDs.newUUID();
+                    audit = new AuditBuilder().setLocalHost().setComment("Rollback role " + id).build();
+                    groupTableDelta = Deltas.mapBuilder()
+                            .update(IDS_ATTR, Deltas.setBuilder()
+                                    .remove(id.getId())
+                                    .deleteIfEmpty()
+                                    .build())
+                            .deleteIfEmpty()
+                            .build();
+                    roleTableDelta = Deltas.delete();
+
+                    _dataStore.updateAll(ImmutableList.of(
+                            new Update(_groupTableName, groupKey, changeId, groupTableDelta, audit, WriteConsistency.GLOBAL),
+                            new Update(_roleTableName, id.toString(), changeId, roleTableDelta, audit, WriteConsistency.GLOBAL)));
+                } catch (Exception rollbackException) {
+                    // Log this error, but favor throwing the original exception
+                    _log.warn("Failed to delete role after failed permission create: {}", id, rollbackException);
+                }
+
+                throw Throwables.propagate(e);
             }
         }
 
@@ -197,14 +227,20 @@ public class TableRoleManagerDAO implements RoleManager {
         // As with creating a role, updating role metadata and permissions cannot be performed atomically.  Update
         // role metadata first since a failure at that point poses the least security risk.
 
+        MapDeltaBuilder rollbackDelta = null;
         if (modification.isNamePresent() || modification.isDescriptionPresent()) {
             MapDeltaBuilder delta = Deltas.mapBuilder();
+            rollbackDelta = Deltas.mapBuilder();
+
             if (modification.isNamePresent()) {
                 delta.put(NAME_ATTR, modification.getName());
+                rollbackDelta.put(NAME_ATTR, role.getName());
             }
             if (modification.isDescriptionPresent()) {
                 delta.put(DESCRIPTION_ATTR, modification.getDescription());
+                rollbackDelta.put(DESCRIPTION_ATTR, role.getDescription());
             }
+
             _dataStore.update(_roleTableName, id.toString(), TimeUUIDs.newUUID(),
                     delta.build(),
                     new AuditBuilder().setLocalHost().setComment("Update role " + id).build(),
@@ -212,7 +248,23 @@ public class TableRoleManagerDAO implements RoleManager {
         }
 
         if (modification.getPermissionUpdate() != null) {
-            _permissionManager.updatePermissions(PermissionIDs.forRole(id), modification.getPermissionUpdate());
+            try {
+                _permissionManager.updatePermissions(PermissionIDs.forRole(id), modification.getPermissionUpdate());
+            } catch (Exception e) {
+                if (rollbackDelta != null) {
+                    // Attempt to rollback the role's state
+                    try {
+                        _dataStore.update(_roleTableName, id.toString(), TimeUUIDs.newUUID(), rollbackDelta.build(),
+                                new AuditBuilder().setLocalHost().setComment("Rollback role " + id).build(),
+                                WriteConsistency.GLOBAL);
+                    } catch (Exception rollbackException) {
+                        // Log this error, but favor throwing the original exception
+                        _log.warn("Failed to rollback role after failed permission update: {}", id, rollbackException);
+                    }
+                }
+
+                throw Throwables.propagate(e);
+            }
         }
     }
 
@@ -232,22 +284,22 @@ public class TableRoleManagerDAO implements RoleManager {
         // As the inverse for creating roles the role is deleted before the group.
         UUID changeId = TimeUUIDs.newUUID();
         String groupKey = checkGroup(role.getGroup());
-        
-        _dataStore.update(_roleTableName, id.toString(), changeId,
-                Deltas.delete(),
-                new AuditBuilder().setLocalHost().setComment("Delete role " + id).build(),
-                WriteConsistency.GLOBAL);
 
-        _dataStore.update(_groupTableName, groupKey, changeId,
-                Deltas.mapBuilder()
-                        .update(IDS_ATTR, Deltas.setBuilder()
-                                .remove(role.getId())
-                                .deleteIfEmpty()
-                                .build())
+        Delta groupTableDelta = Deltas.mapBuilder()
+                .update(IDS_ATTR, Deltas.setBuilder()
+                        .remove(role.getId())
                         .deleteIfEmpty()
-                        .build(),
-                new AuditBuilder().setLocalHost().setComment("Delete role " + id).build(),
-                WriteConsistency.GLOBAL);
+                        .build())
+                .deleteIfEmpty()
+                .build();
+
+        Delta roleTableDelta = Deltas.delete();
+
+        Audit audit = new AuditBuilder().setLocalHost().setComment("Delete role " + id).build();
+
+        _dataStore.updateAll(ImmutableList.of(
+                new Update(_groupTableName, groupKey, changeId, groupTableDelta, audit, WriteConsistency.GLOBAL),
+                new Update(_roleTableName, id.toString(), changeId, roleTableDelta, audit, WriteConsistency.GLOBAL)));
     }
 
     /**

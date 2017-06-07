@@ -7,6 +7,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.shiro.authz.Permission;
+import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -45,7 +46,9 @@ public class MatchingPermission implements Permission, Serializable {
 
     protected MatchingPermission(String permission, boolean initializePermission) {
         _permission = checkNotNull(permission, "permission");
-        checkArgument(!"".equals(permission.trim()), "Permission must be a non-null, non-empty string");
+        if ("".equals(permission.trim())) {
+            throw new InvalidPermissionStringException("Permission must be a non-null, non-empty string", permission);
+        }
 
         if (initializePermission) {
             initializePermission();
@@ -58,17 +61,24 @@ public class MatchingPermission implements Permission, Serializable {
      * with the initialization parameter set to false and then call this method when ready.
      */
     protected void initializePermission() {
-        List<MatchingPart> parts = Lists.newArrayList();
+        try {
+            List<MatchingPart> parts = Lists.newArrayList();
 
-        for (String partString : split(_permission)) {
-            partString = partString.trim();
-            checkArgument(!"".equals(partString), "Permission cannot contain empty parts");
+            for (String partString : split(_permission)) {
+                partString = partString.trim();
+                checkArgument(!"".equals(partString), "Permission cannot contain empty parts");
 
-            MatchingPart part = toPart(Collections.unmodifiableList(parts), partString);
-            parts.add(part);
+                MatchingPart part = toPart(Collections.unmodifiableList(parts), partString);
+                parts.add(part);
+            }
+
+            _parts = ImmutableList.copyOf(parts);
+        } catch (InvalidPermissionStringException e) {
+            throw e;
+        } catch (Exception e) {
+            // Rethrow any uncaught exception as being caused by an invalid permission string
+            throw new InvalidPermissionStringException(e.getMessage(), _permission);
         }
-
-        _parts = ImmutableList.copyOf(parts);
     }
 
     public MatchingPermission(String... parts) {

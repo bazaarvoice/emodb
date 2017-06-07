@@ -44,6 +44,10 @@ import com.bazaarvoice.emodb.web.resources.queue.DedupQueueResource1;
 import com.bazaarvoice.emodb.web.resources.queue.QueueResource1;
 import com.bazaarvoice.emodb.web.resources.report.ReportResource1;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
+import com.bazaarvoice.emodb.web.resources.uac.ApiKeyResource1;
+import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
+import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
+import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.resource.ScanUploadResource1;
 import com.bazaarvoice.emodb.web.throttling.AdHocConcurrentRequestRegulatorSupplier;
@@ -52,6 +56,7 @@ import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListedIpFilter;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
+import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -98,6 +103,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -199,6 +205,7 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateScanner();
         evaluateServiceStartedListeners();
         evaluateSwagger();
+        evaluateUAC();
     }
 
     private void evaluateWeb()
@@ -392,6 +399,22 @@ public class EmoService extends Application<EmoConfiguration> {
         beanConfig.setResourcePackage("com.bazaarvoice.emodb.web.resources");
         // this is a MUST and should be the last property - this creates a new SwaggerContextService and initialize the scanner.
         beanConfig.setScan(true);
+    }
+
+    private void evaluateUAC()
+            throws Exception {
+        if (!runPerServiceMode(uac)) {
+            return;
+        }
+
+        _environment.jersey().register(UserAccessControlRequestMessageBodyReader.class);
+
+        ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
+        SubjectUserAccessControl subjectUserAccessControl = _injector.getInstance(SubjectUserAccessControl.class);
+        RoleResource1 roleResource1 = new RoleResource1(subjectUserAccessControl);
+        ApiKeyResource1 apiKeyResource = new ApiKeyResource1(subjectUserAccessControl);
+        UserAccessControlResource1 authResource = new UserAccessControlResource1(roleResource1, apiKeyResource);
+        resources.addResource(_cluster, "emodb-uac-1", authResource);
     }
 
     private boolean runPerServiceMode (EmoServiceMode.Aspect aspect) {

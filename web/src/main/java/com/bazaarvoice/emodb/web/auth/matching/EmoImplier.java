@@ -29,4 +29,9 @@ public interface EmoImplier extends Implier {
      * Returns true if the instance should permit creating the provided table.
      */
     boolean impliesCreateTable(CreateTablePart part, List<MatchingPart> leadingParts);
+
+    /**
+     * Returns true if there is at least one potential circumstance where the instance would return true.
+     */
+    boolean impliedPartExists();
 }

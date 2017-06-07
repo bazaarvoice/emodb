@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.sor.api.TableAvailability;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.google.common.collect.ImmutableMap;
+import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
@@ -393,24 +394,48 @@ public class EmoPermissionTest {
                 .implies(_resolver.resolvePermission("sor|read|if(intrinsic(\"~table\":\":test:table\"))")));
     }
 
-    @Test (expectedExceptions = IllegalArgumentException.class)
+    @Test (expectedExceptions = InvalidPermissionStringException.class)
     public void testNonConstantInitialScopeRejected() {
         _resolver.resolvePermission("s*");
     }
 
-    @Test (expectedExceptions = IllegalArgumentException.class)
+    @Test (expectedExceptions = InvalidPermissionStringException.class)
     public void testNarrowedWildcardScopeRejected() {
         _resolver.resolvePermission("*|update");
     }
 
-    @Test (expectedExceptions = IllegalArgumentException.class)
+    @Test (expectedExceptions = InvalidPermissionStringException.class)
     public void testInvalidActionCondition() {
         _resolver.resolvePermission("sor|if(intrinsic(\"~table\":\"foo\"))");
     }
 
-    @Test (expectedExceptions = IllegalArgumentException.class)
+    @Test (expectedExceptions = InvalidPermissionStringException.class)
     public void testInvalidTableCondition() {
         _resolver.resolvePermission("sor|*|if(intrinsic(\"~id\":~))");
+    }
+
+    @Test
+    public void testImpliedPartExistsPermission() {
+        assertTrue(_resolver.resolvePermission("sor|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|if(in(\"read\",\"update\"))|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|table1")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|if({..,\"type\":\"review\"}")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertTrue(_resolver.resolvePermission("sor|read|if(alwaysTrue())")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|update|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("blob|read|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|if(in(\"update\",\"delete\"))|*")
+                .implies(_resolver.resolvePermission("sor|read|?")));
+        assertFalse(_resolver.resolvePermission("sor|read|if(alwaysFalse())")
+                .implies(_resolver.resolvePermission("sor|read|?")));
     }
 
     private void addSorTable(String name, String placement, Map<String, Object> attributes) {

@@ -101,6 +101,22 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-uac-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-uac-client</artifactId>
+            <version>${project.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-plugins</artifactId>
             <version>${project.version}</version>
         </dependency>

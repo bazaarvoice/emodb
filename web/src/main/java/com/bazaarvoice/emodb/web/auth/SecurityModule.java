@@ -27,11 +27,29 @@ import com.bazaarvoice.emodb.auth.role.TableRoleManagerDAO;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
+import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
+import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
+import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
+import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;
+import com.bazaarvoice.emodb.web.uac.ReadWriteDelegatingSubjectUserAccessControl;
+import com.bazaarvoice.emodb.web.uac.RemoteSubjectUserAccessControl;
+import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
+import com.bazaarvoice.ostrich.ServiceEndPoint;
+import com.bazaarvoice.ostrich.ServiceEndPointBuilder;
+import com.bazaarvoice.ostrich.ServiceFactory;
+import com.bazaarvoice.ostrich.discovery.FixedHostDiscovery;
+import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
+import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
@@ -47,15 +65,19 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
+import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.PermissionResolver;
 import org.apache.shiro.mgt.SecurityManager;
 import org.slf4j.LoggerFactory;
 
+import java.net.URI;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -78,6 +100,7 @@ import java.util.stream.Collectors;
  * <li> @{@link SystemIdentity} String
  * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
+ * <li> {@link SubjectUserAccessControl}
  * </ul>
  */
 public class SecurityModule extends PrivateModule {
@@ -97,9 +120,9 @@ public class SecurityModule extends PrivateModule {
     protected void configure() {
         bind(HashFunction.class).annotatedWith(ApiKeyHashFunction.class).toInstance(Hashing.sha256());
         bind(ApiKeyEncryption.class).asEagerSingleton();
-        bind(ApiKeyAdminTask.class).asEagerSingleton();
-        bind(RoleAdminTask.class).asEagerSingleton();
         bind(RebuildMissingRolesTask.class).asEagerSingleton();
+
+        bind(LocalSubjectUserAccessControl.class).asEagerSingleton();
         
         bind(new TypeLiteral<Set<String>>() {})
                 .annotatedWith(ReservedRoles.class)
@@ -120,6 +143,7 @@ public class SecurityModule extends PrivateModule {
         expose(Key.get(String.class, SystemIdentity.class));
         expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
+        expose(SubjectUserAccessControl.class);
     }
 
     @Provides
@@ -225,16 +249,25 @@ public class SecurityModule extends PrivateModule {
 
         ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
         reservedIdentities.put(replicationKey,
-                new ApiKey(REPLICATION_ID, ImmutableSet.of(DefaultRoles.replication.toString())));
+                createReservedApiKey(REPLICATION_ID, "replication", ImmutableSet.of(DefaultRoles.replication.toString())));
         reservedIdentities.put(adminKey,
-                new ApiKey(ADMIN_ID, ImmutableSet.of(DefaultRoles.admin.toString())));
+                createReservedApiKey(ADMIN_ID, "admin", ImmutableSet.of(DefaultRoles.admin.toString())));
 
         if (anonymousKey.isPresent()) {
             reservedIdentities.put(anonymousKey.get(),
-                    new ApiKey(ANONYMOUS_ID, ImmutableSet.of(DefaultRoles.anonymous.toString())));
+                    createReservedApiKey(ANONYMOUS_ID, "anonymous", ImmutableSet.of(DefaultRoles.anonymous.toString())));
         }
 
         return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
+    }
+
+    private ApiKey createReservedApiKey(String id, String description, Set<String> roles) {
+        ApiKey apiKey = new ApiKey(id, roles);
+        apiKey.setOwner("emodb");
+        apiKey.setDescription(description);
+        apiKey.setIssued(new Date(1471898640000L));
+        apiKey.setMaskedId(Strings.repeat("*", 48));
+        return apiKey;
     }
 
     @Provides
@@ -317,5 +350,43 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     RoleManager provideRoleManager(@Named("withDefaults") RoleManager delegate, @AuthZooKeeper CuratorFramework curator) {
         return new DataCenterSynchronizedRoleManager(delegate, curator);
+    }
+
+    @Provides
+    @Singleton
+    SubjectUserAccessControl provideSubjectUserAccessControl(LocalSubjectUserAccessControl local,
+                                                             DataCenterConfiguration dataCenterConfiguration,
+                                                             @ServerCluster String cluster,
+                                                             Client jerseyClient, MetricRegistry metricRegistry) {
+        // If this is the system data center all user access control can be performed locally
+        if (dataCenterConfiguration.isSystemDataCenter()) {
+            return local;
+        }
+
+        // Create a client for forwarding user access control requests to the system data center
+        ServiceFactory<AuthUserAccessControl> clientFactory = UserAccessControlClientFactory
+                .forClusterAndHttpClient(cluster, jerseyClient);
+
+        URI uri = dataCenterConfiguration.getSystemDataCenterServiceUri();
+        ServiceEndPoint endPoint = new ServiceEndPointBuilder()
+                .withServiceName(clientFactory.getServiceName())
+                .withId(dataCenterConfiguration.getSystemDataCenter())
+                .withPayload(new PayloadBuilder()
+                        .withUrl(uri.resolve(DataStoreClient.SERVICE_PATH))
+                        .withAdminUrl(uri)
+                        .toString())
+                .build();
+
+        AuthUserAccessControl uac = ServicePoolBuilder.create(AuthUserAccessControl.class)
+                .withMetricRegistry(metricRegistry)
+                .withHostDiscovery(new FixedHostDiscovery(endPoint))
+                .withServiceFactory(clientFactory)
+                .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
+
+        RemoteSubjectUserAccessControl remote = new RemoteSubjectUserAccessControl(uac);
+
+        // Provide an instance which satisfies read requests locally and forwards write requests to the
+        // system data center
+        return new ReadWriteDelegatingSubjectUserAccessControl(local, remote);
     }
 }

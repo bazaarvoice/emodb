@@ -42,7 +42,9 @@ Documentation
 
 [API Keys](https://bazaarvoice.github.io/emodb/security/)
 
-[API Key Management](https://bazaarvoice.github.io/emodb/securityadmin/)
+[User Access Control](https://bazaarvoice.github.io/emodb/useraccesscontrol/)
+
+[Security](https://bazaarvoice.github.io/emodb/securityadmin/)
 
 [Legacy Java Client Support](markdowns/LegacyJavaClients.md)
 

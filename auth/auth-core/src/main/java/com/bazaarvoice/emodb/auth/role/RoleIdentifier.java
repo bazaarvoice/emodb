@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.auth.role;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
 import org.apache.shiro.authz.AuthorizationInfo;
 
 import javax.annotation.Nullable;
@@ -16,7 +18,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * as demonstrated by {@link AuthorizationInfo#getRoles()}, so in all authentication and authorization interfaces
  * the string representation as returned by {@link #toString()} is used to identify roles.
  */
-public class RoleIdentifier {
+public class RoleIdentifier implements Comparable<RoleIdentifier> {
     private final String _group;
     private final String _id;
 
@@ -74,5 +76,13 @@ public class RoleIdentifier {
     @Override
     public int hashCode() {
         return Objects.hash(_group, _id);
+    }
+
+    @Override
+    public int compareTo(RoleIdentifier o) {
+        return ComparisonChain.start()
+                .compare(getGroup(), o.getGroup(), Ordering.natural().nullsFirst())
+                .compare(getId(), o.getId())
+                .result();
     }
 }

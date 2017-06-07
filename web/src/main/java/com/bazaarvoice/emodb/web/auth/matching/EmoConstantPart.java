@@ -35,4 +35,10 @@ public class EmoConstantPart extends ConstantPart implements EmoImplier {
         // This returns true in the very limited circumstance where the condition is a constant, such as eq("value")
         return SubsetEvaluator.isSubset(part.getCondition(), Conditions.equal(getValue()));
     }
+
+    @Override
+    public boolean impliedPartExists() {
+        // Since there is a value which is implied, the constant, this method always returns true.
+        return true;
+    }
 }
