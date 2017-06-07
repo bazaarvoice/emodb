@@ -5,9 +5,9 @@ import com.netflix.astyanax.annotations.Component;
 import java.util.UUID;
 
 public class DeltaKey {
-    // ask bill if these need to be private. I am concerned that it will impede annotatedcompositeserializer
-    @Component(ordinal=0) UUID _changeId;
-    @Component(ordinal=1) Integer _block;
+
+    private @Component(ordinal=0) UUID _changeId;
+    private @Component(ordinal=1) Integer _block;
 
     public DeltaKey(UUID changeId, Integer block) {
         _changeId = changeId;
