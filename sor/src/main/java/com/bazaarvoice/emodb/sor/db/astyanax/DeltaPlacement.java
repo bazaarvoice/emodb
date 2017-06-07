@@ -40,11 +40,10 @@ class DeltaPlacement implements Placement {
     }
 
     /**
-     * All three placement tables -- delta, audit, and delta history -- follow the same DDL.
+     * The delta and audit placement tables -- follow the same DDL.
+     * Delta placement table is different -- it has an additional block column.
      */
-    /* NOT ANYMORE THEY DON"T! */
     private TableDDL createTableDDL(String tableName) {
-        System.out.println("create table ddl:" + tableName);
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
@@ -54,7 +53,6 @@ class DeltaPlacement implements Placement {
     }
 
     private TableDDL createDeltaTableDDL(String tableName) {
-        System.out.println("create DELTA table ddl:" + tableName);
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
