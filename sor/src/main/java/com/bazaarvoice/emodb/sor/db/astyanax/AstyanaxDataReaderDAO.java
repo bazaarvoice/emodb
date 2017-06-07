@@ -183,7 +183,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         _randomReadMeter.mark();
 
         // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
-        return newRecord(key, rowKey, columns, _maxColumnsRange.getLimit(), consistency, null);
+        return newDeltaRecord(key, rowKey, columns, _maxColumnsRange.getLimit(), consistency, null);
     }
 
     @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.readAll", absolute = true)
@@ -1124,7 +1124,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     return emptyRecord(entry.getValue());
                 }
                 // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
-                return newRecord(entry.getValue(), row.getRawKey(), row.getColumns(), largeRowThreshold, consistency, null);
+                return newDeltaRecord(entry.getValue(), row.getRawKey(), row.getColumns(), largeRowThreshold, consistency, null);
             }
         });
     }
@@ -1240,44 +1240,40 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private Iterator<Column<UUID>> convertColumnListIterator(Iterator<Column<DeltaKey>> iterator) {
-        Iterator<Column<UUID>> transformedIterator = Iterators.transform(iterator, new Function<Column<DeltaKey>, Column<UUID>>() {
-            @Override
-            public Column<UUID> apply(Column<DeltaKey> input) {
+        return Iterators.transform(iterator, input -> {
 
-                Column<UUID> transformedCol = new AbstractColumnImpl<UUID>(input.getName().getChangeId()) {
-                    @Override
-                    public ByteBuffer getRawName() {
-                        return UUIDSerializer.get().toByteBuffer(input.getName().getChangeId());
-                    }
+            Column<UUID> transformedCol = new AbstractColumnImpl<UUID>(input.getName().getChangeId()) {
+                @Override
+                public ByteBuffer getRawName() {
+                    return UUIDSerializer.get().toByteBuffer(input.getName().getChangeId());
+                }
 
-                    @Override
-                    public long getTimestamp() {
-                        return input.getTimestamp();
-                    }
+                @Override
+                public long getTimestamp() {
+                    return input.getTimestamp();
+                }
 
-                    @Override
-                    public <V> V getValue(Serializer<V> serializer) {
-                        return input.getValue(serializer);
-                    }
+                @Override
+                public <V> V getValue(Serializer<V> serializer) {
+                    return input.getValue(serializer);
+                }
 
-                    @Override
-                    public int getTtl() {
-                        return input.getTtl();
-                    }
+                @Override
+                public int getTtl() {
+                    return input.getTtl();
+                }
 
-                    @Override
-                    public boolean hasValue() {
-                        return input.hasValue();
-                    }
-                };
+                @Override
+                public boolean hasValue() {
+                    return input.hasValue();
+                }
+            };
 
-                return transformedCol;
-            }
+            return transformedCol;
         });
-        return transformedIterator;
     }
 
-    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+    private Record newDeltaRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
         Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
         Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(convertColumnListIterator(columns.iterator()), cutoffTime));
@@ -1288,6 +1284,37 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             // Compactor+Resolver implementation must scan the row twice: once to find compaction records and once to
             // find deltas.  So we must call columnScan() twice, once for each.
             UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName().getChangeId();
+
+            AstyanaxTable table = (AstyanaxTable) key.getTable();
+            AstyanaxStorage storage = table.getReadStorage();
+            DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
+            ColumnFamily<ByteBuffer, DeltaKey> columnFamily = placement.getDeltaColumnFamily();
+
+            // Execute the same scan 3 times, returning 3 iterators that process the results in different ways.  In
+            // practice at most two of the iterators are actually consumed (one or more is ignored) so the columnScan
+            // should avoid actually doing any work until the first item is fetched from the iterator.
+            changeIter = Iterators.concat(changeIter, decodeChanges(
+                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime)));
+            compactionIter = Iterators.concat(compactionIter, decodeCompactions(
+                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime)));
+            rawMetadataIter = Iterators.concat(rawMetadataIter, rawMetadata(
+                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime)));
+        }
+
+        return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
+    }
+
+    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<UUID> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(columns.iterator(), cutoffTime));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(columns.iterator(), cutoffTime));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(columns.iterator(), cutoffTime));
+
+        if (columns.size() >= largeRowThreshold) {
+            // A large row such that the first query likely returned only a subset of all the columns.  Lazily fetch
+            // the rest while ensuring we never load all columns into memory at the same time.  The current
+            // Compactor+Resolver implementation must scan the row twice: once to find compaction records and once to
+            // find deltas.  So we must call columnScan() twice, once for each.
+            UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
 
             AstyanaxTable table = (AstyanaxTable) key.getTable();
             AstyanaxStorage storage = table.getReadStorage();
