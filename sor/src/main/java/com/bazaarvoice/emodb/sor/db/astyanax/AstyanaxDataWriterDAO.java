@@ -77,6 +77,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     // to allow ample room for additional metadata and protocol overhead.
     private static final int MAX_DELTA_SIZE = 10 * 1024 * 1024;   // 10 MB delta limit, measured in UTF-8 bytes
     private static final int MAX_AUDIT_SIZE = 1 * 1024 * 1024;    // 1 MB audit limit, measured in UTF-8 bytes
+    private static final int DELTA_BLOCK_SIZE = 1 * 1024 * 1024;//1 * 1024 * 1024;  // 1 MB block size
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final ChangeEncoder _changeEncoder;
@@ -214,15 +215,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                     .set(Audit.TAGS, tags)
                     .build();
 
+            UUID changeId = update.getChangeId();
+
             // The values are encoded in a flexible format that allows versioning of the strings
             ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags));
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
             int deltaSize = encodedDelta.remaining();
             int auditSize = encodedAudit.remaining();
-
-            UUID changeId = update.getChangeId();
-            Integer block = 0;
-            DeltaKey deltaKey = new DeltaKey(changeId, block);
 
             // Validate sizes of individual deltas and audits
             if (deltaSize > MAX_DELTA_SIZE) {
@@ -242,7 +241,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.clone(), encodedDelta, null);
+                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(new DeltaKey(changeId, 0), encodedDelta, null);
                 potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
                 if (getMutationBatchSize(potentiallyOversizeMutation) >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
@@ -254,7 +253,25 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(deltaKey.clone(), encodedDelta, null);
+            int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
+            int position = encodedDelta.position();
+            for (int block = 0; block < numBlocks; block++) {
+                ByteBuffer split = encodedDelta.duplicate();
+                int limit;
+                if (DELTA_BLOCK_SIZE * (block + 1) < deltaSize) {
+                    limit = position + DELTA_BLOCK_SIZE;
+                    while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
+                        limit--;
+                    }
+                } else {
+                    limit = encodedDelta.limit();
+                }
+                split.position(position);
+                split.limit(limit);
+                position = limit;
+                mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(new DeltaKey(changeId, block), split, null);
+            }
+
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
             approxMutationSize += deltaSize + auditSize;
             updateCount += 1;
@@ -263,6 +280,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
         _updateMeter.mark(updates.size());
     }
+
 
     private ByteBuffer stringToByteBuffer(String str) {
         return StringSerializer.get().toByteBuffer(str);
