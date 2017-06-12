@@ -8,14 +8,7 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
-import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CachingRowGroupIterator;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
@@ -40,10 +33,9 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.*;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.FluentIterable;
@@ -68,12 +60,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.nio.charset.Charset;
+import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
@@ -101,6 +91,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private static final int ROW_KEY_RESULT_SET_COLUMN = 0;
     private static final int CHANGE_ID_RESULT_SET_COLUMN = 1;
     private static final int VALUE_RESULT_SET_COLUMN = 2;
+    private static final int BLOCK_RESULT_SET_COLUMN = 3;
 
     private final DataReaderDAO _astyanaxReaderDAO;
     private final ChangeEncoder _changeEncoder;
@@ -194,9 +185,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         checkNotNull(key, "key");
         checkNotNull(consistency, "consistency");
 
-        TableDDL tableDDL = placement.getDeltaTableDDL();
+        DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = selectFrom(tableDDL)
+        Statement statement = selectDeltaFrom(tableDDL)
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
@@ -270,16 +261,15 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         return new CachingRowGroupIterator(deltaRowGroupResultSetIterator, _driverConfig.getRecordCacheSize(), _driverConfig.getRecordSoftCacheSize());
     }
-
     /**
      * Creates a Record instance for a given key and list of rows.  All rows must be from the same Cassandra row;
      * in other words, it is expected that row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN) returns the same value for
      * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(rows.iterator());
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(rows.iterator());
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(rows.iterator());
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new DeltaIterator(rows.iterator()));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new DeltaIterator(rows.iterator()));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new DeltaIterator(rows.iterator()));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
     }
@@ -370,9 +360,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             rawKeyMap.put(entry.getKey(), entry.getValue());
         }
 
-        TableDDL tableDDL = placement.getDeltaTableDDL();
+        DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = selectFrom(tableDDL)
+        Statement statement = selectDeltaFrom(tableDDL)
                 .where(in(tableDDL.getRowKeyColumnName(), keys))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
 
@@ -416,12 +406,25 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                 .from(tableDDL.getTableMetadata());
     }
 
+    private Select selectDeltaFrom(DeltaTableDDL tableDDL) {
+        return QueryBuilder.select()
+                .column(tableDDL.getRowKeyColumnName())     // ROW_KEY_RESULT_SET_COLUMN
+                .column(tableDDL.getChangeIdColumnName())   // CHANGE_ID_RESULT_SET_COLUMN
+                .column(tableDDL.getValueColumnName())      // VALUE_RESULT_SET_COLUMN
+                .column(tableDDL.getBlockColumnName())      // BLOCK_ID_RESULT_SET COLUMN
+                .from(tableDDL.getTableMetadata());
+    }
+
     private ByteBuffer getKey(Row row) {
         return row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN);
     }
 
     private UUID getChangeId(Row row) {
         return row.getUUID(CHANGE_ID_RESULT_SET_COLUMN);
+    }
+
+    private int getBlock(Row row) {
+        return row.getInt(BLOCK_RESULT_SET_COLUMN);
     }
 
     private ByteBuffer getValue(Row row) {
@@ -451,7 +454,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return iter;
     }
 
-    @Timed (name = "bv.emodb.sor.CqlDataReaderDAO.scan", absolute = true)
+    @Timed(name = "bv.emodb.sor.CqlDataReaderDAO.scan", absolute = true)
     @Override
     public Iterator<Record> scan(Table tbl, @Nullable String fromKeyExclusive, final LimitCounter ignore_limit,
                                  final ReadConsistency consistency) {
@@ -525,9 +528,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         // around which is absolutely *not* what we want.
         checkArgument(AstyanaxStorage.compareKeys(startToken, endToken) < 0, "Cannot scan rows which loop from maximum- to minimum-token");
 
-        TableDDL tableDDL = placement.getDeltaTableDDL();
+        DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = selectFrom(tableDDL)
+        Statement statement = selectDeltaFrom(tableDDL)
                 .where(gt(token(tableDDL.getRowKeyColumnName()), startToken))
                 .and(lte(token(tableDDL.getRowKeyColumnName()), endToken))
                 .setConsistencyLevel(SorConsistencies.toCql(consistency));
@@ -737,7 +740,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private ResultSet columnScan(DeltaPlacement placement, TableDDL tableDDL, ByteBuffer rowKey, Range<RangeTimeUUID> columnRange,
                                  boolean ascending, int limit, ConsistencyLevel consistency) {
 
-        Select.Where where = selectFrom(tableDDL)
+        Select.Where where = (tableDDL == placement.getDeltaTableDDL() ? selectDeltaFrom(placement.getDeltaTableDDL()) : selectFrom(tableDDL))
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey));
 
         if (columnRange.hasLowerBound()) {

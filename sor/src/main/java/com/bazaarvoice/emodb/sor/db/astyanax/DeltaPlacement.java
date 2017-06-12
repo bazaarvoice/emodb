@@ -19,7 +19,7 @@ class DeltaPlacement implements Placement {
     private final ColumnFamily<ByteBuffer, DeltaKey> _deltaColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _auditColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _deltaHistoryColumnFamily;
-    private final TableDDL _deltaTableDDL;
+    private final DeltaTableDDL _deltaTableDDL;
     private final TableDDL _auditTableDDL;
     private final TableDDL _deltaHistoryTableDDL;
 
@@ -52,7 +52,7 @@ class DeltaPlacement implements Placement {
         return new TableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName);
     }
 
-    private TableDDL createDeltaTableDDL(String tableName) {
+    private DeltaTableDDL createDeltaTableDDL(String tableName) {
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
@@ -84,7 +84,7 @@ class DeltaPlacement implements Placement {
         return _deltaHistoryColumnFamily;
     }
 
-    TableDDL getDeltaTableDDL() {
+    DeltaTableDDL getDeltaTableDDL() {
         return _deltaTableDDL;
     }
 
