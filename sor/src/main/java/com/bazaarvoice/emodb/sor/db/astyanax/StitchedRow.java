@@ -1,9 +1,10 @@
-package com.bazaarvoice.emodb.sor.db;
+package com.bazaarvoice.emodb.sor.db.astyanax;
 
 
 import com.datastax.driver.core.*;
-import com.google.common.base.Charsets;
 import com.google.common.reflect.TypeToken;
+import com.netflix.astyanax.serializers.StringSerializer;
+import com.netflix.astyanax.serializers.UUIDSerializer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -14,25 +15,18 @@ import java.util.*;
 public class StitchedRow implements Row {
 
     private ByteBuffer _content;
-    private Row _firstRow;
-    int _contentIndex;
+    private Row _oldRow;
+    private int _contentIndex;
 
-    public StitchedRow(List<Row> rows, int contentIndex, int contentSize) {
-        _firstRow = rows.get(0);
-        _contentIndex = contentIndex;
-
-        ByteBuffer content = ByteBuffer.allocate(contentSize);
-        int position = content.position();
-        for (Row row : rows) {
-            content.put(row.getBytesUnsafe(contentIndex));
-        }
-        content.position(position);
+    public StitchedRow(Row oldRow, ByteBuffer content, int contentIndex) {
+        _oldRow = oldRow;
         _content = content;
+        _contentIndex = contentIndex;
     }
 
     @Override
     public int getInt(int i) {
-        return _firstRow.getInt(i);
+        return _oldRow.getInt(i);
     }
 
     @Override
@@ -40,32 +34,33 @@ public class StitchedRow implements Row {
         if (i == _contentIndex) {
             return _content;
         }
-        return _firstRow.getBytesUnsafe(i);
+        return _oldRow.getBytesUnsafe(i);
     }
 
     @Override
     public String getString(int i) {
         if (i == _contentIndex) {
-            byte[] bytes = new byte[_content.remaining()];
-            _content.get(bytes);
-            return new String(bytes, Charsets.UTF_8);
+            StringSerializer.get().fromByteBuffer(_content);
         }
-        return _firstRow.getString(i);
+        return _oldRow.getString(i);
     }
 
     @Override
     public UUID getUUID(int i) {
-        return _firstRow.getUUID(i);
+        if (i == _contentIndex) {
+            return UUIDSerializer.get().fromByteBuffer(_content);
+        }
+        return _oldRow.getUUID(i);
     }
 
     @Override
     public UUID getUUID(String name) {
-        return _firstRow.getUUID(name);
+        return _oldRow.getUUID(name);
     }
 
     @Override
     public <T> T get(String name, TypeCodec<T> codec) {
-        return null;
+        throw new UnsupportedOperationException("This method is unimplemented");
     }
 
 
@@ -97,7 +92,6 @@ public class StitchedRow implements Row {
     @Override
     public boolean getBool(int i) {
         throw new UnsupportedOperationException("This method is unimplemented");
-
     }
 
     @Override

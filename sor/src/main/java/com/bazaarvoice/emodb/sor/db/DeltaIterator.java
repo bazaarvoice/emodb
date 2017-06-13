@@ -8,18 +8,15 @@ import com.google.common.collect.Lists;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 
-public class DeltaIterator extends AbstractIterator<Row> {
+abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
-    private static final int VALUE_RESULT_SET_COLUMN = 2;
-    private static final int BLOCK_RESULT_SET_COLUMN = 3;
-    List<Row> list;
+    private List<R> _list;
 
-    private Iterator<Row> _iterator;
-    Row _next;
+    private Iterator<R> _iterator;
+    private R _next;
 
-    public DeltaIterator(Iterator<Row> iterator) {
+    public DeltaIterator(Iterator<R> iterator) {
         _iterator = iterator;
         if (iterator.hasNext()) {
             _next = iterator.next();
@@ -27,49 +24,63 @@ public class DeltaIterator extends AbstractIterator<Row> {
     }
 
     @Override
-    protected Row computeNext() {
+    protected T computeNext() {
         if (_next == null) {
             return endOfData();
         }
         if (!_iterator.hasNext()) {
-            Row ret = _next;
+            T ret = convertDelta(_next);
             _next = null;
             return ret;
         }
-        Row upcoming = _iterator.next();
+        R upcoming = _iterator.next();
         if (getBlock(upcoming) == 0) {
-            Row ret = _next;
+            T ret = convertDelta(_next);
             _next = upcoming;
             return ret;
         }
 
-        if (list == null) {
-            list = Lists.newArrayListWithCapacity(3);
+        if (_list == null) {
+            _list = Lists.newArrayListWithCapacity(3);
         }
         int contentSize = getValue(_next).remaining() + getValue(upcoming).remaining();
-        list.add(_next);
-        list.add(upcoming);
+        _list.add(_next);
+        _list.add(upcoming);
 
         while (_iterator.hasNext() && getBlock(_next = _iterator.next()) != 0) {
-            list.add(_next);
+            _list.add(_next);
             contentSize += getValue(_next).remaining();
             _next = null;
         }
         // construct new row object from list
-        Row ret = new StitchedRow(list, VALUE_RESULT_SET_COLUMN, contentSize);
 
-        list.clear();
+        ByteBuffer content = ByteBuffer.allocate(contentSize);
+        int position = content.position();
+        for (R delta : _list) {
+            content.put(getValue(delta));
+        }
+        content.position(position);
 
-        return ret;
+        _list.clear();
+
+        return convertDelta(upcoming, content);
 
     }
 
-    private int getBlock(Row row) {
-        return row.getInt(BLOCK_RESULT_SET_COLUMN);
-    }
+    abstract protected T convertDelta(R delta);
 
-    private ByteBuffer getValue(Row row) {
-        return row.getBytesUnsafe(VALUE_RESULT_SET_COLUMN);
-    }
+    abstract protected T convertDelta(R delta, ByteBuffer content);
+
+    abstract protected int getBlock(R delta);
+
+    abstract protected ByteBuffer getValue(R delta);
+
+//    private int getBlock(Row row) {
+//        return row.getInt(BLOCK_RESULT_SET_COLUMN);
+//    }
+//
+//    private ByteBuffer getValue(Row row) {
+//        return row.getBytesUnsafe(VALUE_RESULT_SET_COLUMN);
+//    }
 }
 
