@@ -60,10 +60,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.*;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
