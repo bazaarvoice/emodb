@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.core;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.DeltaKey;
 import com.datastax.driver.core.Row;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -70,16 +71,16 @@ public class MultiScanCutoffTimeTest {
         UUID uuid4 = TimeUUIDs.uuidForTimeMillis(nowInTimeMillis + 15000);
         UUID uuid5 = TimeUUIDs.uuidForTimeMillis(nowInTimeMillis + 20000);
 
-        Column<UUID> col1 = astyanaxColumn(uuid1, "a");
-        Column<UUID> col2 = astyanaxColumn(uuid2, "b");
-        Column<UUID> col3 = astyanaxColumn(uuid3, "c");
-        Column<UUID> col4 = astyanaxColumn(uuid4, "d");
-        Column<UUID> col5 = astyanaxColumn(uuid5, "e");
+        Column<DeltaKey> col1 = astyanaxColumn(new DeltaKey(uuid1, 0), "a");
+        Column<DeltaKey> col2 = astyanaxColumn(new DeltaKey(uuid2, 0), "b");
+        Column<DeltaKey> col3 = astyanaxColumn(new DeltaKey(uuid3, 0), "c");
+        Column<DeltaKey> col4 = astyanaxColumn(new DeltaKey(uuid4, 0), "d");
+        Column<DeltaKey> col5 = astyanaxColumn(new DeltaKey(uuid5, 0), "e");
 
-        final Iterable<Column<UUID>> columns = Arrays.asList(col1, col2, col3, col4, col5);
+        final Iterable<Column<DeltaKey>> columns = Arrays.asList(col1, col2, col3, col4, col5);
         assertEquals(Iterators.size(columns.iterator()), 5);
 
-        Iterator<Column<UUID>> filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), null);
+        Iterator<Column<DeltaKey>> filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), null);
         assertEquals(Iterators.size(filteredColumnIter), 5);
 
         filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), new DateTime(nowInTimeMillis - 1000));
@@ -101,9 +102,9 @@ public class MultiScanCutoffTimeTest {
         return row;
     }
 
-    private Column<UUID> astyanaxColumn(UUID uuidValue, String value) {
-        Column<UUID> column = mock(Column.class);
-        when(column.getName()).thenReturn(uuidValue);
+    private Column<DeltaKey> astyanaxColumn(DeltaKey key, String value) {
+        Column<DeltaKey> column = mock(Column.class);
+        when(column.getName()).thenReturn(key);
         when(column.getStringValue()).thenReturn(value);
 
         return column;

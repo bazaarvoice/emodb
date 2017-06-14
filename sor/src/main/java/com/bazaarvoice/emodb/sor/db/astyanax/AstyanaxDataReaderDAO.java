@@ -403,7 +403,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         return splits;
     }
 
-    private List<CfSplit> getCfSplits(Keyspace keyspace, ColumnFamily<ByteBuffer, UUID> cf, String start,
+    private List<CfSplit> getCfSplits(Keyspace keyspace, ColumnFamily<ByteBuffer, DeltaKey> cf, String start,
                                       String end, int desiredRecordsPerSplit, Iterable<TokenRange> allTokenRanges) {
         // There is a hole in the describeSplitsEx() call where if the call is routed to a Cassandra node which does
         // not have a replica of the requested token range then it will return a single split equivalent to the requested
@@ -561,7 +561,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         return builder.build();
     }
 
-    private void addScanRangeSplitsForTokenRange(CassandraKeyspace keyspace, ColumnFamily<ByteBuffer, UUID> cf, String rack,
+    private void addScanRangeSplitsForTokenRange(CassandraKeyspace keyspace, ColumnFamily<ByteBuffer, DeltaKey> cf, String rack,
                                                  TokenRange tokenRange, int desiredRecordsPerSplit, Iterable<TokenRange> allTokenRanges,
                                                  ScanRangeSplits.Builder builder) {
         // Split the token range into sub-ranges with approximately the desired number of records per split
@@ -635,7 +635,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         while (scanIter.hasNext()) {
             ByteBufferRange keyRange = scanIter.next();
             // Copy delta records in this split.
-            copyRange(sourcePlacement, sourcePlacement.getDeltaColumnFamily(),
+            copyDeltaRange(sourcePlacement, sourcePlacement.getDeltaColumnFamily(),
                     dest, destPlacement, destPlacement.getDeltaColumnFamily(),
                     keyRange, progress);
             // Copy audit records in this split.
@@ -646,6 +646,60 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             copyRange(sourcePlacement, sourcePlacement.getDeltaHistoryColumnFamily(),
                     dest, destPlacement, destPlacement.getDeltaHistoryColumnFamily(),
                     keyRange, progress);
+        }
+    }
+
+    private void copyDeltaRange(DeltaPlacement sourcePlacement, ColumnFamily<ByteBuffer, DeltaKey> sourceCf,
+                                AstyanaxStorage dest, DeltaPlacement destPlacement, ColumnFamily<ByteBuffer, DeltaKey> destCf,
+                                ByteBufferRange keyRange, Runnable progress) {
+        ConsistencyLevel writeConsistency = SorConsistencies.toAstyanax(WriteConsistency.STRONG);
+
+        Iterator<List<Row<ByteBuffer, DeltaKey>>> rowsIter = Iterators.partition(
+                rowScan(sourcePlacement, sourceCf, keyRange, _maxColumnsRange, LimitCounter.max(), ReadConsistency.STRONG),
+                MAX_SCAN_ROWS_BATCH);
+        int largeRowThreshold = _maxColumnsRange.getLimit();
+
+        while (rowsIter.hasNext()) {
+            List<Row<ByteBuffer, DeltaKey>> rows = rowsIter.next();
+
+            MutationBatch mutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
+            for (Row<ByteBuffer, DeltaKey> row : rows) {
+                ColumnList<DeltaKey> columns = row.getColumns();
+
+                // Map the source row key to the destination row key.  Its table uuid and shard key will be different.
+                ByteBuffer newRowKey = dest.getRowKey(AstyanaxStorage.getContentKey(row.getRawKey()));
+
+                // Copy the first N columns to the multi-row mutation.
+                putAll(mutation.withRow(destCf, newRowKey), columns);
+
+                // If this is a wide row, copy the remaining columns w/separate mutation objects.
+                // This is especially common with the audit column family.
+                if (columns.size() >= largeRowThreshold) {
+                    UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName().getChangeId();
+                    Iterator<List<Column<DeltaKey>>> columnsIter = Iterators.partition(
+                            deltaColumnScan(row.getRawKey(), sourcePlacement, sourceCf, lastColumn, null,
+                                    false, Long.MAX_VALUE, 1, ReadConsistency.STRONG),
+                            MAX_COLUMN_SCAN_BATCH);
+                    while (columnsIter.hasNext()) {
+                        List<Column<DeltaKey>> moreColumns = columnsIter.next();
+
+                        MutationBatch wideRowMutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
+                        putAll(wideRowMutation.withRow(destCf, newRowKey), moreColumns);
+                        progress.run();
+                        execute(wideRowMutation,
+                                "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
+                                keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
+                                destPlacement.getName(), destCf.getName());
+                    }
+                }
+            }
+            progress.run();
+            execute(mutation,
+                    "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
+                    keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
+                    destPlacement.getName(), destCf.getName());
+
+            _copyMeter.mark(rows.size());
         }
     }
 
@@ -739,7 +793,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     /**
      * Scans for rows within the specified range, exclusive on start and inclusive on end.
      */
-    private Iterator<Row<ByteBuffer, UUID>> rowScan(final DeltaPlacement placement,
+    private Iterator<Row<ByteBuffer, DeltaKey>> rowScan(final DeltaPlacement placement,
                                                     final ByteBufferRange rowRange,
                                                     final ByteBufferRange columnRange,
                                                     final LimitCounter limit,
@@ -750,16 +804,16 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     /**
      * Scans for rows within the specified range, exclusive on start and inclusive on end.
      */
-    private Iterator<Row<ByteBuffer, UUID>> rowScan(final DeltaPlacement placement,
-                                                    final ColumnFamily<ByteBuffer, UUID> columnFamily,
-                                                    final ByteBufferRange rowRange,
-                                                    final ByteBufferRange columnRange,
-                                                    final LimitCounter limit,
-                                                    final ReadConsistency consistency) {
+    private <P> Iterator<Row<ByteBuffer, P>> rowScan(final DeltaPlacement placement,
+                                                     final ColumnFamily<ByteBuffer, P> columnFamily,
+                                                     final ByteBufferRange rowRange,
+                                                     final ByteBufferRange columnRange,
+                                                     final LimitCounter limit,
+                                                     final ReadConsistency consistency) {
         // In the first batch request no more than 50 rows.
         int initialBatchSize = (int) Math.min(limit.remaining(), 50);
 
-        return new AbstractBatchReader<Row<ByteBuffer, UUID>>(1, initialBatchSize, MAX_SCAN_ROWS_BATCH, SCAN_ROW_BATCH_INCREMENT) {
+        return new AbstractBatchReader<Row<ByteBuffer, P>>(1, initialBatchSize, MAX_SCAN_ROWS_BATCH, SCAN_ROW_BATCH_INCREMENT) {
             private ByteBuffer _rangeStart = rowRange.getStart();
             private final ByteBuffer _rangeEnd = rowRange.getEnd();
             private int _minimumLimit = 1;
@@ -771,7 +825,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             }
 
             @Override
-            protected Iterator<Row<ByteBuffer, UUID>> nextBatch(int batchSize)
+            protected Iterator<Row<ByteBuffer, P>> nextBatch(int batchSize)
                     throws Exception {
                 // Note: if Cassandra is asked to perform a token range query where start >= end it will wrap
                 // around which is absolutely *not* what we want since it could return data for another table.
@@ -790,7 +844,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     // Pass token strings to get exclusive start behavior, to support 'fromBlobIdExclusive'.
                     String startToken = toTokenString(_rangeStart);
                     String endToken = toTokenString(_rangeEnd);
-                    Rows<ByteBuffer, UUID> rows = execute(placement.getKeyspace()
+                    Rows<ByteBuffer, P> rows = execute(placement.getKeyspace()
                                     .prepareQuery(columnFamily, SorConsistencies.toAstyanax(consistency))
                                     .getKeyRange(null, null, startToken, endToken, adjustedBatchSize)
                                     .withColumnRange(columnRange),
@@ -811,12 +865,12 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     _scanReadMeter.mark(rows.size());
 
                     // Return the rows.  Filter out range ghosts (deleted rows with no columns)
-                    final Iterator<Row<ByteBuffer, UUID>> rowIter = rows.iterator();
-                    return new AbstractIterator<Row<ByteBuffer, UUID>>() {
+                    final Iterator<Row<ByteBuffer, P>> rowIter = rows.iterator();
+                    return new AbstractIterator<Row<ByteBuffer, P>>() {
                         @Override
-                        protected Row<ByteBuffer, UUID> computeNext() {
+                        protected Row<ByteBuffer, P> computeNext() {
                             while (rowIter.hasNext()) {
-                                Row<ByteBuffer, UUID> row = rowIter.next();
+                                Row<ByteBuffer, P> row = rowIter.next();
                                 if (!row.getColumns().isEmpty()) {
                                     return row;
                                 }
@@ -856,6 +910,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             }
         };
     }
+
 
     private Iterator<Column<DeltaKey>> deltaColumnScan(final ByteBuffer rowKey,
                                                        final DeltaPlacement placement,
@@ -995,12 +1050,12 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     /**
      * Decodes row keys returned by scanning a table.
      */
-    private Iterator<String> decodeKeys(final Iterator<Row<ByteBuffer, UUID>> iter) {
+    private Iterator<String> decodeKeys(final Iterator<Row<ByteBuffer, DeltaKey>> iter) {
         return new AbstractIterator<String>() {
             @Override
             protected String computeNext() {
                 while (iter.hasNext()) {
-                    Row<ByteBuffer, UUID> row = iter.next();
+                    Row<ByteBuffer, DeltaKey> row = iter.next();
                     if (!row.getColumns().isEmpty()) { // Ignore range ghosts
                         return AstyanaxStorage.getContentKey(row.getRawKey());
                     }
@@ -1055,7 +1110,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
 
         // Avoiding pinning multiple decoded rows into memory at once.
         return limit.limit(new AbstractIterator<MultiTableScanResult>() {
-            private PeekingIterator<Row<ByteBuffer, UUID>> _iter = Iterators.peekingIterator(
+            private PeekingIterator<Row<ByteBuffer, DeltaKey>> _iter = Iterators.peekingIterator(
                     rowScan(placement, rowRange, _maxColumnsRange, LimitCounter.max(), consistency));
 
             private long _lastTableUuid = -1;
@@ -1066,8 +1121,8 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             @Override
             protected MultiTableScanResult computeNext() {
                 while (_iter.hasNext()) {
-                    Row<ByteBuffer, UUID> row = _iter.next();
-                    ColumnList<UUID> rowColumns = row.getColumns();
+                    Row<ByteBuffer, DeltaKey> row = _iter.next();
+                    ColumnList<DeltaKey> rowColumns = row.getColumns();
 
                     // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
                     ByteBuffer rowKey = row.getRawKey();
@@ -1101,11 +1156,11 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                 return endOfData();
             }
 
-            private PeekingIterator<Row<ByteBuffer, UUID>> skipToNextTable(long tableUuid) {
+            private PeekingIterator<Row<ByteBuffer, DeltaKey>> skipToNextTable(long tableUuid) {
                 // Iterate over the next 50 rows first to check for a table switch.  This avoids starting a new range
                 // query if the number of rows in the undesired table is small.
                 int skipLimit = 50;
-                Row<ByteBuffer, UUID> row = null;
+                Row<ByteBuffer, DeltaKey> row = null;
 
                 while (skipLimit != 0 && _iter.hasNext()) {
                     row = _iter.peek();
@@ -1134,7 +1189,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Row<ByteBuffer, UUID>>emptyIterator());
+                return Iterators.peekingIterator(Iterators.<Row<ByteBuffer, DeltaKey>>emptyIterator());
             }
         });
     }
