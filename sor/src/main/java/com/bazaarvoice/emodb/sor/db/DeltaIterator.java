@@ -34,16 +34,12 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
         _list.add(_next);
         _list.add(upcoming);
         _next = null;
-        int zeroCount = 0;
-        while (_iterator.hasNext()) {
-            if (getBlock(_next = _iterator.next()) == 0) {
-                zeroCount++;
-            }
-            if (zeroCount < 2) {
-                _list.add(_next);
-                contentSize += getValue(_next).remaining();
-                _next = null;
-            }
+        int previousBlock = getBlock(upcoming);
+
+        while(_iterator.hasNext() && getBlock(_next = _iterator.next()) == --previousBlock) {
+            _list.add(_next);
+            contentSize += getValue((_next)).remaining();
+            _next = null;
         }
 
         Collections.reverse(_list);
