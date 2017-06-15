@@ -264,9 +264,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
     }
@@ -790,7 +790,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
-            deltas = decodeColumns(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
+            deltas = decodeColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed));
         }
 
         // Read Audit objects

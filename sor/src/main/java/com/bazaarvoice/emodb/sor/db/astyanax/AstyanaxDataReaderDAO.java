@@ -278,7 +278,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getDeltaColumnFamily();
-            deltas = decodeColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency)));
+            deltas = decodeColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed));
         }
 
         // Read Audit objects
@@ -1223,9 +1223,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter));
-        Iterator<Map.Entry<UUID, Compaction>> DeltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter));
-        Iterator<RecordEntryRawMetadata> DeltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter));
+        Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false));
+        Iterator<Map.Entry<UUID, Compaction>> DeltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false));
+        Iterator<RecordEntryRawMetadata> DeltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false));
 
         return new RecordImpl(key, DeltaCompactionIter, DeltaChangeIter, DeltaRawMetadataIter);
     }
