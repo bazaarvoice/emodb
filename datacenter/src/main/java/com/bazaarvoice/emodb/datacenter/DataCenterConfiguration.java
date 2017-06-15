@@ -2,10 +2,12 @@ package com.bazaarvoice.emodb.datacenter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
+import com.google.common.collect.ImmutableSet;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.net.URI;
+import java.util.Set;
 
 public class DataCenterConfiguration {
 
@@ -38,6 +40,15 @@ public class DataCenterConfiguration {
     @Valid
     @NotNull
     private URI _dataCenterAdminUri;
+
+    /**
+     * Data centers which should be ignored.  This is uncommon and typically only applies when migrating or removing an
+     * an existing data center.  This allows for a smooth transition from the old to the new data center without any
+     * downtime or fanout errors if either data center unreachable.
+     **/
+    @Valid
+    @NotNull
+    private Set<String> _ignoredDataCenters = ImmutableSet.of();
 
     public boolean isSystemDataCenter() {
         return _currentDataCenter.equals(_systemDataCenter);
@@ -90,5 +101,14 @@ public class DataCenterConfiguration {
 
     public URI getSystemDataCenterServiceUri() {
         return _systemDataCenterServiceUri;
+    }
+
+    public DataCenterConfiguration setIgnoredDataCenters(Set<String> ignoredDataCenters) {
+        _ignoredDataCenters = ignoredDataCenters;
+        return this;
+    }
+
+    public Set<String> getIgnoredDataCenters() {
+        return _ignoredDataCenters;
     }
 }

@@ -5,7 +5,9 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.db.DataCenterDAO;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -26,15 +28,25 @@ public class DefaultDataCenters implements DataCenters {
     private final DataCenterDAO _dataCenterDao;
     private final String _selfDataCenter;
     private final String _systemDataCenter;
+    private final Set<String> _ignoredDataCenters;
+    private final Set<String> _loggedIgnored;
     private volatile Supplier<CachedInfo> _cache;
 
     @Inject
     public DefaultDataCenters(DataCenterDAO dataCenterDao,
                               @SelfDataCenter String selfDataCenter,
-                              @SystemDataCenter String systemDataCenter) {
+                              @SystemDataCenter String systemDataCenter,
+                              @IgnoredDataCenters Set<String> ignoredDataCenters) {
         _dataCenterDao = checkNotNull(dataCenterDao, "dataCenterDao");
         _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
         _systemDataCenter = checkNotNull(systemDataCenter, "systemDataCenter");
+        _ignoredDataCenters = checkNotNull(ignoredDataCenters, "ignoredDataCenters");
+
+        _loggedIgnored = _ignoredDataCenters.isEmpty() ? ImmutableSet.of() : Sets.newHashSet();
+
+        checkArgument(!_ignoredDataCenters.contains(_selfDataCenter), "Cannot ignore self data center");
+        checkArgument(!_ignoredDataCenters.contains(_systemDataCenter), "Cannot ignore system data center");
+
         refresh();
     }
 
@@ -53,7 +65,20 @@ public class DefaultDataCenters implements DataCenters {
         _cache = Suppliers.memoizeWithExpiration(new Supplier<CachedInfo>() {
             @Override
             public CachedInfo get() {
-                return new CachedInfo(_dataCenterDao.loadAll());
+                Map<String, DataCenter> dataCenters = _dataCenterDao.loadAll();
+                if (!_ignoredDataCenters.isEmpty()) {
+                    ImmutableMap.Builder<String, DataCenter> dataCentersBuilder = ImmutableMap.builder();
+                    for (Map.Entry<String, DataCenter> entry : dataCenters.entrySet()) {
+                        if (!_ignoredDataCenters.contains(entry.getKey())) {
+                            dataCentersBuilder.put(entry);
+                        } else if (_loggedIgnored.add(entry.getKey())) {
+                            // Only want to log that we're ignoring the data center once
+                            _log.info("Ignoring data center: {}", entry.getKey());
+                        }
+                    }
+                    dataCenters = dataCentersBuilder.build();
+                }
+                return new CachedInfo(dataCenters);
             }
         }, 10, TimeUnit.MINUTES);
     }
