@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.db;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
+import com.netflix.astyanax.serializers.StringSerializer;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -16,6 +17,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private Iterator<R> _iterator;
     private R _next;
     private boolean _reverse;
+    private byte[] _blockBytes = new byte[4];
 
     public DeltaIterator(Iterator<R> iterator, boolean reverse) {
         _iterator = iterator;
@@ -129,13 +131,10 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
     private int getNumBlocks(R delta) {
         ByteBuffer content = getValue(delta);
-        int numBlocks = 0;
-        int multiplier = 1;
-        for (int i = 3; i >= 0; i--) {
-            numBlocks += (content.get(content.position() + i)- 48) * multiplier;
-            multiplier *= 10;
-        }
-        return numBlocks;
+        int position = content.position();
+                content.get(_blockBytes);
+        String blockString = StringSerializer.get().fromBytes(_blockBytes);
+        return Integer.parseInt(blockString, 16);
     }
 
     private ByteBuffer stitchContent(int contentSize) {

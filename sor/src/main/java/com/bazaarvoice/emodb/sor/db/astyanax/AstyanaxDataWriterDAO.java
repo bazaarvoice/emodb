@@ -179,7 +179,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
         int position = encodedDelta.position();
 
-        byte[] blockBytes = String.valueOf(numBlocks).getBytes();
+        byte[] blockBytes = String.format("%04X", numBlocks).getBytes();
         for (int i = blockBytes.length - 1; i >= 0; i--) { //TODO: replace the 4 with the length the prefix (prefix not yet available to WriterDAO)
             encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
         }
