@@ -28,9 +28,11 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private ByteBuffer reverseCompute(R upcoming) {
 
         int contentSize = getValue(_next).remaining() + getValue(upcoming).remaining();
+
         if (_list == null) {
             _list = Lists.newArrayListWithCapacity(3);
         }
+
         _list.add(_next);
         _list.add(upcoming);
         _next = null;
@@ -44,29 +46,44 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
         Collections.reverse(_list);
 
+        int numBlocks = getNumBlocks(_list.get(0));
+        while (numBlocks != _list.size()) {
+            contentSize -= getValue(_list.remove(_list.size())).remaining();
+        }
+
         return stitchContent(contentSize);
 
     }
 
     private ByteBuffer compute(R upcoming) {
 
+        int numBlocks = getNumBlocks(_next);
+
+        if (numBlocks == 1) {
+            ByteBuffer ret = getValue(_next);
+            skipForward();
+            return ret;
+        }
+
         if (_list == null) {
             _list = Lists.newArrayListWithCapacity(3);
         }
+
         int contentSize = getValue(_next).remaining() + getValue(upcoming).remaining();
         _list.add(_next);
         _list.add(upcoming);
         _next = null;
 
-        while (_iterator.hasNext() && getBlock(_next = _iterator.next()) != 0) {
+        for (int i = 2; i < numBlocks; i++) {
+            _next = _iterator.next();
             _list.add(_next);
             contentSize += getValue(_next).remaining();
-            _next = null;
         }
+
+        skipForward();
 
         return stitchContent(contentSize);
     }
-
 
 
     @Override
@@ -99,10 +116,26 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
             content = reverseCompute(upcoming);
         }
 
-        _list.clear();
-
         return convertDelta(upcoming, content);
 
+    }
+
+    private void skipForward() {
+        _next = null;
+        while (_iterator.hasNext() && getBlock(_next = _iterator.next()) != 0) {
+            _next = null;
+        }
+    }
+
+    private int getNumBlocks(R delta) {
+        ByteBuffer content = getValue(delta);
+        int numBlocks = 0;
+        int multiplier = 1;
+        for (int i = 3; i >= 0; i--) {
+            numBlocks += (content.get(content.position() + i)- 48) * multiplier;
+            multiplier *= 10;
+        }
+        return numBlocks;
     }
 
     private ByteBuffer stitchContent(int contentSize) {
@@ -112,6 +145,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
             content.put(getValue(delta));
         }
         content.position(position);
+        _list.clear();
         return content;
     }
 

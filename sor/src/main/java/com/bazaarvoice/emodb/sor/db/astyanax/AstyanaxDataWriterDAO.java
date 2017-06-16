@@ -178,6 +178,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private void putDeltaColumn(ColumnListMutation mutation, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
         int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
         int position = encodedDelta.position();
+
+        byte[] blockBytes = String.valueOf(numBlocks).getBytes();
+        for (int i = blockBytes.length - 1; i >= 0; i--) { //TODO: replace the 4 with the length the prefix (prefix not yet available to WriterDAO)
+            encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
+        }
         for (int block = 0; block < numBlocks; block++) {
             ByteBuffer split = encodedDelta.duplicate();
             int limit;

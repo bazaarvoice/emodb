@@ -54,7 +54,7 @@ public class DefaultChangeEncoderTest {
     public void testEncodeDecodeD2() {
         Delta delta = Deltas.mapBuilder().put("name", "bob").remove("x").build();
         Set<String> tags = ImmutableSet.of("tag0","tag1");
-        ChangeEncoder changeEncoder = new DefaultChangeEncoder(2);
+        ChangeEncoder changeEncoder = new DefaultChangeEncoder(2, "");
         // Encode and then decode the said delta, and verify if Change is as expected
         String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags);
         assertEquals(encodedDelta, "D2:[\"tag0\",\"tag1\"]:{..,\"name\":\"bob\",\"x\":~}");
@@ -67,7 +67,7 @@ public class DefaultChangeEncoderTest {
     public void testEncodeDecodeD3() {
         Delta delta = Deltas.mapBuilder().put("name", "bob").remove("x").build();
         Set<String> tags = ImmutableSet.of("tag0","tag1");
-        ChangeEncoder changeEncoder = new DefaultChangeEncoder(3);
+        ChangeEncoder changeEncoder = new DefaultChangeEncoder(3, "");
         // Encode and then decode the said delta, and verify if Change is as expected
         String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags);
         assertEquals(encodedDelta, "D3:[\"tag0\",\"tag1\"]:M:{..,\"name\":\"bob\",\"x\":~}");

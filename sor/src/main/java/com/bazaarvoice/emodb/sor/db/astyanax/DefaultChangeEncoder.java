@@ -37,13 +37,14 @@ class DefaultChangeEncoder implements ChangeEncoder {
     }
 
     private final Encoding _deltaEncoding;
+    private final String _prefix;
 
     public DefaultChangeEncoder() {
         // Default constructor uses the latest version.
-        this(3);
+        this(3, "0000");
     }
 
-    public DefaultChangeEncoder(int deltaEncodingVersion) {
+    public DefaultChangeEncoder(int deltaEncodingVersion, String prefix) {
         // To support a rolling upgrade between delta encodings the caller can specify which of the two most recent
         // delta encoding versions to use.  When upgrading the version should be deployed as the old version so that
         // old instances can read deltas written by the new instances.  Once all old instances have been terminated
@@ -51,6 +52,7 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
         checkArgument(deltaEncodingVersion == 2 || deltaEncodingVersion == 3, "Only delta encoding versions 2 and 3 are permitted");
         _deltaEncoding = deltaEncodingVersion == 2 ? Encoding.D2 : Encoding.D3;
+        _prefix = prefix;
     }
 
     @Override
@@ -59,7 +61,7 @@ class DefaultChangeEncoder implements ChangeEncoder {
         // Spec for D2 is <tags>:<delta>
         // Spec for D3 is <tags>:<change flags>:<Delta>
 
-        StringBuilder changeBody = new StringBuilder()
+        StringBuilder changeBody = encodeDeltaPrefix(_prefix, _deltaEncoding)
                 .append(tags.isEmpty() ? "[]" : JsonHelper.asJson(tags));
 
         if (_deltaEncoding == Encoding.D3) {
@@ -74,7 +76,7 @@ class DefaultChangeEncoder implements ChangeEncoder {
         changeBody.append(":")
                 .append(deltaString);
 
-        return encodeChange(_deltaEncoding, changeBody.toString());
+        return changeBody.toString();
     }
 
     @Override
@@ -84,7 +86,8 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
     @Override
     public String encodeCompaction(Compaction compaction) {
-        return encodeChange(Encoding.C1, JsonHelper.asJson(compaction));
+        return encodeDeltaPrefix(_prefix, Encoding.C1)
+                .append(JsonHelper.asJson(compaction)).toString();
     }
 
     @Override
@@ -94,6 +97,13 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
     private String encodeChange(Encoding encoding, String bodyString) {
         return encoding + ":" + bodyString;
+    }
+
+    private StringBuilder encodeDeltaPrefix(String prefix, Encoding encoding) {
+        return new StringBuilder()
+                .append(prefix)
+                .append(encoding)
+                .append(":");
     }
 
     /**
@@ -192,8 +202,9 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
     private Encoding getEncoding(ByteBuffer buf, int sep) {
         // This method gets called frequently enough that it's worth avoiding string building & memory allocation.
-        if (sep == 2) {
-            switch (buf.get(0) | (buf.get(1) << 8)) {
+        if (sep == 2 || sep == _prefix.length() + 2) {
+            int prefLength = sep - 2;
+            switch (buf.get(prefLength) | (buf.get(prefLength + 1) << 8)) {
                 case 'D' | ('1' << 8):
                     return Encoding.D1;
                 case 'D' | ('2' << 8):

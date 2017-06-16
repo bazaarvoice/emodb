@@ -39,6 +39,7 @@ public class DAOModule extends PrivateModule {
     @Provides
     @Singleton
     ChangeEncoder provideChangeEncoder(DataStoreConfiguration configuration) {
-        return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion());
+        // TODO: insert prefix into configuration. Ask Bill how to do this.
+        return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion(), "0000");
     }
 }
