@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.core.DataCenterAnnouncer;
 import com.bazaarvoice.emodb.datacenter.core.DefaultDataCenters;
+import com.bazaarvoice.emodb.datacenter.core.IgnoredDataCenters;
 import com.bazaarvoice.emodb.datacenter.core.SelfCassandraDataCenter;
 import com.bazaarvoice.emodb.datacenter.core.SelfDataCenter;
 import com.bazaarvoice.emodb.datacenter.core.SelfDataCenterAdmin;
@@ -18,6 +19,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
 import java.net.URI;
+import java.util.Set;
 
 /**
  * Guice module for constructing an instance of {@link DataCenters}.
@@ -78,4 +80,10 @@ public class DataCenterModule extends PrivateModule {
     String provideSystemDataCenter(DataCenterConfiguration configuration) {
         return configuration.getSystemDataCenter();
     }
+
+    @Provides @Singleton @IgnoredDataCenters
+    Set<String> provideIgnoredDataCenters(DataCenterConfiguration configuration) {
+        return configuration.getIgnoredDataCenters();
+    }
+
 }
