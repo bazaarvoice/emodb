@@ -86,7 +86,6 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
     @Override
     public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-//        _astyanaxWriterDAO.compact(table, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);
         checkNotNull(tbl, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");

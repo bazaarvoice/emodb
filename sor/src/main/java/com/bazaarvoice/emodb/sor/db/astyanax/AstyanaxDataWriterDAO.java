@@ -80,6 +80,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private static final int DELTA_BLOCK_SIZE = 128 * 1024;  // 128 KB block size (this must remain larger than (exclusive) 32 KB
 
     private final AstyanaxDataReaderDAO _readerDao;
+    private final DataWriterDAO _cqlWriterDAO;
     private final ChangeEncoder _changeEncoder;
     private final Meter _updateMeter;
     private final Meter _oversizeUpdateMeter;
@@ -93,11 +94,12 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final AuditStore _auditStore;
 
     @Inject
-    public AstyanaxDataWriterDAO(AstyanaxDataReaderDAO readerDao,
+    public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate,AstyanaxDataReaderDAO readerDao,
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder,
                                  MetricRegistry metricRegistry) {
+        _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _readerDao = checkNotNull(readerDao, "readerDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
@@ -304,67 +306,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     @Override
     public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId,
                         Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
-        checkNotNull(tbl, "table");
-        checkNotNull(key, "key");
-        checkNotNull(compactionKey, "compactionKey");
-        checkNotNull(compaction, "compaction");
-        checkNotNull(changeId, "changeId");
-        checkNotNull(delta, "delta");
-        checkNotNull(changesToDelete, "changesToDelete");
-        checkNotNull(consistency, "consistency");
-
-        AstyanaxTable table = (AstyanaxTable) tbl;
-        for (AstyanaxStorage storage : table.getWriteStorage()) {
-            DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
-            CassandraKeyspace keyspace = placement.getKeyspace();
-
-            ByteBuffer rowKey = storage.getRowKey(key);
-
-            // Should synchronously write compaction and then delete deltas
-            writeCompaction(rowKey, compactionKey, compaction, consistency, placement, keyspace, tbl, key);
-
-            deleteCompactedDeltas(rowKey, consistency, placement, keyspace, changesToDelete, historyList, tbl, key);
-        }
-    }
-
-    private void writeCompaction(ByteBuffer rowKey, UUID compactionKey, Compaction compaction,
-                                 WriteConsistency consistency, DeltaPlacement placement,
-                                 CassandraKeyspace keyspace, Table table, String key) {
-
-        MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
-        ColumnListMutation<DeltaKey> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
-
-        // Add the compaction record
-        ByteBuffer encodedCompaction = stringToByteBuffer(_changeEncoder.encodeCompaction(compaction));
-        int deltaSize = encodedCompaction.remaining();
-        putDeltaColumn(rowMutation, compactionKey, encodedCompaction, deltaSize);
-        // Write the new compaction
-        execute(mutation, "compact placement %s, table %s, key %s", placement.getName(), table.getName(), key);
-    }
-
-    private void deleteCompactedDeltas(ByteBuffer rowKey, WriteConsistency consistency, DeltaPlacement placement,
-                                       CassandraKeyspace keyspace, Collection<UUID> changesToDelete,
-                                       List<History> historyList, Table table, String key) {
-        MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
-        ColumnListMutation<DeltaKey> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
-
-        // TODO: defer this to the CQLDataWriterDAO because this delete is not usable for anything more than gatekeeper
-        for (UUID change : changesToDelete) {
-            for (int i = 0; i < 10; i++) {
-                rowMutation.deleteColumn(new DeltaKey(change, i));
-            }
-        }
-
-        // Archive compacted deltas
-        if (historyList != null && !historyList.isEmpty()) {
-            AuditBatchPersister auditBatchPersister =
-                    AstyanaxAuditBatchPersister.build(mutation, placement.getDeltaHistoryColumnFamily(),
-                            _changeEncoder, _auditStore);
-            _auditStore.putDeltaAudits(rowKey, historyList, auditBatchPersister);
-        }
-
-        execute(mutation, "compact placement %s, table %s, key %s", placement.getName(), table.getName(), key);
-
+        _cqlWriterDAO.compact(tbl, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);
     }
 
     @Timed (name = "bv.emodb.sorAstyanaxDataWriterDAO.storeCompactedDeltas", absolute = true)

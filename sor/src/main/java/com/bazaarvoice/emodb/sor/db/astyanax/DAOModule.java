@@ -23,6 +23,7 @@ public class DAOModule extends PrivateModule {
     protected void configure() {
         bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
+        bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataCopyDAO.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
