@@ -21,7 +21,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.inject.Inject;
 
@@ -34,7 +33,11 @@ import java.util.UUID;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
+
+
 public class CqlDataWriterDAO implements DataWriterDAO{
+
+    private static final int DELTA_BLOCK_SIZE = 128 * 1024;  // 128 KB block size (this must remain larger than (exclusive) 32 KB
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _astyanaxWriterDAO;
@@ -107,7 +110,36 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         }
     }
 
+    private void insertBlockedDeltas(BatchStatement batchStatement, DeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
+        int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
+        int position = encodedDelta.position();
 
+        byte[] blockBytes = String.format("%04X", numBlocks).getBytes();
+        for (int i = blockBytes.length - 1; i >= 0; i--) { //TODO: replace the 4 with the length the prefix (prefix not yet available to WriterDAO)
+            encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
+        }
+        for (int block = 0; block < numBlocks; block++) {
+            ByteBuffer split = encodedDelta.duplicate();
+            int limit;
+            if (DELTA_BLOCK_SIZE * (block + 1) < deltaSize) {
+                limit = position + DELTA_BLOCK_SIZE;
+                while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
+                    limit--;
+                }
+            } else {
+                limit = encodedDelta.limit();
+            }
+            split.position(position);
+            split.limit(limit);
+            position = limit;
+            batchStatement.add(QueryBuilder.insertInto(tableDDL.getTableMetadata())
+                    .value(tableDDL.getRowKeyColumnName(), rowKey)
+                    .value(tableDDL.getChangeIdColumnName(), changeId)
+                    .value(tableDDL.getBlockColumnName(), block)
+                    .value(tableDDL.getValueColumnName(), split)
+                    .setConsistencyLevel(consistencyLevel));
+        }
+    }
 
     private void writeCompaction(ByteBuffer rowKey, UUID compactionKey, Compaction compaction,
                                  WriteConsistency consistency, DeltaPlacement placement,
@@ -115,21 +147,18 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
         // Add the compaction record
         ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction).getBytes());
-//        int deltaSize = encodedCompaction.remaining();
+        int deltaSize = encodedCompaction.remaining();
         // TODO: add stitching for compacted deltas
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        Statement statement = QueryBuilder.insertInto(tableDDL.getTableMetadata())
-                .value(tableDDL.getRowKeyColumnName(), rowKey)
-                .value(tableDDL.getChangeIdColumnName(), compactionKey)
-                .value(tableDDL.getBlockColumnName(), 0)
-                .value(tableDDL.getValueColumnName(), encodedCompaction)
-                .setConsistencyLevel(consistencyLevel);
+        BatchStatement batchStatement = new BatchStatement(); // may need a type in the constructor!
 
-        session.execute(statement);
+        insertBlockedDeltas(batchStatement, tableDDL, consistencyLevel, rowKey, compactionKey, encodedCompaction, deltaSize);
+
+        session.execute(batchStatement);
     }
 
     private void deleteCompactedDeltas(ByteBuffer rowKey, WriteConsistency consistency, DeltaPlacement placement,

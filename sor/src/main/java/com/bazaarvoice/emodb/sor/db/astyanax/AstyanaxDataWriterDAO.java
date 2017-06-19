@@ -77,7 +77,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     // to allow ample room for additional metadata and protocol overhead.
     private static final int MAX_DELTA_SIZE = 10 * 1024 * 1024;   // 10 MB delta limit, measured in UTF-8 bytes
     private static final int MAX_AUDIT_SIZE = 1 * 1024 * 1024;    // 1 MB audit limit, measured in UTF-8 bytes
-    private static final int DELTA_BLOCK_SIZE = 32;//1 * 1024 * 1024;//1 * 1024 * 1024;  // 1 MB block size
+    private static final int DELTA_BLOCK_SIZE = 128 * 1024;  // 128 KB block size (this must remain larger than (exclusive) 32 KB
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final ChangeEncoder _changeEncoder;
@@ -348,9 +348,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
         ColumnListMutation<DeltaKey> rowMutation = mutation.withRow(placement.getDeltaColumnFamily(), rowKey);
 
-        // delete the old deltas & compaction records
+        // TODO: defer this to the CQLDataWriterDAO because this delete is not usable for anything more than gatekeeper
         for (UUID change : changesToDelete) {
-            rowMutation.deleteColumn(new DeltaKey(change, 0));
+            for (int i = 0; i < 10; i++) {
+                rowMutation.deleteColumn(new DeltaKey(change, i));
+            }
         }
 
         // Archive compacted deltas
