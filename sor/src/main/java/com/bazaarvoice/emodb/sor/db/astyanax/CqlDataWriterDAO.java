@@ -114,7 +114,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         int position = encodedDelta.position();
 
         byte[] blockBytes = String.format("%04X", numBlocks).getBytes();
-        for (int i = blockBytes.length - 1; i >= 0; i--) { //TODO: replace the 4 with the length the prefix (prefix not yet available to WriterDAO)
+        for (int i = blockBytes.length - 1; i >= 0; i--) {
             encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
         }
         for (int block = 0; block < numBlocks; block++) {
@@ -147,7 +147,6 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         // Add the compaction record
         ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction).getBytes());
         int deltaSize = encodedCompaction.remaining();
-        // TODO: add stitching for compacted deltas
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
