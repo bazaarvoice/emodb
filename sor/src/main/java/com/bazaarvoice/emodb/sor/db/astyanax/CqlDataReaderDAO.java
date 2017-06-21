@@ -62,15 +62,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.token;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -271,12 +263,17 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
     }
 
+    private ByteBuffer removePrefix(ByteBuffer value) {
+        value.position(value.position() + 4);
+        return value;
+    }
+
     /**
      * Converts a list of rows into Change instances.
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
+                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row)))));
     }
 
     /**
@@ -288,7 +285,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Row row = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(getValue(row));
+                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(getValue(row)));
                     if (compaction != null) {
                         return Maps.immutableEntry(getChangeId(row), compaction);
                     }
@@ -304,7 +301,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
                 .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
-                .withSize(getValue(row).remaining()));
+                .withSize(removePrefix(getValue(row)).remaining()));
     }
 
     /**
@@ -790,7 +787,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
-            deltas = decodeColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed));
+            deltas = decodeDeltaColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed));
         }
 
         // Read Audit objects
@@ -824,6 +821,10 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Change> decodeColumns(Iterator<Row> iter) {
         return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), getValue(row)));
+    }
+
+    private Iterator<Change> decodeDeltaColumns(Iterator<Row> iter) {
+        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row))));
     }
 
     /**

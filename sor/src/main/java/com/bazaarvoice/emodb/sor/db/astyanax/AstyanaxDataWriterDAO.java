@@ -245,7 +245,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             UUID changeId = update.getChangeId();
 
             // The values are encoded in a flexible format that allows versioning of the strings
-            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags));
+            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(DELTA_PREFIX)));
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
             int deltaSize = encodedDelta.remaining();
             int auditSize = encodedAudit.remaining();

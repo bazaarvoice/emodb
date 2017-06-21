@@ -43,6 +43,6 @@ public class DAOModule extends PrivateModule {
     @Provides
     @Singleton
     ChangeEncoder provideChangeEncoder(DataStoreConfiguration configuration) {
-        return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion(), "0000");
+        return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion());
     }
 }

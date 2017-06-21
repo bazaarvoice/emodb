@@ -278,7 +278,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getDeltaColumnFamily();
-            deltas = decodeColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed));
+            deltas = decodeDeltaColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed));
         }
 
         // Read Audit objects
@@ -1237,21 +1237,24 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                 Iterators.<RecordEntryRawMetadata>emptyIterator());
     }
 
+    private ByteBuffer removePrefix(ByteBuffer value) {
+        value.position(value.position() + 4);
+        return value;
+    }
+
     private Iterator<Change> decodeColumns(Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter,
-                new Function<Column<UUID>, Change>() {
-                    @Override
-                    public Change apply(Column<UUID> column) {
-                        return _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue());
-                    }
-                });
+        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue()));
+    }
+
+    private Iterator<Change> decodeDeltaColumns(Iterator<Column<UUID>> iter) {
+        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue())));
     }
 
     private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
             @Override
             public Map.Entry<UUID, Change> apply(Column<UUID> column) {
-                Change change = _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue());
+                Change change = _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue()));
                 return Maps.immutableEntry(column.getName(), change);
             }
         });
@@ -1263,7 +1266,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Column<UUID> column = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(column.getByteBufferValue());
+                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(column.getByteBufferValue()));
                     if (compaction != null) {
                         return Maps.immutableEntry(column.getName(), compaction);
                     }
@@ -1279,7 +1282,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             public RecordEntryRawMetadata apply(Column<UUID> column) {
                 return new RecordEntryRawMetadata()
                         .withTimestamp(TimeUUIDs.getTimeMillis(column.getName()))
-                        .withSize(column.getByteBufferValue().remaining());
+                        .withSize(removePrefix(column.getByteBufferValue()).remaining());
             }
         });
     }
