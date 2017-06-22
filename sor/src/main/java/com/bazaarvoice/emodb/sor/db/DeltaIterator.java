@@ -5,6 +5,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.serializers.StringSerializer;
 
+import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Iterator;
@@ -14,17 +15,18 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
     private List<R> _list;
 
-    private Iterator<R> _iterator;
+    private final Iterator<R> _iterator;
     private R _next;
-    private boolean _reverse;
-    private byte[] _blockBytes = new byte[4];
+    private final boolean _reverse;
+    private final byte[] _blockBytes;
 
-    public DeltaIterator(Iterator<R> iterator, boolean reverse) {
+    public DeltaIterator(Iterator<R> iterator, boolean reverse, int prefixLength) {
         _iterator = iterator;
         if (iterator.hasNext()) {
             _next = iterator.next();
         }
         _reverse = reverse;
+        _blockBytes = new byte[prefixLength];
     }
 
     private ByteBuffer reverseCompute(R upcoming) {
@@ -132,7 +134,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private int getNumBlocks(R delta) {
         ByteBuffer content = getValue(delta);
         int position = content.position();
-                content.get(_blockBytes);
+        content.get(_blockBytes);
         String blockString = StringSerializer.get().fromBytes(_blockBytes);
         return Integer.parseInt(blockString, 16);
     }

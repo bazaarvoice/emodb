@@ -52,6 +52,7 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TIOStreamTransport;
 import org.apache.thrift.transport.TTransportException;
 
+import javax.inject.Named;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -76,7 +77,6 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     // to allow ample room for additional metadata and protocol overhead.
     private static final int MAX_DELTA_SIZE = 10 * 1024 * 1024;   // 10 MB delta limit, measured in UTF-8 bytes
     private static final int MAX_AUDIT_SIZE = 1 * 1024 * 1024;    // 1 MB audit limit, measured in UTF-8 bytes
-    private static final int DELTA_BLOCK_SIZE = 128 * 1024;  // 128 KB block size (this must remain larger than (exclusive) 32 KB
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _cqlWriterDAO;
@@ -84,6 +84,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final Meter _updateMeter;
     private final Meter _oversizeUpdateMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
+    private final int _deltaBlockSize;
+    private final String _deltaPrefix;
+    private final int _deltaPrefixLength;
 
     // The difference between full consistency and "raw" consistency provider is that full consistency also includes
     //  a minimum lag of 5 minutes, whereas "raw" consistency timestamp just gives us the last known good FCT which could be less than 5 minutes.
@@ -93,11 +96,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final AuditStore _auditStore;
 
     @Inject
-    public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate,AstyanaxDataReaderDAO readerDao,
+    public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder,
-                                 MetricRegistry metricRegistry) {
+                                 MetricRegistry metricRegistry,
+                                 @Named("deltaBlockSize") int deltaBlockSize,
+                                 @Named("deltaPrefix") String deltaPrefix) {
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _readerDao = checkNotNull(readerDao, "readerDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -106,6 +111,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
+        _deltaBlockSize = deltaBlockSize;
+        _deltaPrefix = deltaPrefix;
+        _deltaPrefixLength = deltaPrefix.length();
     }
 
     private String getMetricName(String name) {
@@ -177,18 +185,18 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     }
 
     private void putDeltaColumn(ColumnListMutation mutation, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
-        int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
+        int numBlocks = (deltaSize + _deltaBlockSize - 1) / _deltaBlockSize;
         int position = encodedDelta.position();
 
-        byte[] blockBytes = String.format("%04X", numBlocks).getBytes();
+        byte[] blockBytes = String.format("%0" + _deltaPrefixLength + "X", numBlocks).getBytes();
         for (int i = blockBytes.length - 1; i >= 0; i--) {
-            encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
+            encodedDelta.put(position + _deltaPrefixLength - blockBytes.length + i, blockBytes[i]);
         }
         for (int block = 0; block < numBlocks; block++) {
             ByteBuffer split = encodedDelta.duplicate();
             int limit;
-            if (DELTA_BLOCK_SIZE * (block + 1) < deltaSize) {
-                limit = position + DELTA_BLOCK_SIZE;
+            if (_deltaBlockSize * (block + 1) < deltaSize) {
+                limit = position + _deltaBlockSize;
                 while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
                     limit--;
                 }
@@ -245,7 +253,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             UUID changeId = update.getChangeId();
 
             // The values are encoded in a flexible format that allows versioning of the strings
-            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(DELTA_PREFIX)));
+            ByteBuffer encodedDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(_deltaPrefix)));
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
             int deltaSize = encodedDelta.remaining();
             int auditSize = encodedAudit.remaining();

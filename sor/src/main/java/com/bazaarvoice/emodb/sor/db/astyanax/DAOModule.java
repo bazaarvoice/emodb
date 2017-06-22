@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.name.Names;
 
 /**
  * Guice module for DAO implementations.  Separate from {@link com.bazaarvoice.emodb.sor.DataStoreModule} to allow
@@ -19,8 +20,14 @@ import com.google.inject.Singleton;
  */
 public class DAOModule extends PrivateModule {
 
+    private static final int DELTA_BLOCK_SIZE = 64 * 1024; // 64 KB block size (this must remain larger than (exclusive) 32 KB
+    private static final String DELTA_PREFIX = "0000";
+
     @Override
     protected void configure() {
+        bind(Integer.class).annotatedWith(Names.named("deltaBlockSize")).toInstance(DELTA_BLOCK_SIZE);
+        bind(String.class).annotatedWith(Names.named("deltaPrefix")).toInstance(DELTA_PREFIX);
+
         bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();

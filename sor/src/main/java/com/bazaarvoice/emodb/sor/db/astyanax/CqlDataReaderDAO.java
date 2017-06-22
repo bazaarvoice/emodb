@@ -59,6 +59,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -88,6 +89,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final CqlDriverConfiguration _driverConfig;
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
+    private final int _deltaPrefixLength;
 
     // Support AB testing of various uses of the CQL driver versus the older but (at this point) more vetted Astyanax driver.
     private volatile Supplier<Boolean> _useCqlForMultiGets = Suppliers.ofInstance(true);
@@ -96,13 +98,14 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Inject
     public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
                             CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry) {
+                            MetricRegistry metricRegistry, @Named("deltaPrefix") String deltaPrefix) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
         _placementCache = placementCache;
         _driverConfig = driverConfig;
         _changeEncoder = changeEncoder;
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
+        _deltaPrefixLength = deltaPrefix.length();
     }
 
     private String getMetricName(String name) {
@@ -256,15 +259,15 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false));
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
     }
 
     private ByteBuffer removePrefix(ByteBuffer value) {
-        value.position(value.position() + 4);
+        value.position(value.position() + _deltaPrefixLength);
         return value;
     }
 
@@ -787,7 +790,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
-            deltas = decodeDeltaColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed));
+            deltas = decodeDeltaColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength));
         }
 
         // Read Audit objects

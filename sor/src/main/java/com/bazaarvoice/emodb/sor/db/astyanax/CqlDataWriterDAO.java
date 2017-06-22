@@ -24,6 +24,7 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.inject.Inject;
 
+import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
@@ -37,7 +38,9 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 public class CqlDataWriterDAO implements DataWriterDAO{
 
-    private static final int DELTA_BLOCK_SIZE = 128 * 1024;  // 128 KB block size (this must remain larger than (exclusive) 32 KB
+    private final int _deltaBlockSize;
+    private final String _deltaPrefix;
+    private final int _deltaPrefixLength;
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _astyanaxWriterDAO;
@@ -51,10 +54,12 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
     @Inject
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
-                                 FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
-                                 HintsConsistencyTimeProvider rawConsistencyTimeProvider,
-                                 ChangeEncoder changeEncoder,
-                                 MetricRegistry metricRegistry) {
+                            FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
+                            HintsConsistencyTimeProvider rawConsistencyTimeProvider,
+                            ChangeEncoder changeEncoder,
+                            MetricRegistry metricRegistry,
+                            @Named("deltaBlockSize") int deltaBlockSize,
+                            @Named("deltaPrefix") String deltaPrefix) {
         _readerDao = checkNotNull(readerDao, "readerDao");
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -63,6 +68,9 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
+        _deltaBlockSize = deltaBlockSize;
+        _deltaPrefix = deltaPrefix;
+        _deltaPrefixLength = deltaPrefix.length();
     }
 
     private String getMetricName(String name) {
@@ -110,18 +118,18 @@ public class CqlDataWriterDAO implements DataWriterDAO{
     }
 
     private void insertBlockedDeltas(BatchStatement batchStatement, DeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
-        int numBlocks = (deltaSize + DELTA_BLOCK_SIZE - 1) / DELTA_BLOCK_SIZE;
+        int numBlocks = (deltaSize + _deltaBlockSize - 1) / _deltaBlockSize;
         int position = encodedDelta.position();
 
-        byte[] blockBytes = String.format("%04X", numBlocks).getBytes();
+        byte[] blockBytes = String.format("%0" + _deltaPrefixLength + "X", numBlocks).getBytes();
         for (int i = blockBytes.length - 1; i >= 0; i--) {
-            encodedDelta.put(position + 4 - blockBytes.length + i, blockBytes[i]);
+            encodedDelta.put(position + _deltaPrefixLength - blockBytes.length + i, blockBytes[i]);
         }
         for (int block = 0; block < numBlocks; block++) {
             ByteBuffer split = encodedDelta.duplicate();
             int limit;
-            if (DELTA_BLOCK_SIZE * (block + 1) < deltaSize) {
-                limit = position + DELTA_BLOCK_SIZE;
+            if (_deltaBlockSize * (block + 1) < deltaSize) {
+                limit = position + _deltaBlockSize;
                 while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
                     limit--;
                 }
@@ -145,7 +153,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
                                  CassandraKeyspace keyspace, Table table, String key) {
 
         // Add the compaction record
-        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(DELTA_PREFIX)).getBytes());
+        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).getBytes());
         int deltaSize = encodedCompaction.remaining();
 
         Session session = keyspace.getCqlSession();
@@ -170,7 +178,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        BatchStatement batchStatement = new BatchStatement(); // this may need a type in the constructor
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED); // this may help with the batch size being too large
 
         for (UUID change : changesToDelete) {
             batchStatement.add(QueryBuilder.delete()

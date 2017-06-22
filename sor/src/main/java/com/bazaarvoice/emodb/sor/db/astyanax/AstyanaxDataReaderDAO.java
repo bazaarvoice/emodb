@@ -42,6 +42,7 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Execution;
@@ -109,9 +110,11 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     private final Meter _scanReadMeter;
     private final Meter _largeRowReadMeter;
     private final Meter _copyMeter;
+    private final int _deltaPrefixLength;
 
     @Inject
-    public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry) {
+    public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
+                                 @Named("deltaPrefix") String deltaPrefix) {
         _placementCache = placementCache;
         _changeEncoder = changeEncoder;
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
@@ -120,6 +123,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         _scanReadMeter = metricRegistry.meter(getMetricName("scan-reads"));
         _largeRowReadMeter = metricRegistry.meter(getMetricName("large-row-reads"));
         _copyMeter = metricRegistry.meter(getMetricName("copy"));
+        _deltaPrefixLength = deltaPrefix.length();
     }
 
     private String getMetricName(String name) {
@@ -278,7 +282,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getDeltaColumnFamily();
-            deltas = decodeDeltaColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed));
+            deltas = decodeDeltaColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed, _deltaPrefixLength));
         }
 
         // Read Audit objects
@@ -1223,9 +1227,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false));
-        Iterator<Map.Entry<UUID, Compaction>> DeltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false));
-        Iterator<RecordEntryRawMetadata> DeltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false));
+        Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength));
+        Iterator<Map.Entry<UUID, Compaction>> DeltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength));
+        Iterator<RecordEntryRawMetadata> DeltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength));
 
         return new RecordImpl(key, DeltaCompactionIter, DeltaChangeIter, DeltaRawMetadataIter);
     }
@@ -1238,7 +1242,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private ByteBuffer removePrefix(ByteBuffer value) {
-        value.position(value.position() + 4);
+        value.position(value.position() + _deltaPrefixLength);
         return value;
     }
 

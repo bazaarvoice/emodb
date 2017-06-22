@@ -12,8 +12,8 @@ public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
     private final int _blockIndex;
     private final int _contentIndex;
 
-    public CqlDeltaIterator(Iterator<Row> iterator, final int blockIndex, final int contentIndex, boolean reversed) {
-        super(iterator, reversed);
+    public CqlDeltaIterator(Iterator<Row> iterator, final int blockIndex, final int contentIndex, boolean reversed, int prefixLength) {
+        super(iterator, reversed, prefixLength);
         _blockIndex = blockIndex;
         _contentIndex = contentIndex;
     }
