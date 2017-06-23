@@ -25,6 +25,17 @@ CREATE TABLE ${table.delta} (
   AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}
   AND compression = {'sstable_compression' : 'LZ4Compressor'};
 
+CREATE TABLE ${table.delta}_blocked (
+    rowkey blob,
+    changeid timeuuid,
+    block int,
+    content text,
+    PRIMARY KEY (rowkey, changeid, block)
+) WITH COMPACT STORAGE
+  AND gc_grace_seconds = 172800
+  AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}
+  AND compression = {'sstable_compression' : 'LZ4Compressor'};
+
 -- This is to save all deltas that get compacted away
 CREATE TABLE ${table.history} (
     rowkey blob,

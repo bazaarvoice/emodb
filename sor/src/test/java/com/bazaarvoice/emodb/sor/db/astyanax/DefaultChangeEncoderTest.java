@@ -56,7 +56,7 @@ public class DefaultChangeEncoderTest {
         Set<String> tags = ImmutableSet.of("tag0","tag1");
         ChangeEncoder changeEncoder = new DefaultChangeEncoder(2);
         // Encode and then decode the said delta, and verify if Change is as expected
-        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags);
+        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder());
         assertEquals(encodedDelta, "D2:[\"tag0\",\"tag1\"]:{..,\"name\":\"bob\",\"x\":~}");
         Change change = changeEncoder.decodeChange(TimeUUIDs.newUUID(), StringSerializer.get().fromString(encodedDelta));
         assertEquals(change.getDelta(), delta);
@@ -69,7 +69,7 @@ public class DefaultChangeEncoderTest {
         Set<String> tags = ImmutableSet.of("tag0","tag1");
         ChangeEncoder changeEncoder = new DefaultChangeEncoder(3);
         // Encode and then decode the said delta, and verify if Change is as expected
-        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags);
+        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder());
         assertEquals(encodedDelta, "D3:[\"tag0\",\"tag1\"]:M:{..,\"name\":\"bob\",\"x\":~}");
         Change change = changeEncoder.decodeChange(TimeUUIDs.newUUID(), StringSerializer.get().fromString(encodedDelta));
         // Because the change contains a lazy delta it will not be the exact same instance as "delta"
@@ -81,8 +81,8 @@ public class DefaultChangeEncoderTest {
     @Test
     public void testDecodeCompactionWithMapLiteral() {
         String c1 = "C1:{\"count\":4,\"first\":\"6b6dff41-e50b-11e5-b18e-0e83e95d75a9\",\"cutoff\":\"741bb5bc-a5dc-11e6-8d58-123665dcce6e\"," +
-                    "\"cutoffSignature\":\"b6fe61d13972264e9d7ab0c230c82855\",\"lastContentMutation\":\"cef920a5-fbd4-11e5-b18e-0e83e95d75a9\"," +
-                    "\"lastMutation\":\"cef920a5-fbd4-11e5-b18e-0e83e95d75a9\",\"compactedDelta\":\"{\\\"active\\\":true}\",\"lastTags\":[\"tag1\"]}";
+                "\"cutoffSignature\":\"b6fe61d13972264e9d7ab0c230c82855\",\"lastContentMutation\":\"cef920a5-fbd4-11e5-b18e-0e83e95d75a9\"," +
+                "\"lastMutation\":\"cef920a5-fbd4-11e5-b18e-0e83e95d75a9\",\"compactedDelta\":\"{\\\"active\\\":true}\",\"lastTags\":[\"tag1\"]}";
         ChangeEncoder changeEncoder = new DefaultChangeEncoder();
         Compaction compaction = changeEncoder.decodeCompaction(StringSerializer.get().fromString(c1));
         assertEquals(compaction.getCount(), 4);
