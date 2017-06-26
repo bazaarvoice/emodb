@@ -58,6 +58,11 @@ public class ScannerConfiguration {
     @JsonProperty ("s3Proxy")
     private Optional<String> _s3Proxy = Optional.absent();
 
+    // If using S3, optionally assume the provided role
+    @Valid
+    @NotNull
+    @JsonProperty ("s3AssumeRole")
+    private Optional<String> _s3AssumeRole = Optional.absent();
     @Valid
     @NotNull
     @JsonProperty ("notifications")
@@ -171,6 +176,15 @@ public class ScannerConfiguration {
 
     public ScannerConfiguration setCompleteScanRangeQueueName(Optional<String> completeScanRangeQueueName) {
         _completeScanRangeQueueName = completeScanRangeQueueName;
+        return this;
+    }
+
+    public Optional<String> getS3AssumeRole() {
+        return _s3AssumeRole;
+    }
+
+    public ScannerConfiguration setS3AssumeRole(Optional<String> s3AssumeRole) {
+        _s3AssumeRole = s3AssumeRole;
         return this;
     }
 }
