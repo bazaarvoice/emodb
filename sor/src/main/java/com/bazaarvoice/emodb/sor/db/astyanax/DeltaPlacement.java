@@ -105,6 +105,10 @@ class DeltaPlacement implements Placement {
         return _deltaHistoryTableDDL;
     }
 
+    BlockedDeltaTableDDL getBlockedDeltaTableDDL() {
+        return _blockedDeltaTableDDL;
+    }
+
     // for debugging
     @Override
     public String toString() {
