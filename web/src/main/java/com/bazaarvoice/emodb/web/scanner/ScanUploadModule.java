@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.scanner;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
@@ -14,6 +15,7 @@ import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
@@ -69,6 +71,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provider;
@@ -174,8 +177,14 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    protected AmazonS3 provideAmazonS3(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonS3Client amazonS3 = new AmazonS3Client(credentialsProvider);
+    protected AmazonS3 provideAmazonS3(Region region, AWSCredentialsProvider credentialsProvider,
+                                       @SelfHostAndPort HostAndPort hostAndPort) {
+        AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
+        if (_config.getS3AssumeRole().isPresent()) {
+            s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider(
+                    credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHostText());
+        }
+        AmazonS3Client amazonS3 = new AmazonS3Client(s3CredentialsProvider);
         amazonS3.setRegion(region);
         return amazonS3;
     }
