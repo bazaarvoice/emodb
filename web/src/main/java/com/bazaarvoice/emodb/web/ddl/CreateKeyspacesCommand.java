@@ -244,17 +244,17 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
             ksDef = new KsDef(keyspace, STRATEGY_CLASS, Collections.<CfDef>emptyList());
             ksDef.setStrategy_options(ImmutableMap.of(dataCenter, Integer.toString(replicationFactor)));
             cassandra.systemAddKeyspace(ksDef);
-
-            // Create the column families using CQL
-            for (String cql : createCfCqlScripts) {
-                if (beforeCassandra12) {
-                    cassandra.executeCql3Script_1_1(cql);
-                } else {
-                    cassandra.executeCql3Script(cql);
-                }
+        }
+        // Create the column families using CQL
+        for (String cql : createCfCqlScripts) {
+            if (beforeCassandra12) {
+                cassandra.executeCql3Script_1_1(cql);
+            } else {
+                cassandra.executeCql3Script(cql);
             }
+        }
 
-        } else if (!ksDef.getStrategy_options().containsKey(dataCenter)) {
+        if (!ksDef.getStrategy_options().containsKey(dataCenter)) {
             // Add the data center to the replication topology.
             _log.info("Updating keyspace '{}' to replicate to '{}'.", keyspace, dataCenter);
             Map<String, String> strategyOptions = Maps.newLinkedHashMap(ksDef.getStrategy_options());
