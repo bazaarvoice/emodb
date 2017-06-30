@@ -12,19 +12,11 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
-import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
-import com.bazaarvoice.emodb.sor.db.RecordUpdate;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.datastax.driver.core.ResultSet;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -59,7 +51,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * In-memory implementation of {@link DataWriterDAO}, for testing.
  */
-public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
+public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO, MigratorDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
     private final Map<String, NavigableMap<String, Map<UUID, Change>>> _auditChanges = Maps.newHashMap();
@@ -493,5 +485,15 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
         } catch (DecoderException e) {
             throw new IllegalArgumentException("Invalid hex string: " + string);
         }
+    }
+
+    @Override
+    public void writeRows(String placement, ResultSet resultSet) {
+
+    }
+
+    @Override
+    public ResultSet readRows(String placement, ScanRange scanRange) {
+        return null;
     }
 }

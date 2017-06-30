@@ -79,7 +79,6 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
 
     @Override
     public Placement newPlacement(String placement) throws ConnectionException {
-        System.out.println("Placement: " + placement);
         String[] parsed = PlacementUtil.parsePlacement(placement);
         String keyspaceName = parsed[0];
         String cfPrefix = parsed[1];

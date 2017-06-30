@@ -164,7 +164,7 @@ public interface DataStore {
      * Creates, updates or deletes a piece of content in the data store.
      * Uses {@link WriteConsistency#STRONG}.
      */
-    void update(String table, String key, UUID changeId, Delta delta, Audit audit);
+    void  update(String table, String key, UUID changeId, Delta delta, Audit audit);
 
     /**
      * Creates, updates or deletes a piece of content in the data store.
