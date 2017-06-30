@@ -29,6 +29,11 @@ systemOfRecord:
                table.audit: sys_audit
                table.delta: sys_delta
                table.history: sys_history
+            migration:
+               keyspace: app_global
+               table.audit: migration_audit
+               table.delta: migration_delta
+               table.history: migration_history
       pii_us:
          replicationFactor: 1
          tables:

@@ -149,8 +149,8 @@ public class ScanUploader {
         return status;
     }
 
-    public ScanStatus getStatus(String id) {
-        return _scanStatusDAO.getScanStatus(id);
+    public ScanStatus getStatus(String placement) {
+        return _scanStatusDAO.getScanStatus(placement);
     }
 
     public void cancel(String id) {

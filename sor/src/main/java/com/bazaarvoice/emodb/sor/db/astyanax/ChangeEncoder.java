@@ -11,7 +11,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
-interface ChangeEncoder {
+public interface ChangeEncoder {
 
     String encodeDelta(String delta, @Nullable EnumSet<ChangeFlag> changeFlags, Set<String> tags, StringBuilder changeBody);
 

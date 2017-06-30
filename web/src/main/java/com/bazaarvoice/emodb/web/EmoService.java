@@ -30,6 +30,8 @@ import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
+import com.bazaarvoice.emodb.web.migrator.BlockMigratorResource1;
+import com.bazaarvoice.emodb.web.migrator.DeltaMigrator;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
@@ -91,19 +93,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.*;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class EmoService extends Application<EmoConfiguration> {
@@ -202,6 +192,7 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateReporting();
         evaluateThrottling();
         evaluateScanner();
+        evaluateMigrator();
         evaluateServiceStartedListeners();
         evaluateSwagger();
         evaluateUAC();
@@ -307,6 +298,16 @@ public class EmoService extends Application<EmoConfiguration> {
         ScanUploader scanUploader = _injector.getInstance(ScanUploader.class);
         _environment.jersey().register(new ScanUploadResource1(scanUploader));
         // No admin tasks are registered automatically in SCANNER ServiceMode
+        _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
+    }
+
+    private void evaluateMigrator()
+            throws Exception {
+        if (!runPerServiceMode(migrator)) {
+            return;
+        }
+        _environment.jersey().register(new BlockMigratorResource1(_injector.getInstance(DeltaMigrator.class)));
+        // No admin tasks are registered automatically in MIGRATOR ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 
