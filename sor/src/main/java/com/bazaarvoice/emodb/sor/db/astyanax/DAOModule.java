@@ -21,7 +21,7 @@ import com.google.inject.name.Names;
 public class DAOModule extends PrivateModule {
 
     private static final int DELTA_BLOCK_SIZE = 64 * 1024; // 64 KB block size (this must remain larger than (exclusive) 32 KB
-    private static final String DELTA_PREFIX = "0000";
+    private static final int DELTA_PREFIX_LENGTH = 4;
 
     @Override
     protected void configure() {
