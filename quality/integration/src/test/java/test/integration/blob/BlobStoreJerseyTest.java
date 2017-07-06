@@ -23,8 +23,6 @@ import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreStreaming;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
-import com.bazaarvoice.emodb.datacenter.api.DataCenter;
-import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -42,7 +40,6 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
@@ -97,7 +94,6 @@ public class BlobStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_BLOB_B = "b-blob-key";
 
     private BlobStore _server = mock(BlobStore.class);
-    private DataCenters _dataCenters = mock(DataCenters.class);
     private ScheduledExecutorService _connectionManagementService = mock(ScheduledExecutorService.class);
     private Set<String> _approvedContentTypes = ImmutableSet.of("application/json");
 
@@ -120,15 +116,15 @@ public class BlobStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
-            Collections.<Object>singletonList(new BlobStoreResource1(_server, _dataCenters, _approvedContentTypes)),
+            Collections.<Object>singletonList(new BlobStoreResource1(_server, _approvedContentTypes)),
             authIdentityManager,
             permissionManager);
     }
 
     @After
     public void tearDownMocksAndClearState() {
-        verifyNoMoreInteractions(_server, _dataCenters);
-        reset(_server, _dataCenters, _connectionManagementService);
+        verifyNoMoreInteractions(_server);
+        reset(_server, _connectionManagementService);
     }
 
     private BlobStore blobClient() {
@@ -364,26 +360,17 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testCreateTable() {
-        DataCenter dataCenter = mock(DataCenter.class);
-        when(_dataCenters.getSelf()).thenReturn(dataCenter);
-        when(dataCenter.isSystem()).thenReturn(true);
-
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         Map<String, String> attributes = ImmutableMap.of("key", "value");
         Audit audit = new AuditBuilder().setLocalHost().build();
         blobClient().createTable("table-name", options, attributes, audit);
 
         verify(_server).createTable("table-name", options, attributes, audit);
-        verify(_dataCenters).getSelf();
-        verifyNoMoreInteractions(_server, _dataCenters);
+        verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testCreateTableUnauthorized() {
-        DataCenter dataCenter = mock(DataCenter.class);
-        when(_dataCenters.getSelf()).thenReturn(dataCenter);
-        when(dataCenter.isSystem()).thenReturn(true);
-
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         Map<String, String> attributes = ImmutableMap.of("key", "value");
         Audit audit = new AuditBuilder().setLocalHost().build();
@@ -394,20 +381,44 @@ public class BlobStoreJerseyTest extends ResourceTest {
         } catch (Exception e) {
             assertTrue(e instanceof UnauthorizedException);
         }
-
-        verify(_dataCenters).getSelf();
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testDropTable() {
         Audit audit = new AuditBuilder().setLocalHost().build();
         blobClient().dropTable("table-name", audit);
+        verify(_server).dropTable("table-name", audit);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
+    public void testDropTableUnauthorized() {
+        Audit audit = new AuditBuilder().setLocalHost().build();
+
+        try {
+            blobClient(APIKEY_UNAUTHORIZED).dropTable("table-name", audit);
+            fail();
+        } catch (Exception e) {
+            assertTrue(e instanceof UnauthorizedException);
+        }
+    }
+    
+    @Test
     public void testPurgeTableUnsafe() {
         Audit audit = new AuditBuilder().setLocalHost().build();
         blobClient().purgeTableUnsafe("table-name", audit);
+        verify(_server).purgeTableUnsafe("table-name", audit);
+    }
+
+    @Test
+    public void testPurgeTableUnsafeUnauthorized() {
+        Audit audit = new AuditBuilder().setLocalHost().build();
+
+        try {
+            blobClient(APIKEY_UNAUTHORIZED).purgeTableUnsafe("table-name", audit);
+            fail();
+        } catch (Exception e) {
+            assertTrue(e instanceof UnauthorizedException);
+        }
     }
 
     @Test
@@ -736,9 +747,6 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testTableExistsException() {
-        DataCenter dataCenter = mock(DataCenter.class);
-        when(_dataCenters.getSelf()).thenReturn(dataCenter);
-        when(dataCenter.isSystem()).thenReturn(true);
         doThrow(new TableExistsException("table-name"))
             .when(_server)
             .createTable(eq("table-name"), any(TableOptions.class), any(Map.class), any(Audit.class));
@@ -753,8 +761,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             assertEquals(e.getTable(), "table-name");
         }
         verify(_server).createTable("table-name", options, attributes, audit);
-        verify(_dataCenters).getSelf();
-        verifyNoMoreInteractions(_server, _dataCenters);
+        verifyNoMoreInteractions(_server);
     }
 
     @Test

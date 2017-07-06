@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
-import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
 import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
@@ -45,8 +44,8 @@ import com.bazaarvoice.emodb.web.resources.queue.QueueResource1;
 import com.bazaarvoice.emodb.web.resources.report.ReportResource1;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.resources.uac.ApiKeyResource1;
-import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
 import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
+import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.resource.ScanUploadResource1;
@@ -247,13 +246,12 @@ public class EmoService extends Application<EmoConfiguration> {
             return;
         }
 
-        DataCenters dataCenters = _injector.getInstance(DataCenters.class);
         BlobStore blobStore = _injector.getInstance(BlobStore.class);
         Set<String> approvedContentTypes = _injector.getInstance(
                 Key.get(new TypeLiteral<Set<String>>(){}, ApprovedBlobContentTypes.class));
         // Start the Blob service
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
-        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, dataCenters, approvedContentTypes));
+        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, approvedContentTypes));
     }
 
     private void evaluateDatabus()

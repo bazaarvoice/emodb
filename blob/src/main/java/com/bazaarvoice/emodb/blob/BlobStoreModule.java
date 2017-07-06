@@ -1,7 +1,10 @@
 package com.bazaarvoice.emodb.blob;
 
 import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.core.BlobStoreProviderProxy;
 import com.bazaarvoice.emodb.blob.core.DefaultBlobStore;
+import com.bazaarvoice.emodb.blob.core.LocalBlobStore;
+import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.BlobPlacementFactory;
@@ -81,6 +84,7 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
@@ -107,6 +111,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> {@link DataCenterConfiguration}
  * <li> {@link CacheRegistry}
  * <li> {@link DataStore}
+ * <li> @{@link SystemBlobStore} {@link BlobStore}
  * <li> {@link HealthCheckRegistry}
  * <li> {@link LeaderServiceTask}
  * <li> {@link LifeCycleRegistry}
@@ -186,13 +191,28 @@ public class BlobStoreModule extends PrivateModule {
         }
 
         // Bind the BlobStore instance that the rest of the application will consume
-        bind(BlobStore.class).to(DefaultBlobStore.class).asEagerSingleton();
+        bind(DefaultBlobStore.class).asEagerSingleton();
+        bind(BlobStore.class).annotatedWith(LocalBlobStore.class).to(DefaultBlobStore.class);
         expose(BlobStore.class);
 
         // Bind any methods annotated with @ParameterizedTimed
         bindListener(Matchers.any(), new ParameterizedTimedListener(_metricsGroup, _metricRegistry));
     }
 
+    @Provides @Singleton
+    BlobStore provideBlobStore(@LocalBlobStore Provider<BlobStore> localBlobStoreProvider,
+                               @SystemBlobStore Provider<BlobStore> systemBlobStoreProvider,
+                               DataCenterConfiguration dataCenterConfiguration) {
+        // Provides the unannotated version of the BlobStore
+        // If this is the system data center, return the local BlobStore implementation
+        // Otherwise return a proxy that delegates to local or remote system BlobStores
+        if (dataCenterConfiguration.isSystemDataCenter()) {
+            return localBlobStoreProvider.get();
+        } else {
+            return new BlobStoreProviderProxy(localBlobStoreProvider, systemBlobStoreProvider);
+        }
+    }
+    
     @Provides @Singleton
     Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
