@@ -25,8 +25,8 @@ public class DAOModule extends PrivateModule {
 
     @Override
     protected void configure() {
-        bind(Integer.class).annotatedWith(Names.named("deltaBlockSize")).toInstance(DELTA_BLOCK_SIZE);
-        bind(String.class).annotatedWith(Names.named("deltaPrefix")).toInstance(DELTA_PREFIX);
+        bind(Integer.class).annotatedWith(BlockSize.class).toInstance(DELTA_BLOCK_SIZE);
+        bind(Integer.class).annotatedWith(PrefixLength.class).toInstance(DELTA_PREFIX_LENGTH);
 
         bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();

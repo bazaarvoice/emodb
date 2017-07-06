@@ -11,7 +11,14 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AbstractBatchReader;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -63,8 +70,6 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
-import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
-import com.netflix.astyanax.serializers.CompositeRangeBuilder;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.AbstractKeyspaceOperationImpl;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
@@ -88,6 +93,7 @@ import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.bazaarvoice.emodb.sor.db.DAOUtils.removePrefix;
 
 /**
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
@@ -114,7 +120,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
 
     @Inject
     public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                 @Named("deltaPrefix") String deltaPrefix) {
+                                 @PrefixLength int deltaPrefixLength) {
         _placementCache = placementCache;
         _changeEncoder = changeEncoder;
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
@@ -123,7 +129,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         _scanReadMeter = metricRegistry.meter(getMetricName("scan-reads"));
         _largeRowReadMeter = metricRegistry.meter(getMetricName("large-row-reads"));
         _copyMeter = metricRegistry.meter(getMetricName("copy"));
-        _deltaPrefixLength = deltaPrefix.length();
+        _deltaPrefixLength = deltaPrefixLength;
     }
 
     private String getMetricName(String name) {
@@ -282,7 +288,10 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getDeltaColumnFamily();
-            deltas = decodeDeltaColumns(new AstyanaxDeltaIterator(deltaColumnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency), reversed, _deltaPrefixLength));
+            DeltaKey deltaStart = start != null ? new DeltaKey(start, 0) : null;
+            DeltaKey deltaEnd = end != null ? new DeltaKey(end, Integer.MAX_VALUE) : null;
+            deltas = decodeDeltaColumns(Iterators.limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength), (int) limit));
+
         }
 
         // Read Audit objects
@@ -290,9 +299,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         Iterator<Change> deltaHistory = Iterators.emptyIterator();
         if (includeAuditInformation) {
             ColumnFamily<ByteBuffer, UUID> cf = placement.getAuditColumnFamily();
-            audits = decodeColumns(columnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency));
+            audits = decodeColumns(columnScan(rowKey, placement, cf, start, end, reversed, _uuidInc, limit, 0, consistency));
             ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = placement.getDeltaHistoryColumnFamily();
-            deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, limit, 0, consistency));
+            deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, _uuidInc, limit, 0, consistency));
         }
 
         Iterator<Change> deltaPlusAudit = MergeIterator.merge(deltas, audits, reversed);
@@ -306,7 +315,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         ByteBuffer rowKey = storage.getRowKey(key.getKey());
         DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
         ColumnFamily<ByteBuffer, UUID> cf = placement.getDeltaHistoryColumnFamily();
-        return decodeColumns(columnScan(rowKey, placement, cf, start, end, true, MAX_COLUMN_SCAN_BATCH, 0, consistency));
+        return decodeColumns(columnScan(rowKey, placement, cf, start, end, true, _uuidInc, MAX_COLUMN_SCAN_BATCH, 0, consistency));
     }
 
     @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.scan", absolute = true)
@@ -639,90 +648,36 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         while (scanIter.hasNext()) {
             ByteBufferRange keyRange = scanIter.next();
             // Copy delta records in this split.
-            copyDeltaRange(sourcePlacement, sourcePlacement.getDeltaColumnFamily(),
+            copyRange(sourcePlacement, sourcePlacement.getDeltaColumnFamily(),
                     dest, destPlacement, destPlacement.getDeltaColumnFamily(),
-                    keyRange, progress);
+                    _deltaKeyInc, keyRange, progress);
             // Copy audit records in this split.
             copyRange(sourcePlacement, sourcePlacement.getAuditColumnFamily(),
                     dest, destPlacement, destPlacement.getAuditColumnFamily(),
-                    keyRange, progress);
+                    _uuidInc, keyRange, progress);
             // Copy delta history records in this split.
             copyRange(sourcePlacement, sourcePlacement.getDeltaHistoryColumnFamily(),
                     dest, destPlacement, destPlacement.getDeltaHistoryColumnFamily(),
-                    keyRange, progress);
+                    _uuidInc, keyRange, progress);
         }
     }
 
-    private void copyDeltaRange(DeltaPlacement sourcePlacement, ColumnFamily<ByteBuffer, DeltaKey> sourceCf,
-                                AstyanaxStorage dest, DeltaPlacement destPlacement, ColumnFamily<ByteBuffer, DeltaKey> destCf,
-                                ByteBufferRange keyRange, Runnable progress) {
-        ConsistencyLevel writeConsistency = SorConsistencies.toAstyanax(WriteConsistency.STRONG);
-
-        Iterator<List<Row<ByteBuffer, DeltaKey>>> rowsIter = Iterators.partition(
-                rowScan(sourcePlacement, sourceCf, keyRange, _maxColumnsRange, LimitCounter.max(), ReadConsistency.STRONG),
-                MAX_SCAN_ROWS_BATCH);
-        int largeRowThreshold = _maxColumnsRange.getLimit();
-
-        while (rowsIter.hasNext()) {
-            List<Row<ByteBuffer, DeltaKey>> rows = rowsIter.next();
-
-            MutationBatch mutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
-            for (Row<ByteBuffer, DeltaKey> row : rows) {
-                ColumnList<DeltaKey> columns = row.getColumns();
-
-                // Map the source row key to the destination row key.  Its table uuid and shard key will be different.
-                ByteBuffer newRowKey = dest.getRowKey(AstyanaxStorage.getContentKey(row.getRawKey()));
-
-                // Copy the first N columns to the multi-row mutation.
-                putAll(mutation.withRow(destCf, newRowKey), columns);
-
-                // If this is a wide row, copy the remaining columns w/separate mutation objects.
-                // This is especially common with the audit column family.
-                if (columns.size() >= largeRowThreshold) {
-                    UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName().getChangeId();
-                    Iterator<List<Column<DeltaKey>>> columnsIter = Iterators.partition(
-                            deltaColumnScan(row.getRawKey(), sourcePlacement, sourceCf, lastColumn, null,
-                                    false, Long.MAX_VALUE, 1, ReadConsistency.STRONG),
-                            MAX_COLUMN_SCAN_BATCH);
-                    while (columnsIter.hasNext()) {
-                        List<Column<DeltaKey>> moreColumns = columnsIter.next();
-
-                        MutationBatch wideRowMutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
-                        putAll(wideRowMutation.withRow(destCf, newRowKey), moreColumns);
-                        progress.run();
-                        execute(wideRowMutation,
-                                "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
-                                keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
-                                destPlacement.getName(), destCf.getName());
-                    }
-                }
-            }
-            progress.run();
-            execute(mutation,
-                    "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
-                    keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
-                    destPlacement.getName(), destCf.getName());
-
-            _copyMeter.mark(rows.size());
-        }
-    }
-
-    private void copyRange(DeltaPlacement sourcePlacement, ColumnFamily<ByteBuffer, UUID> sourceCf,
-                           AstyanaxStorage dest, DeltaPlacement destPlacement, ColumnFamily<ByteBuffer, UUID> destCf,
+    private <C> void copyRange(DeltaPlacement sourcePlacement, ColumnFamily<ByteBuffer, C> sourceCf,
+                           AstyanaxStorage dest, DeltaPlacement destPlacement, ColumnFamily<ByteBuffer, C> destCf, ColumnInc<C> columnInc,
                            ByteBufferRange keyRange, Runnable progress) {
         ConsistencyLevel writeConsistency = SorConsistencies.toAstyanax(WriteConsistency.STRONG);
 
-        Iterator<List<Row<ByteBuffer, UUID>>> rowsIter = Iterators.partition(
+        Iterator<List<Row<ByteBuffer, C>>> rowsIter = Iterators.partition(
                 rowScan(sourcePlacement, sourceCf, keyRange, _maxColumnsRange, LimitCounter.max(), ReadConsistency.STRONG),
                 MAX_SCAN_ROWS_BATCH);
         int largeRowThreshold = _maxColumnsRange.getLimit();
 
         while (rowsIter.hasNext()) {
-            List<Row<ByteBuffer, UUID>> rows = rowsIter.next();
+            List<Row<ByteBuffer, C>> rows = rowsIter.next();
 
             MutationBatch mutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
-            for (Row<ByteBuffer, UUID> row : rows) {
-                ColumnList<UUID> columns = row.getColumns();
+            for (Row<ByteBuffer, C> row : rows) {
+                ColumnList<C> columns = row.getColumns();
 
                 // Map the source row key to the destination row key.  Its table uuid and shard key will be different.
                 ByteBuffer newRowKey = dest.getRowKey(AstyanaxStorage.getContentKey(row.getRawKey()));
@@ -733,13 +688,13 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                 // If this is a wide row, copy the remaining columns w/separate mutation objects.
                 // This is especially common with the audit column family.
                 if (columns.size() >= largeRowThreshold) {
-                    UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
-                    Iterator<List<Column<UUID>>> columnsIter = Iterators.partition(
+                    C lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
+                    Iterator<List<Column<C>>> columnsIter = Iterators.partition(
                             columnScan(row.getRawKey(), sourcePlacement, sourceCf, lastColumn, null,
-                                    false, Long.MAX_VALUE, 1, ReadConsistency.STRONG),
+                                    false, columnInc, Long.MAX_VALUE, 1, ReadConsistency.STRONG),
                             MAX_COLUMN_SCAN_BATCH);
                     while (columnsIter.hasNext()) {
-                        List<Column<UUID>> moreColumns = columnsIter.next();
+                        List<Column<C>> moreColumns = columnsIter.next();
 
                         MutationBatch wideRowMutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
                         putAll(wideRowMutation.withRow(destCf, newRowKey), moreColumns);
@@ -916,97 +871,27 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
 
-    private Iterator<Column<DeltaKey>> deltaColumnScan(final ByteBuffer rowKey,
-                                                       final DeltaPlacement placement,
-                                                       final ColumnFamily<ByteBuffer, DeltaKey> columnFamily,
-                                                       final UUID start,
-                                                       final UUID end,
-                                                       final boolean reversed,
-                                                       final long limit,
-                                                       final long page,
-                                                       final ReadConsistency consistency) {
-        return Iterators.concat(new AbstractIterator<Iterator<Column<DeltaKey>>>() {
-            private UUID _from = start;
-            private long _remaining = limit;
-            private long _page = page;
-
-            @Override
-            protected Iterator<Column<DeltaKey>> computeNext() {
-                if (_remaining <= 0) {
-                    return endOfData();
-                }
-
-                // For page N+1, treat "_from" as exclusive.  Since Cassandra doesn't support exclusive column ranges
-                // bump the from value up to the next possible time UUID (assumes from != null when page != 0).
-                if (_page > 0) {
-                    if (_from.equals(end)) {
-                        return endOfData();
-                    }
-                    _from = reversed ? TimeUUIDs.getPrevious(_from) : TimeUUIDs.getNext(_from);
-                    if (_from == null) {
-                        return endOfData();
-                    }
-                }
-
-                // TESTING IS REQUIRED TO ENSURE THAT HTIS WORKS CORRECTLY IN REVERSE!
-
-                // Execute the query
-                int batchSize = (int) Math.min(_remaining, MAX_COLUMN_SCAN_BATCH);
-                CompositeRangeBuilder range = new AnnotatedCompositeSerializer<DeltaKey>(DeltaKey.class).buildRange()
-                        .greaterThanEquals(_from)
-                        .lessThanEquals(end)
-                        .limit(batchSize);
-                if (reversed) {
-                    range.reverse();
-                }
-
-
-                ColumnList<DeltaKey> columns = execute(placement.getKeyspace()
-                                .prepareQuery(columnFamily, SorConsistencies.toAstyanax(consistency))
-                                .getKey(rowKey)
-                                .withColumnRange(range),
-                        "scan columns in placement %s, column family %s, row %s, from %s to %s",
-                        placement.getName(), columnFamily.getName(), rowKey, start, end);
-
-                // Update state for the next iteration.
-                if (columns.size() >= batchSize) {
-                    // Save the last column key so we can use it as the start (exclusive) if we must query to get more data.
-                    _from = columns.getColumnByIndex(columns.size() - 1).getName().getChangeId();
-                    _remaining = _remaining - columns.size();
-                    _page++;
-                } else {
-                    // If we got fewer columns than we asked for, another query won't find more columns.
-                    _remaining = 0;
-                }
-
-                // Track metrics.  For rows w/more than 50 columns, count subsequent reads w/_largeRowReadMeter.
-                (_page == 0 ? _randomReadMeter : _largeRowReadMeter).mark();
-
-                return columns.iterator();
-            }
-        });
-    }
-
     /**
      * Scans a single row for columns within the specified range, inclusive or exclusive on start based on whether
      * <code>page</code> is non-zero, and inclusive on end.
      */
-    private Iterator<Column<UUID>> columnScan(final ByteBuffer rowKey,
+    private <C> Iterator<Column<C>> columnScan(final ByteBuffer rowKey,
                                               final DeltaPlacement placement,
-                                              final ColumnFamily<ByteBuffer, UUID> columnFamily,
-                                              final UUID start,
-                                              final UUID end,
+                                              final ColumnFamily<ByteBuffer, C> columnFamily,
+                                              final C start,
+                                              final C end,
                                               final boolean reversed,
+                                              final ColumnInc<C> columnInc,
                                               final long limit,
                                               final long page,
                                               final ReadConsistency consistency) {
-        return Iterators.concat(new AbstractIterator<Iterator<Column<UUID>>>() {
-            private UUID _from = start;
+        return Iterators.concat(new AbstractIterator<Iterator<Column<C>>>() {
+            private C _from = start;
             private long _remaining = limit;
             private long _page = page;
 
             @Override
-            protected Iterator<Column<UUID>> computeNext() {
+            protected Iterator<Column<C>> computeNext() {
                 if (_remaining <= 0) {
                     return endOfData();
                 }
@@ -1017,7 +902,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     if (_from.equals(end)) {
                         return endOfData();
                     }
-                    _from = reversed ? TimeUUIDs.getPrevious(_from) : TimeUUIDs.getNext(_from);
+                    _from = reversed ? columnInc.previous(_from) : columnInc.next(_from);
                     if (_from == null) {
                         return endOfData();
                     }
@@ -1025,7 +910,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
 
                 // Execute the query
                 int batchSize = (int) Math.min(_remaining, MAX_COLUMN_SCAN_BATCH);
-                ColumnList<UUID> columns = execute(placement.getKeyspace()
+                ColumnList<C> columns = execute(placement.getKeyspace()
                                 .prepareQuery(columnFamily, SorConsistencies.toAstyanax(consistency))
                                 .getKey(rowKey)
                                 .withColumnRange(_from, end, reversed, batchSize),
@@ -1050,6 +935,41 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             }
         });
     }
+
+    private interface ColumnInc<C> {
+        C previous(C col);
+        C next(C col);
+    }
+
+    private static final ColumnInc<UUID> _uuidInc = new ColumnInc<UUID>() {
+        @Override
+        public UUID previous(UUID col) {
+            return TimeUUIDs.getPrevious(col);
+        }
+
+        @Override
+        public UUID next(UUID col) {
+            return TimeUUIDs.getNext(col);
+        }
+    };
+
+    private static final ColumnInc<DeltaKey> _deltaKeyInc = new ColumnInc<DeltaKey>() {
+        @Override
+        public DeltaKey previous(DeltaKey col) {
+            if (col.getBlock() == 0) {
+                return new DeltaKey(_uuidInc.previous(col.getChangeId()), Integer.MAX_VALUE);
+            }
+            return new DeltaKey(col.getChangeId(), col.getBlock() - 1);
+        }
+
+        @Override
+        public DeltaKey next(DeltaKey col) {
+            if (col.getBlock() == Integer.MAX_VALUE) {
+                return new DeltaKey(_uuidInc.next(col.getChangeId()), 0);
+            }
+            return new DeltaKey(col.getChangeId(), col.getBlock() + 1);
+        }
+    };
 
     /**
      * Decodes row keys returned by scanning a table.
@@ -1209,7 +1129,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             // the rest while ensuring we never load all columns into memory at the same time.  The current
             // Compactor+Resolver implementation must scan the row twice: once to find compaction records and once to
             // find deltas.  So we must call columnScan() twice, once for each.
-            UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName().getChangeId();
+            DeltaKey lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
 
             AstyanaxTable table = (AstyanaxTable) key.getTable();
             AstyanaxStorage storage = table.getReadStorage();
@@ -1220,11 +1140,11 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             // practice at most two of the iterators are actually consumed (one or more is ignored) so the columnScan
             // should avoid actually doing any work until the first item is fetched from the iterator.
             changeIter = Iterators.concat(changeIter,
-                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime));
+                    getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
             compactionIter = Iterators.concat(compactionIter,
-                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime));
+                    getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
             rawMetadataIter = Iterators.concat(rawMetadataIter,
-                    getFilteredColumnIter(deltaColumnScan(rowKey, placement, columnFamily, lastColumn, null, false, Long.MAX_VALUE, 1, consistency), cutoffTime));
+                    getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
         Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength));
@@ -1241,24 +1161,19 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                 Iterators.<RecordEntryRawMetadata>emptyIterator());
     }
 
-    private ByteBuffer removePrefix(ByteBuffer value) {
-        value.position(value.position() + _deltaPrefixLength);
-        return value;
-    }
-
     private Iterator<Change> decodeColumns(Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue()));
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue())));
+        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue(), _deltaPrefixLength)));
     }
 
     private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
             @Override
             public Map.Entry<UUID, Change> apply(Column<UUID> column) {
-                Change change = _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue()));
+                Change change = _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue(), _deltaPrefixLength));
                 return Maps.immutableEntry(column.getName(), change);
             }
         });
@@ -1270,7 +1185,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Column<UUID> column = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(column.getByteBufferValue()));
+                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(column.getByteBufferValue(), _deltaPrefixLength));
                     if (compaction != null) {
                         return Maps.immutableEntry(column.getName(), compaction);
                     }
@@ -1286,7 +1201,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             public RecordEntryRawMetadata apply(Column<UUID> column) {
                 return new RecordEntryRawMetadata()
                         .withTimestamp(TimeUUIDs.getTimeMillis(column.getName()))
-                        .withSize(removePrefix(column.getByteBufferValue()).remaining());
+                        .withSize(removePrefix(column.getByteBufferValue(), _deltaPrefixLength).remaining());
             }
         });
     }

@@ -19,6 +19,11 @@ public class StitchedColumn extends AbstractColumnImpl<UUID> {
         _content = content;
     }
 
+    public StitchedColumn(Column<DeltaKey> oldColumn) {
+        super(oldColumn.getName().getChangeId());
+        _oldColumn = oldColumn;
+    }
+
     @Override
     public ByteBuffer getRawName() {
         return UUIDSerializer.get().toByteBuffer(getName());
@@ -29,6 +34,7 @@ public class StitchedColumn extends AbstractColumnImpl<UUID> {
         return _oldColumn.getTimestamp();
     }
 
+    // content will be null if delta fit in a single block, as no stitching was performed
     @Override
     public <V> V getValue(Serializer<V> serializer) {
         return _content != null ? serializer.fromByteBuffer(_content) : _oldColumn.getValue(serializer);

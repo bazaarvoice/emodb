@@ -24,11 +24,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
@@ -59,13 +55,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.*;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.bazaarvoice.emodb.sor.db.DAOUtils.removePrefix;
 
 // Delegates to AstyanaxReaderDAO for non-CQL stuff
 // Once we transition fully, we will stop delegating to Astyanax
@@ -98,14 +94,14 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Inject
     public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
                             CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry, @Named("deltaPrefix") String deltaPrefix) {
+                            MetricRegistry metricRegistry, @PrefixLength int deltaPrefixLength) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
         _placementCache = placementCache;
         _driverConfig = driverConfig;
         _changeEncoder = changeEncoder;
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
-        _deltaPrefixLength = deltaPrefix.length();
+        _deltaPrefixLength = deltaPrefixLength;
     }
 
     private String getMetricName(String name) {
@@ -259,16 +255,15 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength));
+        Session session = ((AstyanaxTable) key.getTable()).getReadStorage().getPlacement().getKeyspace().getCqlSession();
+        ProtocolVersion protocolVersion = session.getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
+        CodecRegistry codecRegistry = session.getCluster().getConfiguration().getCodecRegistry();
+
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
-    }
-
-    private ByteBuffer removePrefix(ByteBuffer value) {
-        value.position(value.position() + _deltaPrefixLength);
-        return value;
     }
 
     /**
@@ -276,7 +271,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row)))));
+                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row), _deltaPrefixLength))));
     }
 
     /**
@@ -288,7 +283,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Row row = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(getValue(row)));
+                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(getValue(row), _deltaPrefixLength));
                     if (compaction != null) {
                         return Maps.immutableEntry(getChangeId(row), compaction);
                     }
@@ -304,7 +299,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
                 .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
-                .withSize(removePrefix(getValue(row)).remaining()));
+                .withSize(removePrefix(getValue(row), _deltaPrefixLength).remaining()));
     }
 
     /**
@@ -726,7 +721,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         protected ResultSet queryRowGroupRowsAfter(Row row) {
             Range<RangeTimeUUID> columnRange = Range.greaterThan(new RangeTimeUUID(getChangeId(row)));
             return columnScan(_placement, _placement.getDeltaTableDDL(), getKey(row),
-                    columnRange, true, Integer.MAX_VALUE, _consistency);
+                    columnRange, true, _consistency);
         }
     }
 
@@ -735,7 +730,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * parameterized.
      */
     private ResultSet columnScan(DeltaPlacement placement, TableDDL tableDDL, ByteBuffer rowKey, Range<RangeTimeUUID> columnRange,
-                                 boolean ascending, int limit, ConsistencyLevel consistency) {
+                                 boolean ascending, ConsistencyLevel consistency) {
 
         Select.Where where = (tableDDL == placement.getDeltaTableDDL() ? selectDeltaFrom(placement.getDeltaTableDDL()) : selectFrom(tableDDL))
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey));
@@ -758,7 +753,6 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
         Statement statement = where
                 .orderBy(ascending ? asc(tableDDL.getChangeIdColumnName()) : desc(tableDDL.getChangeIdColumnName()))
-                .limit(limit)
                 .setFetchSize(_driverConfig.getSingleRowFetchSize())
                 .setConsistencyLevel(consistency);
 
@@ -790,7 +784,10 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
-            deltas = decodeDeltaColumns(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength));
+            ProtocolVersion protocolVersion = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
+            CodecRegistry codecRegistry = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getCodecRegistry();
+
+            deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry), scaledLimit));
         }
 
         // Read Audit objects
@@ -798,9 +795,9 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Iterator<Change> deltaHistory = Iterators.emptyIterator();
         if (includeAuditInformation) {
             TableDDL auditDDL = placement.getAuditTableDDL();
-            audits = decodeColumns(columnScan(placement, auditDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
+            audits = decodeColumns(Iterators.limit(columnScan(placement, auditDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
             TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
-            deltaHistory = decodeColumns(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
+            deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
         }
 
         Iterator<Change> deltaPlusAudit = MergeIterator.merge(deltas, audits, reversed);
@@ -816,7 +813,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         Range<RangeTimeUUID> columnRange = toRange(start, end, true);
         ConsistencyLevel consistency = SorConsistencies.toCql(readConsistency);
         TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
-        return decodeColumns(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, false, Integer.MAX_VALUE, consistency).iterator());
+        return decodeColumns(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, false, consistency).iterator());
     }
 
     /**
@@ -827,7 +824,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Row> iter) {
-        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row))));
+        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row), _deltaPrefixLength)));
     }
 
     /**

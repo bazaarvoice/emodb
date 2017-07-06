@@ -19,7 +19,7 @@ public class AstyanaxDeltaIterator extends DeltaIterator<Column<DeltaKey>, Colum
 
     @Override
     protected Column<UUID> convertDelta(Column<DeltaKey> delta) {
-        return convertDelta(delta, null);
+        return new StitchedColumn(delta);
     }
 
     @Override

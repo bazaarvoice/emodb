@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -47,6 +48,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.AbstractThriftMutationBatchImpl;
 import org.apache.cassandra.thrift.Cassandra;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TIOStreamTransport;
@@ -101,8 +103,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder,
                                  MetricRegistry metricRegistry,
-                                 @Named("deltaBlockSize") int deltaBlockSize,
-                                 @Named("deltaPrefix") String deltaPrefix) {
+                                 @BlockSize int deltaBlockSize,
+                                 @PrefixLength int deltaPrefixLength) {
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _readerDao = checkNotNull(readerDao, "readerDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -112,8 +114,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
         _deltaBlockSize = deltaBlockSize;
-        _deltaPrefix = deltaPrefix;
-        _deltaPrefixLength = deltaPrefix.length();
+        _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
+        _deltaPrefixLength = deltaPrefixLength;
     }
 
     private String getMetricName(String name) {
@@ -184,29 +186,10 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         }
     }
 
-    private void putDeltaColumn(ColumnListMutation mutation, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
-        int numBlocks = (deltaSize + _deltaBlockSize - 1) / _deltaBlockSize;
-        int position = encodedDelta.position();
-
-        byte[] blockBytes = String.format("%0" + _deltaPrefixLength + "X", numBlocks).getBytes();
-        for (int i = blockBytes.length - 1; i >= 0; i--) {
-            encodedDelta.put(position + _deltaPrefixLength - blockBytes.length + i, blockBytes[i]);
-        }
-        for (int block = 0; block < numBlocks; block++) {
-            ByteBuffer split = encodedDelta.duplicate();
-            int limit;
-            if (_deltaBlockSize * (block + 1) < deltaSize) {
-                limit = position + _deltaBlockSize;
-                while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
-                    limit--;
-                }
-            } else {
-                limit = encodedDelta.limit();
-            }
-            split.position(position);
-            split.limit(limit);
-            position = limit;
-            mutation.putColumn(new DeltaKey(changeId, block), split, null);
+    private void putDeltaColumn(ColumnListMutation mutation, UUID changeId, ByteBuffer encodedDelta) {
+        List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(encodedDelta, _deltaPrefixLength, _deltaBlockSize);
+        for (int i = 0; i < blocks.size(); i++) {
+            mutation.putColumn(new DeltaKey(changeId, i), blocks.get(i));
         }
     }
 
@@ -289,7 +272,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            putDeltaColumn(mutation.withRow(placement.getDeltaColumnFamily(), rowKey), changeId, encodedDelta, deltaSize);
+            putDeltaColumn(mutation.withRow(placement.getDeltaColumnFamily(), rowKey), changeId, encodedDelta);
 
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
             approxMutationSize += deltaSize + auditSize;
