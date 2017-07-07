@@ -13,7 +13,7 @@ abstract class SorConsistencies {
     public static ConsistencyLevel toAstyanax(ReadConsistency consistency) {
         switch (consistency) {
             case WEAK:
-                return ConsistencyLevel.CL_ONE;           // first node to respond
+                return ConsistencyLevel.CL_LOCAL_ONE;           // first node to respond
             case STRONG:
                 return ConsistencyLevel.CL_LOCAL_QUORUM;  // single data center quorum
             default:
@@ -24,7 +24,7 @@ abstract class SorConsistencies {
     public static com.datastax.driver.core.ConsistencyLevel toCql(ReadConsistency consistency) {
         switch (consistency) {
             case WEAK:
-                return com.datastax.driver.core.ConsistencyLevel.ONE;
+                return com.datastax.driver.core.ConsistencyLevel.LOCAL_ONE;
             case STRONG:
                 return com.datastax.driver.core.ConsistencyLevel.LOCAL_QUORUM;
             default:

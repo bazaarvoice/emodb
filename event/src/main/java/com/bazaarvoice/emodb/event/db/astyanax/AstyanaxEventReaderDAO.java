@@ -165,7 +165,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // we can't trust results w/ConsistencyLevel.CL_ONE.
 
         Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_ONE)
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(channel)
                         .withColumnRange(new RangeBuilder().setLimit(100).build())
                         .autoPaginate(true));
@@ -175,7 +175,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
             if (total <= limit) {
                 int count = execute(
-                        _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_ONE)
+                        _keyspace.prepareQuery(ColumnFamilies.SLAB, ConsistencyLevel.CL_LOCAL_ONE)
                                 .getKey(slabId)
                                 .withColumnRange(0, Constants.OPEN_SLAB_MARKER - 1, false, Integer.MAX_VALUE)
                                 .getCount());
@@ -185,7 +185,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                 // Clients may just want to distinguish "a few" vs. "lots.  Calculate an exact count up to 'limit'
                 // then estimate anything larger by counting slabs and assuming each has a full set of events.
                 int slabs = execute(
-                        _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_ONE)
+                        _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
                                 .getKey(channel)
                                 .withColumnRange(new RangeBuilder().setStart(slabId).build())
                                 .getCount());
@@ -285,7 +285,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         //    data is written and first read.
 
         Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_ONE)
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(channel)
                         .withColumnRange(new RangeBuilder().setLimit(50).build())
                         .autoPaginate(true));
