@@ -99,7 +99,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
     private static final int DEFAULT_CHUNK_SIZE = 0x10000; // 64kb
     private static final ConsistencyLevel CONSISTENCY_STRONG = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private static final ConsistencyLevel CONSISTENCY_WEAK = ConsistencyLevel.CL_ONE;
+    private static final ConsistencyLevel CONSISTENCY_WEAK = ConsistencyLevel.CL_LOCAL_ONE;
     private static final int MAX_SCAN_METADATA_BATCH_SIZE = 250;
 
     private final Token.TokenFactory _tokenFactory;
