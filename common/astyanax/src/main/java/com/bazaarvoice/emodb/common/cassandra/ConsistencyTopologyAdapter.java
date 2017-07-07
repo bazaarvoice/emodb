@@ -21,7 +21,7 @@ public class ConsistencyTopologyAdapter {
         if ((consistencyLevel == ConsistencyLevel.CL_LOCAL_QUORUM || consistencyLevel == ConsistencyLevel.CL_EACH_QUORUM) && !_networkTopology) {
             consistencyLevel = ConsistencyLevel.CL_QUORUM;
         }
-        if (consistencyLevel == ConsistencyLevel.CL_LOCAL_ONE || !_networkTopology) {
+        if (consistencyLevel == ConsistencyLevel.CL_LOCAL_ONE && !_networkTopology) {
             consistencyLevel = ConsistencyLevel.CL_ONE;
         }
 
