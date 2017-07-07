@@ -136,33 +136,50 @@ public class BlobStoreClient implements AuthBlobStore {
                 .queryParam("options", RisonHelper.asORison(options))
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        for (int attempt = 0; ; attempt++) {
-            try {
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put(attributes);
-                return;
-            } catch (EmoClientException e) {
-                // The SoR returns a 301 response when we need to make this request against a different data center.
-                // Follow the redirect a few times but don't loop forever.
-                if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
-                    uri = e.getResponse().getLocation();
-                    continue;
-                }
-                throw convertException(e);
-            }
+        try {
+            _client.resource(uri)
+                    .type(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .put(attributes);
+        } catch (EmoClientException e) {
+            throw convertException(e);
         }
     }
 
     @Override
     public void dropTable(String apiKey, String table, Audit audit) throws UnknownTableException {
-        throw new UnsupportedOperationException("Dropping a table requires administrator privileges.");
+        checkNotNull(table, "table");
+        checkNotNull(audit, "audit");
+        URI uri = _blobStore.clone()
+                .segment("_table", table)
+                .queryParam("audit", RisonHelper.asORison(audit))
+                .build();
+        try {
+            _client.resource(uri)
+                    .type(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .delete();
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
     }
 
     @Override
     public void purgeTableUnsafe(String apiKey, String table, Audit audit) {
-        throw new UnsupportedOperationException("Purging a table requires administrator privileges.");
+        checkNotNull(table, "table");
+        checkNotNull(audit, "audit");
+        URI uri = _blobStore.clone()
+                .segment("_table", table, "purge")
+                .queryParam("audit", RisonHelper.asORison(audit))
+                .build();
+        try {
+            _client.resource(uri)
+                    .type(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .post();
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
     }
 
     @Override
@@ -232,22 +249,13 @@ public class BlobStoreClient implements AuthBlobStore {
                 .segment("_table", table, "attributes")
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
-        for (int attempt = 0; ; attempt++) {
-            try {
-                _client.resource(uri)
-                        .type(MediaType.APPLICATION_JSON_TYPE)
-                        .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                        .put(attributes);
-                return;
-            } catch (EmoClientException e) {
-                // The SoR returns a 301 response when we need to make this request against a different data center.
-                // Follow the redirect a few times but don't loop forever.
-                if (e.getResponse().getStatus() == Response.Status.MOVED_PERMANENTLY.getStatusCode() && attempt < 5) {
-                    uri = e.getResponse().getLocation();
-                    continue;
-                }
-                throw convertException(e);
-            }
+        try {
+            _client.resource(uri)
+                    .type(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .put(attributes);
+        } catch (EmoClientException e) {
+            throw convertException(e);
         }
     }
 

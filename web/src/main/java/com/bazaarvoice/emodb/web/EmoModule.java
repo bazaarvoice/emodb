@@ -6,6 +6,10 @@ import com.bazaarvoice.emodb.auth.AuthZooKeeper;
 import com.bazaarvoice.emodb.blob.BlobStoreConfiguration;
 import com.bazaarvoice.emodb.blob.BlobStoreModule;
 import com.bazaarvoice.emodb.blob.BlobStoreZooKeeper;
+import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
+import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
+import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
@@ -353,6 +357,31 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @BlobStoreZooKeeper
         CuratorFramework provideBlobStoreZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "blob");
+        }
+
+        /** Provides a BlobStore client that delegates to the remote system center blob store. */
+        @Provides @Singleton @SystemBlobStore
+        BlobStore provideSystemBlobStore (DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
+
+            ServiceFactory<BlobStore> clientFactory = BlobStoreClientFactory
+                    .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)
+                    .usingCredentials(apiKey);
+
+            URI uri = config.getSystemDataCenterServiceUri();
+            ServiceEndPoint endPoint = new ServiceEndPointBuilder()
+                    .withServiceName(clientFactory.getServiceName())
+                    .withId(config.getSystemDataCenter())
+                    .withPayload(new PayloadBuilder()
+                            .withUrl(uri.resolve(BlobStoreClient.SERVICE_PATH))
+                            .withAdminUrl(uri)
+                            .toString())
+                    .build();
+
+            return ServicePoolBuilder.create(BlobStore.class)
+                    .withMetricRegistry(metricRegistry)
+                    .withHostDiscovery(new FixedHostDiscovery(endPoint))
+                    .withServiceFactory(clientFactory)
+                    .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
         }
     }
 

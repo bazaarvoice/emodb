@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.blob;
 
 import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
@@ -112,6 +113,7 @@ public class BlobStoreModuleTest {
                         .setSystemDataCenter("datacenter1")
                         .setCurrentDataCenter("datacenter1"));
 
+                bind(BlobStore.class).annotatedWith(SystemBlobStore.class).toInstance(mock(BlobStore.class));
                 bind(HostAndPort.class).annotatedWith(SelfHostAndPort.class).toInstance(HostAndPort.fromString("localhost:8080"));
                 bind(Client.class).toInstance(mock(Client.class));
                 bind(CacheRegistry.class).toInstance(rootCacheRegistry);

@@ -10,8 +10,6 @@ import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
-import com.bazaarvoice.emodb.datacenter.api.DataCenter;
-import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.web.auth.Permissions;
@@ -53,18 +51,15 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URI;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -90,12 +85,10 @@ public class BlobStoreResource1 {
     private static final Pattern CONTENT_TYPE = Pattern.compile("content[-_]?type", Pattern.CASE_INSENSITIVE);
 
     private final BlobStore _blobStore;
-    private final DataCenters _dataCenters;
     private final Set<String> _approvedContentTypes;
 
-    public BlobStoreResource1(BlobStore blobStore, DataCenters dataCenters, Set<String> approvedContentTypes) {
+    public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes) {
         _blobStore = blobStore;
-        _dataCenters = dataCenters;
         _approvedContentTypes = approvedContentTypes;
     }
 
@@ -131,12 +124,6 @@ public class BlobStoreResource1 {
                                        @QueryParam("audit") AuditParam auditParam,
                                        @Context UriInfo uriInfo,
                                        @Authenticated Subject subject) {
-        // Table create/drop must take place in the system data center.  Note that redirecting a PUT isn't well
-        // supported by clients.  Some will turn it into a GET, others won't include the body.  Your mileage may vary.
-        if (!_dataCenters.getSelf().isSystem()) {
-            throw new WebApplicationException(redirectTo(_dataCenters.getSystem(), uriInfo.getRequestUri()));
-        }
-
         TableOptions options = getRequired(optionParams, "options");
         Audit audit = getRequired(auditParam, "audit");
 
@@ -162,12 +149,6 @@ public class BlobStoreResource1 {
     public SuccessResponse dropTable(@PathParam("table") String table,
                                      @QueryParam("audit") AuditParam auditParam,
                                      @Context UriInfo uriInfo) {
-        // Table create/drop must take place in the system data center.  Note that redirecting a DELETE isn't well
-        // supported by clients.  Some will turn it into a GET.  Your mileage may vary.
-        if (!_dataCenters.getSelf().isSystem()) {
-            throw new WebApplicationException(redirectTo(_dataCenters.getSystem(), uriInfo.getRequestUri()));
-        }
-
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
         return SuccessResponse.instance();
@@ -213,12 +194,6 @@ public class BlobStoreResource1 {
                                               Map<String, String> attributes,
                                               @QueryParam("audit") AuditParam auditParam,
                                               @Context UriInfo uriInfo) {
-        // Table create/drop/update must take place in the system data center.  Note that redirecting a PUT isn't well
-        // supported by clients.  Some will turn it into a GET, others won't include the body.  Your mileage may vary.
-        if (!_dataCenters.getSelf().isSystem()) {
-            throw new WebApplicationException(redirectTo(_dataCenters.getSystem(), uriInfo.getRequestUri()));
-        }
-
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.setTableAttributes(table, attributes, audit);
         return SuccessResponse.instance();
@@ -451,18 +426,6 @@ public class BlobStoreResource1 {
     public SuccessResponse delete(@PathParam("table") String table, @PathParam("blobId") String blobId) {
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
-    }
-
-    private Response redirectTo(DataCenter dataCenter, URI requestUri) {
-        // Use the scheme+authority from the data center and the path+query from the request uri
-        URI location = UriBuilder.fromUri(dataCenter.getServiceUri()).
-                replacePath(requestUri.getRawPath()).
-                replaceQuery(requestUri.getRawQuery()).
-                build();
-        return Response.status(Response.Status.MOVED_PERMANENTLY).
-                location(location).
-                header("X-BV-Exception", UnsupportedOperationException.class.getName()).
-                build();
     }
 
     private String hexToBase64(String hex) {

@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.api.Table;
+import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
@@ -131,6 +132,7 @@ public class CasBlobStoreTest {
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
                         .setHistoryTtl(Period.days(2)));
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
+                bind(BlobStore.class).annotatedWith(SystemBlobStore.class).toInstance(mock(BlobStore.class));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
 
