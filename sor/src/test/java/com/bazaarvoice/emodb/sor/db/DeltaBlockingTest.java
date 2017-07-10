@@ -7,6 +7,7 @@ import org.testng.annotations.Test;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
 
@@ -39,8 +40,9 @@ public class DeltaBlockingTest {
         List<TestRow> rows = Lists.newArrayListWithCapacity(deltas.length * 5); // lazy guess at future size
         for (String encodedDelta : encodedDeltas) {
             List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(ByteBuffer.wrap(encodedDelta.getBytes()), _prefixLength, _deltaBlockSize);
+            UUID changeId = UUID.randomUUID();
             for (int i = 0; i < blocks.size(); i++) {
-                rows.add(new TestRow(i, blocks.get(i)));
+                rows.add(new TestRow(i, changeId, blocks.get(i)));
             }
         }
         Iterator<ByteBuffer> iterator = new ListDeltaIterator(rows.iterator(), false, _prefixLength);
@@ -91,6 +93,10 @@ class ListDeltaIterator extends DeltaIterator<TestRow, ByteBuffer> {
         return delta.getBlock();
     }
 
+    protected UUID getChangeId(TestRow delta) {
+        return delta.getChangeId();
+    }
+
     @Override
     protected ByteBuffer getValue(TestRow delta) {
         return delta.getContent();
@@ -100,15 +106,21 @@ class ListDeltaIterator extends DeltaIterator<TestRow, ByteBuffer> {
 class TestRow {
 
     private int _block;
+    private UUID _changeId;
     private ByteBuffer _content;
 
-    public TestRow(int block, ByteBuffer content) {
+    public TestRow(int block, UUID changeId, ByteBuffer content) {
         _block = block;
+        _changeId = changeId;
         _content = content;
     }
 
     public int getBlock() {
         return _block;
+    }
+
+    public UUID getChangeId() {
+        return _changeId;
     }
 
     public ByteBuffer getContent() {

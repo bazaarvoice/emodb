@@ -28,6 +28,11 @@ public class AstyanaxDeltaIterator extends DeltaIterator<Column<DeltaKey>, Colum
     }
 
     @Override
+    protected UUID getChangeId(Column<DeltaKey> column) {
+        return column.getName().getChangeId();
+    }
+
+    @Override
     protected ByteBuffer getValue(Column<DeltaKey> column) {
         return column.getByteBufferValue();
     }

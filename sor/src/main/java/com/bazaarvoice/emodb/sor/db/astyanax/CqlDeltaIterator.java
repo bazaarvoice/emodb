@@ -8,6 +8,7 @@ import com.datastax.driver.core.Row;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.UUID;
 
 /*
 * CQL implementation of DeltaIterator.
@@ -18,12 +19,14 @@ public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
     private final ProtocolVersion _protocolVersion;
     private final CodecRegistry _codecRegistry;
     private final int _blockIndex;
+    private final int _changeIdIndex;
     private final int _contentIndex;
 
-    public CqlDeltaIterator(Iterator<Row> iterator, final int blockIndex, final int contentIndex, boolean reversed, int prefixLength,
+    public CqlDeltaIterator(Iterator<Row> iterator, final int blockIndex, final int changeIdIndex, final int contentIndex, boolean reversed, int prefixLength,
                             ProtocolVersion protocolVersion, CodecRegistry codecRegistry) {
         super(iterator, reversed, prefixLength);
         _blockIndex = blockIndex;
+        _changeIdIndex = changeIdIndex;
         _contentIndex = contentIndex;
         _protocolVersion = protocolVersion;
         _codecRegistry = codecRegistry;
@@ -42,6 +45,11 @@ public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
     @Override
     protected int getBlock(Row row) {
         return row.getInt(_blockIndex);
+    }
+
+    @Override
+    protected UUID getChangeId(Row row) {
+        return row.getUUID(_changeIdIndex);
     }
 
     @Override
