@@ -56,7 +56,7 @@ public class DefaultChangeEncoderTest {
         Set<String> tags = ImmutableSet.of("tag0","tag1");
         ChangeEncoder changeEncoder = new DefaultChangeEncoder(2);
         // Encode and then decode the said delta, and verify if Change is as expected
-        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder());
+        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder()).toString();
         assertEquals(encodedDelta, "D2:[\"tag0\",\"tag1\"]:{..,\"name\":\"bob\",\"x\":~}");
         Change change = changeEncoder.decodeChange(TimeUUIDs.newUUID(), StringSerializer.get().fromString(encodedDelta));
         assertEquals(change.getDelta(), delta);
@@ -69,7 +69,7 @@ public class DefaultChangeEncoderTest {
         Set<String> tags = ImmutableSet.of("tag0","tag1");
         ChangeEncoder changeEncoder = new DefaultChangeEncoder(3);
         // Encode and then decode the said delta, and verify if Change is as expected
-        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder());
+        String encodedDelta = changeEncoder.encodeDelta(delta.toString(), EnumSet.of(ChangeFlag.MAP_DELTA), tags, new StringBuilder()).toString();
         assertEquals(encodedDelta, "D3:[\"tag0\",\"tag1\"]:M:{..,\"name\":\"bob\",\"x\":~}");
         Change change = changeEncoder.decodeChange(TimeUUIDs.newUUID(), StringSerializer.get().fromString(encodedDelta));
         // Because the change contains a lazy delta it will not be the exact same instance as "delta"

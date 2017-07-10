@@ -139,7 +139,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
                                  CassandraKeyspace keyspace, Table table, String key) {
 
         // Add the compaction record
-        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).getBytes());
+        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes());
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
