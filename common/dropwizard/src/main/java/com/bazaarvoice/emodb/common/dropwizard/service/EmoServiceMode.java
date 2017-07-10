@@ -102,7 +102,6 @@ public enum EmoServiceMode {
             Aspect.cache,
             Aspect.leader_control,
             Aspect.dataCenter,
-            Aspect.dataCenter_announce, //TODO: this can eventuall be removed as this should only run if there is data to migrate
             Aspect.dataStore_module,
             Aspect.blobStore_module, // needed for permission resolver
             Aspect.migrator,
