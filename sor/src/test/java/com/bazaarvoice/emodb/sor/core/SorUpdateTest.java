@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.codahale.metrics.MetricRegistry;
@@ -32,7 +32,7 @@ public class SorUpdateTest {
 
     @BeforeTest
     public void SetupTest() {
-        final InMemoryDataDAO dataDAO = new InMemoryDataDAO();
+        final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventBus = new EventBus();
         _eventBus.register(this);
         _dataStore = new InMemoryDataStore(_eventBus, dataDAO, new MetricRegistry());

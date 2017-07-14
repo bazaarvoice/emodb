@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
+import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -18,10 +19,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.datastax.driver.core.BatchStatement;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.inject.Inject;
 
@@ -37,7 +35,7 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 
 
-public class CqlDataWriterDAO implements DataWriterDAO{
+public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
@@ -228,5 +226,10 @@ public class CqlDataWriterDAO implements DataWriterDAO{
     @Override
     public void purgeUnsafe(Table table) {
         _astyanaxWriterDAO.purgeUnsafe(table);
+    }
+
+    @Override
+    public void writeRows(String placement, Iterator<Row> rows) {
+        
     }
 }

@@ -29,7 +29,6 @@ import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.sor.db.cql.CqlMigratorDAO;
 import com.bazaarvoice.emodb.sor.db.cql.SorCqlSettingsTask;
 import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
