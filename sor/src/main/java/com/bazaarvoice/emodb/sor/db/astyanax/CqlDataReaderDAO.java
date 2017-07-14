@@ -8,14 +8,7 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
-import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CachingRowGroupIterator;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
@@ -45,24 +38,14 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.BoundType;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Range;
+import com.google.common.collect.*;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import org.apache.cassandra.utils.ByteBufferUtil;
+import org.hyperic.sigar.util.IteratorIterator;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +73,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 // Delegates to AstyanaxReaderDAO for non-CQL stuff
 // Once we transition fully, we will stop delegating to Astyanax
-public class CqlDataReaderDAO implements DataReaderDAO {
+public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
 
     private final Logger _log = LoggerFactory.getLogger(CqlDataReaderDAO.class);
 
@@ -940,5 +923,18 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Override
     public long count(Table table, @Nullable Integer limit, ReadConsistency consistency) {
         return _astyanaxReaderDAO.count(table, limit, consistency);
+    }
+
+    @Override
+    public Iterator<MigrationScanResultIterator> readRows(String placementName, ScanRange scanRange) {
+        final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
+        List<ScanRange> ranges = scanRange.unwrapped();
+
+        return touch(FluentIterable.from(ranges)
+        .transformAndConcat(rowRange -> scanRows(placement, rowRange.asByteBufferRange(), ReadConsistency.STRONG)).iterator());
+    }
+
+    private Iterable<MigrationScanResultIterator> scanRows(final DeltaPlacement placement, final ByteBufferRange rowRange, final ReadConsistency consistency) {
+        return () -> Iterators.transform(rowScan(placement, null, rowRange, consistency), iterable -> new MigrationScanResultIterator(iterable.iterator(), ROW_KEY_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
     }
 }

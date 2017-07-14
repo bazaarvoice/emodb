@@ -312,6 +312,25 @@
                                     <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
                                 </configuration>
                             </execution>
+                            <execution>
+                                <id>stop-emodb-main</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8081</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
+                                </configuration>
+                            </execution>
                         </executions>
                     </plugin>
                     <!-- Run the server using Jetty -->

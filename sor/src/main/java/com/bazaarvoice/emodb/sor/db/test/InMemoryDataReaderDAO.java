@@ -17,6 +17,7 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -51,7 +52,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * In-memory implementation of {@link DataWriterDAO}, for testing.
  */
-public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO, MigratorDAO {
+public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, MigratorReaderDAO, MigratorWriterDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
     private final Map<String, NavigableMap<String, Map<UUID, Change>>> _auditChanges = Maps.newHashMap();
@@ -60,22 +61,22 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO, MigratorDA
     private int _columnBatchSize = 50;
     public AuditStore _auditStore;
 
-    public InMemoryDataDAO() {
+    public InMemoryDataReaderDAO() {
         _auditStore = new InMemoryAuditStore();
     }
 
-    public InMemoryDataDAO setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
+    public InMemoryDataReaderDAO setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
         _fullConsistencyDelayMillis = fullConsistencyDelayMillis;
         _fullConsistencyTimestamp = null;
         return this;
     }
 
-    public InMemoryDataDAO setAuditStore(AuditStore auditStore) {
+    public InMemoryDataReaderDAO setAuditStore(AuditStore auditStore) {
         _auditStore = checkNotNull(auditStore);
         return this;
     }
 
-    public InMemoryDataDAO setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
+    public InMemoryDataReaderDAO setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
         _fullConsistencyTimestamp = fullConsistencyTimestamp;
         return this;
     }
@@ -488,12 +489,12 @@ public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO, MigratorDA
     }
 
     @Override
-    public void writeRows(String placement, ResultSet resultSet) {
+    public void writeRows(String placement, Iterator<Row> rows) {
 
     }
 
     @Override
-    public ResultSet readRows(String placement, ScanRange scanRange) {
+    public Iterator<MigrationScanResultIterator> readRows(String placement, ScanRange scanRange) {
         return null;
     }
 }
