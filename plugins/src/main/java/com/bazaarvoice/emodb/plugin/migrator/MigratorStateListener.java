@@ -1,7 +1,9 @@
-package com.bazaarvoice.emodb.plugin.stash;
+package com.bazaarvoice.emodb.plugin.migrator;
 
 
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
+import com.bazaarvoice.emodb.plugin.stash.StashMetadata;
+import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import io.dropwizard.setup.Environment;
 
 import java.util.Date;

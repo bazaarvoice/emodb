@@ -5,9 +5,9 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Inject;
 
-public class MetricsReadCountListener implements ScanCountListener{
+public class MetricsReadCountListener implements ScanCountListener {
 
-    private final String ACTIVE_SCANS_METRIC_NAME = MetricRegistry.name("bv.emodb.scan", "ScanUploader", "active-scans");
+    private final String ACTIVE_SCANS_METRIC_NAME = MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-migrations");
 
     private int _active;
 

@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.migrator;
 
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
-import com.bazaarvoice.emodb.plugin.stash.MigratorStateListener;
+import com.bazaarvoice.emodb.plugin.migrator.MigratorStateListener;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
@@ -75,6 +75,8 @@ public class MigratorModule extends PrivateModule {
                 .implement(MigratorWriter.class, MigratorWriter.class)
                 .build(WriterFactory.class));
 
+        bind(MigratorMonitor.class).asEagerSingleton();
+        bind(DistributedMigratorRangeMonitor.class).asEagerSingleton();
 
         expose(DeltaMigrator.class);
     }
