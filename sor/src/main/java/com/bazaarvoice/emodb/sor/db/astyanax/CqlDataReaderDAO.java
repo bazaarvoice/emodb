@@ -45,7 +45,6 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.hyperic.sigar.util.IteratorIterator;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -926,7 +925,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     }
 
     @Override
-    public Iterator<MigrationScanResultIterator> readRows(String placementName, ScanRange scanRange) {
+    public Iterator<MigrationScanResult> readRows(String placementName, ScanRange scanRange) {
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         List<ScanRange> ranges = scanRange.unwrapped();
 
@@ -934,7 +933,11 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         .transformAndConcat(rowRange -> scanRows(placement, rowRange.asByteBufferRange(), ReadConsistency.STRONG)).iterator());
     }
 
-    private Iterable<MigrationScanResultIterator> scanRows(final DeltaPlacement placement, final ByteBufferRange rowRange, final ReadConsistency consistency) {
-        return () -> Iterators.transform(rowScan(placement, null, rowRange, consistency), iterable -> new MigrationScanResultIterator(iterable.iterator(), ROW_KEY_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
+    private Iterable<MigrationScanResult> scanRows(final DeltaPlacement placement, final ByteBufferRange rowRange, final ReadConsistency consistency) {
+        return () -> {
+            Iterator<Iterator<Row>> rowIterators = Iterators.transform(rowScan(placement, null, rowRange, consistency), iterable -> iterable.iterator());
+            Iterator<Row> rows = Iterators.concat(rowIterators);
+            return Iterators.transform(rows, row -> new MigrationScanResult(row, ROW_KEY_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
+        };
     }
 }

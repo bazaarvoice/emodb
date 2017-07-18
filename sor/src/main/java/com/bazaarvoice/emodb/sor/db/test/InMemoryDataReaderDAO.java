@@ -16,8 +16,6 @@ import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
@@ -489,12 +487,12 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public void writeRows(String placement, Iterator<Row> rows) {
+    public void writeRows(String placement, Iterator<MigrationScanResult> results) {
 
     }
 
     @Override
-    public Iterator<MigrationScanResultIterator> readRows(String placement, ScanRange scanRange) {
+    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
         return null;
     }
 }

@@ -1,11 +1,9 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.bazaarvoice.emodb.sor.db.MigrationScanResultIterator;
+import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.MigratorReaderDAO;
 import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
 import com.google.inject.Inject;
 
 import java.util.Iterator;
@@ -23,13 +21,13 @@ public class DefaultMigratorTools implements MigratorTools {
         _migratorWriterDao = checkNotNull(migratorWriterDAO, "migratorWriterDao");
     }
 
-    public void writeRows(String placement, Iterator<Row> rows) {
+    public void writeRows(String placement, Iterator<MigrationScanResult> results) {
         checkNotNull(placement, "placement");
-        checkNotNull(rows, "rows");
-        _migratorWriterDao.writeRows(placement, rows);
+        checkNotNull(results, "rows");
+        _migratorWriterDao.writeRows(placement, results);
     }
 
-    public Iterator<MigrationScanResultIterator> readRows(String placement, ScanRange scanRange) {
+    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
         checkNotNull(placement, "placement");
         checkNotNull(scanRange, scanRange);
         return _migratorReaderDao.readRows(placement, scanRange);

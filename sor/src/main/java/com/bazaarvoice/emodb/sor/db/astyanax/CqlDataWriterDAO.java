@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
+import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
@@ -16,6 +17,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -47,6 +49,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final Meter _updateMeter;
     private final Meter _oversizeUpdateMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
+    private final PlacementCache _placementCache;
 
     private final HintsConsistencyTimeProvider _rawConsistencyTimeProvider;
     private final AuditStore _auditStore;
@@ -55,6 +58,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
                             FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                             HintsConsistencyTimeProvider rawConsistencyTimeProvider,
+                            PlacementCache placementCache,
                             ChangeEncoder changeEncoder,
                             MetricRegistry metricRegistry,
                             @Named("deltaBlockSize") int deltaBlockSize,
@@ -64,6 +68,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
         _auditStore = checkNotNull(auditStore, "auditStore");
+        _placementCache = checkNotNull(placementCache, "placementCache");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
@@ -110,9 +115,9 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             ByteBuffer rowKey = storage.getRowKey(key);
 
             // Should synchronously write compaction and then delete deltas
-            writeCompaction(rowKey, compactionKey, compaction, consistency, placement, keyspace, tbl, key);
+            writeCompaction(rowKey, compactionKey, compaction, consistency, placement, keyspace);
 
-            deleteCompactedDeltas(rowKey, consistency, placement, keyspace, changesToDelete, historyList, tbl, key);
+            deleteCompactedDeltas(rowKey, consistency, placement, keyspace, changesToDelete, historyList);
         }
     }
 
@@ -149,7 +154,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     private void writeCompaction(ByteBuffer rowKey, UUID compactionKey, Compaction compaction,
                                  WriteConsistency consistency, DeltaPlacement placement,
-                                 CassandraKeyspace keyspace, Table table, String key) {
+                                 CassandraKeyspace keyspace) {
 
         // TODO: implement checks to ensure we are under the transport size
 
@@ -189,7 +194,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     private void deleteCompactedDeltas(ByteBuffer rowKey, WriteConsistency consistency, DeltaPlacement placement,
                                        CassandraKeyspace keyspace, Collection<UUID> changesToDelete,
-                                       List<History> historyList, Table table, String key) {
+                                       List<History> historyList) {
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
@@ -229,7 +234,23 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void writeRows(String placement, Iterator<Row> rows) {
-        
+    public void writeRows(String placementName, Iterator<MigrationScanResult> results) {
+        DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
+        Session session = placement.getKeyspace().getCqlSession();
+
+        BatchStatement batchStatement = new BatchStatement();
+
+        while(results.hasNext()) {
+            MigrationScanResult result = results.next();
+            ByteBuffer delta = result.getValue();
+            int deltaSize = delta.remaining();
+            ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
+            encodedDelta.put(new byte[_deltaPrefixLength]); // TODO: replace this and also cleanup modules to match block_column revisions
+            encodedDelta.put(delta);
+            encodedDelta.position(0);
+            insertBlockedDeltas(batchStatement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, result.getRowKey(), result.getChangeId(), result.getValue(), encodedDelta.remaining());
+        }
+
+        session.execute(batchStatement);
     }
 }
