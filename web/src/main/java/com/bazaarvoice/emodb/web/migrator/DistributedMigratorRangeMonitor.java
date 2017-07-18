@@ -38,6 +38,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
     private final Logger _log = LoggerFactory.getLogger(DistributedMigratorRangeMonitor.class);
     private final ScanWorkflow _workflow;
     private final ScanStatusDAO _statusDAO;
+    private final LocalRangeMigrator _rangeMigrator;
     private final int _maxConcurrentScans;
 
     private final ConcurrentMap<Integer, ClaimedTask> _claimedTasks = Maps.newConcurrentMap();
@@ -51,9 +52,10 @@ public class DistributedMigratorRangeMonitor implements Managed {
     };
 
     @Inject
-    public DistributedMigratorRangeMonitor(ScanWorkflow workflow, ScanStatusDAO statusDAO, @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
+    public DistributedMigratorRangeMonitor(ScanWorkflow workflow, ScanStatusDAO statusDAO, LocalRangeMigrator rangeMigrator, @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
         _workflow = checkNotNull(workflow, "workflow");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
+        _rangeMigrator = rangeMigrator;
         _maxConcurrentScans = maxConcurrentScans;
 
         lifecycle.manage(this);
@@ -296,8 +298,9 @@ public class DistributedMigratorRangeMonitor implements Managed {
 //            TableSet tableSet = _scanTableSetManager.getTableSetForScan(scanId);
             // Perform the range scan
 //            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet);
-            result = RangeScanUploaderResult.success();
-            System.out.println("Success!" + task.getScanId() + " " + task.getPlacement());
+            result = _rangeMigrator.migrate(taskId, status.getOptions(), placement, range);
+//            result = RangeScanUploaderResult.success();
+//            System.out.println("Success!" + task.getScanId() + " " + task.getPlacement());
 
 
             _log.info("Completed migration range task: {}", task);

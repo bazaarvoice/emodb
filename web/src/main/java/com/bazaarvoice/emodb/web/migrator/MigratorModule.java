@@ -55,6 +55,7 @@ public class MigratorModule extends PrivateModule {
 
         bind(DeltaMigrator.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(MigratorStatusDAO.class).asEagerSingleton();
+        bind(LocalRangeMigrator.class).asEagerSingleton();
 
         bind(MetricsReadCountListener.class).asEagerSingleton();
 
@@ -73,7 +74,7 @@ public class MigratorModule extends PrivateModule {
 
         install(new FactoryModuleBuilder()
                 .implement(MigratorWriter.class, MigratorWriter.class)
-                .build(WriterFactory.class));
+                .build(MigratorWriterFactory.class));
 
         bind(MigratorMonitor.class).asEagerSingleton();
         bind(DistributedMigratorRangeMonitor.class).asEagerSingleton();
