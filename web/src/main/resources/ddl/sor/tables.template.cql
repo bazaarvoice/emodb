@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS ${table.delta} (
   AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}
   AND compression = {'sstable_compression' : 'LZ4Compressor'};
 
-CREATE TABLE IF NOT EXISTS ${table.delta}_blocked (
+CREATE TABLE IF NOT EXISTS ${table.delta}_v2 (
     rowkey blob,
     changeid timeuuid,
     block int,

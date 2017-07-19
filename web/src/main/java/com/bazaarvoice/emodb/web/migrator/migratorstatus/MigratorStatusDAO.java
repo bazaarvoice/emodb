@@ -38,7 +38,7 @@ public class MigratorStatusDAO implements ScanStatusDAO {
     }
 
     /**
-     * Returns the scan status table name.  On the first call it also verifies that the table exists, then skips this
+     * Returns the migration status table name.  On the first call it also verifies that the table exists, then skips this
      * check on future calls.
      */
     private String getTable() {
@@ -48,7 +48,7 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                         _tableName,
                         new TableOptionsBuilder().setPlacement(_tablePlacement).build(),
                         ImmutableMap.<String, Object>of(),
-                        new AuditBuilder().setLocalHost().setComment("Create scan status table").build());
+                        new AuditBuilder().setLocalHost().setComment("Create migration status table").build());
 
                 _tableChecked = true;
             }
@@ -88,7 +88,7 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                         .put("startTime", status.getStartTime().getTime())
                         .put("completeTime", status.getCompleteTime() != null ? status.getCompleteTime().getTime() : null)
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Starting scan").build());
+                new AuditBuilder().setLocalHost().setComment("Starting migration").build());
     }
 
     private Map<String, Object> scanRangeStatusToMap(ScanRangeStatus rangeStatus) {
@@ -125,8 +125,8 @@ public class MigratorStatusDAO implements ScanStatusDAO {
     }
 
     @Override
-    public ScanStatus getScanStatus(String scanId) {
-        Map<String, Object> map = _dataStore.get(getTable(), scanId);
+    public ScanStatus getScanStatus(String migrationId) {
+        Map<String, Object> map = _dataStore.get(getTable(), migrationId);
         return fromMap(map);
     }
 
@@ -143,9 +143,9 @@ public class MigratorStatusDAO implements ScanStatusDAO {
         //noinspection unchecked
         Map<String, Object> ranges = (Map<String, Object>) map.get("ranges");
 
-        List<ScanRangeStatus> pendingScanRanges = Lists.newArrayList();
-        List<ScanRangeStatus> activeScanRanges = Lists.newArrayList();
-        List<ScanRangeStatus> completeScanRanges = Lists.newArrayList();
+        List<ScanRangeStatus> pendingMigrationRanges = Lists.newArrayList();
+        List<ScanRangeStatus> activeMigrationRanges = Lists.newArrayList();
+        List<ScanRangeStatus> completeMigrationRanges = Lists.newArrayList();
 
         for (Object rangeObject : ranges.values()) {
             //noinspection unchecked
@@ -156,69 +156,40 @@ public class MigratorStatusDAO implements ScanStatusDAO {
             int batchId = (Integer) rangeJson.get("batch");
             Optional<Integer> blockedByBatchId = Optional.fromNullable((Integer) rangeJson.get("blockedByBatch"));
             Optional<Integer> concurrencyId = Optional.fromNullable(((Integer) rangeJson.get("concurrencyGroup")));
-            ScanRangeStatus scanRangeStatus = new ScanRangeStatus(taskId, placement, range, batchId, blockedByBatchId, concurrencyId);
+            ScanRangeStatus migrationRangeStatus = new ScanRangeStatus(taskId, placement, range, batchId, blockedByBatchId, concurrencyId);
 
             Long time = (Long) rangeJson.get("queuedTime");
             if (time != null) {
-                scanRangeStatus.setScanQueuedTime(new Date(time));
+                migrationRangeStatus.setScanQueuedTime(new Date(time));
             }
 
             time = (Long) rangeJson.get("startTime");
             if (time == null) {
                 // Not yet started, so this range is pending
-                pendingScanRanges.add(scanRangeStatus);
+                pendingMigrationRanges.add(migrationRangeStatus);
             } else {
-                scanRangeStatus.setScanStartTime(new Date(time));
+                migrationRangeStatus.setScanStartTime(new Date(time));
                 time = (Long) rangeJson.get("completeTime");
                 if (time == null) {
                     // Not yet complete
-                    activeScanRanges.add(scanRangeStatus);
+                    activeMigrationRanges.add(migrationRangeStatus);
                 } else {
-                    scanRangeStatus.setScanCompleteTime(new Date(time));
-                    scanRangeStatus.setResplitRange(JsonHelper.convert(rangeJson.get("resplitRange"), ScanRange.class));
-                    completeScanRanges.add(scanRangeStatus);
+                    migrationRangeStatus.setScanCompleteTime(new Date(time));
+                    migrationRangeStatus.setResplitRange(JsonHelper.convert(rangeJson.get("resplitRange"), ScanRange.class));
+                    completeMigrationRanges.add(migrationRangeStatus);
                 }
             }
         }
 
-        // Early versions of ScanStatus did not include a startTime attribute.  If none is found extrapolate one.
-        Long startTs = (Long) map.get("startTime");
-        Date startTime = startTs != null ?
-                new Date(startTs) :
-                extrapolateStartTimeFromScanRanges(pendingScanRanges, activeScanRanges, completeScanRanges);
+        Date startTime = new Date((Long) map.get("startTime"));
 
-        return new ScanStatus(Intrinsic.getId(map), options, canceled, startTime, pendingScanRanges, activeScanRanges,
-                completeScanRanges, completeTime);
-    }
-
-    /**
-     * For grandfathered in ScanStatuses that did not include a startTime attribute extrapolate it as the earliest
-     * time a scan range was queued.
-     */
-    private Date extrapolateStartTimeFromScanRanges(List<ScanRangeStatus> pendingScanRanges,
-                                                    List<ScanRangeStatus> activeScanRanges,
-                                                    List<ScanRangeStatus> completeScanRanges) {
-        Date startTime = null;
-
-        for (ScanRangeStatus status : Iterables.concat(pendingScanRanges, activeScanRanges, completeScanRanges)) {
-            Date queuedTime = status.getScanQueuedTime();
-            if (queuedTime != null && (startTime == null || queuedTime.before(startTime))) {
-                startTime = queuedTime;
-            }
-        }
-
-        if (startTime == null) {
-            // Either the scan contained no scan ranges or no scans were ever queued, neither of which is likely to
-            // ever happen.  But, so we don't return null choose a reasonably old date.
-            startTime = new Date(0);
-        }
-
-        return startTime;
+        return new ScanStatus(Intrinsic.getId(map), options, canceled, startTime, pendingMigrationRanges, activeMigrationRanges,
+                completeMigrationRanges, completeTime);
     }
 
     @Override
-    public void setScanRangeTaskQueued(String scanId, int taskId, Date queuedTime) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setScanRangeTaskQueued(String migrationId, int taskId, Date queuedTime) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", Deltas.mapBuilder()
                                 .updateIfExists(toRangeKey(taskId), Deltas.mapBuilder()
@@ -226,12 +197,12 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                                         .build())
                                 .build())
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan range queued").build());
+                new AuditBuilder().setLocalHost().setComment("Migration range queued").build());
     }
 
     @Override
-    public void setScanRangeTaskActive(String scanId, int taskId, Date startTime) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setScanRangeTaskActive(String migrationId, int taskId, Date startTime) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", Deltas.mapBuilder()
                                 .updateIfExists(toRangeKey(taskId), Deltas.mapBuilder()
@@ -239,12 +210,12 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                                         .build())
                                 .build())
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan range started").build());
+                new AuditBuilder().setLocalHost().setComment("Migration range started").build());
     }
 
     @Override
-    public void setScanRangeTaskInactive(String scanId, int taskId) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setScanRangeTaskInactive(String migrationId, int taskId) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", Deltas.mapBuilder()
                                 .updateIfExists(toRangeKey(taskId), Deltas.mapBuilder()
@@ -254,12 +225,12 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                                         .build())
                                 .build())
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan range inactive").build());
+                new AuditBuilder().setLocalHost().setComment("Migration range inactive").build());
     }
 
     @Override
-    public void setScanRangeTaskComplete(String scanId, int taskId, Date completeTime) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setScanRangeTaskComplete(String migrationId, int taskId, Date completeTime) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", Deltas.mapBuilder()
                                 .updateIfExists(toRangeKey(taskId), Deltas.mapBuilder()
@@ -267,12 +238,12 @@ public class MigratorStatusDAO implements ScanStatusDAO {
                                         .build())
                                 .build())
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan range complete").build());
+                new AuditBuilder().setLocalHost().setComment("Migration range complete").build());
     }
 
     @Override
-    public void setScanRangeTaskPartiallyComplete(String scanId, int taskId, ScanRange completeRange, ScanRange resplitRange, Date completeTime) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setScanRangeTaskPartiallyComplete(String migrationId, int taskId, ScanRange completeRange, ScanRange resplitRange, Date completeTime) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", Deltas.mapBuilder()
                                 .updateIfExists(toRangeKey(taskId), Deltas.mapBuilder()
@@ -286,43 +257,43 @@ public class MigratorStatusDAO implements ScanStatusDAO {
     }
 
     @Override
-    public void resplitScanRangeTask(String scanId, int taskId, List<ScanRangeStatus> splitScanStatuses) {
+    public void resplitScanRangeTask(String migrationId, int taskId, List<ScanRangeStatus> splitMigrationStatuses) {
         MapDeltaBuilder rangeBuilder = Deltas.mapBuilder();
 
-        // Update the original range scan to remove the resplit request
+        // Update the original range migration to remove the resplit request
         rangeBuilder.update(toRangeKey(taskId), Deltas.mapBuilder()
                 .remove("resplitRange")
                 .build());
 
-        // Add all of the new split scan ranges
-        for (ScanRangeStatus splitScanStatus : splitScanStatuses) {
-            Map<String, Object> splitScanMap = scanRangeStatusToMap(splitScanStatus);
-            rangeBuilder.update(toRangeKey(splitScanStatus.getTaskId()), Deltas.literal(splitScanMap));
+        // Add all of the new split migration ranges
+        for (ScanRangeStatus splitMigrationStatus : splitMigrationStatuses) {
+            Map<String, Object> splitMigrationMap = scanRangeStatusToMap(splitMigrationStatus);
+            rangeBuilder.update(toRangeKey(splitMigrationStatus.getTaskId()), Deltas.literal(splitMigrationMap));
         }
 
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("ranges", rangeBuilder.build())
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan range resplit").build());
+                new AuditBuilder().setLocalHost().setComment("Migration range resplit").build());
     }
 
     @Override
-    public void setCompleteTime(String scanId, Date completeTime) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setCompleteTime(String migrationId, Date completeTime) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("completeTime", Deltas.conditional(Conditions.isNull(), Deltas.literal(completeTime.getTime())))
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Scan complete").build());
+                new AuditBuilder().setLocalHost().setComment("Migration complete").build());
     }
 
     @Override
-    public void setCanceled(String scanId) {
-        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+    public void setCanceled(String migrationId) {
+        _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
                         .update("canceled", Deltas.conditional(Conditions.equal(false), Deltas.literal(true)))
                         .build(),
-                new AuditBuilder().setLocalHost().setComment("Canceling scan").build());
+                new AuditBuilder().setLocalHost().setComment("Canceling migration").build());
     }
 
     private String toRangeKey(int taskId) {

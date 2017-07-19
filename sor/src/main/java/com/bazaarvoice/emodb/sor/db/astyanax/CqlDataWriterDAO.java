@@ -7,10 +7,7 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
-import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
-import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
-import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -23,7 +20,11 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.inject.Named;
 import java.nio.ByteBuffer;
@@ -42,6 +43,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
+    private final byte[] _deltaPrefixBytes;
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _astyanaxWriterDAO;
@@ -56,25 +58,23 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     @Inject
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
-                            FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
-                            HintsConsistencyTimeProvider rawConsistencyTimeProvider,
-                            PlacementCache placementCache,
-                            ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry,
-                            @Named("deltaBlockSize") int deltaBlockSize,
-                            @Named("deltaPrefix") String deltaPrefix) {
+                            PlacementCache placementCache, FullConsistencyTimeProvider fullConsistencyTimeProvider,
+                            AuditStore auditStore, HintsConsistencyTimeProvider rawConsistencyTimeProvider,
+                            ChangeEncoder changeEncoder, MetricRegistry metricRegistry, @BlockSize int deltaBlockSize,
+                            @PrefixLength int deltaPrefixLength) {
         _readerDao = checkNotNull(readerDao, "readerDao");
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
         _auditStore = checkNotNull(auditStore, "auditStore");
-        _placementCache = checkNotNull(placementCache, "placementCache");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _placementCache = placementCache;
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
         _deltaBlockSize = deltaBlockSize;
-        _deltaPrefix = deltaPrefix;
-        _deltaPrefixLength = deltaPrefix.length();
+        _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
+        _deltaPrefixBytes = _deltaPrefix.getBytes();
+        _deltaPrefixLength = deltaPrefixLength;
     }
 
     private String getMetricName(String name) {
@@ -121,33 +121,16 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         }
     }
 
-    private void insertBlockedDeltas(BatchStatement batchStatement, BlockedDeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta, int deltaSize) {
-        int numBlocks = (deltaSize + _deltaBlockSize - 1) / _deltaBlockSize;
-        int position = encodedDelta.position();
+    private void insertBlockedDeltas(BatchStatement batchStatement, BlockedDeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta) {
 
-        byte[] blockBytes = String.format("%0" + _deltaPrefixLength + "X", numBlocks).getBytes();
-        for (int i = blockBytes.length - 1; i >= 0; i--) {
-            encodedDelta.put(position + _deltaPrefixLength - blockBytes.length + i, blockBytes[i]);
-        }
-        for (int block = 0; block < numBlocks; block++) {
-            ByteBuffer split = encodedDelta.duplicate();
-            int limit;
-            if (_deltaBlockSize * (block + 1) < deltaSize) {
-                limit = position + _deltaBlockSize;
-                while ((split.get(limit) & 0x80) != 0 && (split.get(limit) & 0x40) == 0) {
-                    limit--;
-                }
-            } else {
-                limit = encodedDelta.limit();
-            }
-            split.position(position);
-            split.limit(limit);
-            position = limit;
+        List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(encodedDelta, _deltaPrefixLength, _deltaBlockSize);
+
+        for (int i = 0; i < blocks.size(); i++) {
             batchStatement.add(QueryBuilder.insertInto(tableDDL.getTableMetadata())
                     .value(tableDDL.getRowKeyColumnName(), rowKey)
                     .value(tableDDL.getChangeIdColumnName(), changeId)
-                    .value(tableDDL.getBlockColumnName(), block)
-                    .value(tableDDL.getValueColumnName(), split)
+                    .value(tableDDL.getBlockColumnName(), i)
+                    .value(tableDDL.getValueColumnName(), blocks.get(i))
                     .setConsistencyLevel(consistencyLevel));
         }
     }
@@ -179,7 +162,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                 .value(deltaTableDDL.getValueColumnName(), encodedCompaction)
                 .setConsistencyLevel(consistencyLevel));
 
-        insertBlockedDeltas(batchStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction, blockedDeltaSize);
+        insertBlockedDeltas(batchStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
 
         session.execute(batchStatement);
     }
@@ -204,8 +187,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         TableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
         TableDDL deltaTableDDL = placement.getDeltaTableDDL();
 
-
-        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED); // this may help with the batch size being too large
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
 
         for (UUID change : changesToDelete) {
             batchStatement.add(deleteStatement(blockedDeltaTableDDL, rowKey, change, consistencyLevel));
@@ -237,18 +219,39 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     public void writeRows(String placementName, Iterator<MigrationScanResult> results) {
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         Session session = placement.getKeyspace().getCqlSession();
+        PeekingIterator<MigrationScanResult> iterator = Iterators.peekingIterator(results);
+
+        int batchSize = 0;
+
+        // nothing to write so return immediately
+        if (!iterator.hasNext()) {
+            return;
+        }
 
         BatchStatement batchStatement = new BatchStatement();
 
-        while(results.hasNext()) {
-            MigrationScanResult result = results.next();
+        while (true) {
+            MigrationScanResult result = iterator.next();
             ByteBuffer delta = result.getValue();
             int deltaSize = delta.remaining();
             ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
-            encodedDelta.put(new byte[_deltaPrefixLength]); // TODO: replace this and also cleanup modules to match block_column revisions
+            encodedDelta.put(_deltaPrefixBytes);
+            encodedDelta.position(_deltaPrefixLength);
             encodedDelta.put(delta);
             encodedDelta.position(0);
-            insertBlockedDeltas(batchStatement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, result.getRowKey(), result.getChangeId(), result.getValue(), encodedDelta.remaining());
+            batchSize += encodedDelta.remaining() + 16;
+            ByteBuffer rowKey = result.getRowKey();
+            insertBlockedDeltas(batchStatement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
+
+            if (!iterator.hasNext()) {
+                break;
+            }
+
+            if (batchSize > 5 * 1024 || !iterator.peek().getRowKey().equals(rowKey)) {
+                session.execute(batchStatement);
+                batchStatement = new BatchStatement();
+                batchSize = 0;
+            }
         }
 
         session.execute(batchStatement);
