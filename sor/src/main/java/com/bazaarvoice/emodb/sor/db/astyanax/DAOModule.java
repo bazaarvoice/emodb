@@ -22,16 +22,16 @@ import com.google.inject.name.Names;
  */
 public class DAOModule extends PrivateModule {
 
-    private static final int DELTA_BLOCK_SIZE = 64 * 1024; // 64 KB block size (this must remain larger than (exclusive) 32 KB
-    private static final String DELTA_PREFIX = "0000";
+    private static final int DELTA_BLOCK_SIZE = 16; //64 * 1024; // 64 KB block size (this must remain larger than (exclusive) 32 KB
+    private static final int DELTA_PREFIX_LENGTH = 4;
 
     @Override
     protected void configure() {
-        bind(Integer.class).annotatedWith(Names.named("deltaBlockSize")).toInstance(DELTA_BLOCK_SIZE);
-        bind(String.class).annotatedWith(Names.named("deltaPrefix")).toInstance(DELTA_PREFIX);
-
+        bind(Integer.class).annotatedWith(BlockSize.class).toInstance(DELTA_BLOCK_SIZE);
+        bind(Integer.class).annotatedWith(PrefixLength.class).toInstance(DELTA_PREFIX_LENGTH);
         bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
+        bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataCopyDAO.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();

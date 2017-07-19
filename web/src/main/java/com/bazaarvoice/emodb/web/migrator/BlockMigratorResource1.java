@@ -22,13 +22,13 @@ public class BlockMigratorResource1 {
 
 
     @POST
-    @Path ("migrate/{placement}")
+    @Path ("migrate/{placement}/{id}")
     @Timed(name = "bv.emodb.sor.DataStoreResource1.migrate", absolute = true)
     @ApiOperation(value = "Migrates deltas to new block tables.",
             notes = "Migrates deltas to new block tables.",
             response = SuccessResponse.class
     )
-    public ScanStatus migrate(@PathParam("placement") String placement) {
+    public ScanStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
 
         if (_deltaMigrator.getStatus(placement) != null) {
             throw new WebApplicationException(
@@ -38,7 +38,7 @@ public class BlockMigratorResource1 {
                             .build());
         }
 
-        return _deltaMigrator.migratePlacement(placement);
+        return _deltaMigrator.migratePlacement(placement, id);
 
     }
 
@@ -53,6 +53,32 @@ public class BlockMigratorResource1 {
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .entity(ImmutableMap.of("not_found", placement))
                             .build());
+        }
+
+        return scanStatus;
+    }
+
+    @POST
+    @Path ("upload/{id}/cancel")
+    public ScanStatus cancelScan(@PathParam ("id") String id) {
+        ScanStatus scanStatus = _deltaMigrator.getStatus(id);
+        if (scanStatus == null) {
+            throw new WebApplicationException(Response.Status.NOT_FOUND);
+        }
+
+        if (!scanStatus.isCanceled()) {
+            _deltaMigrator.cancel(id);
+        }
+
+        return _deltaMigrator.getStatus(id);
+    }
+
+    @POST
+    @Path ("upload/{id}/recover")
+    public ScanStatus recoverScan(@PathParam ("id") String id) {
+        ScanStatus scanStatus = _deltaMigrator.resubmitWorkflowTasks(id);
+        if (scanStatus == null) {
+            throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
 
         return scanStatus;
