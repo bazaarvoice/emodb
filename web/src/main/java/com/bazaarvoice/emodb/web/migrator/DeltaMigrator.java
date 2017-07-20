@@ -56,7 +56,7 @@ public class DeltaMigrator {
             ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.<ScanRange>absent());
 
             for (ScanRangeSplits.SplitGroup splitGroup : scanRangeSplits.getSplitGroups()) {
-                // Start a new batch, indicating the subsequent token ranges can be scanned in parallel
+                // Start a new batch, indicating the subsequent token ranges can be migrated in parallel
                 plan.startNewBatchForCluster(cluster);
                 // Add the scan ranges associated with each token range in the split group to the batch
                 for (ScanRangeSplits.TokenRange tokenRange : splitGroup.getTokenRanges()) {
