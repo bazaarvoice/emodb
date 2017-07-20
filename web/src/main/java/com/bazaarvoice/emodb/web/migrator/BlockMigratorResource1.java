@@ -30,7 +30,7 @@ public class BlockMigratorResource1 {
     )
     public ScanStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
 
-        if (_deltaMigrator.getStatus(placement) != null) {
+        if (_deltaMigrator.getStatus("id") != null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.CONFLICT)
                             .type(MediaType.APPLICATION_JSON_TYPE)
@@ -43,15 +43,15 @@ public class BlockMigratorResource1 {
     }
 
     @GET
-    @Path ("migrate/{placement}")
-    public ScanStatus getScanStatus(@PathParam ("placement") String placement) {
-        ScanStatus scanStatus = _deltaMigrator.getStatus(placement);
+    @Path ("migrate/{id}")
+    public ScanStatus getScanStatus(@PathParam ("id") String id) {
+        ScanStatus scanStatus = _deltaMigrator.getStatus(id);
 
         if (scanStatus == null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.NOT_FOUND)
                             .type(MediaType.APPLICATION_JSON_TYPE)
-                            .entity(ImmutableMap.of("not_found", placement))
+                            .entity(ImmutableMap.of("not_found", id))
                             .build());
         }
 
