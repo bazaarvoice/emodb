@@ -30,7 +30,7 @@ public class BlockMigratorResource1 {
     )
     public ScanStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
 
-        if (_deltaMigrator.getStatus("id") != null) {
+        if (_deltaMigrator.getStatus(id) != null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.CONFLICT)
                             .type(MediaType.APPLICATION_JSON_TYPE)
