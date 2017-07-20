@@ -28,7 +28,6 @@ public class MigratorWriter implements Closeable {
         }
 
         _migratorTools.writeRows(placement, results.iterator());
-//        QueryBuilder.select().all().from("ugc_delta").where(QueryBuilder.gte("rowkey", QueryBuilder.token("token string here")));
     }
 
     @Override

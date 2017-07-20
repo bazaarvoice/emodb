@@ -342,12 +342,6 @@ public class LocalMigratorMonitor extends AbstractService {
         _log.info("Migration complete: {}", id);
 
         try {
-            // TODO: not using scan writers so don't need this, however make sure with Sujith
-//            // Mark the scan is complete
-//            Set<ScanDestination> destinations = status.getOptions().getDestinations();
-//            // Use -1 as the task ID since writing that the scan is complete is not associated with any scan range task.
-//            ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(-1, destinations);
-//            scanWriter.writeScanComplete(id, _statusDAO.getScanStatus(id).getStartTime());
 
             // Store the time the migration completed
             Date completeTime = new Date();
@@ -367,13 +361,6 @@ public class LocalMigratorMonitor extends AbstractService {
             notifyActiveMigrationCountChanged();
         }
 
-        // TODO: figure out if we need this, as there are not table sets
-//        try {
-//            // Remove the distributed table set for this scan
-////            _scanTableSetManager.cleanupTableSetForScan(id);
-//        } catch (Exception e) {
-////            _log.error("Failed to clean up table set for scan {}", id, e);
-//        }
     }
 
     private void initializeAllActiveMigrations() {
