@@ -40,7 +40,7 @@ import static com.google.common.base.Preconditions.checkState;
 public class LocalRangeMigrator implements Managed {
 
     private final static int PIPELINE_THREAD_COUNT = 5;
-    private final static int PIPELINE_BATCH_SIZE = 2500; //TODO: this may need to be lowered in order to handle large deltas
+    private final static int PIPELINE_BATCH_SIZE = 2500;
     // Interval for checking whether all transfers are complete and logging the result
     private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL = Duration.standardSeconds(30);
     // Interval after which the task will fail if there has been no progress on any active transfers
@@ -56,7 +56,6 @@ public class LocalRangeMigrator implements Managed {
     private final Counter _batchRowsSubmitted;
     private final Counter _batchesSubmitted;
     private final Counter _waitingForBatchesComplete;
-    private final Counter _waitingForAllTransfersComplete;
     private final Meter _failedRangeMigrations;
 
     private final LoadingCache<String, Counter> _rawBytesMigrated;
@@ -92,10 +91,7 @@ public class LocalRangeMigrator implements Managed {
         _batchRowsSubmitted = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "batch-rows-submitted"));
         _batchesSubmitted = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "batches-submitted"));
         _waitingForBatchesComplete = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "waiting-for-batches-complete"));
-        _waitingForAllTransfersComplete = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "waiting-for-all-transfers-complete"));
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
-
-        // TODO: figure out if we need shards like the LocalRangeScanUploader
 
         _rawBytesMigrated = CacheBuilder.newBuilder()
                 .build(new CacheLoader<String, Counter>() {
@@ -207,8 +203,6 @@ public class LocalRangeMigrator implements Managed {
             // If there are any open batches wait for them to complete
             context.waitForAllBatchesComplete();
 
-            // If there are any asynchronous transfers still taking place wait for them to complete before returning
-//            waitForAllTransfersComplete(taskId, range, migratorWriter); // TODO: figure this out
 
             // If the results were non-empty but left additional rows then that means we received significantly more
             // rows than expected or took longer to read all rows than permitted.  Return that the remaining rows need
@@ -218,7 +212,7 @@ public class LocalRangeMigrator implements Managed {
                         placement, range);
                 // Scan ranges are exclusive on the start key so resend the last key read to start on the next row.
                 return RangeScanUploaderResult.resplit(
-                        ScanRange.create(batch.getLastResult().getRowKey(), range.getTo())); // TODO: We need to find a way to ensure that the first parameter is INCLUSIVE
+                        ScanRange.create(batch.getLastResult().getRowKey(), range.getTo()));
             }
 
             _log.info("Migrating placement complete for task id={}, {}: {} ({})", taskId, placement, range,
@@ -274,71 +268,6 @@ public class LocalRangeMigrator implements Managed {
         return (int) Math.ceil(options.getRangeScanSplitSize() * RESPLIT_FACTOR);
     }
 
-//    private void waitForAllTransfersComplete(int taskId, ScanRange range, MigratorWriter migratorWriter)
-//            throws IOException, InterruptedException {
-//        _log.debug("Waiting for all transfers complete: id={}, range={}...", taskId, range);
-//        DateTime startWaitTime = DateTime.now();
-//        DateTime lastCheckTime = null;
-//        DateTime startNoProgressTime = null;
-//        Map<TransferKey, TransferStatus> lastStatusMap = null;
-//
-//        _waitingForAllTransfersComplete.inc();
-//        try {
-//            while (true) {
-//                WaitForAllTransfersCompleteResult result = migratorWriter.waitForAllTransfersComplete(_waitForAllTransfersCompleteCheckInterval);
-//                if (result.isComplete()) {
-//                    return;
-//                }
-//
-//                DateTime now = DateTime.now();
-//
-//                // Get the transfer status for all active transfers
-//                Map<TransferKey, TransferStatus> currentStatusMap = result.getActiveTransferStatusMap();
-//
-//                if (lastStatusMap != null) {
-//                    // Check if there has been any progress since the last iteration
-//                    boolean progressMade = false;
-//                    for (TransferStatus lastStatus : lastStatusMap.values()) {
-//                        TransferStatus currentStatus = currentStatusMap.get(lastStatus.getKey());
-//                        if (currentStatus == null ||
-//                                currentStatus.getAttempts() > lastStatus.getAttempts() ||
-//                                currentStatus.getBytesTransferred() > lastStatus.getBytesTransferred()) {
-//                            // Either the transfer completed (is now null) or has made progress since the last iteration
-//                            progressMade = true;
-//                            break;
-//                        }
-//                    }
-//
-//                    if (progressMade) {
-//                        _log.info("Task {} has {} active transfers after {}", taskId, currentStatusMap.size(),
-//                                PeriodFormat.getDefault().print(new Interval(startWaitTime, now).toPeriod()));
-//                        startNoProgressTime = null;
-//                    } else {
-//                        if (startNoProgressTime == null) {
-//                            startNoProgressTime = lastCheckTime;
-//                        }
-//                        Period noProgressPeriod = new Interval(startNoProgressTime, now).toPeriod();
-//                        _log.info("Task {} has made no progress on {} active transfers in {}",
-//                                taskId, currentStatusMap.size(), PeriodFormat.getDefault().print(noProgressPeriod));
-//
-//                        // If we've gone beyond the timeout for all transfers making no progress then raise an exception
-//                        if (noProgressPeriod.toStandardDuration().isLongerThan(_waitForAllTransfersCompleteTimeout)) {
-//                            throw new IOException("All transfers made no progress in " +
-//                                    PeriodFormat.getDefault().print(_waitForAllTransfersCompleteTimeout.toPeriod()) +
-//                                    " for task id=" + taskId);
-//                        }
-//                    }
-//                }
-//
-//                lastStatusMap = currentStatusMap;
-//                lastCheckTime = now;
-//            }
-//        } finally {
-//            _waitingForAllTransfersComplete.dec();
-//            _log.debug("Waiting for all transfers complete: id={}, range={}... DONE", taskId, range);
-//        }
-//    }
-
     private void processBatch(int taskId, Batch batch) {
         BatchContext context = batch.getContext();
         MigratorWriter migratorWriter = context.getMigratorWriter();
@@ -347,57 +276,11 @@ public class LocalRangeMigrator implements Managed {
         try {
             migratorWriter.writeToBlockTable(placement, batch.getResults());
 
-//            for (Iterator<MigrationScanResult> resultIter = batch.getResults().iterator();
-//                 resultIter.hasNext() && context.continueProcessing(); ) {
-//
-//                MigrationScanResult result = resultIter.next();
-//
-//                // If we've switched shards then close this file and start a new one.
-//                if (prevShardId != shardId || prevTableUuid != tableUuid) {
-//                    prevShardId = shardId;
-//                    prevTableUuid = tableUuid;
-//
-//                    if (writer != null) {
-//                        closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, true);
-//                        totalPartsForShard = 1;
-//                    }
-//
-//                    writer = scanWriter.writeShardRows(result.getTable().getName(), placement, shardId, tableUuid);
-//                    out = new MetricCounterOutputStream(writer.getOutputStream(), rawBytesUploaded);
-//                    generator = createGenerator(out);
-//
-//                    _log.debug("Writing output file: {}", writer);
-//                }
-//
-//                if (!Intrinsic.isDeleted(content)) {  // Ignore deleted objects
-//                    assert generator != null;
-//                    _mapper.writeValue(generator, content);
-//                    generator.writeRaw('\n');
-//                }
-//
-//
-//            }
-//
-//            if (writer != null) {
-//                closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, !batch.isContinuedInNextBatch());
-//            }
-
             context.closeBatch(batch, null);
         } catch (Throwable t) {
             _log.error("Uncaught exception processing batch for task id={}, placement {}: {}",
                     taskId, placement, context.getTaskRange(), t);
             context.closeBatch(batch, t);
-//
-//            try {
-//                Closeables.close(generator,true);
-//                Closeables.close(out, true);
-//            } catch (IOException e2) {
-//                // Won't happen
-//            }
-//
-//            if (writer != null) {
-//                writer.closeAndCancel();
-//            }
         }
     }
 

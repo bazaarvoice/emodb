@@ -76,18 +76,8 @@ public class LocalMigratorMonitor extends AbstractService {
                     // Start the loop for processing complete range migrations
                     _service.schedule(_processCompleteRangeMigrationsExecution, 1, TimeUnit.SECONDS);
 
-                    // TODO: figure out if this is needed, leaving it out for now
-//                    // Run a daily check to clean up orphaned migrations
-//                    _service.scheduleAtFixedRate(
-//                            new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    cleanupOrphanedScans();
-//                                }
-//                            },
-//                            1, TimeUnit.DAYS.toMinutes(1), TimeUnit.MINUTES);
-
                     notifyStarted();
+                    
                 } catch (Exception e) {
                     _log.error("Failed to start local migration upload monitor", e);
                     notifyFailed(e);
