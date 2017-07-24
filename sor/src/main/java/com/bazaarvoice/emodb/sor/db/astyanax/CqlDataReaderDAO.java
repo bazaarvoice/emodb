@@ -910,6 +910,28 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         return _astyanaxReaderDAO.count(table, limit, consistency);
     }
 
+    private Iterator<Iterable<Row>> migrationScan(DeltaPlacement placement, ByteBufferRange keyRange,
+                                            ReadConsistency consistency) {
+        ByteBuffer startToken = keyRange.getStart();
+        ByteBuffer endToken = keyRange.getEnd();
+
+        // Note: if Cassandra is asked to perform a token range query where start >= end it will wrap
+        // around which is absolutely *not* what we want.
+        checkArgument(AstyanaxStorage.compareKeys(startToken, endToken) < 0, "Cannot migrate rows which loop from maximum- to minimum-token");
+
+        TableDDL tableDDL = placement.getDeltaTableDDL();
+
+        // Our query needs to be inclusive on both sides so that we ensure that we get all records in the event of a re-split
+        Statement statement = selectFrom(tableDDL)
+                .where(gte(token(tableDDL.getRowKeyColumnName()), startToken))
+                .and(lte(token(tableDDL.getRowKeyColumnName()), endToken))
+                .setConsistencyLevel(SorConsistencies.toCql(consistency));
+
+        return deltaQueryAsync(placement, statement, false, "Failed to scan (for migration) token range [%s, %s] for %s",
+                ByteBufferUtil.bytesToHex(startToken), ByteBufferUtil.bytesToHex(endToken),
+                "multiple tables");
+    }
+
     @Override
     public Iterator<MigrationScanResult> readRows(String placementName, ScanRange scanRange) {
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
@@ -921,7 +943,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
 
     private Iterable<MigrationScanResult> scanRows(final DeltaPlacement placement, final ByteBufferRange rowRange, final ReadConsistency consistency) {
         return () -> {
-            Iterator<Iterator<Row>> rowIterators = Iterators.transform(rowScan(placement, null, rowRange, consistency), iterable -> iterable.iterator());
+            Iterator<Iterator<Row>> rowIterators = Iterators.transform(migrationScan(placement, rowRange, consistency), iterable -> iterable.iterator());
             Iterator<Row> rows = Iterators.concat(rowIterators);
             return Iterators.transform(rows, row -> new MigrationScanResult(row, ROW_KEY_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
         };

@@ -139,14 +139,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                                  WriteConsistency consistency, DeltaPlacement placement,
                                  CassandraKeyspace keyspace) {
 
-        // TODO: implement checks to ensure we are under the transport size
+        // TODO: implement checks to ensure we are under the transport size OR drastically increase batch_size_warn_in_kb
 
         // Add the compaction record
         ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).getBytes());
         ByteBuffer encodedCompaction = encodedBlockedCompaction.duplicate();
         encodedCompaction.position(encodedCompaction.position() + _deltaPrefixLength);
-
-        int blockedDeltaSize = encodedCompaction.remaining();
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
@@ -154,17 +152,24 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         TableDDL deltaTableDDL = placement.getDeltaTableDDL();
         BlockedDeltaTableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
 
-        BatchStatement batchStatement = new BatchStatement(); // may need a type in the constructor!
+        // create new atomic batch
+        BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.LOGGED);
 
-        batchStatement.add(QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
+        insertBlockedDeltas(newTableStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
+
+        ResultSetFuture newTableFuture = session.executeAsync(newTableStatement);
+
+        Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
                 .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
                 .value(deltaTableDDL.getChangeIdColumnName(), compactionKey)
                 .value(deltaTableDDL.getValueColumnName(), encodedCompaction)
-                .setConsistencyLevel(consistencyLevel));
+                .setConsistencyLevel(consistencyLevel);
 
-        insertBlockedDeltas(batchStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
+        ResultSetFuture oldTableFuture =  session.executeAsync(oldTableStatement);
 
-        session.execute(batchStatement);
+        // Wait for both statements to return
+        newTableFuture.getUninterruptibly();
+        oldTableFuture.getUninterruptibly();
     }
 
     private Statement deleteStatement(TableDDL tableDDL, ByteBuffer rowKey, UUID changeId, ConsistencyLevel consistencyLevel) {
@@ -187,22 +192,27 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         TableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
         TableDDL deltaTableDDL = placement.getDeltaTableDDL();
 
-        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        BatchStatement oldTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.LOGGED);
 
         for (UUID change : changesToDelete) {
-            batchStatement.add(deleteStatement(blockedDeltaTableDDL, rowKey, change, consistencyLevel));
-            batchStatement.add(deleteStatement(deltaTableDDL, rowKey, change, consistencyLevel));
+            oldTableStatement.add(deleteStatement(deltaTableDDL, rowKey, change, consistencyLevel));
+            newTableStatement.add(deleteStatement(blockedDeltaTableDDL, rowKey, change, consistencyLevel));
         }
 
 
         if (historyList != null && !historyList.isEmpty()) {
-            AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(batchStatement, placement.getDeltaHistoryTableDDL(),
+            AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(oldTableStatement, placement.getDeltaHistoryTableDDL(),
                     _changeEncoder, _auditStore);
             _auditStore.putDeltaAudits(rowKey, historyList, auditBatchPersister);
         }
 
-        session.execute(batchStatement);
+        ResultSetFuture oldTableFuture =  session.executeAsync(oldTableStatement);
+        ResultSetFuture newTableFuture = session.executeAsync(newTableStatement);
 
+        // Wait for both statements to return
+        newTableFuture.getUninterruptibly();
+        oldTableFuture.getUninterruptibly();
     }
 
     @Override
@@ -216,22 +226,32 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void writeRows(String placementName, Iterator<MigrationScanResult> results) {
+    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator) {
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         Session session = placement.getKeyspace().getCqlSession();
-        PeekingIterator<MigrationScanResult> iterator = Iterators.peekingIterator(results);
+        int batchSize = 2500;
+        List<ResultSetFuture> futures = Lists.newArrayListWithCapacity(batchSize);
 
-        int batchSize = 0;
+        BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
+        ByteBuffer lastRowKey = null;
 
-        // nothing to write so return immediately
-        if (!iterator.hasNext()) {
-            return;
-        }
-
-        BatchStatement batchStatement = new BatchStatement();
-
-        while (true) {
+        while(iterator.hasNext()) {
             MigrationScanResult result = iterator.next();
+            ByteBuffer rowKey = result.getRowKey();
+
+            // execute statement if we have encountered a new C* wide row
+            if (rowKey != lastRowKey) {
+                futures.add(session.executeAsync(statement));
+                statement = new BatchStatement(BatchStatement.Type.LOGGED);
+
+                // wait for all requests to return if we have sent out the maximum allowed amount
+                if (futures.size() == batchSize) {
+                    futures.forEach(ResultSetFuture::getUninterruptibly);
+                    futures.clear();
+                }
+            }
+
+            // build blocked delta value
             ByteBuffer delta = result.getValue();
             int deltaSize = delta.remaining();
             ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
@@ -239,21 +259,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             encodedDelta.position(_deltaPrefixLength);
             encodedDelta.put(delta);
             encodedDelta.position(0);
-            batchSize += encodedDelta.remaining() + 16;
-            ByteBuffer rowKey = result.getRowKey();
-            insertBlockedDeltas(batchStatement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
 
-            if (!iterator.hasNext()) {
-                break;
-            }
+            insertBlockedDeltas(statement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
 
-            if (batchSize > 5 * 1024 || !iterator.peek().getRowKey().equals(rowKey)) {
-                session.execute(batchStatement);
-                batchStatement = new BatchStatement();
-                batchSize = 0;
-            }
         }
 
-        session.execute(batchStatement);
+        futures.add(session.executeAsync(statement));
+        futures.forEach(ResultSetFuture::getUninterruptibly);
     }
 }
