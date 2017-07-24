@@ -45,9 +45,9 @@ public class BlockMigratorResource1 {
     @GET
     @Path ("migrate/{id}")
     public ScanStatus getScanStatus(@PathParam ("id") String id) {
-        ScanStatus scanStatus = _deltaMigrator.getStatus(id);
+        ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
 
-        if (scanStatus == null) {
+        if (migratorStatus == null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.NOT_FOUND)
                             .type(MediaType.APPLICATION_JSON_TYPE)
@@ -55,18 +55,18 @@ public class BlockMigratorResource1 {
                             .build());
         }
 
-        return scanStatus;
+        return migratorStatus;
     }
 
     @POST
     @Path ("upload/{id}/cancel")
     public ScanStatus cancelScan(@PathParam ("id") String id) {
-        ScanStatus scanStatus = _deltaMigrator.getStatus(id);
-        if (scanStatus == null) {
+        ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
+        if (migratorStatus == null) {
             throw new WebApplicationException(Response.Status.NOT_FOUND);
         }
 
-        if (!scanStatus.isCanceled()) {
+        if (!migratorStatus.isCanceled()) {
             _deltaMigrator.cancel(id);
         }
 
