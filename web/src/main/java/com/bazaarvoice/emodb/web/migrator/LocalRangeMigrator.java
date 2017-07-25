@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -19,18 +20,15 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.inject.Named;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -48,6 +46,8 @@ public class LocalRangeMigrator implements Managed {
     // Stop migrating and resplit if we receive three times the number of rows expected in a single task.
     private final static float RESPLIT_FACTOR = 3;
 
+    private final static int DEFAULT_MAX_CONCURRENT_WRITES = 500;
+
     private final static Logger _log = LoggerFactory.getLogger(LocalRangeMigrator.class);
 
     private final Counter _activeRangeMigrations;
@@ -62,6 +62,7 @@ public class LocalRangeMigrator implements Managed {
 
     private final int _threadCount;
     private final int _batchSize;
+    private final int _maxConcurrentWrites;
     private final MigratorTools _migratorTools;
     private final MigratorWriterFactory _writerFactory;
     private final Set<ExecutorService> _batchServices = Collections.synchronizedSet(Sets.<ExecutorService>newIdentityHashSet());
@@ -71,19 +72,20 @@ public class LocalRangeMigrator implements Managed {
     private volatile boolean _shutdown = true;
 
     @Inject
-    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry) {
+    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry, @Named ("maxConcurrentWrites") Optional<Integer> maxConcurrentWrites) {
         this(migratorTools, writerFactory, lifecyle, metricRegistry, PIPELINE_THREAD_COUNT, PIPELINE_BATCH_SIZE,
-                WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT);
+                WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT, maxConcurrentWrites.or(DEFAULT_MAX_CONCURRENT_WRITES));
     }
 
     public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecycle, final MetricRegistry metricRegistry, int threadCount,
-                              int batchSize, Duration waitForAllTransfersCompleteCheckInterval, Duration waitForAllTransfersCompleteTimeout) {
+                              int batchSize, Duration waitForAllTransfersCompleteCheckInterval, Duration waitForAllTransfersCompleteTimeout, int maxConcurrentWrites) {
         _migratorTools = migratorTools;
         _writerFactory = writerFactory;
         _threadCount = threadCount;
         _batchSize = batchSize;
         _waitForAllTransfersCompleteCheckInterval = waitForAllTransfersCompleteCheckInterval;
         _waitForAllTransfersCompleteTimeout = waitForAllTransfersCompleteTimeout;
+        _maxConcurrentWrites = maxConcurrentWrites;
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _blockedRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "blocked-range-migrations"));
@@ -274,7 +276,7 @@ public class LocalRangeMigrator implements Managed {
         String placement = context.getPlacement();
 
         try {
-            migratorWriter.writeToBlockTable(placement, batch.getResults());
+            migratorWriter.writeToBlockTable(placement, batch.getResults(), _maxConcurrentWrites);
 
             context.closeBatch(batch, null);
         } catch (Throwable t) {

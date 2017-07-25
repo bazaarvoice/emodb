@@ -21,10 +21,10 @@ public class DefaultMigratorTools implements MigratorTools {
         _migratorWriterDao = checkNotNull(migratorWriterDAO, "migratorWriterDao");
     }
 
-    public void writeRows(String placement, Iterator<MigrationScanResult> results) {
+    public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites) {
         checkNotNull(placement, "placement");
         checkNotNull(results, "rows");
-        _migratorWriterDao.writeRows(placement, results);
+        _migratorWriterDao.writeRows(placement, results, maxConcurrentWrites);
     }
 
     public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {

@@ -20,13 +20,10 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
@@ -39,6 +36,10 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 
 
 public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
+
+    private final static int ROW_KEY_SIZE = 8;
+    private final static int CHANGE_ID_SIZE = 8;
+    private final static int MAX_STATEMENT_SIZE = 1 * 1024 * 1024; // 1Mb
 
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
@@ -226,30 +227,18 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator) {
+    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, int maxConcurrentWrites) {
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         Session session = placement.getKeyspace().getCqlSession();
-        int batchSize = 2500;
-        List<ResultSetFuture> futures = Lists.newArrayListWithCapacity(batchSize);
+        List<ResultSetFuture> futures = Lists.newArrayListWithCapacity(maxConcurrentWrites);
 
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         ByteBuffer lastRowKey = null;
+        int currentStatementSize = 0;
 
         while(iterator.hasNext()) {
             MigrationScanResult result = iterator.next();
             ByteBuffer rowKey = result.getRowKey();
-
-            // execute statement if we have encountered a new C* wide row
-            if (rowKey != lastRowKey) {
-                futures.add(session.executeAsync(statement));
-                statement = new BatchStatement(BatchStatement.Type.LOGGED);
-
-                // wait for all requests to return if we have sent out the maximum allowed amount
-                if (futures.size() == batchSize) {
-                    futures.forEach(ResultSetFuture::getUninterruptibly);
-                    futures.clear();
-                }
-            }
 
             // build blocked delta value
             ByteBuffer delta = result.getValue();
@@ -260,7 +249,21 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             encodedDelta.put(delta);
             encodedDelta.position(0);
 
+            // execute statement if we have encountered a new C* wide row OR if statement has become too large
+            if (rowKey != lastRowKey|| currentStatementSize > MAX_STATEMENT_SIZE) {
+                futures.add(session.executeAsync(statement));
+                statement = new BatchStatement(BatchStatement.Type.LOGGED);
+                currentStatementSize = 0;
+
+                // wait for all requests to return if we have sent out the maximum allowed amount
+                if (futures.size() == maxConcurrentWrites) {
+                    futures.forEach(ResultSetFuture::getUninterruptibly);
+                    futures.clear();
+                }
+            }
+
             insertBlockedDeltas(statement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
+            currentStatementSize += encodedDelta.remaining() + ROW_KEY_SIZE + CHANGE_ID_SIZE;
 
         }
 

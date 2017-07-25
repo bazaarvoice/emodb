@@ -69,6 +69,8 @@ public class MigratorModule extends PrivateModule {
                 .toInstance(_config.getPendingReadRangeQueueName());
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeReadRangeQueueName"))
                 .toInstance(_config.getCompleteReadRangeQueueName());
+        bind(new TypeLiteral<Optional<Integer>>(){}).annotatedWith(Names.named("maxConcurrentWrites"))
+                .toInstance(_config.getMaxConcurrentWrites());
 
         bind(StashStateListener.class).to(MigratorStateListener.class).asEagerSingleton();
 
