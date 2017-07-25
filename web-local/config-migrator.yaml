@@ -7,6 +7,7 @@ cluster: local_default
 
 migrator:
   migrateStatusTablePlacement: "app_global:migration"
+  maxConcurrentWrites: 1
 #  pendingReadRangeQueueName: pendingQueue
 #  completeReadRangeQueueName: completeQueue
 

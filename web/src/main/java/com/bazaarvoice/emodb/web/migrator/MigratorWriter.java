@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.migrator;
 
 import com.bazaarvoice.emodb.sor.core.MigratorTools;
 import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
-import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 
@@ -22,12 +21,12 @@ public class MigratorWriter implements Closeable {
         _migratorTools = checkNotNull(migratorTools, "migratorTools");
     }
 
-    public void writeToBlockTable(String placement, List<MigrationScanResult> results) throws IOException {
+    public void writeToBlockTable(String placement, List<MigrationScanResult> results, int maxConcurrentWrites) throws IOException {
         if (_closed) {
             throw new IOException("Writer closed");
         }
 
-        _migratorTools.writeRows(placement, results.iterator());
+        _migratorTools.writeRows(placement, results.iterator(), maxConcurrentWrites);
     }
 
     @Override
