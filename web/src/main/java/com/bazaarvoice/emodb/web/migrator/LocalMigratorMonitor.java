@@ -4,6 +4,8 @@ import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatus;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeComplete;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeTask;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
@@ -36,7 +38,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
 
     private final ScanWorkflow _workflow;
-    private final ScanStatusDAO _statusDAO;
+    private final MigratorStatusDAO _statusDAO;
     private final StashStateListener _migratorStateListener;
 //    private final ScanCountListener _migratorCountListener;
     private final DataTools _dataTools;
@@ -44,8 +46,8 @@ public class LocalMigratorMonitor extends AbstractService {
 
     private ScheduledExecutorService _service;
 
-    public LocalMigratorMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,  StashStateListener migratorStateListener,
-                                  DataTools dataTools) {
+    public LocalMigratorMonitor(ScanWorkflow scanWorkflow, MigratorStatusDAO scanStatusDAO, StashStateListener migratorStateListener,
+                                DataTools dataTools) {
         _workflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _statusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
         _migratorStateListener = checkNotNull(migratorStateListener, "migratorStateListener");
@@ -155,7 +157,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
     private void refreshMigration(String id)
             throws IOException {
-        ScanStatus status = _statusDAO.getScanStatus(id);
+        ScanStatus status = _statusDAO.getMigratorStatus(id);
         if (status == null) {
             _log.warn("Refresh migration called for unknown scan: {}", id);
             return;
@@ -200,7 +202,7 @@ public class LocalMigratorMonitor extends AbstractService {
                 String placement = rangeStatus.getPlacement();
                 ScanRange range = rangeStatus.getScanRange();
                 ScanRangeTask task = _workflow.addScanRangeTask(id, taskId, placement, range);
-                _statusDAO.setScanRangeTaskQueued(id, taskId, now);
+                _statusDAO.setMigratorRangeTaskQueued(id, taskId, now);
 
                 if (concurrencyId.isPresent()) {
                     // Mark that this range has been queued so this loop doesn't over-add range migrations
@@ -239,7 +241,7 @@ public class LocalMigratorMonitor extends AbstractService {
                                     complete.getBatchId(), complete.getBlockedByBatchId(), complete.getConcurrencyId()));
                 }
 
-                _statusDAO.resplitScanRangeTask(status.getScanId(), complete.getTaskId(), resplitStatuses);
+                _statusDAO.resplitMigratorRangeTask(status.getScanId(), complete.getTaskId(), resplitStatuses);
 
                 anyUpdated = true;
             }
@@ -250,7 +252,7 @@ public class LocalMigratorMonitor extends AbstractService {
         }
 
         // Slightly inefficient to reload but less risky than trying to keep the DAO and in-memory object in sync
-        return _statusDAO.getScanStatus(status.getScanId());
+        return _statusDAO.getMigratorStatus(status.getScanId());
     }
 
     private List<ScanRange> resplit(String placement, ScanRange resplitRange, int splitSize) {
@@ -355,7 +357,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
     private void initializeAllActiveMigrations() {
         try {
-            Iterator<ScanStatus> statuses = _statusDAO.list(null, Long.MAX_VALUE);
+            Iterator<MigratorStatus> statuses = _statusDAO.list(null, Long.MAX_VALUE);
             while (statuses.hasNext()) {
                 ScanStatus status = statuses.next();
                 if (!status.isDone()) {
@@ -373,7 +375,7 @@ public class LocalMigratorMonitor extends AbstractService {
     }
 
     private void scheduleOverrunCheck(ScanStatus status) {
-        final String scanId = status.getScanId();
+        final String migratorId = status.getScanId();
 
         DateTime now = DateTime.now();
         DateTime overrunTime = new DateTime(status.getStartTime()).plus(OVERRUN_MIGRATION_TIME);
@@ -387,11 +389,11 @@ public class LocalMigratorMonitor extends AbstractService {
                 new Runnable() {
                     @Override
                     public void run() {
-                        ScanStatus status = _statusDAO.getScanStatus(scanId);
+                        ScanStatus status = _statusDAO.getMigratorStatus(migratorId);
                         if (!status.isDone()) {
-                            _log.warn("Overrun migration detected, canceling migration: {}", scanId);
-                            _statusDAO.setCanceled(scanId);
-                            _workflow.scanStatusUpdated(scanId);
+                            _log.warn("Overrun migration detected, canceling migration: {}", migratorId);
+                            _statusDAO.setCanceled(migratorId);
+                            _workflow.scanStatusUpdated(migratorId);
 
                         }
                     }

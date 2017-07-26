@@ -3,13 +3,13 @@ package com.bazaarvoice.emodb.web.migrator;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.control.MaxConcurrentScans;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeTask;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -37,9 +37,9 @@ public class DistributedMigratorRangeMonitor implements Managed {
     private static final Duration CLAIM_START_TIMEOUT = QUEUE_CLAIM_TTL.minus(Duration.standardSeconds(15));
     private final Logger _log = LoggerFactory.getLogger(DistributedMigratorRangeMonitor.class);
     private final ScanWorkflow _workflow;
-    private final ScanStatusDAO _statusDAO;
+    private final MigratorStatusDAO _statusDAO;
     private final LocalRangeMigrator _rangeMigrator;
-    private final int _maxConcurrentScans;
+    private final int _maxConcurrentMigrations;
 
     private final ConcurrentMap<Integer, ClaimedTask> _claimedTasks = Maps.newConcurrentMap();
     private ExecutorService _migratingService;
@@ -52,11 +52,11 @@ public class DistributedMigratorRangeMonitor implements Managed {
     };
 
     @Inject
-    public DistributedMigratorRangeMonitor(ScanWorkflow workflow, ScanStatusDAO statusDAO, LocalRangeMigrator rangeMigrator, @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
+    public DistributedMigratorRangeMonitor(ScanWorkflow workflow, MigratorStatusDAO statusDAO, LocalRangeMigrator rangeMigrator, @MaxConcurrentScans int maxConcurrentMigrations, LifeCycleRegistry lifecycle) {
         _workflow = checkNotNull(workflow, "workflow");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _rangeMigrator = rangeMigrator;
-        _maxConcurrentScans = maxConcurrentScans;
+        _maxConcurrentMigrations = maxConcurrentMigrations;
 
         lifecycle.manage(this);
     }
@@ -66,7 +66,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
         _log.info("Distributed migrator range monitor is starting");
 
         if (_migratingService == null) {
-            _migratingService = Executors.newFixedThreadPool(_maxConcurrentScans, new ThreadFactoryBuilder().setNameFormat("MigratorRange-%d").build());
+            _migratingService = Executors.newFixedThreadPool(_maxConcurrentMigrations, new ThreadFactoryBuilder().setNameFormat("MigratorRange-%d").build());
         }
 
         if (_backgroundService == null) {
@@ -134,7 +134,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
      * Returns the number of threads currently available to start a migration.
      */
     private int getAvailableMigrationThreadCount() {
-        return _maxConcurrentScans - _claimedTasks.size();
+        return _maxConcurrentMigrations - _claimedTasks.size();
     }
 
     /**
@@ -261,7 +261,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
     }
 
     private boolean asyncRangeMigration(ScanRangeTask task) {
-        final String scanId = task.getScanId();
+        final String migrationId = task.getScanId();
         final int taskId = task.getId();
         final String placement = task.getPlacement();
         final ScanRange range = task.getRange();
@@ -269,7 +269,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
 
         try {
             // Verify that this range hasn't already been completed (protect against queue re-posts)
-            ScanStatus status = _statusDAO.getScanStatus(scanId);
+            ScanStatus status = _statusDAO.getMigratorStatus(migrationId);
 
             if (status.isCanceled()) {
                 _log.info("Ignoring migration range from canceled task: [task={}]", task);
@@ -292,15 +292,9 @@ public class DistributedMigratorRangeMonitor implements Managed {
 
             _log.info("Started migration range task: {}", task);
 
-            _statusDAO.setScanRangeTaskActive(scanId, taskId, new Date());
+            _statusDAO.setMigratorRangeTaskActive(migrationId, taskId, new Date());
 
-            // Get the distributed table set for this scan
-//            TableSet tableSet = _scanTableSetManager.getTableSetForScan(scanId);
-            // Perform the range scan
-//            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet);
-            result = _rangeMigrator.migrate(taskId, status.getOptions(), placement, range);
-//            result = RangeScanUploaderResult.success();
-//            System.out.println("Success!" + task.getScanId() + " " + task.getPlacement());
+            result = _rangeMigrator.migrate(taskId, status.getOptions(), placement, range, _statusDAO.getMaxConcurrentWrites(migrationId));
 
 
             _log.info("Completed migration range task: {}", task);
@@ -312,21 +306,21 @@ public class DistributedMigratorRangeMonitor implements Managed {
         try {
             switch (result.getStatus()) {
                 case SUCCESS:
-                    _statusDAO.setScanRangeTaskComplete(scanId, taskId, new Date());
+                    _statusDAO.setMigratorRangeTaskComplete(migrationId, taskId, new Date());
                     break;
                 case FAILURE:
-                    _statusDAO.setScanRangeTaskInactive(scanId, taskId);
+                    _statusDAO.setMigratorRangeTaskInactive(migrationId, taskId);
                     break;
                 case REPSPLIT:
                     // The portion of the range up to the resplit is what was completed.
                     //noinspection ConstantConditions
                     ScanRange completedRange = ScanRange.create(range.getFrom(), result.getResplitRange().getFrom());
-                    _statusDAO.setScanRangeTaskPartiallyComplete(scanId, taskId, completedRange, result.getResplitRange(), new Date());
+                    _statusDAO.setMigratorRangeTaskPartiallyComplete(migrationId, taskId, completedRange, result.getResplitRange(), new Date());
                     break;
             }
         } catch (Throwable t) {
             _log.error("Failed to mark migration range result: [id={}, placement={}, range={}, result={}]",
-                    scanId, placement, range, result, t);
+                    migrationId, placement, range, result, t);
 
             // Since the scan result wasn't marked the leader will not have an accurate view of the state.
             return false;

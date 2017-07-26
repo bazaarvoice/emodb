@@ -46,8 +46,6 @@ public class LocalRangeMigrator implements Managed {
     // Stop migrating and resplit if we receive three times the number of rows expected in a single task.
     private final static float RESPLIT_FACTOR = 3;
 
-    private final static int DEFAULT_MAX_CONCURRENT_WRITES = 500;
-
     private final static Logger _log = LoggerFactory.getLogger(LocalRangeMigrator.class);
 
     private final Counter _activeRangeMigrations;
@@ -62,7 +60,6 @@ public class LocalRangeMigrator implements Managed {
 
     private final int _threadCount;
     private final int _batchSize;
-    private final int _maxConcurrentWrites;
     private final MigratorTools _migratorTools;
     private final MigratorWriterFactory _writerFactory;
     private final Set<ExecutorService> _batchServices = Collections.synchronizedSet(Sets.<ExecutorService>newIdentityHashSet());
@@ -72,20 +69,19 @@ public class LocalRangeMigrator implements Managed {
     private volatile boolean _shutdown = true;
 
     @Inject
-    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry, @Named ("maxConcurrentWrites") Optional<Integer> maxConcurrentWrites) {
+    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry) {
         this(migratorTools, writerFactory, lifecyle, metricRegistry, PIPELINE_THREAD_COUNT, PIPELINE_BATCH_SIZE,
-                WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT, maxConcurrentWrites.or(DEFAULT_MAX_CONCURRENT_WRITES));
+                WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT);
     }
 
     public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecycle, final MetricRegistry metricRegistry, int threadCount,
-                              int batchSize, Duration waitForAllTransfersCompleteCheckInterval, Duration waitForAllTransfersCompleteTimeout, int maxConcurrentWrites) {
+                              int batchSize, Duration waitForAllTransfersCompleteCheckInterval, Duration waitForAllTransfersCompleteTimeout) {
         _migratorTools = migratorTools;
         _writerFactory = writerFactory;
         _threadCount = threadCount;
         _batchSize = batchSize;
         _waitForAllTransfersCompleteCheckInterval = waitForAllTransfersCompleteCheckInterval;
         _waitForAllTransfersCompleteTimeout = waitForAllTransfersCompleteTimeout;
-        _maxConcurrentWrites = maxConcurrentWrites;
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _blockedRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "blocked-range-migrations"));
@@ -125,7 +121,7 @@ public class LocalRangeMigrator implements Managed {
         }
     }
 
-    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range) throws IOException, InterruptedException {
+    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxConcurrentWrites) throws IOException, InterruptedException {
 
         checkState(!_shutdown, "Service not started");
 
@@ -157,7 +153,7 @@ public class LocalRangeMigrator implements Managed {
                             if (batch != null) {
                                 _activeBatches.inc();
                                 try {
-                                    processBatch(taskId, batch);
+                                    processBatch(taskId, batch, maxConcurrentWrites);
                                 } finally {
                                     _activeBatches.dec();
                                 }
@@ -270,13 +266,13 @@ public class LocalRangeMigrator implements Managed {
         return (int) Math.ceil(options.getRangeScanSplitSize() * RESPLIT_FACTOR);
     }
 
-    private void processBatch(int taskId, Batch batch) {
+    private void processBatch(int taskId, Batch batch, int maxConcurrentWrites) {
         BatchContext context = batch.getContext();
         MigratorWriter migratorWriter = context.getMigratorWriter();
         String placement = context.getPlacement();
 
         try {
-            migratorWriter.writeToBlockTable(placement, batch.getResults(), _maxConcurrentWrites);
+            migratorWriter.writeToBlockTable(placement, batch.getResults(), maxConcurrentWrites);
 
             context.closeBatch(batch, null);
         } catch (Throwable t) {

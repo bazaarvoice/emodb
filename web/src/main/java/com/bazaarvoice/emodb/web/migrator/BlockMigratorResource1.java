@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.migrator;
 
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatus;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.codahale.metrics.annotation.Timed;
@@ -28,7 +29,7 @@ public class BlockMigratorResource1 {
             notes = "Migrates deltas to new block tables.",
             response = SuccessResponse.class
     )
-    public ScanStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
+    public MigratorStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
 
         if (_deltaMigrator.getStatus(id) != null) {
             throw new WebApplicationException(
@@ -44,8 +45,8 @@ public class BlockMigratorResource1 {
 
     @GET
     @Path ("migrate/{id}")
-    public ScanStatus getMigratorStatus(@PathParam ("id") String id) {
-        ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
+    public MigratorStatus getMigratorStatus(@PathParam ("id") String id) {
+        MigratorStatus migratorStatus = _deltaMigrator.getStatus(id);
 
         if (migratorStatus == null) {
             throw new WebApplicationException(
@@ -60,8 +61,8 @@ public class BlockMigratorResource1 {
 
     @POST
     @Path ("migrate/{id}/cancel")
-    public ScanStatus cancelMigration(@PathParam ("id") String id) {
-        ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
+    public MigratorStatus cancelMigration(@PathParam ("id") String id) {
+        MigratorStatus migratorStatus = _deltaMigrator.getStatus(id);
         if (migratorStatus == null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.NOT_FOUND)
@@ -79,8 +80,8 @@ public class BlockMigratorResource1 {
 
     @POST
     @Path ("migrate/{id}/recover")
-    public ScanStatus recoverMigration(@PathParam ("id") String id) {
-        ScanStatus migratorStatus = _deltaMigrator.resubmitWorkflowTasks(id);
+    public MigratorStatus recoverMigration(@PathParam ("id") String id) {
+        MigratorStatus migratorStatus = _deltaMigrator.resubmitWorkflowTasks(id);
         if (migratorStatus == null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.NOT_FOUND)

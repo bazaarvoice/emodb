@@ -4,15 +4,16 @@ import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatus;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.control.ScanPlan;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,24 +24,27 @@ public class DeltaMigrator {
     private static final Logger _log = LoggerFactory.getLogger(DeltaMigrator.class);
 
     private final DataTools _dataTools;
-    private final ScanStatusDAO _statusDAO;
+    private final MigratorStatusDAO _statusDAO;
     private final ScanWorkflow _workflow;
     private final StashStateListener _listener;
+    private final int _defaultMaxConcurrentWrites;
 
     @Inject
-    public DeltaMigrator(DataTools dataTools, ScanStatusDAO statusDAO, ScanWorkflow workflow,
-                         StashStateListener listener) {
+    public DeltaMigrator(DataTools dataTools, MigratorStatusDAO statusDAO, ScanWorkflow workflow,
+                         StashStateListener listener, @Named ("maxConcurrentWrites") Integer maxConcurrentWrites) {
         _dataTools = checkNotNull(dataTools, "dataTools");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _workflow = checkNotNull(workflow, "workflow");
         _listener = checkNotNull(listener, "listener");
+        _defaultMaxConcurrentWrites = maxConcurrentWrites;
+
     }
 
-    public ScanStatus migratePlacement(String placement, String migrationId) {
+    public MigratorStatus migratePlacement(String placement, String migrationId) {
         ScanOptions options = new ScanOptions(placement)
                 .setScanByAZ(true);
-        ScanPlan plan = createPlan(migrationId, options);
-        ScanStatus status = plan.toScanStatus();
+        MigratorPlan plan = createPlan(migrationId, options);
+        MigratorStatus status = plan.toMigratorStatus();
 
         startMigration(migrationId, status);
 
@@ -48,8 +52,8 @@ public class DeltaMigrator {
 
     }
 
-    private ScanPlan createPlan(String id, ScanOptions options) {
-        ScanPlan plan = new ScanPlan(id, options);
+    private MigratorPlan createPlan(String id, ScanOptions options) {
+        MigratorPlan plan = new MigratorPlan(id, options, _defaultMaxConcurrentWrites);
 
         for (String placement : options.getPlacements()) {
             String cluster = _dataTools.getPlacementCluster(placement);
@@ -68,12 +72,12 @@ public class DeltaMigrator {
         return plan;
     }
 
-    private void startMigration(String id, ScanStatus status) {
+    private void startMigration(String id, MigratorStatus status) {
         boolean migrationCreated = false;
 
         try {
             // Create the migration
-            _statusDAO.updateScanStatus(status);
+            _statusDAO.updateMigratorStatus(status);
             migrationCreated = true;
 
             // Notify the workflow that the migration can be started
@@ -98,8 +102,8 @@ public class DeltaMigrator {
         }
     }
 
-    public ScanStatus getStatus(String id) {
-        return _statusDAO.getScanStatus(id);
+    public MigratorStatus getStatus(String id) {
+        return _statusDAO.getMigratorStatus(id);
     }
 
     /**
@@ -107,8 +111,8 @@ public class DeltaMigrator {
      * This method takes all available tasks for a migration and resubmits them.  This method is safe because
      * the underlying system is resilient to task resubmissions and concurrent work on the same task.
      */
-    public ScanStatus resubmitWorkflowTasks(String migrationId) {
-        ScanStatus status = _statusDAO.getScanStatus(migrationId);
+    public MigratorStatus resubmitWorkflowTasks(String migrationId) {
+        MigratorStatus status = _statusDAO.getMigratorStatus(migrationId);
         if (status == null) {
             return null;
         }
@@ -132,5 +136,18 @@ public class DeltaMigrator {
         // Notify the workflow the migrator status was updated
         _workflow.scanStatusUpdated(id);
 
+    }
+
+    private class MigratorPlan extends ScanPlan {
+        private int _maxConcurrentWrites;
+
+        public MigratorPlan(String migrationId, ScanOptions options, int maxConcurrentWrites) {
+            super(migrationId, options);
+            _maxConcurrentWrites = maxConcurrentWrites;
+        }
+
+        public MigratorStatus toMigratorStatus() {
+            return new MigratorStatus(toScanStatus(), _maxConcurrentWrites);
+        }
     }
 }

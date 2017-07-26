@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
@@ -30,7 +31,7 @@ public class MigratorMonitor extends LeaderService {
 
     @Inject
     public MigratorMonitor(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
-                           final ScanWorkflow workflow, final ScanStatusDAO statusDAO,
+                           final ScanWorkflow workflow, final MigratorStatusDAO statusDAO,
                            final StashStateListener migratorStateListener,
                            final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                            MetricRegistry metricRegistry) {

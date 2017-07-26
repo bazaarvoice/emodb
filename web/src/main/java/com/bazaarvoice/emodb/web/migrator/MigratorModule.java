@@ -41,6 +41,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 public class MigratorModule extends PrivateModule {
     private final MigratorConfiguration _config;
+    private final static int DEFAULT_MAX_CONCURRENT_WRITES = 500;
 
     public MigratorModule(EmoConfiguration config) {
         _config = config.getMigrator().get();
@@ -54,7 +55,7 @@ public class MigratorModule extends PrivateModule {
         binder().requireExplicitBindings();
 
         bind(DeltaMigrator.class).asEagerSingleton();
-        bind(ScanStatusDAO.class).to(MigratorStatusDAO.class).asEagerSingleton();
+        bind(MigratorStatusDAO.class).asEagerSingleton();
         bind(LocalRangeMigrator.class).asEagerSingleton();
 
         bind(MetricsReadCountListener.class).asEagerSingleton();
@@ -69,8 +70,8 @@ public class MigratorModule extends PrivateModule {
                 .toInstance(_config.getPendingReadRangeQueueName());
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeReadRangeQueueName"))
                 .toInstance(_config.getCompleteReadRangeQueueName());
-        bind(new TypeLiteral<Optional<Integer>>(){}).annotatedWith(Names.named("maxConcurrentWrites"))
-                .toInstance(_config.getMaxConcurrentWrites());
+        bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
+                .toInstance(_config.getMaxConcurrentWrites().or(DEFAULT_MAX_CONCURRENT_WRITES));
 
         bind(StashStateListener.class).to(MigratorStateListener.class).asEagerSingleton();
 
