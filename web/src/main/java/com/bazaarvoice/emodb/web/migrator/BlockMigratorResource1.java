@@ -11,6 +11,8 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 @Path("/migrator/1")
 @Produces(MediaType.APPLICATION_JSON)
 public class BlockMigratorResource1 {
@@ -29,17 +31,19 @@ public class BlockMigratorResource1 {
             notes = "Migrates deltas to new block tables.",
             response = SuccessResponse.class
     )
-    public MigratorStatus migrate(@PathParam("placement") String placement, @PathParam("id") String id) {
+    public MigratorStatus migrate(@PathParam("placement") String placement,
+                                  @PathParam("id") String id,
+                                  @QueryParam("maxConcurrentWrites") int maxConcurrentWrites) {
 
         if (_deltaMigrator.getStatus(id) != null) {
             throw new WebApplicationException(
                     Response.status(Response.Status.CONFLICT)
                             .type(MediaType.APPLICATION_JSON_TYPE)
-                            .entity(ImmutableMap.of("Migration Exists", placement))
+                            .entity(ImmutableMap.of("Migration Exists", id))
                             .build());
         }
 
-        return _deltaMigrator.migratePlacement(placement, id);
+        return _deltaMigrator.migratePlacement(placement, id, maxConcurrentWrites);
 
     }
 
@@ -91,5 +95,26 @@ public class BlockMigratorResource1 {
         }
 
         return migratorStatus;
+    }
+
+    @POST
+    @Path ("migrate/{id}/throttle")
+    public MigratorStatus throttleMigration(@PathParam ("id") String id,
+                                            @QueryParam ("maxConcurrentWrites") int maxConcurrentWrites) {
+        checkArgument(maxConcurrentWrites > 0, "maxConcurrentWrites is required");
+
+        MigratorStatus migratorStatus = _deltaMigrator.getStatus(id);
+        if (migratorStatus == null) {
+            throw new WebApplicationException(
+                    Response.status(Response.Status.NOT_FOUND)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .entity(ImmutableMap.of("not_found", id))
+                            .build());
+        }
+
+        _deltaMigrator.throttle(id, maxConcurrentWrites);
+
+        return _deltaMigrator.getStatus(id);
+
     }
 }

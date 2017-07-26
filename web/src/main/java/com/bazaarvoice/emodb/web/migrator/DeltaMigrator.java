@@ -40,11 +40,11 @@ public class DeltaMigrator {
 
     }
 
-    public MigratorStatus migratePlacement(String placement, String migrationId) {
+    public MigratorStatus migratePlacement(String placement, String migrationId, int maxConcurrentWrites) {
         ScanOptions options = new ScanOptions(placement)
                 .setScanByAZ(true);
         MigratorPlan plan = createPlan(migrationId, options);
-        MigratorStatus status = plan.toMigratorStatus();
+        MigratorStatus status = plan.toMigratorStatus(maxConcurrentWrites > 0 ? maxConcurrentWrites: _defaultMaxConcurrentWrites);
 
         startMigration(migrationId, status);
 
@@ -53,7 +53,7 @@ public class DeltaMigrator {
     }
 
     private MigratorPlan createPlan(String id, ScanOptions options) {
-        MigratorPlan plan = new MigratorPlan(id, options, _defaultMaxConcurrentWrites);
+        MigratorPlan plan = new MigratorPlan(id, options);
 
         for (String placement : options.getPlacements()) {
             String cluster = _dataTools.getPlacementCluster(placement);
@@ -138,16 +138,18 @@ public class DeltaMigrator {
 
     }
 
-    private class MigratorPlan extends ScanPlan {
-        private int _maxConcurrentWrites;
+    public void throttle(String id, int maxConcurrentWrites) {
+        _statusDAO.setMaxConcurrentWrites(id, maxConcurrentWrites);
+    }
 
-        public MigratorPlan(String migrationId, ScanOptions options, int maxConcurrentWrites) {
+    private class MigratorPlan extends ScanPlan {
+
+        public MigratorPlan(String migrationId, ScanOptions options) {
             super(migrationId, options);
-            _maxConcurrentWrites = maxConcurrentWrites;
         }
 
-        public MigratorStatus toMigratorStatus() {
-            return new MigratorStatus(toScanStatus(), _maxConcurrentWrites);
+        public MigratorStatus toMigratorStatus(int maxConcurrentWrites) {
+            return new MigratorStatus(toScanStatus(), maxConcurrentWrites);
         }
     }
 }
