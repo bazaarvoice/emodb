@@ -44,7 +44,7 @@ public class BlockMigratorResource1 {
 
     @GET
     @Path ("migrate/{id}")
-    public ScanStatus getScanStatus(@PathParam ("id") String id) {
+    public ScanStatus getMigratorStatus(@PathParam ("id") String id) {
         ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
 
         if (migratorStatus == null) {
@@ -59,11 +59,15 @@ public class BlockMigratorResource1 {
     }
 
     @POST
-    @Path ("upload/{id}/cancel")
-    public ScanStatus cancelScan(@PathParam ("id") String id) {
+    @Path ("migrate/{id}/cancel")
+    public ScanStatus cancelMigration(@PathParam ("id") String id) {
         ScanStatus migratorStatus = _deltaMigrator.getStatus(id);
         if (migratorStatus == null) {
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
+            throw new WebApplicationException(
+                    Response.status(Response.Status.NOT_FOUND)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .entity(ImmutableMap.of("not_found", id))
+                            .build());
         }
 
         if (!migratorStatus.isCanceled()) {
@@ -74,13 +78,17 @@ public class BlockMigratorResource1 {
     }
 
     @POST
-    @Path ("upload/{id}/recover")
-    public ScanStatus recoverScan(@PathParam ("id") String id) {
-        ScanStatus scanStatus = _deltaMigrator.resubmitWorkflowTasks(id);
-        if (scanStatus == null) {
-            throw new WebApplicationException(Response.Status.NOT_FOUND);
+    @Path ("migrate/{id}/recover")
+    public ScanStatus recoverMigration(@PathParam ("id") String id) {
+        ScanStatus migratorStatus = _deltaMigrator.resubmitWorkflowTasks(id);
+        if (migratorStatus == null) {
+            throw new WebApplicationException(
+                    Response.status(Response.Status.NOT_FOUND)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .entity(ImmutableMap.of("not_found", id))
+                            .build());
         }
 
-        return scanStatus;
+        return migratorStatus;
     }
 }
