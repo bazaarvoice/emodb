@@ -28,12 +28,12 @@ public class MigratorStatus extends ScanStatus {
                       @JsonProperty ("options") ScanOptions options,
                       @JsonProperty ("canceled") boolean canceled,
                       @JsonProperty ("startTime") Date startTime,
-                      @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
-                      @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeScanRanges,
-                      @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeScanRanges,
+                      @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingMigrationRanges,
+                      @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeMigrationRanges,
+                      @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeMigrationRanges,
                       @JsonProperty ("completeTime") @Nullable Date completeTime,
                       @JsonProperty ("maxConcurrentWrites") int maxConcurrentWrites) {
-        super(scanId, options, canceled, startTime, pendingScanRanges, activeScanRanges, completeScanRanges);
+        super(scanId, options, canceled, startTime, pendingMigrationRanges, activeMigrationRanges, completeMigrationRanges, completeTime);
         _maxConcurrentWrites = maxConcurrentWrites;
     }
 

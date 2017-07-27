@@ -9,7 +9,6 @@ import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -26,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.inject.Named;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
@@ -37,8 +35,7 @@ import static com.google.common.base.Preconditions.checkState;
 
 public class LocalRangeMigrator implements Managed {
 
-    private final static int PIPELINE_THREAD_COUNT = 5;
-    private final static int PIPELINE_BATCH_SIZE = 2500;
+    private final static int READ_BATCH_SIZE = 2500;
     // Interval for checking whether all transfers are complete and logging the result
     private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL = Duration.standardSeconds(30);
     // Interval after which the task will fail if there has been no progress on any active transfers
@@ -69,8 +66,8 @@ public class LocalRangeMigrator implements Managed {
     private volatile boolean _shutdown = true;
 
     @Inject
-    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry) {
-        this(migratorTools, writerFactory, lifecyle, metricRegistry, PIPELINE_THREAD_COUNT, PIPELINE_BATCH_SIZE,
+    public LocalRangeMigrator(MigratorTools migratorTools, MigratorWriterFactory writerFactory, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry, @MigrationWriterThreads int threadCount) {
+        this(migratorTools, writerFactory, lifecyle, metricRegistry, threadCount, READ_BATCH_SIZE,
                 WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL, WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT);
     }
 
@@ -153,7 +150,8 @@ public class LocalRangeMigrator implements Managed {
                             if (batch != null) {
                                 _activeBatches.inc();
                                 try {
-                                    processBatch(taskId, batch, maxConcurrentWrites);
+                                    // divide maxConcurrentWrites by the # of writer threads, but also make sure that it is at least 1
+                                    processBatch(taskId, batch, Math.max(maxConcurrentWrites / _threadCount, 1));
                                 } finally {
                                     _activeBatches.dec();
                                 }

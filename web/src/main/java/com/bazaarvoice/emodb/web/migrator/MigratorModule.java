@@ -41,13 +41,13 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 public class MigratorModule extends PrivateModule {
     private final MigratorConfiguration _config;
-    private final static int DEFAULT_MAX_CONCURRENT_WRITES = 500;
 
     public MigratorModule(EmoConfiguration config) {
         _config = config.getMigrator().get();
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
         checkArgument(_config.getWriteThreadCount() > 0, "Write thread count must be at least 1");
+        checkArgument(_config.getMaxConcurrentWrites() > 0, "Max concurrent writes must be at least 1");
     }
 
     @Override
@@ -65,13 +65,14 @@ public class MigratorModule extends PrivateModule {
         bind(String.class).annotatedWith(MigratorStatusTable.class).toInstance(_config.getMigrateStatusTable());
         bind(String.class).annotatedWith(MigratorStatusTablePlacement.class).toInstance(_config.getMigrateStatusTablePlacement());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getReadThreadCount());
+        bind(Integer.class).annotatedWith(MigrationWriterThreads.class).toInstance(_config.getWriteThreadCount());
 
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingReadRangeQueueName"))
                 .toInstance(_config.getPendingReadRangeQueueName());
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeReadRangeQueueName"))
                 .toInstance(_config.getCompleteReadRangeQueueName());
         bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
-                .toInstance(_config.getMaxConcurrentWrites().or(DEFAULT_MAX_CONCURRENT_WRITES));
+                .toInstance(_config.getMaxConcurrentWrites());
 
         bind(StashStateListener.class).to(MigratorStateListener.class).asEagerSingleton();
 

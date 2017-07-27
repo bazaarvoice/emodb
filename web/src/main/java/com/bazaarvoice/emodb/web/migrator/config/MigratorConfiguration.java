@@ -12,9 +12,10 @@ import javax.validation.constraints.NotNull;
 public class MigratorConfiguration {
 
     private static final int DEFAULT_READ_THREAD_COUNT = 8;
-    private static final int DEFAULT_WRITE_THREAD_COUNT = 12;
+    private static final int DEFAULT_WRITE_THREAD_COUNT = 5;
     private static final String DEFAULT_MIGRATE_STATUS_TABLE = "__system_migrate";
     private static final String DEFAULT_MIGRATE_STATUS_TABLE_PLACEMENT = "app_global:migration";
+    private static final int DEFAULT_MAX_CONCURRENT_WRITES = 500;
 
     // If using EmoDB queues, the API key to use
     @Valid
@@ -49,7 +50,7 @@ public class MigratorConfiguration {
     @Valid
     @NotNull
     @JsonProperty ("maxConcurrentWrites")
-    private Optional<Integer> _maxConcurrentWrites = Optional.absent();
+    private int _maxConcurrentWrites = DEFAULT_MAX_CONCURRENT_WRITES;
 
     @Valid
     @NotNull
@@ -82,7 +83,7 @@ public class MigratorConfiguration {
         return _writeThreadCount;
     }
 
-    public MigratorConfiguration setUploadThreadCount(int writeThreadCount) {
+    public MigratorConfiguration setWriteThreadCount(int writeThreadCount) {
         _writeThreadCount = writeThreadCount;
         return this;
     }
@@ -122,7 +123,7 @@ public class MigratorConfiguration {
         return this;
     }
 
-    public Optional<Integer> getMaxConcurrentWrites() {
+    public int getMaxConcurrentWrites() {
         return _maxConcurrentWrites;
     }
 }

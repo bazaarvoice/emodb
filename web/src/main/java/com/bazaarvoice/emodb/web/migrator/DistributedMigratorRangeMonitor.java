@@ -117,12 +117,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
 
                 for (final ClaimedTask claimedTask : claimedTasks) {
                     // Start the migration asynchronously
-                    _migratingService.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            executeClaimedTask(claimedTask);
-                        }
-                    });
+                    _migratingService.submit(() -> executeClaimedTask(claimedTask));
                 }
             }
         } catch (Exception e) {
