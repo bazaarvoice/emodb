@@ -143,7 +143,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         // TODO: implement checks to ensure we are under the transport size OR drastically increase batch_size_warn_in_kb
 
         // Add the compaction record
-        ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).getBytes());
+        ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes());
         ByteBuffer encodedCompaction = encodedBlockedCompaction.duplicate();
         encodedCompaction.position(encodedCompaction.position() + _deltaPrefixLength);
 

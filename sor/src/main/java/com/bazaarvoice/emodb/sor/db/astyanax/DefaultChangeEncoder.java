@@ -55,7 +55,7 @@ class DefaultChangeEncoder implements ChangeEncoder {
     }
 
     @Override
-    public String encodeDelta(String deltaString, @Nullable EnumSet<ChangeFlag> changeFlags, @Nonnull Set<String> tags, StringBuilder changeBody) {
+    public StringBuilder encodeDelta(String deltaString, @Nullable EnumSet<ChangeFlag> changeFlags, @Nonnull Set<String> tags, StringBuilder changeBody) {
         // Encoding will be either the legacy D2 or the current D3
         // Spec for D2 is <tags>:<delta>
         // Spec for D3 is <tags>:<change flags>:<Delta>
@@ -77,26 +77,26 @@ class DefaultChangeEncoder implements ChangeEncoder {
                 .append(deltaString);
 
 
-        return changeBody.toString();
+        return changeBody;
     }
 
     @Override
     public String encodeAudit(Audit audit) {
-        return encodeChange(Encoding.A1, JsonHelper.asJson(audit), new StringBuilder());
+        return encodeChange(Encoding.A1, JsonHelper.asJson(audit), new StringBuilder()).toString();
     }
 
     @Override
-    public String encodeCompaction(Compaction compaction, StringBuilder prefix) {
+    public StringBuilder encodeCompaction(Compaction compaction, StringBuilder prefix) {
         return encodeChange(Encoding.C1, JsonHelper.asJson(compaction), prefix);
     }
 
     @Override
     public String encodeHistory(History history) {
-        return encodeChange(Encoding.H1, JsonHelper.asJson(history), new StringBuilder());
+        return encodeChange(Encoding.H1, JsonHelper.asJson(history), new StringBuilder()).toString();
     }
 
-    private String encodeChange(Encoding encoding, String bodyString, StringBuilder prefix) {
-        return prefix.append(encoding).append(":").append(bodyString).toString();
+    private StringBuilder encodeChange(Encoding encoding, String bodyString, StringBuilder prefix) {
+        return prefix.append(encoding).append(":").append(bodyString);
     }
 
     /**
