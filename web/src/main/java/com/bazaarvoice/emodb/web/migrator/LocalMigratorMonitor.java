@@ -9,12 +9,12 @@ import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeComplete;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeTask;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
+import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
+import com.google.common.base.Optional;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.AbstractService;
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -40,18 +40,18 @@ public class LocalMigratorMonitor extends AbstractService {
     private final ScanWorkflow _workflow;
     private final MigratorStatusDAO _statusDAO;
     private final StashStateListener _migratorStateListener;
-//    private final ScanCountListener _migratorCountListener;
+    private final ScanCountListener _migratorCountListener;
     private final DataTools _dataTools;
     private final Set<String> _activeMigrations = Sets.newHashSet();
 
     private ScheduledExecutorService _service;
 
     public LocalMigratorMonitor(ScanWorkflow scanWorkflow, MigratorStatusDAO scanStatusDAO, StashStateListener migratorStateListener,
-                                DataTools dataTools) {
+                                ScanCountListener migratorCountListener, DataTools dataTools) {
         _workflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _statusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
         _migratorStateListener = checkNotNull(migratorStateListener, "migratorStateListener");
-//        _scanCountListener = checkNotNull(scanCountListener, "scanCountListener");
+        _migratorCountListener = checkNotNull(migratorCountListener, "scanCountListener");
         _dataTools = checkNotNull(dataTools, "dataTools");
     }
 
@@ -64,26 +64,22 @@ public class LocalMigratorMonitor extends AbstractService {
                     new ThreadFactoryBuilder().setNameFormat("migrator-monitor-%d").build());
         }
 
-        _service.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    // Initialize active migrations with migrations that were already active when this instance became leader
-                    initializeAllActiveMigrations();
+        _service.execute(() -> {
+            try {
+                // Initialize active migrations with migrations that were already active when this instance became leader
+                initializeAllActiveMigrations();
 
-                    // Set the starting count for the migration count notifier
-                    // TODO: this does nothing at the moment as there is no migration count notifier
-                    notifyActiveMigrationCountChanged();
+                // Set the starting count for the migration count notifier
+                notifyActiveMigrationCountChanged();
 
-                    // Start the loop for processing complete range migrations
-                    _service.schedule(_processCompleteRangeMigrationsExecution, 1, TimeUnit.SECONDS);
+                // Start the loop for processing complete range migrations
+                _service.schedule(_processCompleteRangeMigrationsExecution, 1, TimeUnit.SECONDS);
 
-                    notifyStarted();
-                    
-                } catch (Exception e) {
-                    _log.error("Failed to start local migration upload monitor", e);
-                    notifyFailed(e);
-                }
+                notifyStarted();
+
+            } catch (Exception e) {
+                _log.error("Failed to start local migration upload monitor", e);
+                notifyFailed(e);
             }
         });
     }
@@ -385,23 +381,19 @@ public class LocalMigratorMonitor extends AbstractService {
             delay = new Duration(now, overrunTime).getMillis();
         }
 
-        _service.schedule(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        ScanStatus status = _statusDAO.getMigratorStatus(migratorId);
-                        if (!status.isDone()) {
-                            _log.warn("Overrun migration detected, canceling migration: {}", migratorId);
-                            _statusDAO.setCanceled(migratorId);
-                            _workflow.scanStatusUpdated(migratorId);
+        _service.schedule(() -> {
+                    ScanStatus migratorStatus = _statusDAO.getMigratorStatus(migratorId);
+                    if (!migratorStatus.isDone()) {
+                        _log.warn("Overrun migration detected, canceling migration: {}", migratorId);
+                        _statusDAO.setCanceled(migratorId);
+                        _workflow.scanStatusUpdated(migratorId);
 
-                        }
                     }
                 },
                 delay, TimeUnit.MILLISECONDS);
     }
 
     private void notifyActiveMigrationCountChanged() {
-//        _scanCountListener.activeScanCountChanged(_activeScans.size());
+        _migratorCountListener.activeScanCountChanged(_activeMigrations.size());
     }
 }

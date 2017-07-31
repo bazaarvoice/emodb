@@ -54,13 +54,13 @@ public class MigratorConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty ("pendingReadRangeQueueName")
-    private Optional<String> _pendingReadRangeQueueName = Optional.absent();
+    @JsonProperty ("pendingMigrationRangeQueueName")
+    private Optional<String> _pendingMigrationRangeQueueName = Optional.absent();
 
     @Valid
     @NotNull
-    @JsonProperty ("completeReadRangeQueueName")
-    private Optional<String> _completeReadRangeQueueName = Optional.absent();
+    @JsonProperty ("completeMigrationRangeQueueName")
+    private Optional<String> _completeMigrationRangeQueueName = Optional.absent();
 
     public int getReadThreadCount() {
         return _readThreadCount;
@@ -105,21 +105,21 @@ public class MigratorConfiguration {
         this._migrateStatusTablePlacement = _migrateStatusTablePlacement;
     }
 
-    public Optional<String> getPendingReadRangeQueueName() {
-        return _pendingReadRangeQueueName;
+    public Optional<String> getPendingMigrationRangeQueueName() {
+        return _pendingMigrationRangeQueueName;
     }
 
-    public MigratorConfiguration setPendingReadRangeQueueName(Optional<String> pendingReadRangeQueueName) {
-        _pendingReadRangeQueueName = pendingReadRangeQueueName;
+    public MigratorConfiguration setPendingMigrationRangeQueueName(Optional<String> pendingMigrationRangeQueueName) {
+        _pendingMigrationRangeQueueName = pendingMigrationRangeQueueName;
         return this;
     }
 
-    public Optional<String> getCompleteReadRangeQueueName() {
-        return _completeReadRangeQueueName;
+    public Optional<String> getCompleteMigrationRangeQueueName() {
+        return _completeMigrationRangeQueueName;
     }
 
-    public MigratorConfiguration setCompleteReadRangeQueueName(Optional<String> completeRangeRangeQueueName) {
-        _completeReadRangeQueueName = completeRangeRangeQueueName;
+    public MigratorConfiguration setCompleteMigrationRangeQueueName(Optional<String> completeMigrationRangeQueueName) {
+        _completeMigrationRangeQueueName = completeMigrationRangeQueueName;
         return this;
     }
 

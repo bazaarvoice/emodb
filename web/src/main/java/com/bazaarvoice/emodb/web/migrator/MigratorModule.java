@@ -18,7 +18,7 @@ import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusTablePlac
 import com.bazaarvoice.emodb.web.scanner.control.MaxConcurrentScans;
 import com.bazaarvoice.emodb.web.scanner.control.QueueScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
+import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.dropwizard.pool.ManagedServicePoolProxy;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
@@ -58,7 +58,7 @@ public class MigratorModule extends PrivateModule {
         bind(MigratorStatusDAO.class).asEagerSingleton();
         bind(LocalRangeMigrator.class).asEagerSingleton();
 
-        bind(MetricsReadCountListener.class).asEagerSingleton();
+        bind(ScanCountListener.class).to(MetricsMigrationCountListener.class).asEagerSingleton();
 
         bind(ScanWorkflow.class).toProvider(QueueScanWorkflowProvider.class).asEagerSingleton();
 
@@ -67,10 +67,10 @@ public class MigratorModule extends PrivateModule {
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getReadThreadCount());
         bind(Integer.class).annotatedWith(MigrationWriterThreads.class).toInstance(_config.getWriteThreadCount());
 
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingReadRangeQueueName"))
-                .toInstance(_config.getPendingReadRangeQueueName());
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeReadRangeQueueName"))
-                .toInstance(_config.getCompleteReadRangeQueueName());
+        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingMigrationRangeQueueName"))
+                .toInstance(_config.getPendingMigrationRangeQueueName());
+        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeMigrationRangeQueueName"))
+                .toInstance(_config.getCompleteMigrationRangeQueueName());
         bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
                 .toInstance(_config.getMaxConcurrentWrites());
 
@@ -116,8 +116,8 @@ public class MigratorModule extends PrivateModule {
         @Inject
         public QueueScanWorkflowProvider(@Global CuratorFramework curator, @ServerCluster String cluster,
                                          Client client, @Named("MigratorAPIKey") String apiKey,
-                                         @Named ("pendingReadRangeQueueName") Optional<String> pendingScanRangeQueueName,
-                                         @Named ("completeReadRangeQueueName") Optional<String> completeScanRangeQueueName,
+                                         @Named ("pendingMigrationRangeQueueName") Optional<String> pendingMigrationRangeQueueName,
+                                         @Named ("completeMigrationRangeQueueName") Optional<String> completeMigrationRangeQueueName,
                                          Environment environment, MetricRegistry metricRegistry) {
             _curator = curator;
             _cluster = cluster;
@@ -125,8 +125,8 @@ public class MigratorModule extends PrivateModule {
             _apiKey = apiKey;
             _environment = environment;
             _metricRegistry = metricRegistry;
-            _pendingScanRangeQueueName = pendingScanRangeQueueName.or("emodb-pending-migrator-ranges");
-            _completeScanRangeQueueName = completeScanRangeQueueName.or("emodb-complete-migrator-ranges");
+            _pendingScanRangeQueueName = pendingMigrationRangeQueueName.or("emodb-pending-migrator-ranges");
+            _completeScanRangeQueueName = completeMigrationRangeQueueName.or("emodb-complete-migrator-ranges");
         }
 
         @Override
