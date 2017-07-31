@@ -145,7 +145,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        BatchStatement batchStatement = new BatchStatement(); // may need a type in the constructor!
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
 
         insertBlockedDeltas(batchStatement, tableDDL, consistencyLevel, rowKey, compactionKey, encodedCompaction);
 
@@ -163,7 +163,8 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
-        BatchStatement batchStatement = new BatchStatement();
+        // each individual delete statement will be atomic, so the batch can be unlogged
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
 
         for (UUID change : changesToDelete) {
             batchStatement.add(QueryBuilder.delete()
