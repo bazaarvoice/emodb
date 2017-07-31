@@ -92,7 +92,7 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
         AnnotatedCompositeSerializer<DeltaKey> deltaKeySerializer = new AnnotatedCompositeSerializer<DeltaKey>(DeltaKey.class);
 
-        ColumnFamily<ByteBuffer, DeltaKey> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, deltaKeySerializer);
+        ColumnFamily<ByteBuffer, DeltaKey> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta_v2", placement, deltaKeySerializer);
         ColumnFamily<ByteBuffer, UUID> auditCf = getColumnFamily(keyspaceDef, cfPrefix, "audit", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = getColumnFamily(keyspaceDef, cfPrefix, "history", placement, TimeUUIDSerializer.get());
 
