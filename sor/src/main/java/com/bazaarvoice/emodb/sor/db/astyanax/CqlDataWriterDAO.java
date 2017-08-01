@@ -26,15 +26,14 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
-import javax.inject.Named;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 
 // Delegates to AstyanaxWriterDAO for non-Compaction stuff
