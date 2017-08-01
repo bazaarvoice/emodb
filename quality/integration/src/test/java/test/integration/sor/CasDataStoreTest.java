@@ -126,8 +126,8 @@ public class CasDataStoreTest {
                         .setSystemTablePlacement("app_global:sys")
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
-                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
-                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
+                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
+                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Period.days(2)));
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
                 bind(JobService.class).toInstance(mock(JobService.class));
