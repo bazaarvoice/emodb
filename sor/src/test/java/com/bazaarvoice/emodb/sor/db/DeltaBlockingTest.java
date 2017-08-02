@@ -15,6 +15,7 @@ public class DeltaBlockingTest {
 
     private int _prefixLength = 4;
     private int _deltaBlockSize = 8;
+    private DAOUtils _daoUtils = new DAOUtils(_prefixLength, _deltaBlockSize);
 
     private String[] buildDeltas() {
         String[] deltas = new String[100000];
@@ -39,7 +40,7 @@ public class DeltaBlockingTest {
         String[] encodedDeltas = buildEncodedDeltas(deltas);
         List<TestRow> rows = Lists.newArrayListWithCapacity(deltas.length * 5); // lazy guess at future size
         for (String encodedDelta : encodedDeltas) {
-            List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(ByteBuffer.wrap(encodedDelta.getBytes()), _prefixLength, _deltaBlockSize);
+            List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
             UUID changeId = UUID.randomUUID();
             for (int i = 0; i < blocks.size(); i++) {
                 rows.add(new TestRow(i, changeId, blocks.get(i)));
@@ -48,7 +49,7 @@ public class DeltaBlockingTest {
         Iterator<ByteBuffer> iterator = new ListDeltaIterator(rows.iterator(), false, _prefixLength);
         for (int i = 0; i < deltas.length; i++) {
             assertEquals(iterator.hasNext(), true);
-            assertEquals(StringSerializer.get().fromByteBuffer(DAOUtils.removePrefix(iterator.next(), _prefixLength)), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(iterator.next())), deltas[i]);
         }
         assertEquals(iterator.hasNext(), false);
 
@@ -57,7 +58,7 @@ public class DeltaBlockingTest {
 
         for (int i = deltas.length - 1; i >= 0; i--) {
             assertEquals(reversedIterator.hasNext(), true);
-            assertEquals(StringSerializer.get().fromByteBuffer(DAOUtils.removePrefix(reversedIterator.next(), _prefixLength)), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(reversedIterator.next())), deltas[i]);
         }
         assertEquals(reversedIterator.hasNext(), false);
     }
@@ -68,7 +69,7 @@ public class DeltaBlockingTest {
         List<TestRow> rows = Lists.newArrayListWithCapacity(deltas.length * 5); // lazy guess at future size
         for (int i = 0; i < encodedDeltas.length; i++) {
             ByteBuffer byteDelta = ByteBuffer.wrap((encodedDeltas[i].getBytes()));
-            assertEquals(StringSerializer.get().fromByteBuffer(DAOUtils.removePrefix(byteDelta, _prefixLength)), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(byteDelta)), deltas[i]);
         }
     }
 }

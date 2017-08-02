@@ -11,14 +11,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AbstractBatchReader;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
-import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
-import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -49,7 +42,6 @@ import com.google.common.collect.Multimaps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.netflix.astyanax.CassandraOperationType;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Execution;
@@ -93,7 +85,6 @@ import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.bazaarvoice.emodb.sor.db.DAOUtils.removePrefix;
 
 /**
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
@@ -116,11 +107,14 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     private final Meter _scanReadMeter;
     private final Meter _largeRowReadMeter;
     private final Meter _copyMeter;
+    private final DAOUtils _daoUtils;
     private final int _deltaPrefixLength;
 
     @Inject
     public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                 @PrefixLength int deltaPrefixLength) {
+                                 DAOUtils daoUtils, @PrefixLength int deltaPrefixLength) {
+        checkArgument(deltaPrefixLength > 0, "delta prefix length must be > 0");
+
         _placementCache = placementCache;
         _changeEncoder = changeEncoder;
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
@@ -129,6 +123,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         _scanReadMeter = metricRegistry.meter(getMetricName("scan-reads"));
         _largeRowReadMeter = metricRegistry.meter(getMetricName("large-row-reads"));
         _copyMeter = metricRegistry.meter(getMetricName("copy"));
+        _daoUtils = daoUtils;
         _deltaPrefixLength = deltaPrefixLength;
     }
 
@@ -290,7 +285,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getDeltaColumnFamily();
             DeltaKey deltaStart = start != null ? new DeltaKey(start, 0) : null;
             DeltaKey deltaEnd = end != null ? new DeltaKey(end, Integer.MAX_VALUE) : null;
-            deltas = decodeDeltaColumns(Iterators.limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength), (int) limit));
+            deltas = decodeDeltaColumns(new LimitCounter(limit).limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength)));
 
         }
 
@@ -1147,11 +1142,11 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
                     getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> DeltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength));
-        Iterator<Map.Entry<UUID, Compaction>> DeltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength));
-        Iterator<RecordEntryRawMetadata> DeltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength));
+        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength));
+        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength));
+        Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength));
 
-        return new RecordImpl(key, DeltaCompactionIter, DeltaChangeIter, DeltaRawMetadataIter);
+        return new RecordImpl(key, deltaCompactionIter, deltaChangeIter, deltaRawMetadataIter);
     }
 
     private Record emptyRecord(Key key) {
@@ -1166,14 +1161,14 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue(), _deltaPrefixLength)));
+        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), _daoUtils.removePrefix(column.getByteBufferValue())));
     }
 
     private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
             @Override
             public Map.Entry<UUID, Change> apply(Column<UUID> column) {
-                Change change = _changeEncoder.decodeChange(column.getName(), removePrefix(column.getByteBufferValue(), _deltaPrefixLength));
+                Change change = _changeEncoder.decodeChange(column.getName(), _daoUtils.removePrefix(column.getByteBufferValue()));
                 return Maps.immutableEntry(column.getName(), change);
             }
         });
@@ -1185,7 +1180,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Column<UUID> column = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(column.getByteBufferValue(), _deltaPrefixLength));
+                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.removePrefix(column.getByteBufferValue()));
                     if (compaction != null) {
                         return Maps.immutableEntry(column.getName(), compaction);
                     }
@@ -1201,7 +1196,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             public RecordEntryRawMetadata apply(Column<UUID> column) {
                 return new RecordEntryRawMetadata()
                         .withTimestamp(TimeUUIDs.getTimeMillis(column.getName()))
-                        .withSize(removePrefix(column.getByteBufferValue(), _deltaPrefixLength).remaining());
+                        .withSize(_daoUtils.removePrefix(column.getByteBufferValue()).remaining());
             }
         });
     }

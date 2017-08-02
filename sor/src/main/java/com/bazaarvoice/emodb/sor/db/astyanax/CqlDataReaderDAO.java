@@ -15,6 +15,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
+import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -44,7 +45,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-import static com.bazaarvoice.emodb.sor.db.DAOUtils.removePrefix;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -71,6 +71,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final CqlDriverConfiguration _driverConfig;
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
+    private final DAOUtils _daoUtils;
     private final int _deltaPrefixLength;
 
     // Support AB testing of various uses of the CQL driver versus the older but (at this point) more vetted Astyanax driver.
@@ -80,7 +81,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     @Inject
     public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
                             CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry, @PrefixLength int deltaPrefixLength) {
+                            MetricRegistry metricRegistry, DAOUtils daoUtils, @PrefixLength int deltaPrefixLength) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
         _placementCache = placementCache;
         _driverConfig = driverConfig;
@@ -88,6 +89,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
         _deltaPrefixLength = deltaPrefixLength;
+        _daoUtils = daoUtils;
+
     }
 
     private String getMetricName(String name) {
@@ -179,7 +182,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         }
 
         // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
-        return newRecordFromCql(key, rows);
+        return newRecordFromCql(key, rows, placement);
     }
 
     /**
@@ -240,8 +243,8 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      * in other words, it is expected that row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN) returns the same value for
      * each row in rows.
      */
-    private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Session session = ((AstyanaxTable) key.getTable()).getReadStorage().getPlacement().getKeyspace().getCqlSession();
+    private Record newRecordFromCql(Key key, Iterable<Row> rows, Placement placement) {
+        Session session = placement.getKeyspace().getCqlSession();
         ProtocolVersion protocolVersion = session.getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
         CodecRegistry codecRegistry = session.getCluster().getConfiguration().getCodecRegistry();
 
@@ -257,7 +260,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row), _deltaPrefixLength))));
+                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), _daoUtils.removePrefix(getValue(row)))));
     }
 
     /**
@@ -269,7 +272,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Row row = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(removePrefix(getValue(row), _deltaPrefixLength));
+                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.removePrefix(getValue(row)));
                     if (compaction != null) {
                         return Maps.immutableEntry(getChangeId(row), compaction);
                     }
@@ -285,7 +288,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
                 .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
-                .withSize(removePrefix(getValue(row), _deltaPrefixLength).remaining()));
+                .withSize(_daoUtils.removePrefix(getValue(row)).remaining()));
     }
 
     /**
@@ -352,7 +355,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                     ByteBuffer keyBytes = getRawKeyFromRowGroup(rows);
                     Key key = rawKeyMap.remove(keyBytes);
                     assert key != null : "Query returned row with a key out of bound";
-                    return newRecordFromCql(key, rows);
+                    return newRecordFromCql(key, rows, placement);
                 }),
                 // Second iterator returns an empty Record for each key queried but not found.
                 new AbstractIterator<Record>() {
@@ -526,16 +529,16 @@ public class CqlDataReaderDAO implements DataReaderDAO {
                                         ReadConsistency consistency) {
 
         Iterator<Iterable<Row>> rowGroups = rowScan(placement, table, keyRange, consistency);
-        return decodeRows(rowGroups, table);
+        return decodeRows(rowGroups, table, placement);
     }
 
     /**
      * Converts rows from a single C* row to a Record.
      */
-    private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table) {
+    private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table, Placement placement) {
         return Iterators.transform(rowGroups, rowGroup -> {
             String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
-            return newRecordFromCql(new Key(table, key), rowGroup);
+            return newRecordFromCql(new Key(table, key), rowGroup, placement);
         });
     }
 
@@ -618,7 +621,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), filteredRows);
+                    Record record = newRecordFromCql(new Key(_table, key), filteredRows, placement);
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
@@ -810,7 +813,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Row> iter) {
-        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), removePrefix(getValue(row), _deltaPrefixLength)));
+        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), _daoUtils.removePrefix(getValue(row))));
     }
 
     /**

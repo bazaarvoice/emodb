@@ -54,7 +54,6 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TIOStreamTransport;
 import org.apache.thrift.transport.TTransportException;
 
-import javax.inject.Named;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -86,6 +85,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final Meter _updateMeter;
     private final Meter _oversizeUpdateMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
+    private final DAOUtils _daoUtils;
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
@@ -101,10 +101,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
-                                 ChangeEncoder changeEncoder,
-                                 MetricRegistry metricRegistry,
-                                 @BlockSize int deltaBlockSize,
-                                 @PrefixLength int deltaPrefixLength) {
+                                 ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
+                                 DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength) {
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _readerDao = checkNotNull(readerDao, "readerDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -113,6 +111,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
+        _daoUtils = daoUtils;
         _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixLength = deltaPrefixLength;
@@ -186,8 +185,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         }
     }
 
-    private void putDeltaColumn(ColumnListMutation mutation, UUID changeId, ByteBuffer encodedDelta) {
-        List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(encodedDelta, _deltaPrefixLength, _deltaBlockSize);
+    private void putDeltaColumn(ColumnListMutation<DeltaKey> mutation, UUID changeId, ByteBuffer encodedDelta) {
+        List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(encodedDelta);
         for (int i = 0; i < blocks.size(); i++) {
             mutation.putColumn(new DeltaKey(changeId, i), blocks.get(i));
         }

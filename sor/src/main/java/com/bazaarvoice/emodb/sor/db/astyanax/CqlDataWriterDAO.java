@@ -23,6 +23,7 @@ import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Charsets;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
@@ -43,6 +44,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
+    private final DAOUtils _daoUtils;
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _astyanaxWriterDAO;
@@ -58,10 +60,8 @@ public class CqlDataWriterDAO implements DataWriterDAO{
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
                             FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                             HintsConsistencyTimeProvider rawConsistencyTimeProvider,
-                            ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry,
-                            @BlockSize int deltaBlockSize,
-                            @PrefixLength int deltaPrefixLength) {
+                            ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
+                            DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength) {
         _readerDao = checkNotNull(readerDao, "readerDao");
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -70,6 +70,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
+        _daoUtils = daoUtils;
         _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixLength = deltaPrefixLength;
@@ -121,7 +122,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
     private void insertBlockedDeltas(BatchStatement batchStatement, DeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta) {
 
-        List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(encodedDelta, _deltaPrefixLength, _deltaBlockSize);
+        List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(encodedDelta);
 
         for (int i = 0; i < blocks.size(); i++) {
             batchStatement.add(QueryBuilder.insertInto(tableDDL.getTableMetadata())
@@ -138,7 +139,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
                                  CassandraKeyspace keyspace, Table table, String key) {
 
         // Add the compaction record
-        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes());
+        ByteBuffer encodedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes(Charsets.UTF_8));
 
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
@@ -163,6 +164,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
         // each individual delete statement will be atomic, so the batch can be unlogged
+        // if any delete fails in this batch it will be deleted again the next time it is read
         BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
 
         for (UUID change : changesToDelete) {
