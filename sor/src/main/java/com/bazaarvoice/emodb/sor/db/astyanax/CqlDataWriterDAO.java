@@ -20,6 +20,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -49,12 +50,13 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
     private final byte[] _deltaPrefixBytes;
+    private final DAOUtils _daoUtils;
 
     private final AstyanaxDataReaderDAO _readerDao;
     private final DataWriterDAO _astyanaxWriterDAO;
     private final ChangeEncoder _changeEncoder;
-    private final Meter _updateMeter;
-    private final Meter _oversizeUpdateMeter;
+    private final Meter _migratorMeter;
+    private final Meter _blockedRowsMigratedMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
     private final PlacementCache _placementCache;
 
@@ -65,8 +67,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
                             PlacementCache placementCache, FullConsistencyTimeProvider fullConsistencyTimeProvider,
                             AuditStore auditStore, HintsConsistencyTimeProvider rawConsistencyTimeProvider,
-                            ChangeEncoder changeEncoder, MetricRegistry metricRegistry, @BlockSize int deltaBlockSize,
-                            @PrefixLength int deltaPrefixLength) {
+                            ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
+                            @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength) {
         _readerDao = checkNotNull(readerDao, "readerDao");
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -74,11 +76,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         _auditStore = checkNotNull(auditStore, "auditStore");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _placementCache = placementCache;
-        _updateMeter = metricRegistry.meter(getMetricName("updates"));
-        _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
+        _migratorMeter = metricRegistry.meter(getMetricName("migratedRows"));
+        _blockedRowsMigratedMeter = metricRegistry.meter(getMetricName("blockedMigratedRows"));
+        _daoUtils = daoUtils;
         _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
-        _deltaPrefixBytes = _deltaPrefix.getBytes();
+        _deltaPrefixBytes = _deltaPrefix.getBytes(Charsets.UTF_8);
         _deltaPrefixLength = deltaPrefixLength;
     }
 
@@ -128,7 +131,11 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     private void insertBlockedDeltas(BatchStatement batchStatement, BlockedDeltaTableDDL tableDDL, ConsistencyLevel consistencyLevel, ByteBuffer rowKey, UUID changeId, ByteBuffer encodedDelta) {
 
-        List<ByteBuffer> blocks = DAOUtils.getBlockedDeltas(encodedDelta, _deltaPrefixLength, _deltaBlockSize);
+        List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(encodedDelta);
+
+        if (blocks.size() > 1) {
+            _blockedRowsMigratedMeter.mark();
+        }
 
         for (int i = 0; i < blocks.size(); i++) {
             batchStatement.add(QueryBuilder.insertInto(tableDDL.getTableMetadata())
@@ -147,7 +154,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         // TODO: implement checks to ensure we are under the transport size OR drastically increase batch_size_warn_in_kb
 
         // Add the compaction record
-        ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes());
+        ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes(Charsets.UTF_8));
         ByteBuffer encodedCompaction = encodedBlockedCompaction.duplicate();
         encodedCompaction.position(encodedCompaction.position() + _deltaPrefixLength);
 
@@ -269,12 +276,13 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             encodedDelta.put(delta);
             encodedDelta.position(0);
 
+            _migratorMeter.mark();
+
             // execute statement if we have encountered a new C* wide row OR if statement has become too large
             if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
 
                 semaphore.acquireUninterruptibly();
                 Futures.addCallback(session.executeAsync(statement), callback);
-
                 statement = new BatchStatement(BatchStatement.Type.LOGGED);
                 currentStatementSize = 0;
             }
