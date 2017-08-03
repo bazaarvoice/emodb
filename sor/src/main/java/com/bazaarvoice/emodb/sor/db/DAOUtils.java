@@ -45,7 +45,7 @@ public class DAOUtils {
             numBlocks++;
         }
 
-        assert numBlocks < Math.pow(16, _deltaBlockSize);
+        assert numBlocks < Math.pow(16, _prefixLength);
 
         byte[] blockBytes = numBlocks == 1 ? _singleBlockBytes : String.format("%0" + _prefixLength + "X", numBlocks).getBytes();
         for (int i = encodedDelta.position(); i < blockBytes.length ; i++) {

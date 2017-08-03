@@ -91,7 +91,6 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                     contentSize += getValue(_next).remaining();
                 } else {
                     // fragmented delta encountered, we must skip over it
-                    skipForward();
                     return null;
                 }
             } else {
@@ -107,45 +106,50 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
     @Override
     protected T computeNext() {
-        if (_next == null) {
-            return endOfData();
-        }
 
-        ByteBuffer content;
+        while(true) {
 
-        if (!_reverse) {
-
-            int numBlocks = getNumBlocks(_next);
-
-            if (numBlocks == 1) {
-                T ret = convertDelta(_next);
-                skipForward();
-                return ret;
+            if (_next == null) {
+                return endOfData();
             }
 
-            content = compute(numBlocks);
+            ByteBuffer content;
 
-        } else {
-            if (getBlock(_next) == 0) {
-                if (getNumBlocks(_next) != 1) {
-                    return computeNext();
+            if (!_reverse) {
+
+                int numBlocks = getNumBlocks(_next);
+
+                if (numBlocks == 1) {
+                    T ret = convertDelta(_next);
+                    skipForward();
+                    return ret;
                 }
-                T ret = convertDelta(_next);
-                _next = _iterator.next();
-                return ret;
+
+                content = compute(numBlocks);
+
+            } else {
+                if (getBlock(_next) == 0) {
+                    if (getNumBlocks(_next) != 1) {
+                        continue;
+                    }
+                    T ret = convertDelta(_next);
+                    _next = _iterator.hasNext() ? _iterator.next() : null;
+                    return ret;
+                }
+
+                content = reverseCompute();
             }
 
-            content = reverseCompute();
+            _list.clear();
+
+            if (content == null) {
+                continue;
+            }
+
+
+            return convertDelta(_oldDelta, content);
+
         }
-
-        _list.clear();
-
-        if (content == null) {
-            return computeNext();
-        }
-
-
-        return convertDelta(_oldDelta, content);
     }
 
     // This handles the edge case in which a client has explicity specified a changeId when writing and overwrote an exisiting delta.
