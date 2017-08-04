@@ -193,7 +193,7 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateReporting();
         evaluateThrottling();
         evaluateScanner();
-        evaluateMigrator();
+        evaluateDeltaMigrator();
         evaluateServiceStartedListeners();
         evaluateSwagger();
         evaluateUAC();
@@ -307,13 +307,13 @@ public class EmoService extends Application<EmoConfiguration> {
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 
-    private void evaluateMigrator()
+    private void evaluateDeltaMigrator()
             throws Exception {
         if (!runPerServiceMode(migrator)) {
             return;
         }
         _environment.jersey().register(new BlockMigratorResource1(_injector.getInstance(DeltaMigrator.class)));
-        // No admin tasks are registered automatically in MIGRATOR ServiceMode
+        // No admin tasks are registered automatically in DELTA_MIGRATOR ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 

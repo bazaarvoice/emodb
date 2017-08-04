@@ -90,7 +90,7 @@ public class EmoConfiguration extends Configuration {
 
     @Valid
     @NotNull
-    @JsonProperty ("migrator")
+    @JsonProperty ("deltaMigrator")
     private Optional<MigratorConfiguration> _migrator = Optional.absent();
 
     @Valid

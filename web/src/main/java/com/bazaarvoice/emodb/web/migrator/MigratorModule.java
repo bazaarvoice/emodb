@@ -43,7 +43,6 @@ public class MigratorModule extends PrivateModule {
         _config = config.getMigrator().get();
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
-        checkArgument(_config.getWriteThreadCount() > 0, "Write thread count must be at least 1");
         checkArgument(_config.getMaxConcurrentWrites() > 0, "Max concurrent writes must be at least 1");
     }
 
@@ -60,7 +59,6 @@ public class MigratorModule extends PrivateModule {
         bind(String.class).annotatedWith(MigratorStatusTable.class).toInstance(_config.getMigrateStatusTable());
         bind(String.class).annotatedWith(MigratorStatusTablePlacement.class).toInstance(_config.getMigrateStatusTablePlacement());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getReadThreadCount());
-        bind(Integer.class).annotatedWith(MigrationWriterThreads.class).toInstance(_config.getWriteThreadCount());
 
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingMigrationRangeQueueName"))
                 .toInstance(_config.getPendingMigrationRangeQueueName());
