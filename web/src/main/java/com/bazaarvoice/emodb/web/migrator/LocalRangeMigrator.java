@@ -36,11 +36,7 @@ public class LocalRangeMigrator implements Managed {
     private volatile boolean _shutdown = true;
 
     @Inject
-    public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecyle, MetricRegistry metricRegistry, @MigrationWriterThreads int threadCount) {
-        this(migratorTools, lifecyle, metricRegistry);
-    }
-
-    public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, final MetricRegistry metricRegistry) {
+    public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
         _migratorTools = migratorTools;
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));

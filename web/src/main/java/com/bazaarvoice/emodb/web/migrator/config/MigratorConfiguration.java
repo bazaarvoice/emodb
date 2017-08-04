@@ -12,7 +12,6 @@ import javax.validation.constraints.NotNull;
 public class MigratorConfiguration {
 
     private static final int DEFAULT_READ_THREAD_COUNT = 8;
-    private static final int DEFAULT_WRITE_THREAD_COUNT = 5;
     private static final String DEFAULT_MIGRATE_STATUS_TABLE = "__system_migrate";
     private static final String DEFAULT_MIGRATE_STATUS_TABLE_PLACEMENT = "app_global:migration";
     private static final int DEFAULT_MAX_CONCURRENT_WRITES = 500;
@@ -28,12 +27,6 @@ public class MigratorConfiguration {
     @NotNull
     @JsonProperty ("readThreadCount")
     private int _readThreadCount = DEFAULT_READ_THREAD_COUNT;
-
-    // Maximum number of write threads that can run concurrently on a single server.  Default is 12.
-    @Valid
-    @NotNull
-    @JsonProperty ("writeThreadCount")
-    private int _writeThreadCount = DEFAULT_WRITE_THREAD_COUNT;
 
     // Name of the table which holds migrator status entries.
     @Valid
@@ -76,15 +69,6 @@ public class MigratorConfiguration {
 
     public MigratorConfiguration setReadThreadCount(int readThreadCount) {
         _readThreadCount = readThreadCount;
-        return this;
-    }
-
-    public int getWriteThreadCount() {
-        return _writeThreadCount;
-    }
-
-    public MigratorConfiguration setWriteThreadCount(int writeThreadCount) {
-        _writeThreadCount = writeThreadCount;
         return this;
     }
 
