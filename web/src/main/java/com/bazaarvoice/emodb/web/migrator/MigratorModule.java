@@ -69,10 +69,6 @@ public class MigratorModule extends PrivateModule {
         bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
                 .toInstance(_config.getMaxConcurrentWrites());
 
-        install(new FactoryModuleBuilder()
-                .implement(MigratorWriter.class, MigratorWriter.class)
-                .build(MigratorWriterFactory.class));
-
         bind(MigratorMonitor.class).asEagerSingleton();
         bind(DistributedMigratorRangeMonitor.class).asEagerSingleton();
 
