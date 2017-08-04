@@ -4,5 +4,5 @@ import java.util.Iterator;
 
 public interface MigratorReaderDAO {
 
-    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
+    Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
 }

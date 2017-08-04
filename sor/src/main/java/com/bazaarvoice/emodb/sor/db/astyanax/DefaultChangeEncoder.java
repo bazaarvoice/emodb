@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.sor.delta.deser.JsonTokener;
 import com.google.common.base.Charsets;
 import com.google.common.base.Functions;
 import com.google.common.collect.FluentIterable;
-import jnr.ffi.Struct;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 import javax.annotation.Nonnull;

@@ -1,34 +1,28 @@
 package com.bazaarvoice.emodb.sor.db;
 
-import com.datastax.driver.core.Row;
-import com.google.common.collect.AbstractIterator;
-
 import java.nio.ByteBuffer;
-import java.util.Iterator;
 import java.util.UUID;
 
 public class MigrationScanResult {
-    private final Row _row;
-    private final int _rowKeyIndex;
-    private final int _changeIdIndex;
-    private final int _contentIndex;
+    private final ByteBuffer _rowKey;
+    private final UUID _changeId;
+    private final ByteBuffer _value;
 
-    public MigrationScanResult(Row row, int rowKeyIndex, int changeIdIndex, int contentIndex) {
-        _row = row;
-        _rowKeyIndex = rowKeyIndex;
-        _changeIdIndex = changeIdIndex;
-        _contentIndex = contentIndex;
+    public MigrationScanResult(ByteBuffer rowKey, UUID changeId, ByteBuffer value) {
+        _rowKey = rowKey;
+        _changeId = changeId;
+        _value = value;
     }
 
     public ByteBuffer getRowKey() {
-        return _row.getBytesUnsafe(_rowKeyIndex);
+        return _rowKey;
     }
 
     public UUID getChangeId() {
-        return _row.getUUID(_changeIdIndex);
+        return _changeId;
     }
 
     public ByteBuffer getValue() {
-        return _row.getBytesUnsafe(_contentIndex);
+        return _value;
     }
 }

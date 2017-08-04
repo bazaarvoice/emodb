@@ -488,11 +488,11 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
     @Override
     public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites) {
-
+        throw new UnsupportedOperationException();
     }
 
     @Override
     public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 }

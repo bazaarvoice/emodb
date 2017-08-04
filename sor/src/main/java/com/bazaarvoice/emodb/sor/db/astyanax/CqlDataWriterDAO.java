@@ -272,7 +272,6 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             int deltaSize = delta.remaining();
             ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
             encodedDelta.put(_deltaPrefixBytes);
-            encodedDelta.position(_deltaPrefixLength);
             encodedDelta.put(delta);
             encodedDelta.position(0);
 
@@ -289,7 +288,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
             lastRowKey = rowKey;
             insertBlockedDeltas(statement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
-            currentStatementSize += encodedDelta.remaining() + ROW_KEY_SIZE + CHANGE_ID_SIZE;
+            currentStatementSize += encodedDelta.limit() + ROW_KEY_SIZE + CHANGE_ID_SIZE;
 
         }
 

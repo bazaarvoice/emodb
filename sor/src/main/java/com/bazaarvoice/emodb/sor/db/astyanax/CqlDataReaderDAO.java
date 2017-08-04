@@ -51,12 +51,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
@@ -956,10 +952,10 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     }
 
     private Iterable<MigrationScanResult> scanRows(final DeltaPlacement placement, final ByteBufferRange rowRange, final ReadConsistency consistency) {
-        return () -> {
-            Iterator<Iterator<Row>> rowIterators = Iterators.transform(migrationScan(placement, rowRange, consistency), iterable -> iterable.iterator());
-            Iterator<Row> rows = Iterators.concat(rowIterators);
-            return Iterators.transform(rows, row -> new MigrationScanResult(row, ROW_KEY_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN));
-        };
+
+        return () -> StreamSupport.stream(Spliterators.spliteratorUnknownSize(migrationScan(placement, rowRange, consistency), 0), false)
+                .flatMap(rows -> StreamSupport.stream(rows.spliterator(), false))
+                .map(row -> new MigrationScanResult(getKey(row), getChangeId(row), getValue(row)))
+                .iterator();
     }
 }
