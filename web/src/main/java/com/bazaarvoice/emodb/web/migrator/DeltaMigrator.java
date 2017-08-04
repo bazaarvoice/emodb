@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.migrator;
 
-import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
@@ -26,16 +25,14 @@ public class DeltaMigrator {
     private final DataTools _dataTools;
     private final MigratorStatusDAO _statusDAO;
     private final ScanWorkflow _workflow;
-    private final StashStateListener _listener;
     private final int _defaultMaxConcurrentWrites;
 
     @Inject
     public DeltaMigrator(DataTools dataTools, MigratorStatusDAO statusDAO, ScanWorkflow workflow,
-                         StashStateListener listener, @Named ("maxConcurrentWrites") Integer maxConcurrentWrites) {
+                         @Named ("maxConcurrentWrites") Integer maxConcurrentWrites) {
         _dataTools = checkNotNull(dataTools, "dataTools");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _workflow = checkNotNull(workflow, "workflow");
-        _listener = checkNotNull(listener, "listener");
         _defaultMaxConcurrentWrites = maxConcurrentWrites;
 
     }
@@ -83,8 +80,6 @@ public class DeltaMigrator {
             // Notify the workflow that the migration can be started
             _workflow.scanStatusUpdated(id);
 
-            // Send notification that the migration has started
-            _listener.stashStarted(status.asPluginStashMetadata());
         } catch (Exception e) {
             _log.error("Failed to start migration for {}", id, e);
 

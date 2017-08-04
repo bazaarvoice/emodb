@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.migrator;
 
-import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
@@ -9,7 +8,6 @@ import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeComplete;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeTask;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
-import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.google.common.base.Optional;
@@ -39,19 +37,14 @@ public class LocalMigratorMonitor extends AbstractService {
 
     private final ScanWorkflow _workflow;
     private final MigratorStatusDAO _statusDAO;
-    private final StashStateListener _migratorStateListener;
-    private final ScanCountListener _migratorCountListener;
     private final DataTools _dataTools;
     private final Set<String> _activeMigrations = Sets.newHashSet();
 
     private ScheduledExecutorService _service;
 
-    public LocalMigratorMonitor(ScanWorkflow scanWorkflow, MigratorStatusDAO scanStatusDAO, StashStateListener migratorStateListener,
-                                ScanCountListener migratorCountListener, DataTools dataTools) {
-        _workflow = checkNotNull(scanWorkflow, "scanWorkflow");
+    public LocalMigratorMonitor(ScanWorkflow workflow, MigratorStatusDAO scanStatusDAO, DataTools dataTools) {
+        _workflow = checkNotNull(workflow, "workflow");
         _statusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _migratorStateListener = checkNotNull(migratorStateListener, "migratorStateListener");
-        _migratorCountListener = checkNotNull(migratorCountListener, "scanCountListener");
         _dataTools = checkNotNull(dataTools, "dataTools");
     }
 
@@ -69,8 +62,6 @@ public class LocalMigratorMonitor extends AbstractService {
                 // Initialize active migrations with migrations that were already active when this instance became leader
                 initializeAllActiveMigrations();
 
-                // Set the starting count for the migration count notifier
-                notifyActiveMigrationCountChanged();
 
                 // Start the loop for processing complete range migrations
                 _service.schedule(_processCompleteRangeMigrationsExecution, 1, TimeUnit.SECONDS);
@@ -100,10 +91,7 @@ public class LocalMigratorMonitor extends AbstractService {
             _service = null;
         }
 
-        // Send a final notification that the active count is zero; whoever picks up leadership going forward
-        // will take over active migration count notifications.
         _activeMigrations.clear();
-        notifyActiveMigrationCountChanged();
 
         notifyStopped();
     }
@@ -112,13 +100,13 @@ public class LocalMigratorMonitor extends AbstractService {
         @Override
         public void run() {
             try {
-                processCompleteRangeScans();
+                processCompleteRangeMigrations();
             } catch (Exception e) {
-                // This should never happen; all exceptions should already be caught in processCompleteRangeScans()
+                // This should never happen; all exceptions should already be caught in processCompleteRangeMigrations()
                 _log.error("Unexpected exception caught processing complete range migrations", e);
             }
 
-            // Schedule the next check depending on whether any scans are active.
+            // Schedule the next check depending on whether any migrations are active.
             long delaySeconds = _activeMigrations.isEmpty() ? 3 : 1;
 
             // Repeat execution after the previously computed delay
@@ -126,11 +114,11 @@ public class LocalMigratorMonitor extends AbstractService {
         }
     };
 
-    protected void processCompleteRangeScans() {
-        Multimap<String, ScanRangeComplete> completeRangeMigrationsByScanId;
+    protected void processCompleteRangeMigrations() {
+        Multimap<String, ScanRangeComplete> completeRangeMigrationsBy;
 
         try {
-            completeRangeMigrationsByScanId = Multimaps.index(
+            completeRangeMigrationsBy = Multimaps.index(
                     _workflow.claimCompleteScanRanges(Duration.standardMinutes(5)),
                     completion -> completion.getScanId());
         } catch (Exception e) {
@@ -138,15 +126,15 @@ public class LocalMigratorMonitor extends AbstractService {
             return;
         }
 
-        for (Map.Entry<String, Collection<ScanRangeComplete>> entry : completeRangeMigrationsByScanId.asMap().entrySet()) {
-            String scanId = entry.getKey();
+        for (Map.Entry<String, Collection<ScanRangeComplete>> entry : completeRangeMigrationsBy.asMap().entrySet()) {
+            String migratorId = entry.getKey();
             Collection<ScanRangeComplete> completions = entry.getValue();
 
             try {
-                refreshMigration(scanId);
+                refreshMigration(migratorId);
                 _workflow.releaseCompleteScanRanges(completions);
             } catch (Exception e) {
-                _log.error("Failed to process migration range complete: id={}", scanId, e);
+                _log.error("Failed to process migration range complete: id={}", migratorId, e);
             }
         }
     }
@@ -155,7 +143,7 @@ public class LocalMigratorMonitor extends AbstractService {
             throws IOException {
         ScanStatus status = _statusDAO.getMigratorStatus(id);
         if (status == null) {
-            _log.warn("Refresh migration called for unknown scan: {}", id);
+            _log.warn("Refresh migration called for unknown migrations: {}", id);
             return;
         }
 
@@ -170,18 +158,16 @@ public class LocalMigratorMonitor extends AbstractService {
 
         // Update the set of active migrations
         if (_activeMigrations.add(id)) {
-            // This is a new migration.  Notify that the number of active migrations has changed.
-            notifyActiveMigrationCountChanged();
             // Schedule a callback to cancel the migration if it goes overrun
             scheduleOverrunCheck(status);
         }
 
-        // Before evaluating available tasks check whether any completed tasks didn't scan their entire ranges
+        // Before evaluating available tasks check whether any completed tasks didn't migrate their entire ranges
         // and require the addition of new tasks.
         status = resplitPartiallyCompleteTasks(status);
 
         Set<Integer> incompleteBatches = getIncompleteBatches(status);
-        Multimap<Integer, ScanRangeStatus> queuedScansByConcurrencyId = getQueuedRangeMigrationsByConcurrencyId(status);
+        Multimap<Integer, ScanRangeStatus> queuedMigrationsByConcurrencyId = getQueuedRangeMigrationsByConcurrencyId(status);
         int maxConcurrency = status.getOptions().getMaxConcurrentSubRangeScans();
         Date now = new Date();
 
@@ -193,7 +179,7 @@ public class LocalMigratorMonitor extends AbstractService {
             // 1. It has no blocking batch or the blocking batch is complete
             // 2. The maximum concurrency permitted has not already been met
             if ((!blockedByBatchId.isPresent() || !incompleteBatches.contains(blockedByBatchId.get())) &&
-                    (!concurrencyId.isPresent() || queuedScansByConcurrencyId.get(concurrencyId.get()).size() < maxConcurrency)) {
+                    (!concurrencyId.isPresent() || queuedMigrationsByConcurrencyId.get(concurrencyId.get()).size() < maxConcurrency)) {
                 int taskId = rangeStatus.getTaskId();
                 String placement = rangeStatus.getPlacement();
                 ScanRange range = rangeStatus.getScanRange();
@@ -202,7 +188,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
                 if (concurrencyId.isPresent()) {
                     // Mark that this range has been queued so this loop doesn't over-add range migrations
-                    queuedScansByConcurrencyId.put(concurrencyId.get(), rangeStatus);
+                    queuedMigrationsByConcurrencyId.put(concurrencyId.get(), rangeStatus);
                 }
 
                 _log.info("Queued migration range task: {}", task);
@@ -314,8 +300,6 @@ public class LocalMigratorMonitor extends AbstractService {
     }
 
     private void migrationCanceled(ScanStatus status) {
-        // Send notification that the migration has been canceled
-        _migratorStateListener.stashCanceled(status.asPluginStashMetadata(), new Date());
         cleanupMigration(status.getScanId());
     }
 
@@ -337,7 +321,6 @@ public class LocalMigratorMonitor extends AbstractService {
 
             // Send notification that the migration has completed.
             status.setCompleteTime(completeTime);
-            _migratorStateListener.stashCompleted(status.asPluginStashMetadata(), status.getCompleteTime());
         } finally {
             cleanupMigration(id);
         }
@@ -345,9 +328,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
     private void cleanupMigration(String id) {
         // Remove this migration from the active set
-        if (_activeMigrations.remove(id)) {
-            notifyActiveMigrationCountChanged();
-        }
+        _activeMigrations.remove(id);
 
     }
 
@@ -391,9 +372,5 @@ public class LocalMigratorMonitor extends AbstractService {
                     }
                 },
                 delay, TimeUnit.MILLISECONDS);
-    }
-
-    private void notifyActiveMigrationCountChanged() {
-        _migratorCountListener.activeScanCountChanged(_activeMigrations.size());
     }
 }

@@ -172,7 +172,7 @@ public class LocalScanUploadMonitor extends AbstractService {
             try {
                 processCompleteRangeScans();
             } catch (Exception e) {
-                // This should never happen; all exceptions should already be caught in processCompleteRangeScans()
+                // This should never happen; all exceptions should already be caught in processCompleteRangeMigrations()
                 _log.error("Unexpected exception caught processing complete range scans", e);
             }
 

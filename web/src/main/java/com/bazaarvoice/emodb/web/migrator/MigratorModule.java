@@ -3,8 +3,6 @@ package com.bazaarvoice.emodb.web.migrator;
 
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
-import com.bazaarvoice.emodb.plugin.migrator.MigratorStateListener;
-import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
@@ -18,7 +16,6 @@ import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusTablePlac
 import com.bazaarvoice.emodb.web.scanner.control.MaxConcurrentScans;
 import com.bazaarvoice.emodb.web.scanner.control.QueueScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
-import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.dropwizard.pool.ManagedServicePoolProxy;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
@@ -58,8 +55,6 @@ public class MigratorModule extends PrivateModule {
         bind(MigratorStatusDAO.class).asEagerSingleton();
         bind(LocalRangeMigrator.class).asEagerSingleton();
 
-        bind(ScanCountListener.class).to(MetricsMigrationCountListener.class).asEagerSingleton();
-
         bind(ScanWorkflow.class).toProvider(QueueScanWorkflowProvider.class).asEagerSingleton();
 
         bind(String.class).annotatedWith(MigratorStatusTable.class).toInstance(_config.getMigrateStatusTable());
@@ -73,8 +68,6 @@ public class MigratorModule extends PrivateModule {
                 .toInstance(_config.getCompleteMigrationRangeQueueName());
         bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
                 .toInstance(_config.getMaxConcurrentWrites());
-
-        bind(StashStateListener.class).to(MigratorStateListener.class).asEagerSingleton();
 
         install(new FactoryModuleBuilder()
                 .implement(MigratorWriter.class, MigratorWriter.class)

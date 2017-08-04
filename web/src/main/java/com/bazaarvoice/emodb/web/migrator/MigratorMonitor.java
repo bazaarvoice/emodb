@@ -6,13 +6,10 @@ import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
-import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
-import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.net.HostAndPort;
@@ -33,14 +30,13 @@ public class MigratorMonitor extends LeaderService {
     @Inject
     public MigratorMonitor(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                            final ScanWorkflow workflow, final MigratorStatusDAO statusDAO,
-                           final StashStateListener migratorStateListener, final ScanCountListener migratorCountListener,
                            final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                            MetricRegistry metricRegistry) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new LocalMigratorMonitor(workflow, statusDAO, migratorStateListener, migratorCountListener, dataTools);
+                        return new LocalMigratorMonitor(workflow, statusDAO, dataTools);
                     }
                 });
 
