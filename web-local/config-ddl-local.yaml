@@ -7,6 +7,7 @@ systemOfRecord:
                keyspace: ugc_global
                table.audit: ugc_audit
                table.delta: ugc_delta
+               table.delta_v2: ugc_delta_v2
                table.history: ugc_history
       catalog_global:
          replicationFactor: 1
@@ -15,6 +16,7 @@ systemOfRecord:
                keyspace: catalog_global
                table.audit: cat_audit
                table.delta: cat_delta
+               table.delta_v2: cat_delta_v2
                table.history: cat_history
       app_global:
          replicationFactor: 1
@@ -23,16 +25,19 @@ systemOfRecord:
                keyspace: app_global
                table.audit: default_audit
                table.delta: default_delta
+               table.delta_v2: default_delta_v2
                table.history: default_history
             sys:
                keyspace: app_global
                table.audit: sys_audit
                table.delta: sys_delta
+               table.delta_v2: sys_delta_v2
                table.history: sys_history
             migration:
                keyspace: app_global
                table.audit: migration_audit
                table.delta: migration_delta
+               table.delta_v2: migration_delta_v2
                table.history: migration_history
       pii_us:
          replicationFactor: 1
@@ -41,6 +46,7 @@ systemOfRecord:
                keyspace: pii_us
                table.audit: pii_audit
                table.delta: pii_delta
+               table.delta_v2: pii_delta_v2
                table.history: pii_history
 
 databus:
