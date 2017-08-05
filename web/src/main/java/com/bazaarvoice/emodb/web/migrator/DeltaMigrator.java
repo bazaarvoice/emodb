@@ -37,13 +37,13 @@ public class DeltaMigrator {
 
     }
 
-    public MigratorStatus migratePlacement(String placement, String migrationId, int maxConcurrentWrites) {
+    public MigratorStatus migratePlacement(String placement, int maxConcurrentWrites) {
         ScanOptions options = new ScanOptions(placement)
                 .setScanByAZ(true);
-        MigratorPlan plan = createPlan(migrationId, options);
+        MigratorPlan plan = createPlan(placement, options);
         MigratorStatus status = plan.toMigratorStatus(maxConcurrentWrites > 0 ? maxConcurrentWrites: _defaultMaxConcurrentWrites);
 
-        startMigration(migrationId, status);
+        startMigration(placement, status);
 
         return status;
 
@@ -69,7 +69,7 @@ public class DeltaMigrator {
         return plan;
     }
 
-    private void startMigration(String id, MigratorStatus status) {
+    private void startMigration(String placement, MigratorStatus status) {
         boolean migrationCreated = false;
 
         try {
@@ -78,18 +78,18 @@ public class DeltaMigrator {
             migrationCreated = true;
 
             // Notify the workflow that the migration can be started
-            _workflow.scanStatusUpdated(id);
+            _workflow.scanStatusUpdated(placement);
 
         } catch (Exception e) {
-            _log.error("Failed to start migration for {}", id, e);
+            _log.error("Failed to start migration for {}", placement, e);
 
             if (migrationCreated) {
                 // The migrator was not properly started; cancel the migration
                 try {
-                    _statusDAO.setCanceled(id);
+                    _statusDAO.setCanceled(placement);
                 } catch (Exception e2) {
                     // Don't mask the original exception but log it
-                    _log.error("Failed to mark unsuccessfully started migration as canceled: [id={}]", id, e2);
+                    _log.error("Failed to mark unsuccessfully started migration as canceled: [id={}]", placement, e2);
                 }
             }
 
@@ -97,8 +97,8 @@ public class DeltaMigrator {
         }
     }
 
-    public MigratorStatus getStatus(String id) {
-        return _statusDAO.getMigratorStatus(id);
+    public MigratorStatus getStatus(String placement) {
+        return _statusDAO.getMigratorStatus(placement);
     }
 
     /**
@@ -106,8 +106,8 @@ public class DeltaMigrator {
      * This method takes all available tasks for a migration and resubmits them.  This method is safe because
      * the underlying system is resilient to task resubmissions and concurrent work on the same task.
      */
-    public MigratorStatus resubmitWorkflowTasks(String migrationId) {
-        MigratorStatus status = _statusDAO.getMigratorStatus(migrationId);
+    public MigratorStatus resubmitWorkflowTasks(String placement) {
+        MigratorStatus status = _statusDAO.getMigratorStatus(placement);
         if (status == null) {
             return null;
         }
@@ -115,32 +115,32 @@ public class DeltaMigrator {
         if (status.getCompleteTime() == null) {
             // Resubmit any active tasks
             for (ScanRangeStatus active : status.getActiveScanRanges()) {
-                _workflow.addScanRangeTask(migrationId, active.getTaskId(), active.getPlacement(), active.getScanRange());
+                _workflow.addScanRangeTask(placement, active.getTaskId(), active.getPlacement(), active.getScanRange());
             }
 
             // Send notification to evaluate whether any new range tasks can be started
-            _workflow.scanStatusUpdated(migrationId);
+            _workflow.scanStatusUpdated(placement);
         }
 
         return status;
     }
 
-    public void cancel(String id) {
-        _statusDAO.setCanceled(id);
+    public void cancel(String placement) {
+        _statusDAO.setCanceled(placement);
 
         // Notify the workflow the migrator status was updated
-        _workflow.scanStatusUpdated(id);
+        _workflow.scanStatusUpdated(placement);
 
     }
 
-    public void throttle(String id, int maxConcurrentWrites) {
-        _statusDAO.setMaxConcurrentWrites(id, maxConcurrentWrites);
+    public void throttle(String placement, int maxConcurrentWrites) {
+        _statusDAO.setMaxConcurrentWrites(placement, maxConcurrentWrites);
     }
 
     private class MigratorPlan extends ScanPlan {
 
-        public MigratorPlan(String migrationId, ScanOptions options) {
-            super(migrationId, options);
+        public MigratorPlan(String placement, ScanOptions options) {
+            super(placement, options);
         }
 
         public MigratorStatus toMigratorStatus(int maxConcurrentWrites) {
