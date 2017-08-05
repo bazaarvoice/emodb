@@ -6,9 +6,10 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 
 import java.util.Iterator;
 
+// interface to migrate deltas from old tables to new tables with blocking
 public interface MigratorTools {
 
-    public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites);
+    void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites);
 
-    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
+    Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
 }

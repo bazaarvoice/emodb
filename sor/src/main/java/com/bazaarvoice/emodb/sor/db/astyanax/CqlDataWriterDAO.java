@@ -171,6 +171,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
         ResultSetFuture newTableFuture = session.executeAsync(newTableStatement);
 
+        // this write statement should be removed in the next version
         Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
                 .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
                 .value(deltaTableDDL.getChangeIdColumnName(), compactionKey)
@@ -204,6 +205,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         TableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
         TableDDL deltaTableDDL = placement.getDeltaTableDDL();
 
+        // the old statement should be removed in the next version
         BatchStatement oldTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
         BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
 
