@@ -125,11 +125,11 @@ public class DeltaMigrator {
         return status;
     }
 
-    public void cancel(String placement) {
-        _statusDAO.setCanceled(placement);
+    public void cancel(String id) {
+        _statusDAO.setCanceled(id);
 
         // Notify the workflow the migrator status was updated
-        _workflow.scanStatusUpdated(placement);
+        _workflow.scanStatusUpdated(id);
 
     }
 
