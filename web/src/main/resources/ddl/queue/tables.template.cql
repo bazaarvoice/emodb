@@ -5,7 +5,7 @@ USE ${keyspace};
 -- as messages get processed and deleted from the slabs.
 -- Zero gc_grace_seconds to disable tombstones to improve read performance.  If a delete gets lost because of the lack
 -- of tombstones, the application will notice and simply delete the row again.
-CREATE TABLE IF NOT EXISTS manifest (
+CREATE TABLE manifest (
   queue text,
   slabid timeuuid,
   open boolean,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS manifest (
 -- maximum number of messages per slab, typically 1000, to avoid getting wide rows with lots of tombstones that hurt
 -- read performance.  Low gc_grace_seconds to improve read performance, but not as low as with the 'manifest' CF.  If
 -- a delete gets lost, the QueueService will issue a duplicate message which hurts the performance of queue consumers.
-CREATE TABLE IF NOT EXISTS slab (
+CREATE TABLE slab (
   slabid timeuuid,
   messageidx int,
   message text,
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS slab (
 
 -- One row per queue.  One column for each segment containing actual queue data.  The Java code recycles column uuids
 -- as segments are added and deleted so, in general, tombstones shouldn't accumulate and aren't a major concern.
-CREATE TABLE IF NOT EXISTS dedup_md (
+CREATE TABLE dedup_md (
   subscription text,
   segmentid timeuuid,
   state text,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS dedup_md (
 -- live columns]" where the segment metadata maintains the minimum live column for each row, and all read queries start
 -- from that minimum, so even if deleted columns get resurrected they won't be looked at.  That means we can safely
 -- disable tombstones and let Cassandra aggressively reclaim disk space.
-CREATE TABLE IF NOT EXISTS dedup_data (
+CREATE TABLE dedup_data (
   dataid timeuuid,
   event blob,
   unused blob,

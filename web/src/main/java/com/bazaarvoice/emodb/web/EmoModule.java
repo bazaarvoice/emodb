@@ -85,7 +85,6 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
-import com.bazaarvoice.emodb.web.migrator.MigratorModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
@@ -152,7 +151,22 @@ import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.*;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataCenter;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
 
 public class EmoModule extends AbstractModule {
     private static final Logger _log = LoggerFactory.getLogger(EmoModule.class);
@@ -185,7 +199,6 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
         evaluate(job, new JobSetup());
         evaluate(security, new SecuritySetup());
@@ -615,19 +628,6 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideScannerZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "scanner");
-        }
-    }
-
-    private class MigratorSetup extends AbstractModule  {
-        @Override
-        protected void configure() {
-            install(new MigratorModule(_configuration));
-        }
-
-        /** Provide ZooKeeper namespaced to migrator data. */
-        @Provides @Singleton @ScannerZooKeeper
-        CuratorFramework provideMigratorZooKeeperConnection(@Global CuratorFramework curator) {
-            return withComponentNamespace(curator, "migrator");
         }
     }
 

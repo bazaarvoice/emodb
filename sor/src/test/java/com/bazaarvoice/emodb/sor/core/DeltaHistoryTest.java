@@ -9,7 +9,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.MultiDCDataStores;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
@@ -50,7 +50,7 @@ public class DeltaHistoryTest {
         // Just use one datacenter for this test
         MultiDCDataStores allDCs = new MultiDCDataStores(1, metricRegistry);
         DataStore dc1 = allDCs.dc(0);
-        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
+        InMemoryDataDAO dao1 = allDCs.dao(0);
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -183,7 +183,7 @@ public class DeltaHistoryTest {
         MetricRegistry metricRegistry = new MetricRegistry();
         MultiDCDataStores allDCs = new MultiDCDataStores(1, metricRegistry);
         DataStore dc1 = allDCs.dc(0);
-        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
+        InMemoryDataDAO dao1 = allDCs.dao(0);
         // Reset the archivedDeltaSize static counter to zero - This may have accrued some value due to our use of
         // DiscardingExecutorService in other tests.
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -236,7 +236,7 @@ public class DeltaHistoryTest {
         final DataStore dc1 = allDCs.dc(0);
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
-        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
+        InMemoryDataDAO dao1 = allDCs.dao(0);
         int numberOfConcurrentGets = 1000;
         for (int i = 0; i < numberOfConcurrentGets ; i++) {
             createCompactibleRecord(dc1, dao1, "key" + i);
@@ -292,7 +292,7 @@ public class DeltaHistoryTest {
         return false;
     }
 
-    private void createCompactibleRecord(DataStore dc1, InMemoryDataReaderDAO dao1, String key) {
+    private void createCompactibleRecord(DataStore dc1, InMemoryDataDAO dao1, String key) {
         // Write an initial update
         // Version 1
         dc1.update(TABLE, key, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);

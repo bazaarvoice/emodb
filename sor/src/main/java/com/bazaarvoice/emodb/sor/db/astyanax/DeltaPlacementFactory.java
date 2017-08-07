@@ -16,7 +16,6 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.serializers.AnnotatedCompositeSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
@@ -90,15 +89,12 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
         }
 
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
-        AnnotatedCompositeSerializer<DeltaKey> deltaKeySerializer  = new AnnotatedCompositeSerializer<DeltaKey>(DeltaKey.class);
-
         ColumnFamily<ByteBuffer, UUID> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, TimeUUIDSerializer.get());
-        ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta_v2", placement, deltaKeySerializer);
         ColumnFamily<ByteBuffer, UUID> auditCf = getColumnFamily(keyspaceDef, cfPrefix, "audit", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = getColumnFamily(keyspaceDef, cfPrefix, "history", placement, TimeUUIDSerializer.get());
 
         // Calculate the data centers on demand since they may change in a live system.
-        return new DeltaPlacement(placement, keyspace, deltaCf, blockedDeltaCf, auditCf, deltaHistoryCf);
+        return new DeltaPlacement(placement, keyspace, deltaCf, auditCf, deltaHistoryCf);
     }
 
     @Override

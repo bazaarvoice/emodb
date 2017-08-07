@@ -239,36 +239,32 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
         }
 
         KsDef ksDef = cassandra.describeKeyspace(keyspace);
-        boolean ksDefWasNull = false;
-
         if (ksDef == null) {
-            ksDefWasNull = true;
             _log.info("Creating new keyspace '{}' in '{}' and creating column families.", keyspace, dataCenter);
             ksDef = new KsDef(keyspace, STRATEGY_CLASS, Collections.<CfDef>emptyList());
             ksDef.setStrategy_options(ImmutableMap.of(dataCenter, Integer.toString(replicationFactor)));
             cassandra.systemAddKeyspace(ksDef);
-        }
-        // Create the column families using CQL
-        for (String cql : createCfCqlScripts) {
-            if (beforeCassandra12) {
-                cassandra.executeCql3Script_1_1(cql);
-            } else {
-                cassandra.executeCql3Script(cql);
-            }
-        }
-        if (!ksDefWasNull) {
-            if (!ksDef.getStrategy_options().containsKey(dataCenter)) {
-                // Add the data center to the replication topology.
-                _log.info("Updating keyspace '{}' to replicate to '{}'.", keyspace, dataCenter);
-                Map<String, String> strategyOptions = Maps.newLinkedHashMap(ksDef.getStrategy_options());
-                strategyOptions.put(dataCenter, Integer.toString(replicationFactor));
-                ksDef.setStrategy_options(strategyOptions);
-                ksDef.setCf_defs(Collections.<CfDef>emptyList());  // Don't modify column family definitions--assume they're correct already.
-                cassandra.systemUpdateKeyspace(ksDef);
 
-            } else {
-                _log.info("Not modifying keyspace '{}' since it already includes '{}'.", keyspace, dataCenter);
+            // Create the column families using CQL
+            for (String cql : createCfCqlScripts) {
+                if (beforeCassandra12) {
+                    cassandra.executeCql3Script_1_1(cql);
+                } else {
+                    cassandra.executeCql3Script(cql);
+                }
             }
+
+        } else if (!ksDef.getStrategy_options().containsKey(dataCenter)) {
+            // Add the data center to the replication topology.
+            _log.info("Updating keyspace '{}' to replicate to '{}'.", keyspace, dataCenter);
+            Map<String, String> strategyOptions = Maps.newLinkedHashMap(ksDef.getStrategy_options());
+            strategyOptions.put(dataCenter, Integer.toString(replicationFactor));
+            ksDef.setStrategy_options(strategyOptions);
+            ksDef.setCf_defs(Collections.<CfDef>emptyList());  // Don't modify column family definitions--assume they're correct already.
+            cassandra.systemUpdateKeyspace(ksDef);
+
+        } else {
+            _log.info("Not modifying keyspace '{}' since it already includes '{}'.", keyspace, dataCenter);
         }
     }
 
