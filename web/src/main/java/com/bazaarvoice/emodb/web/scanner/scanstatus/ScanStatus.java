@@ -24,6 +24,7 @@ public class ScanStatus {
 
     private final String _scanId;
     private final ScanOptions _options;
+    private final boolean _tableSnapshotCreated;
     private final boolean _canceled;
     private final List<ScanRangeStatus> _pendingScanRanges;
     private final List<ScanRangeStatus> _activeScanRanges;
@@ -31,17 +32,18 @@ public class ScanStatus {
     private final Date _startTime;
     private Date _completeTime;
 
-    public ScanStatus(String scanId, ScanOptions options, boolean canceled,
+    public ScanStatus(String scanId, ScanOptions options, boolean tableSnapshotCreated, boolean canceled,
                       Date startTime,
                       List<ScanRangeStatus> pendingScanRanges,
                       List<ScanRangeStatus> activeScanRanges,
                       List<ScanRangeStatus> completeScanRanges) {
-        this(scanId, options, canceled, startTime, pendingScanRanges, activeScanRanges, completeScanRanges, null);
+        this(scanId, options, tableSnapshotCreated, canceled, startTime, pendingScanRanges, activeScanRanges, completeScanRanges, null);
     }
 
     @JsonCreator
     public ScanStatus(@JsonProperty ("scanId") String scanId,
                       @JsonProperty ("options") ScanOptions options,
+                      @JsonProperty ("tableSnapshotCreated") boolean tableSnapshotCreated,
                       @JsonProperty ("canceled") boolean canceled,
                       @JsonProperty ("startTime") Date startTime,
                       @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
@@ -50,6 +52,7 @@ public class ScanStatus {
                       @JsonProperty ("completeTime") @Nullable Date completeTime) {
         _scanId = scanId;
         _options = options;
+        _tableSnapshotCreated = tableSnapshotCreated;
         _canceled = canceled;
         _startTime = startTime;
         _pendingScanRanges = Objects.firstNonNull(pendingScanRanges, ImmutableList.<ScanRangeStatus>of());
@@ -64,6 +67,10 @@ public class ScanStatus {
 
     public ScanOptions getOptions() {
         return _options;
+    }
+
+    public boolean isTableSnapshotCreated() {
+        return _tableSnapshotCreated;
     }
 
     public boolean isCanceled() {

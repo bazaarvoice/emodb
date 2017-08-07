@@ -94,6 +94,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
                         .put("options", JsonHelper.convert(status.getOptions(), Map.class))
                         .put("ranges", ranges)
                         .put("canceled", false)
+                        .put("tableSnapshotCreated", status.isTableSnapshotCreated())
                         .put("startTime", status.getStartTime().getTime())
                         .put("completeTime", status.getCompleteTime() != null ? status.getCompleteTime().getTime() : null)
                         .build(),
@@ -145,6 +146,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
         }
 
         boolean canceled = (Boolean) map.get("canceled");
+        boolean tableSnapshotCreated = Optional.fromNullable((Boolean) map.get("tableSnapshotCreated")).or(false);
         ScanOptions options = JsonHelper.convert(map.get("options"), ScanOptions.class);
         Long completeTs = (Long) map.get("completeTime");
         Date completeTime = completeTs != null ? new Date(completeTs) : null;
@@ -196,7 +198,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
                 new Date(startTs) :
                 extrapolateStartTimeFromScanRanges(pendingScanRanges, activeScanRanges, completeScanRanges);
 
-        return new ScanStatus(Intrinsic.getId(map), options, canceled, startTime, pendingScanRanges, activeScanRanges,
+        return new ScanStatus(Intrinsic.getId(map), options, tableSnapshotCreated, canceled, startTime, pendingScanRanges, activeScanRanges,
                 completeScanRanges, completeTime);
     }
 
@@ -332,6 +334,15 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
                         .update("canceled", Deltas.conditional(Conditions.equal(false), Deltas.literal(true)))
                         .build(),
                 new AuditBuilder().setLocalHost().setComment("Canceling scan").build());
+    }
+
+    @Override
+    public void setTableSnapshotCreated(String scanId) {
+        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+                Deltas.mapBuilder()
+                        .update("tableSnapshotCreated", Deltas.conditional(Conditions.equal(false), Deltas.literal(true)))
+                        .build(),
+                new AuditBuilder().setLocalHost().setComment("Table snapshot created").build());
     }
 
     private String toRangeKey(int taskId) {

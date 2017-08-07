@@ -6,10 +6,8 @@ import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricCounterOutputStream
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.core.DataTools;
-import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
@@ -177,7 +175,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
     @Override
     public RangeScanUploaderResult scanAndUpload(
-            final int taskId, ScanOptions options, final String placement, ScanRange scanRange, final TableSet tableSet)
+            final String scanId, final int taskId, ScanOptions options, final String placement, ScanRange scanRange)
             throws IOException, InterruptedException {
         checkState(!_shutdown, "Service not started");
 
@@ -234,16 +232,11 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                 });
             }
 
-            MultiTableScanOptions multiTableScanOptions = new MultiTableScanOptions()
-                    .setPlacement(placement)
-                    .setScanRange(scanRange)
-                    .setIncludeDeletedTables(false)
-                    .setIncludeMirrorTables(false);
-
             int partCountForFirstShard = 1;
             Batch batch = new Batch(context, partCountForFirstShard);
 
-            Iterator<MultiTableScanResult> allResults = _dataTools.multiTableScan(multiTableScanOptions, tableSet, LimitCounter.max(), ReadConsistency.STRONG, null);
+            Iterator<MultiTableScanResult> allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
+                    LimitCounter.max(), ReadConsistency.STRONG, null);
 
             // Enforce a maximum number of results based on the scan options
             Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));

@@ -71,4 +71,9 @@ public interface ScanStatusDAO {
      * Sets the time this scan completed.
      */
     void setCompleteTime(String scanId, Date completeTime);
+
+    /**
+     * Updates the scan to mark that the table snapshot have been created.
+     */
+    void setTableSnapshotCreated(String scanId);
 }

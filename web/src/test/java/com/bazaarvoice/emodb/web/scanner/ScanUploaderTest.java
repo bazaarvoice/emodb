@@ -25,14 +25,12 @@ import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.Table;
-import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.web.scanner.control.DistributedScanRangeMonitor;
 import com.bazaarvoice.emodb.web.scanner.control.InMemoryScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.control.LocalScanUploadMonitor;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeComplete;
 import com.bazaarvoice.emodb.web.scanner.control.ScanRangeTask;
-import com.bazaarvoice.emodb.web.scanner.control.ScanTableSetManager;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.rangescan.LocalRangeScanUploader;
@@ -105,7 +103,6 @@ import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -152,7 +149,7 @@ public class ScanUploaderTest {
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
 
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
-                mock(ScanTableSetManager.class), mock(ScanWriterGenerator.class), mock(StashStateListener.class),
+                mock(ScanWriterGenerator.class), mock(StashStateListener.class),
                 mock(ScanCountListener.class), mock(DataTools.class));
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
 
@@ -179,7 +176,7 @@ public class ScanUploaderTest {
             }
         }
 
-        ScanStatus scanStatus = new ScanStatus(id, options, false, new Date(), statuses,
+        ScanStatus scanStatus = new ScanStatus(id, options, false, false, new Date(), statuses,
                 Lists.<ScanRangeStatus>newArrayList(), Lists.<ScanRangeStatus>newArrayList());
 
         scanStatusDAO.updateScanStatus(scanStatus);
@@ -193,6 +190,8 @@ public class ScanUploaderTest {
 
         Date now = new Date();
 
+        scanStatusDAO.setTableSnapshotCreated(id);
+        
         for (String p : ImmutableList.of("p0", "p1")) {
             scanStatusDAO.setScanRangeTaskActive(id, taskForRange.get(p, ScanRange.create(asByteBuffer(0, 0L), asByteBuffer(0, 1L))), now);
             scanStatusDAO.setScanRangeTaskComplete(id, taskForRange.get(p, ScanRange.create(asByteBuffer(0, 0L), asByteBuffer(0, 1L))), now);
@@ -244,7 +243,7 @@ public class ScanUploaderTest {
                 ScanRangeSplits.builder()
                         .addScanRange("dummy", "dummy", ScanRange.all())
                         .build());
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+        when(dataTools.stashMultiTableScan(eq("test1"), eq("placement1"), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(createMockScanResults());
         when(dataTools.toContent(any(MultiTableScanResult.class), any(ReadConsistency.class), eq(false)))
                 .thenAnswer(new Answer<Map<String, Object>>() {
@@ -304,7 +303,6 @@ public class ScanUploaderTest {
         );
         ScanWriterGenerator scanWriterGenerator = new ScanWriterGenerator(scanWriterFactory);
 
-        TableSet tableSet = mock(TableSet.class);
         StashStateListener stashStateListener = mock(StashStateListener.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
@@ -314,7 +312,7 @@ public class ScanUploaderTest {
         ScanUploader scanUploader = new ScanUploader(dataTools, scanWorkflow, scanStatusDAO, stashStateListener);
         scanUploader.scanAndUpload("test1",
                 new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path"))));
-        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, mock(ScanTableSetManager.class),
+        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 scanWriterGenerator, stashStateListener, scanCountListener, dataTools);
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
 
@@ -348,7 +346,7 @@ public class ScanUploaderTest {
                 Duration.standardMinutes(5));
         uploader.start();
         try {
-            uploader.scanAndUpload(task.getId(), scanStatus.getOptions(), "placement1", task.getRange(), tableSet);
+            uploader.scanAndUpload("test1", task.getId(), scanStatus.getOptions(), "placement1", task.getRange());
         } finally {
             uploader.stop();
         }
@@ -496,17 +494,13 @@ public class ScanUploaderTest {
         // Create a simple scan with a single range
         String id = "id";
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"));
-        ScanStatus scanStatus = new ScanStatus(id, options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(),
                 ImmutableList.of(new ScanRangeStatus(123, "p0", ScanRange.all(), 0, Optional.<Integer>absent(), Optional.<Integer>absent())),
                 Lists.<ScanRangeStatus>newArrayList(), Lists.<ScanRangeStatus>newArrayList());
 
-        // Mock needs to return an object, actual value isn't important for this test
-        ScanTableSetManager scanTableSetManager = mock(ScanTableSetManager.class);
-        when(scanTableSetManager.getTableSetForScan(id)).thenReturn(mock(TableSet.class));
-
         InMemoryScanWorkflow scanWorkflow = new InMemoryScanWorkflow();
         ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(new InMemoryDataStore(new MetricRegistry()), "scan_table", "app_global:sys");
-        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, scanTableSetManager,
+        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 mock(ScanWriterGenerator.class), mock(StashStateListener.class), mock(ScanCountListener.class),
                 mock(DataTools.class));
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
@@ -526,11 +520,11 @@ public class ScanUploaderTest {
         // Create a RangeScanUploader which will raise an uncaught exception when the scan is attempted.
         RangeScanUploader rangeScanUploader = mock(RangeScanUploader.class);
         doThrow(new RuntimeException("Mock error reading from Cassandra"))
-                .when(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class));
+                .when(rangeScanUploader).scanAndUpload(eq(id), eq(123), eq(options), eq("p0"), eq(ScanRange.all()));
 
         // Set up the distributed scan range monitor
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
-                scanWorkflow, scanStatusDAO, rangeScanUploader, scanTableSetManager, 1, mock(LifeCycleRegistry.class));
+                scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
         // Give it an executor service that will run the scan synchronously in the current thread
         distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
@@ -551,7 +545,7 @@ public class ScanUploaderTest {
         assertEquals(pendingTasks.get(0).getScanId(), id);
         assertEquals(pendingTasks.get(0).getId(), 123);
 
-        verify(rangeScanUploader).scanAndUpload(eq(123), eq(options), eq("p0"), eq(ScanRange.all()), any(TableSet.class));
+        verify(rangeScanUploader).scanAndUpload(eq(id), eq(123), eq(options), eq("p0"), eq(ScanRange.all()));
         verifyNoMoreInteractions(rangeScanUploader);
     }
 
@@ -562,7 +556,7 @@ public class ScanUploaderTest {
         String id = "id";
         String placement = "p0";
         ScanOptions options = new ScanOptions(ImmutableList.of(placement));
-        ScanStatus scanStatus = new ScanStatus(id, options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(),
                 ImmutableList.of(new ScanRangeStatus(123, placement, ScanRange.all(), 0, Optional.<Integer>absent(), Optional.<Integer>absent())),
                 Lists.<ScanRangeStatus>newArrayList(), Lists.<ScanRangeStatus>newArrayList());
 
@@ -584,13 +578,12 @@ public class ScanUploaderTest {
         );
 
         RangeScanUploader rangeScanUploader = mock(RangeScanUploader.class);
-        when(rangeScanUploader.scanAndUpload(anyInt(), eq(options), eq(placement), eq(ScanRange.all()), any(TableSet.class)))
+        when(rangeScanUploader.scanAndUpload(eq(id), anyInt(), eq(options), eq(placement), eq(ScanRange.all())))
                 .thenReturn(RangeScanUploaderResult.success());
-        ScanTableSetManager scanTableSetManager = mock(ScanTableSetManager.class);
 
         // Set up the distributed scan range monitor
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
-                scanWorkflow, scanStatusDAO, rangeScanUploader, scanTableSetManager, 1, mock(LifeCycleRegistry.class));
+                scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
         // Give it an executor service that will run the scan synchronously in the current thread
         distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
@@ -638,7 +631,7 @@ public class ScanUploaderTest {
             status.setScanCompleteTime(new Date());
         }
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(), pendingTasks, activeTasks, completeTasks);
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(), pendingTasks, activeTasks, completeTasks);
 
         ScanWorkflow scanWorkflow = mock(ScanWorkflow.class);
         ScanStatusDAO scanStatusDAO = mock(ScanStatusDAO.class);
@@ -662,7 +655,7 @@ public class ScanUploaderTest {
         status.setScanQueuedTime(new Date());
         status.setScanCompleteTime(new Date());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(status), new Date());
 
         ScanWorkflow scanWorkflow = mock(ScanWorkflow.class);
@@ -704,25 +697,25 @@ public class ScanUploaderTest {
 
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
         scanStatusDAO.updateScanStatus(
-                new ScanStatus("closedNew", options, false, DateTime.now().minusHours(2).toDate(),
+                new ScanStatus("closedNew", options, true, false, DateTime.now().minusHours(2).toDate(),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(status),
                         DateTime.now().minusHours(1).toDate()));
         scanStatusDAO.updateScanStatus(
-                new ScanStatus("closedOld", options, false, DateTime.now().minusDays(2).toDate(),
+                new ScanStatus("closedOld", options, true, false, DateTime.now().minusDays(2).toDate(),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(),
                         DateTime.now().minusDays(1).minusHours(23).toDate()));
         scanStatusDAO.updateScanStatus(
-                new ScanStatus("openNotOverrun", options, false, DateTime.now().minusDays(1).plusMinutes(1).toDate(),
+                new ScanStatus("openNotOverrun", options, true, false, DateTime.now().minusDays(1).plusMinutes(1).toDate(),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(status), ImmutableList.<ScanRangeStatus>of(),
                         null));
         scanStatusDAO.updateScanStatus(
-                new ScanStatus("openIsOverrun", options, false, DateTime.now().minusDays(1).minusMinutes(1).toDate(),
+                new ScanStatus("openIsOverrun", options, true, false, DateTime.now().minusDays(1).minusMinutes(1).toDate(),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(status), ImmutableList.<ScanRangeStatus>of(),
                         null));
 
         ScheduledExecutorService service = mock(ScheduledExecutorService.class);
 
-        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, mock(ScanTableSetManager.class),
+        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 mock(ScanWriterGenerator.class), mock(StashStateListener.class), mock(ScanCountListener.class),
                 mock(DataTools.class));
         monitor.setExecutorService(service);
@@ -767,54 +760,15 @@ public class ScanUploaderTest {
     }
 
     @Test
-    public void testCleanupOrphanedScans() {
-        ScanWorkflow scanWorkflow = mock(ScanWorkflow.class);
-
-        ScanTableSetManager tableSetManager = mock(ScanTableSetManager.class);
-        when(tableSetManager.getAvailableTableSets()).thenReturn(ImmutableList.of("active", "closed", "unknown"));
-
-        ScanOptions options = new ScanOptions("p0");
-        ScanRangeStatus status = new ScanRangeStatus(0, "'0", ScanRange.all(), 0, Optional.<Integer>absent(), Optional.<Integer>absent());
-
-        ScanStatusDAO scanStatusDAO = mock(ScanStatusDAO.class);
-        when(scanStatusDAO.getScanStatus("active")).thenReturn(
-                new ScanStatus("active", options, false, new Date(), ImmutableList.<ScanRangeStatus>of(status),
-                        ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), null));
-        when(scanStatusDAO.getScanStatus("closed")).thenReturn(
-                new ScanStatus("closed", options, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
-                        ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(status), new Date()));
-
-        ScheduledExecutorService service = mock(ScheduledExecutorService.class);
-        doAnswer(new Answer() {
-            @Override
-            public Object answer(InvocationOnMock invocation) throws Throwable {
-                ((Runnable) invocation.getArguments()[0]).run();
-                return null;
-            }
-        }).when(service).submit(any((Runnable.class)));
-
-        LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, tableSetManager,
-                mock(ScanWriterGenerator.class), mock(StashStateListener.class), mock(ScanCountListener.class),
-                mock(DataTools.class));
-        monitor.setExecutorService(service);
-
-        monitor.cleanupOrphanedScans();
-
-        verify(tableSetManager).getAvailableTableSets();
-        verify(tableSetManager).cleanupTableSetForScan("closed");
-        verify(tableSetManager).cleanupTableSetForScan("unknown");
-        verifyNoMoreInteractions(tableSetManager);
-    }
-
-    @Test
     public void testScanTaskWithOversizedRange()
             throws Exception {
+        final String id = "id";
         final int shardId = 1;
         final long tableUuid = 100;
         final MetricRegistry metricRegistry = new MetricRegistry();
 
         DataTools dataTools = mock(DataTools.class);
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+        when(dataTools.stashMultiTableScan(eq(id), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenAnswer(new Answer<Iterator<MultiTableScanResult>>() {
                     @Override
                     public Iterator<MultiTableScanResult> answer(InvocationOnMock invocation)
@@ -865,8 +819,6 @@ public class ScanUploaderTest {
         when(scanWriterGenerator.createScanWriter(eq(123), anySetOf(ScanDestination.class)))
                 .thenReturn(scanWriter);
 
-        TableSet tableSet = mock(TableSet.class);
-
         LocalRangeScanUploader uploader = new LocalRangeScanUploader(
                 dataTools, scanWriterGenerator, mock(LifeCycleRegistry.class), metricRegistry, 2, 1000, Duration.standardMinutes(1),
                 Duration.standardMinutes(5));
@@ -877,7 +829,7 @@ public class ScanUploaderTest {
         RangeScanUploaderResult result;
         uploader.start();
         try {
-            result = uploader.scanAndUpload(123, options, "p0", ScanRange.all(), tableSet);
+            result = uploader.scanAndUpload(id, 123, options, "p0", ScanRange.all());
         } finally {
             uploader.stop();
         }
@@ -901,9 +853,6 @@ public class ScanUploaderTest {
 
         ScanWorkflow scanWorkflow = mock(ScanWorkflow.class);
         RangeScanUploader rangeScanUploader = mock(RangeScanUploader.class);
-        ScanTableSetManager scanTableSetManager = mock(ScanTableSetManager.class);
-
-        when(scanTableSetManager.getTableSetForScan(id)).thenReturn(mock(TableSet.class));
 
         ScanRangeTask task = mock(ScanRangeTask.class);
         when(task.getScanId()).thenReturn(id);
@@ -919,17 +868,17 @@ public class ScanUploaderTest {
         List<ScanRangeStatus> statuses = ImmutableList.of(
                 new ScanRangeStatus(123, placement, originalRange, 15, Optional.<Integer>absent(), Optional.<Integer>absent()));
 
-        ScanStatus scanStatus = new ScanStatus(id, options, false, new Date(), statuses,
+        ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(), statuses,
                 Lists.<ScanRangeStatus>newArrayList(), Lists.<ScanRangeStatus>newArrayList());
 
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
         scanStatusDAO.updateScanStatus(scanStatus);
 
-        when(rangeScanUploader.scanAndUpload(eq(123), eq(options), eq(placement), eq(originalRange), any(TableSet.class)))
+        when(rangeScanUploader.scanAndUpload(eq(id), eq(123), eq(options), eq(placement), eq(originalRange)))
                 .thenReturn(RangeScanUploaderResult.resplit(resplitRange));
 
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
-                scanWorkflow, scanStatusDAO, rangeScanUploader, scanTableSetManager, 1, mock(LifeCycleRegistry.class));
+                scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
         distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
         distributedScanRangeMonitor.startScansIfAvailable();
@@ -961,7 +910,7 @@ public class ScanUploaderTest {
 
         List<ScanRangeStatus> statuses = ImmutableList.of(status);
 
-        ScanStatus scanStatus = new ScanStatus(id, options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus(id, options, true, false, new Date(),
                 Lists.<ScanRangeStatus>newArrayList(), Lists.<ScanRangeStatus>newArrayList(), statuses);
 
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
@@ -978,7 +927,7 @@ public class ScanUploaderTest {
                         .build());
 
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
-                mock(ScanTableSetManager.class), mock(ScanWriterGenerator.class), mock(StashStateListener.class),
+                mock(ScanWriterGenerator.class), mock(StashStateListener.class),
                 mock(ScanCountListener.class), dataTools);
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
 
@@ -1039,7 +988,7 @@ public class ScanUploaderTest {
             Record record = mock(Record.class);
             when(record.getKey()).thenReturn(key);
 
-            when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+            when(dataTools.stashMultiTableScan(eq("id"), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                     .thenReturn(Iterators.singletonIterator(
                             new MultiTableScanResult(
                                     ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1059,15 +1008,13 @@ public class ScanUploaderTest {
                         }
                     });
 
-            TableSet tableSet = mock(TableSet.class);
-
             scanUploader = new LocalRangeScanUploader(dataTools, scanWriterGenerator, mock(LifeCycleRegistry.class), metricRegistry);
             scanUploader.start();
 
             ScanOptions scanOptions = new ScanOptions("p0")
                     .addDestination(ScanDestination.discard());
 
-            RangeScanUploaderResult result = scanUploader.scanAndUpload(1, scanOptions, "p0", ScanRange.all(), tableSet);
+            RangeScanUploaderResult result = scanUploader.scanAndUpload("id", 1, scanOptions, "p0", ScanRange.all());
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.FAILURE);
         } finally {
             uploadService.shutdownNow();
@@ -1093,7 +1040,7 @@ public class ScanUploaderTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
 
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+        when(dataTools.stashMultiTableScan(eq("id"), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(Iterators.singletonIterator(
                         new MultiTableScanResult(
                                 ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1143,7 +1090,7 @@ public class ScanUploaderTest {
         uploader.start();
 
         try {
-            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class));
+            RangeScanUploaderResult result = uploader.scanAndUpload("id", 0, options, "p0", ScanRange.all());
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.FAILURE);
         } finally {
             uploader.stop();
@@ -1166,7 +1113,7 @@ public class ScanUploaderTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
 
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+        when(dataTools.stashMultiTableScan(eq("id"), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
                 .thenReturn(Iterators.singletonIterator(
                         new MultiTableScanResult(
                                 ByteBuffer.wrap(new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1229,7 +1176,7 @@ public class ScanUploaderTest {
             // Given our configuration above the file will take 2 seconds to upload but we are configured to terminate
             // the upload if there was no progress for 100ms.  Therefore if this returns success then the upload
             // was not killed despite taking over 100ms, which is what this test is checking for.
-            RangeScanUploaderResult result = uploader.scanAndUpload(0, options, "p0", ScanRange.all(), mock(TableSet.class));
+            RangeScanUploaderResult result = uploader.scanAndUpload("id", 0, options, "p0", ScanRange.all());
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.SUCCESS);
         } finally {
             uploader.stop();

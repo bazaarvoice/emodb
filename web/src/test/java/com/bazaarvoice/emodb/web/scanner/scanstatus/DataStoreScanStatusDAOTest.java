@@ -58,7 +58,7 @@ public class DataStoreScanStatusDAOTest {
         complete.setScanStartTime(DateTime.now().minusMinutes(25).toDate());
         complete.setScanCompleteTime(DateTime.now().minusMinutes(20).toDate());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, false, false, new Date(),
                 ImmutableList.of(pending), ImmutableList.of(active), ImmutableList.of(complete));
 
         _dao.updateScanStatus(scanStatus);
@@ -75,7 +75,7 @@ public class DataStoreScanStatusDAOTest {
         ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
                 Optional.<Integer>absent(), Optional.<Integer>absent());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.of(pending), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
 
         _dao.updateScanStatus(scanStatus);
@@ -106,7 +106,7 @@ public class DataStoreScanStatusDAOTest {
                 Optional.<Integer>absent(), Optional.<Integer>absent());
         pending.setScanQueuedTime(DateTime.now().minusMinutes(1).toDate());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.of(pending), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
@@ -136,7 +136,7 @@ public class DataStoreScanStatusDAOTest {
         active.setScanQueuedTime(DateTime.now().minusMinutes(2).toDate());
         active.setScanStartTime(DateTime.now().minusMinutes(1).toDate());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
@@ -166,7 +166,7 @@ public class DataStoreScanStatusDAOTest {
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
@@ -192,7 +192,7 @@ public class DataStoreScanStatusDAOTest {
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
@@ -228,7 +228,7 @@ public class DataStoreScanStatusDAOTest {
         complete.setScanCompleteTime(new Date());
         complete.setResplitRange(ScanRange.create(row1, ScanRange.MAX_VALUE));
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(complete));
         _dao.updateScanStatus(scanStatus);
 
@@ -258,7 +258,7 @@ public class DataStoreScanStatusDAOTest {
         active.setScanQueuedTime(new Date());
         active.setScanStartTime(new Date());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
@@ -279,7 +279,7 @@ public class DataStoreScanStatusDAOTest {
         complete.setScanStartTime(new Date());
         complete.setScanCompleteTime(new Date());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(complete));
         _dao.updateScanStatus(scanStatus);
 
@@ -312,7 +312,7 @@ public class DataStoreScanStatusDAOTest {
         complete.setScanStartTime(DateTime.now().minusMinutes(25).toDate());
         complete.setScanCompleteTime(DateTime.now().minusMinutes(20).toDate());
 
-        ScanStatus scanStatus = new ScanStatus("id", options, false, new Date(0),
+        ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(0),
                 ImmutableList.of(pending), ImmutableList.of(active), ImmutableList.of(complete));
 
         _dao.updateScanStatus(scanStatus);

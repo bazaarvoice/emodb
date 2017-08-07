@@ -128,7 +128,7 @@ public class ScanPlan {
             }
         }
 
-        return new ScanStatus(_scanId, _options, false, new Date(), pendingRangeStatuses,
+        return new ScanStatus(_scanId, _options, false, false, new Date(), pendingRangeStatuses,
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
     }
 

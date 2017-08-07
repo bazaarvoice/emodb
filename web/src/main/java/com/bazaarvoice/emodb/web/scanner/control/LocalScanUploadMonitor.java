@@ -73,7 +73,6 @@ public class LocalScanUploadMonitor extends AbstractService {
 
     private final ScanWorkflow _scanWorkflow;
     private final ScanStatusDAO _scanStatusDAO;
-    private final ScanTableSetManager _scanTableSetManager;
     private final ScanWriterGenerator _scanWriterGenerator;
     private final StashStateListener _stashStateListener;
     private final ScanCountListener _scanCountListener;
@@ -83,12 +82,11 @@ public class LocalScanUploadMonitor extends AbstractService {
     private ScheduledExecutorService _service;
 
     public LocalScanUploadMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
-                                  ScanTableSetManager scanTableSetManager, ScanWriterGenerator scanWriterGenerator,
+                                  ScanWriterGenerator scanWriterGenerator,
                                   StashStateListener stashStateListener, ScanCountListener scanCountListener,
                                   DataTools dataTools) {
         _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _scanTableSetManager = checkNotNull(scanTableSetManager, "scanTableSetManager");
         _scanWriterGenerator = checkNotNull(scanWriterGenerator, "scanWriterGenerator");
         _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
         _scanCountListener = checkNotNull(scanCountListener, "scanCountListener");
@@ -122,17 +120,7 @@ public class LocalScanUploadMonitor extends AbstractService {
 
                     // Start the loop for processing complete range scans
                     _service.schedule(_processCompleteRangeScansExecution, 1, TimeUnit.SECONDS);
-
-                    // Run a daily check to clean up orphaned scans
-                    _service.scheduleAtFixedRate(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    cleanupOrphanedScans();
-                                }
-                            },
-                            1, TimeUnit.DAYS.toMinutes(1), TimeUnit.MINUTES);
-
+                    
                     notifyStarted();
                 } catch (Exception e) {
                     _log.error("Failed to start local scan upload monitor", e);
@@ -238,6 +226,13 @@ public class LocalScanUploadMonitor extends AbstractService {
             notifyActiveScanCountChanged();
             // Schedule a callback to cancel the scan if it goes overrun
             scheduleOverrunCheck(status);
+        }
+
+        // Before going any further ensure the stash table snapshot has been created and, if not, do so now.
+        // This should only happen prior to the first scan range being processed.
+        if (!status.isTableSnapshotCreated()) {
+            _dataTools.createStashTokenRangeSnapshot(id, status.getOptions().getPlacements());
+            _scanStatusDAO.setTableSnapshotCreated(id);
         }
 
         // Before evaluating available tasks check whether any completed tasks didn't scan their entire ranges
@@ -435,37 +430,10 @@ public class LocalScanUploadMonitor extends AbstractService {
         }
 
         try {
-            // Remove the distributed table set for this scan
-            _scanTableSetManager.cleanupTableSetForScan(id);
+            // Remove the table snapshots set for this scan
+            _dataTools.clearStashTokenRangeSnapshot(id);
         } catch (Exception e) {
             _log.error("Failed to clean up table set for scan {}", id, e);
-        }
-    }
-
-    @VisibleForTesting
-    public void cleanupOrphanedScans() {
-        try {
-            for (final String id : _scanTableSetManager.getAvailableTableSets()) {
-                final ScanStatus scanStatus = _scanStatusDAO.getScanStatus(id);
-
-                if (scanStatus == null || scanStatus.isDone()) {
-                    // Schedule each cleanup separately
-                    _service.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (scanStatus == null) {
-                                _log.warn("Cleaning table set from unknown scan: {}", id);
-                            } else {
-                                _log.info("Cleaning orphaned table set for scan: {}", id);
-                            }
-
-                            cleanupScan(id);
-                        }
-                    });
-                }
-            }
-        } catch (Exception e) {
-            _log.error("Failed to clean up orphaned table sets", e);
         }
     }
 

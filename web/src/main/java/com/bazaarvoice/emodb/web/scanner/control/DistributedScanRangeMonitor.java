@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.control;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploader;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
@@ -51,7 +50,6 @@ public class DistributedScanRangeMonitor implements Managed {
     private final ScanWorkflow _scanWorkflow;
     private final ScanStatusDAO _scanStatusDAO;
     private final RangeScanUploader _rangeScanUploader;
-    private final ScanTableSetManager _scanTableSetManager;
     private final int _maxConcurrentScans;
     // No ConcurrentSet in Java, so use a ConcurrentMap instead.
     private final ConcurrentMap<Integer, ClaimedTask> _claimedTasks = Maps.newConcurrentMap();
@@ -60,12 +58,11 @@ public class DistributedScanRangeMonitor implements Managed {
 
     @Inject
     public DistributedScanRangeMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
-                                       RangeScanUploader rangeScanUploader, ScanTableSetManager scanTableSetManager,
+                                       RangeScanUploader rangeScanUploader,
                                        @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
         _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
         _rangeScanUploader = checkNotNull(rangeScanUploader, "rangeScanUploader");
-        _scanTableSetManager = checkNotNull(scanTableSetManager, "scanTableSetManager");
         checkArgument(maxConcurrentScans > 0, "maxConcurrentScans <= 0");
         _maxConcurrentScans = maxConcurrentScans;
 
@@ -334,10 +331,8 @@ public class DistributedScanRangeMonitor implements Managed {
 
             _scanStatusDAO.setScanRangeTaskActive(scanId, taskId, new Date());
 
-            // Get the distributed table set for this scan
-            TableSet tableSet = _scanTableSetManager.getTableSetForScan(scanId);
             // Perform the range scan
-            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet);
+            result = _rangeScanUploader.scanAndUpload(scanId, taskId, status.getOptions(), placement, range);
 
             _log.info("Completed scan range task: {}", task);
         } catch (Throwable t) {

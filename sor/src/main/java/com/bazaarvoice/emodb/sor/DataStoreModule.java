@@ -37,6 +37,7 @@ import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.Placements;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
+import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
@@ -44,6 +45,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxKeyspaceDiscovery;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.BootstrapTables;
 import com.bazaarvoice.emodb.table.db.astyanax.CQLSessionForHintsPollerMap;
+import com.bazaarvoice.emodb.table.db.astyanax.CQLStashTableDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.CurrentDataCenter;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
@@ -180,6 +182,13 @@ public class DataStoreModule extends PrivateModule {
             bind(TableChangesEnabledTask.class).asEagerSingleton();
             bind(MaintenanceRateLimitTask.class).asEagerSingleton();
             bind(MoveTableTask.class).asEagerSingleton();
+        }
+
+        // Stash requires an additional DAO for storing Stash artifacts and provides a custom interface for access.
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.scanner)) {
+            bind(CQLStashTableDAO.class).asEagerSingleton();
+            bind(StashTableDAO.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            expose(StashTableDAO.class);
         }
 
         // The system of record requires two bootstrap tables in which it stores its metadata about tables.
