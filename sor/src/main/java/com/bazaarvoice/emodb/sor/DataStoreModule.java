@@ -24,7 +24,16 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.core.*;
+import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
+import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.sor.core.DefaultAuditStore;
+import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
+import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
+import com.bazaarvoice.emodb.sor.core.LocalDataStore;
+import com.bazaarvoice.emodb.sor.core.StashRoot;
+import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
@@ -228,9 +237,6 @@ public class DataStoreModule extends PrivateModule {
         // Data tools used to generate reports
         bind(DataTools.class).to(DefaultDataStore.class);
         expose(DataTools.class);
-
-        bind(MigratorTools.class).to(DefaultMigratorTools.class);
-        expose(MigratorTools.class);
     }
 
     @Provides @Singleton

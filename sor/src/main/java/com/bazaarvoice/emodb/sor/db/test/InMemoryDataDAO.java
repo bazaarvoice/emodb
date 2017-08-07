@@ -12,7 +12,16 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -50,7 +59,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * In-memory implementation of {@link DataWriterDAO}, for testing.
  */
-public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, MigratorReaderDAO, MigratorWriterDAO {
+public class InMemoryDataDAO implements DataReaderDAO, DataWriterDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
     private final Map<String, NavigableMap<String, Map<UUID, Change>>> _auditChanges = Maps.newHashMap();
@@ -59,22 +68,22 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     private int _columnBatchSize = 50;
     public AuditStore _auditStore;
 
-    public InMemoryDataReaderDAO() {
+    public InMemoryDataDAO() {
         _auditStore = new InMemoryAuditStore();
     }
 
-    public InMemoryDataReaderDAO setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
+    public InMemoryDataDAO setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
         _fullConsistencyDelayMillis = fullConsistencyDelayMillis;
         _fullConsistencyTimestamp = null;
         return this;
     }
 
-    public InMemoryDataReaderDAO setAuditStore(AuditStore auditStore) {
+    public InMemoryDataDAO setAuditStore(AuditStore auditStore) {
         _auditStore = checkNotNull(auditStore);
         return this;
     }
 
-    public InMemoryDataReaderDAO setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
+    public InMemoryDataDAO setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
         _fullConsistencyTimestamp = fullConsistencyTimestamp;
         return this;
     }
@@ -484,15 +493,5 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
         } catch (DecoderException e) {
             throw new IllegalArgumentException("Invalid hex string: " + string);
         }
-    }
-
-    @Override
-    public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
-        throw new UnsupportedOperationException();
     }
 }

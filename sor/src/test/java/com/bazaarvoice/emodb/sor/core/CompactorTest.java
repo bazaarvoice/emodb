@@ -12,7 +12,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
@@ -440,7 +440,7 @@ public class CompactorTest {
 
         // Boolean used to control whether the data DAO should pause after deletion of records or not
         final AtomicBoolean holdRecord = new AtomicBoolean(true);
-        InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO() {
+        InMemoryDataDAO dataDAO = new InMemoryDataDAO() {
             @Override
             public void compact(Table table, String key, UUID compactionKey, Compaction compaction,
                                 UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
@@ -548,7 +548,7 @@ public class CompactorTest {
         // Latch used to coordinate returning the read record
         final CountDownLatch returnRecord = new CountDownLatch(1);
 
-        InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO() {
+        InMemoryDataDAO dataDAO = new InMemoryDataDAO() {
             @Override
             public Record read(Key key, ReadConsistency ignored) {
                 // Read the record as usual

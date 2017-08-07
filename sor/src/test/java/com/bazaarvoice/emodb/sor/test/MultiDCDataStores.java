@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
@@ -25,7 +25,7 @@ import java.net.URI;
 public class MultiDCDataStores {
 
     private final DataStore[] _stores;
-    private final InMemoryDataReaderDAO[] _inMemoryDaos;
+    private final InMemoryDataDAO[] _inMemoryDaos;
     private final ReplicatingDataWriterDAO[] _replDaos;
     private final AuditStore[] _auditStores;
     private final InMemoryTableDAO _tableDao;
@@ -38,10 +38,10 @@ public class MultiDCDataStores {
         _tableDao = new InMemoryTableDAO();
 
         // create multiple data stores, one per data center
-        _inMemoryDaos = new InMemoryDataReaderDAO[numDCs];
+        _inMemoryDaos = new InMemoryDataDAO[numDCs];
         _replDaos = new ReplicatingDataWriterDAO[numDCs];
         for (int i = 0; i < numDCs; i++) {
-            _inMemoryDaos[i] = new InMemoryDataReaderDAO();
+            _inMemoryDaos[i] = new InMemoryDataDAO();
             _replDaos[i] = new ReplicatingDataWriterDAO(_inMemoryDaos[i]);
         }
         // connect each data store to every other data store
@@ -80,7 +80,7 @@ public class MultiDCDataStores {
         return _stores[index];
     }
 
-    public InMemoryDataReaderDAO dao(int index) {
+    public InMemoryDataDAO dao(int index) {
         return _inMemoryDaos[index];
     }
 
@@ -109,14 +109,14 @@ public class MultiDCDataStores {
     }
 
     public MultiDCDataStores setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
-        for (InMemoryDataReaderDAO dao : _inMemoryDaos) {
+        for (InMemoryDataDAO dao : _inMemoryDaos) {
             dao.setFullConsistencyDelayMillis(fullConsistencyDelayMillis);
         }
         return this;
     }
 
     public MultiDCDataStores setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
-        for (InMemoryDataReaderDAO dao : _inMemoryDaos) {
+        for (InMemoryDataDAO dao : _inMemoryDaos) {
             dao.setFullConsistencyTimestamp(fullConsistencyTimestamp);
         }
         return this;
