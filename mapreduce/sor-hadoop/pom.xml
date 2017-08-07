@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-mapreduce</artifactId>
-        <version>1.0.3-migration-SNAPSHOT</version>
+        <version>1.0.2-migration</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
