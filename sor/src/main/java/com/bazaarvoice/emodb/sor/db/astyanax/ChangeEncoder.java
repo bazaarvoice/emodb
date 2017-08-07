@@ -11,13 +11,13 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.UUID;
 
-interface ChangeEncoder {
+public interface ChangeEncoder {
 
-    String encodeDelta(String delta, @Nullable EnumSet<ChangeFlag> changeFlags, Set<String> tags);
+    StringBuilder encodeDelta(String delta, @Nullable EnumSet<ChangeFlag> changeFlags, Set<String> tags, StringBuilder changeBody);
 
     String encodeAudit(Audit audit);
 
-    String encodeCompaction(Compaction compaction);
+    StringBuilder encodeCompaction(Compaction compaction, StringBuilder builder);
 
     String encodeHistory(History history);
 

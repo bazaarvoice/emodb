@@ -22,6 +22,8 @@ import java.util.EnumSet;
  *      A typical use case for this is running command-line tools, such as reports.</li>
  * <li>SCANNER:
  *      Only services, tasks, and resources required to support the scan and upload server.</li>
+ * <li>SCANNER:
+ *      Only services, tasks, and resources required to migrate all delta from old tables to new "blocked" tables.</li>
  * </ul>
  */
 public enum EmoServiceMode {
@@ -95,6 +97,18 @@ public enum EmoServiceMode {
             Aspect.scanner,
             Aspect.security,
             Aspect.full_consistency
+    ),
+
+    DELTA_MIGRATOR(
+            Aspect.web,
+            Aspect.cache,
+            Aspect.leader_control,
+            Aspect.dataCenter,
+            Aspect.dataStore_module,
+            Aspect.blobStore_module, // needed for permission resolver
+            Aspect.migrator,
+            Aspect.security,
+            Aspect.full_consistency
     );
 
     private final EnumSet<Aspect> aspects;
@@ -156,6 +170,7 @@ public enum EmoServiceMode {
         security,
         invalidation_cache_listener, // This makes sure the node is registered in zookeeper to invalidate its caches
         scanner(false),
+        migrator(false),
         swagger,
         uac;
 
