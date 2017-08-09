@@ -50,4 +50,7 @@ public interface DataTools {
 
     /** Return a consistent TableSet view of all tables in the system. */
     TableSet createTableSet();
+
+    /** Return all placements that are in the local datacenter */
+    Collection<String> getLocalPlacements();
 }

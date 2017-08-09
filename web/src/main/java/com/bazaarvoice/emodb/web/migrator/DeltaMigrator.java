@@ -11,10 +11,16 @@ import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.util.Collection;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -53,6 +59,7 @@ public class DeltaMigrator {
         MigratorPlan plan = new MigratorPlan(id, options);
 
         for (String placement : options.getPlacements()) {
+            checkLocalPlacement(placement);
             String cluster = _dataTools.getPlacementCluster(placement);
             ScanRangeSplits scanRangeSplits = _dataTools.getScanRangeSplits(placement, options.getRangeScanSplitSize(), Optional.<ScanRange>absent());
 
@@ -67,6 +74,16 @@ public class DeltaMigrator {
         }
 
         return plan;
+    }
+
+    private void checkLocalPlacement(String placement) {
+        if (!_dataTools.getLocalPlacements().contains(placement)) {
+            throw new WebApplicationException(
+                    Response.status(Response.Status.CONFLICT)
+                            .type(MediaType.APPLICATION_JSON_TYPE)
+                            .entity(ImmutableMap.of("Placement does not exist in local datacenter", placement))
+                            .build());
+        }
     }
 
     private void startMigration(String placement, MigratorStatus status) {

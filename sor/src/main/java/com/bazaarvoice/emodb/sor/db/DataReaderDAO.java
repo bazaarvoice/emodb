@@ -62,4 +62,7 @@ public interface DataReaderDAO {
     /** Retrieves records all records across multiple tables in their natural key order (shard, table UUID, key). */
     Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
                                                   ReadConsistency consistency, @Nullable DateTime cutoffTime);
+
+    /** Return all placements that are in the local datacenter */
+    Collection<String> getLocalPlacements();
 }
