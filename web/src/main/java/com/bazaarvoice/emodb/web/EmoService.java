@@ -309,7 +309,7 @@ public class EmoService extends Application<EmoConfiguration> {
 
     private void evaluateDeltaMigrator()
             throws Exception {
-        if (!runPerServiceMode(migrator)) {
+        if (!runPerServiceMode(delta_migrator)) {
             return;
         }
         _environment.jersey().register(new BlockMigratorResource1(_injector.getInstance(DeltaMigrator.class)));

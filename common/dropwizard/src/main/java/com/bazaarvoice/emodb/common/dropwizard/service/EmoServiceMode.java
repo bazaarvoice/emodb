@@ -106,7 +106,7 @@ public enum EmoServiceMode {
             Aspect.dataCenter,
             Aspect.dataStore_module,
             Aspect.blobStore_module, // needed for permission resolver
-            Aspect.migrator,
+            Aspect.delta_migrator,
             Aspect.security,
             Aspect.full_consistency
     );
@@ -170,7 +170,7 @@ public enum EmoServiceMode {
         security,
         invalidation_cache_listener, // This makes sure the node is registered in zookeeper to invalidate its caches
         scanner(false),
-        migrator(false),
+        delta_migrator(false),
         swagger,
         uac;
 

@@ -212,7 +212,7 @@ class DefaultChangeEncoder implements ChangeEncoder {
                     return Encoding.H1;
             }
         }
-        throw new IllegalArgumentException("Unknown encoding: " + BufferUtils.getString(buf, 0, sep, Charsets.US_ASCII));
+        throw new IllegalArgumentException("Unknown encoding: " + BufferUtils.getString(buf, position, sep, Charsets.US_ASCII));
     }
 
     private String getBody(ByteBuffer buf, int sep) {

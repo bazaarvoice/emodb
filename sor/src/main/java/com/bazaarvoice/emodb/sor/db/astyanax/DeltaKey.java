@@ -36,12 +36,10 @@ public class DeltaKey {
     public boolean equals(Object obj) {
         if (this == obj) return true;
         if (obj == null) return false;
-        if (getClass() != obj.getClass()) return false;
+        if (!(obj instanceof DeltaKey)) return false;
         DeltaKey other = (DeltaKey) obj;
         boolean equal = true;
-        equal &= (_changeId != null) ? (_changeId.equals(other.getChangeId())) : other.getChangeId() == null;
-        equal &= (_block != null) ? (_block.equals(other.getBlock())) : other.getBlock() == null;
-        return equal;
+        return com.google.common.base.Objects.equal(_changeId, other.getChangeId()) && com.google.common.base.Objects.equal(_block, other.getBlock());
     }
 
     public DeltaKey clone() {

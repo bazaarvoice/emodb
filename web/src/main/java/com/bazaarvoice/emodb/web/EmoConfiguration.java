@@ -211,7 +211,7 @@ public class EmoConfiguration extends Configuration {
         return _scanner;
     }
 
-    public Optional<MigratorConfiguration> getMigrator() {
+    public Optional<MigratorConfiguration> getDeltaMigrator() {
         return _migrator;
     }
 
@@ -220,7 +220,7 @@ public class EmoConfiguration extends Configuration {
         return this;
     }
 
-    public EmoConfiguration setMigrator(Optional<MigratorConfiguration> migrator) {
+    public EmoConfiguration setDeltaMigrator(Optional<MigratorConfiguration> migrator) {
         _migrator = migrator;
         return this;
     }

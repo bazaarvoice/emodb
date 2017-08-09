@@ -23,7 +23,6 @@ import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
 import com.google.inject.*;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
@@ -40,7 +39,7 @@ public class MigratorModule extends PrivateModule {
     private final MigratorConfiguration _config;
 
     public MigratorModule(EmoConfiguration config) {
-        _config = config.getMigrator().get();
+        _config = config.getDeltaMigrator().get();
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
         checkArgument(_config.getMaxConcurrentWrites() > 0, "Max concurrent writes must be at least 1");

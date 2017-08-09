@@ -185,7 +185,7 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(migrator, new MigratorSetup());
+        evaluate(delta_migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
         evaluate(job, new JobSetup());
         evaluate(security, new SecuritySetup());
@@ -628,10 +628,10 @@ public class EmoModule extends AbstractModule {
             install(new MigratorModule(_configuration));
         }
 
-        /** Provide ZooKeeper namespaced to migrator data. */
+        /** Provide ZooKeeper namespaced to delta_migrator data. */
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideMigratorZooKeeperConnection(@Global CuratorFramework curator) {
-            return withComponentNamespace(curator, "migrator");
+            return withComponentNamespace(curator, "delta_migrator");
         }
     }
 
