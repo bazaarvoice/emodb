@@ -61,7 +61,7 @@ class DeltaPlacement implements Placement {
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
-        String blockColumnName = tableMetadata.getColumns().get(2).getName();
+        String blockColumnName = tableMetadata.getPrimaryKey().get(2).getName();
         String valueColumnName = tableMetadata.getColumns().get(3).getName();
 
         return new BlockedDeltaTableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName, blockColumnName);

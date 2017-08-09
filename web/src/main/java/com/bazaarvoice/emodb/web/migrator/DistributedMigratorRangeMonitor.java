@@ -246,7 +246,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
             // Immediately renew the claim; future renewals will be handled asynchronously by the background renewal task.
             _workflow.renewScanRangeTasks(ImmutableList.of(task), QUEUE_RENEW_TTL);
 
-            releaseTask = asyncRangeMigration(task);
+            releaseTask = rangeMigration(task);
         } finally {
             unclaimTask(claimedTask, releaseTask);
 
@@ -255,7 +255,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
         }
     }
 
-    private boolean asyncRangeMigration(ScanRangeTask task) {
+    private boolean rangeMigration(ScanRangeTask task) {
         final String migrationId = task.getScanId();
         final int taskId = task.getId();
         final String placement = task.getPlacement();
