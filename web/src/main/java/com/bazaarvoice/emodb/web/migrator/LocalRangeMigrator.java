@@ -22,7 +22,7 @@ import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkState;
 
-public class LocalRangeMigrator implements Managed {
+public class LocalRangeMigrator {
 
     private final static float RESPLIT_FACTOR = 3;
     private final static int BATCH_SIZE = 2500;
@@ -33,7 +33,6 @@ public class LocalRangeMigrator implements Managed {
     private final Meter _failedRangeMigrations;
 
     private final MigratorTools _migratorTools;
-    private volatile boolean _shutdown = true;
 
     @Inject
     public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
@@ -41,24 +40,10 @@ public class LocalRangeMigrator implements Managed {
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
-
-        lifecycle.manage(this);
-    }
-
-    @Override
-    public void start() throws Exception {
-        _shutdown = false;
-    }
-
-    @Override
-    public void stop() throws Exception {
-        _shutdown = true;
     }
 
     public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxConcurrentWrites) throws IOException, InterruptedException {
-
-        checkState(!_shutdown, "Service not started");
-
+        
         _log.info("Migrating placement {}: {}", placement, range);
 
         final long startTime = System.currentTimeMillis();
