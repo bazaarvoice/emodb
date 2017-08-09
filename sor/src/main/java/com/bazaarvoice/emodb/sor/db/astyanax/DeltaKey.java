@@ -38,7 +38,6 @@ public class DeltaKey {
         if (obj == null) return false;
         if (!(obj instanceof DeltaKey)) return false;
         DeltaKey other = (DeltaKey) obj;
-        boolean equal = true;
         return com.google.common.base.Objects.equal(_changeId, other.getChangeId()) && com.google.common.base.Objects.equal(_block, other.getBlock());
     }
 
