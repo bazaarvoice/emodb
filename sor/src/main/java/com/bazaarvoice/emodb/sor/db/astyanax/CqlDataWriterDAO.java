@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
@@ -239,6 +240,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         _astyanaxWriterDAO.purgeUnsafe(table);
     }
 
+    private void checkError(AtomicReference<Throwable> t) {
+        if (t.get() != null) {
+            Throwables.propagate(t.get());
+        }
+    }
+
     @Override
     public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, int maxConcurrentWrites) {
 
@@ -250,6 +257,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         Session session = placement.getKeyspace().getCqlSession();
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         final Semaphore semaphore = new Semaphore(maxConcurrentWrites);
+        AtomicReference<Throwable> error = new AtomicReference<>();
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
@@ -260,7 +268,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
             @Override
             public void onFailure(Throwable t) {
-                Throwables.propagate(t);
+                semaphore.release();
+                error.set(t);
             }
         };
 
@@ -292,11 +301,15 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             insertBlockedDeltas(statement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
             currentStatementSize += encodedDelta.limit() + ROW_KEY_SIZE + CHANGE_ID_SIZE;
 
+            // fail fast if an error has occurred
+            checkError(error);
+
         }
 
         semaphore.acquireUninterruptibly();
         Futures.addCallback(session.executeAsync(statement), callback);
         semaphore.acquireUninterruptibly(maxConcurrentWrites);
+        checkError(error);
 
     }
 }
