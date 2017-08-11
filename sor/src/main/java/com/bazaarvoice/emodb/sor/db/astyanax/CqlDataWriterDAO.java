@@ -242,7 +242,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     private void checkError(AtomicReference<Throwable> t) {
         if (t.get() != null) {
-            Throwables.propagate(t.get());
+            throw Throwables.propagate(t.get());
         }
     }
 
@@ -269,7 +269,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             @Override
             public void onFailure(Throwable t) {
                 semaphore.release();
-                error.set(t);
+                error.compareAndSet(null, t);
             }
         };
 
