@@ -92,7 +92,7 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
         AnnotatedCompositeSerializer<DeltaKey> deltaKeySerializer  = new AnnotatedCompositeSerializer<DeltaKey>(DeltaKey.class);
 
-        // DDL's are actually configurable due to the way we abstract the names from the placements here.
+        // DDL's are not actually configurable due to the way we abstract the names from the placements here.
         // In the future, we should either phase out the DDL config or change the implementation here to conform to it.
         ColumnFamily<ByteBuffer, UUID> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta_v2", placement, deltaKeySerializer);
