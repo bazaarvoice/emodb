@@ -16,15 +16,17 @@ Quick Start
 
 1. Download the [EmoDB binaries](https://github.com/bazaarvoice/emodb/releases)
 
-2. Run the EmoDB server locally. This will start ZooKeeper and Cassandra locally.
+2. Unzip them (typically into `/opt/emodb`). I'll refer to the place you put that directory as `$EMO_INSTALL_DIR`.
 
-        $ bin/start-local.sh
+3. Run the EmoDB server locally. This will start ZooKeeper and Cassandra locally.
+
+        $ $EMO_INSTALL_DIR/start-local.sh
         ...
         INFO  [2012-05-14 19:12:19,802] org.eclipse.jetty.server.AbstractConnector: Started InstrumentedBlockingChannelConnector@0.0.0.0:8080
         INFO  [2012-05-14 19:12:19,805] org.eclipse.jetty.server.AbstractConnector: Started SocketConnector@0.0.0.0:8081
         # Use Ctrl-C to kill the server when you are done.
 
-3.  Check that the server responds to requests (from another window):
+4.  Check that the server responds to requests (from another window):
 
         $ curl -s "http://localhost:8081/ping"
         pong
@@ -32,10 +34,10 @@ Quick Start
         $ curl -s "http://localhost:8081/healthcheck"
         {"deadlocks":{"healthy":true},"ugc_global-cassandra":{"healthy":true,"message":"127.0.0.1(127.0.0.1):9160 124us"},...}
 
-4.  To erase the EmoDB data, simply delete the data folder:
+5.  To erase the EmoDB data, simply delete the data folder:
 
-        $ rm -rf bin/data/
-        $ bin/start-local.sh
+        $ rm -rf $EMO_INSTALL_DIR/bin/data/
+        $ $EMO_INSTALL_DIR//start-local.sh
 {:.workflow}
 
 
