@@ -45,7 +45,7 @@ public class CQLStashTableDAO {
     private final String _systemTablePlacement;
     private final PlacementCache _placementCache;
     private final DataCenters _dataCenters;
-    private boolean _verifiedStashTokenRangeTableExists;
+    private volatile boolean _verifiedStashTokenRangeTableExists;
 
     @Inject
     public CQLStashTableDAO(@SystemTablePlacement String systemTablePlacement,
@@ -156,7 +156,7 @@ public class CQLStashTableDAO {
         // whose token range intersects the query range then by querying for all start and end tokens within that range
         // either the start token, end token, or both will be returned in the results.
 
-        final ResultSet resultSet = _placementCache.get(_systemTablePlacement)
+        ResultSet resultSet = _placementCache.get(_systemTablePlacement)
                 .getKeyspace()
                 .getCqlSession()
                 .execute(
@@ -168,7 +168,9 @@ public class CQLStashTableDAO {
                                 .and(QueryBuilder.gte("range_token", fromInclusive))
                                 .and(QueryBuilder.lt("range_token", toExclusive))
                                 .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
-                                .setFetchSize(1000));
+                                .setFetchSize(100));
+
+        final Iterator<Row> resultSetIterator = resultSet.iterator();
 
         return new AbstractIterator<ProtoStashTokenRange>() {
             TableJson currentTable;
@@ -177,10 +179,10 @@ public class CQLStashTableDAO {
             @Override
             protected ProtoStashTokenRange computeNext() {
                 ProtoStashTokenRange range = null;
-                Row row;
 
                 while (range == null) {
-                    if ((row = resultSet.one()) != null) {
+                    if (resultSetIterator.hasNext()) {
+                        Row row = resultSetIterator.next();
                         TableJson table = getTableJson(row);
                         if (isStartToken(row)) {
                             if (currentTable == null) {
