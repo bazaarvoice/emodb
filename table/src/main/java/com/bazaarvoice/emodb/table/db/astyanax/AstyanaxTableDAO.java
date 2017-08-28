@@ -59,6 +59,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -89,8 +90,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.Spliterators;
-import java.util.stream.StreamSupport;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
@@ -1378,9 +1377,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         Iterator<CQLStashTableDAO.ProtoStashTokenRange> protoRanges = _stashTableDao.getTokenRangesBetween(stashId, placement, fromInclusive, toExclusive);
 
         // Convert the TableJson from the stash table DAO into Tables.
-        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(protoRanges, 0), false)
-                .map(protoRange -> new StashTokenRange(protoRange.getFrom(), protoRange.getTo(), tableFromJson(protoRange.getTableJson())))
-                .iterator();
+        return Iterators.transform(protoRanges, protoRange ->
+                new StashTokenRange(protoRange.getFrom(), protoRange.getTo(), tableFromJson(protoRange.getTableJson())));
     }
 
     @Override

@@ -38,6 +38,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -68,14 +69,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Spliterators;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -812,14 +811,13 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> unwrappedRanges = scanRange.unwrapped();
 
-        return unwrappedRanges.stream()
-                // Convert the entire scan range to the ordered sub-ranges for tables that existed when Stash was started
-                .flatMap(range -> StreamSupport.stream(
-                        Spliterators.spliteratorUnknownSize(
-                                _stashTableDao.getStashTokenRangesFromSnapshot(stashId, placement, range.getFrom(), range.getTo()), 0),
-                                false))
-                // For each table range stream the records for that table
-                .flatMap(stashTokenRange -> {
+        Iterator<StashTokenRange> stashTokenRanges = Iterators.concat(
+                Iterators.transform(
+                        unwrappedRanges.iterator(),
+                        unwrappedRange -> _stashTableDao.getStashTokenRangesFromSnapshot(stashId, placement, unwrappedRange.getFrom(), unwrappedRange.getTo())));
+
+        return Iterators.concat(
+                Iterators.transform(stashTokenRanges, stashTokenRange -> {
                     // Create a table set which always returns the table, since we know all records in this range come
                     // exclusively from this table.
                     TableSet tableSet = new TableSet() {
@@ -840,10 +838,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             .setIncludeDeletedTables(false)
                             .setIncludeMirrorTables(false);
 
-                    Iterator<MultiTableScanResult> results = multiTableScan(tableQuery, tableSet, limit, consistency, cutoffTime);
-                    return StreamSupport.stream(Spliterators.spliteratorUnknownSize(results, 0), false);
+                    return multiTableScan(tableQuery, tableSet, limit, consistency, cutoffTime);
                 })
-                .iterator();
+        );
     }
 
     @Override
