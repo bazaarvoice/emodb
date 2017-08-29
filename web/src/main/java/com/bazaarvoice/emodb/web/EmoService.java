@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.jersey.ServerErrorResponseMetricsFilter;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
@@ -217,6 +218,11 @@ public class EmoService extends Application<EmoConfiguration> {
         _environment.servlets().addServlet("/ping", new PingServlet());
         // Serve static assets
         _environment.jersey().register(FaviconResource.class);
+
+        // Add a filter to provide finer 5xx metrics than the default DropWizard metrics include.
+        //noinspection unchecked
+        _environment.jersey().getResourceConfig().getContainerResponseFilters()
+                .add(new ServerErrorResponseMetricsFilter(_environment.metrics()));
     }
 
     private void evaluateInvalidateCaches()
