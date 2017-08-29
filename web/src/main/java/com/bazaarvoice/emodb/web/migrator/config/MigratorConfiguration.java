@@ -85,8 +85,8 @@ public class MigratorConfiguration {
         return _migrateStatusTablePlacement;
     }
 
-    public void setMigrateStatusTablePlacement(String _migrateStatusTablePlacement) {
-        this._migrateStatusTablePlacement = _migrateStatusTablePlacement;
+    public void setMigrateStatusTablePlacement(String migrateStatusTablePlacement) {
+        _migrateStatusTablePlacement = migrateStatusTablePlacement;
     }
 
     public Optional<String> getPendingMigrationRangeQueueName() {

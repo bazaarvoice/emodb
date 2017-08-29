@@ -62,6 +62,11 @@ public class DataStoreConfiguration {
     @JsonProperty("stashRoot")
     private Optional<String> _stashRoot = Optional.absent();
 
+    @Valid
+    @NotNull
+    @JsonProperty("doubleWrite")
+    private boolean _doubleWrite = false;
+
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
     }
@@ -154,5 +159,9 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setDeltaEncodingVersion(int deltaEncodingVersion) {
         _deltaEncodingVersion = deltaEncodingVersion;
         return this;
+    }
+
+    public boolean getDoubleWrite() {
+        return _doubleWrite;
     }
 }

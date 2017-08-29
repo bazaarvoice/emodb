@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
+import com.bazaarvoice.emodb.sor.core.DoubleWrite;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
@@ -9,7 +10,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.google.inject.name.Names;
 
 /**
  * Guice module for DAO implementations.  Separate from {@link com.bazaarvoice.emodb.sor.DataStoreModule} to allow
@@ -54,5 +54,11 @@ public class DAOModule extends PrivateModule {
     @Singleton
     ChangeEncoder provideChangeEncoder(DataStoreConfiguration configuration) {
         return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion());
+    }
+
+    @Provides
+    @DoubleWrite
+    boolean provideDoubleWrite(DataStoreConfiguration configuration) {
+        return configuration.getDoubleWrite();
     }
 }
