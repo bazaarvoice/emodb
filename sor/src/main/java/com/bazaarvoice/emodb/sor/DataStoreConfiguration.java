@@ -64,8 +64,8 @@ public class DataStoreConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty("doubleWrite")
-    private boolean _doubleWrite = false;
+    @JsonProperty("migrationPhase")
+    private int _migrationPhase = 0;
 
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
@@ -161,7 +161,7 @@ public class DataStoreConfiguration {
         return this;
     }
 
-    public boolean getDoubleWrite() {
-        return _doubleWrite;
+    public int getMigrationPhase() {
+        return _migrationPhase;
     }
 }

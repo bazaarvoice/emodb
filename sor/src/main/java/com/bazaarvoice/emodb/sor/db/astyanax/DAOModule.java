@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
+import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.core.DoubleWrite;
 import com.bazaarvoice.emodb.sor.db.*;
@@ -7,6 +8,8 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.table.db.astyanax.DataCopyDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
+import com.codahale.metrics.MetricRegistry;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -27,19 +30,15 @@ public class DAOModule extends PrivateModule {
         bind(Integer.class).annotatedWith(BlockSize.class).toInstance(DELTA_BLOCK_SIZE);
         bind(Integer.class).annotatedWith(PrefixLength.class).toInstance(DELTA_PREFIX_LENGTH);
         bind(DAOUtils.class).asEagerSingleton();
-        bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(DataReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(DataCopyDAO.class).to(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(DataPurgeDAO.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
         bind(MigratorWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(MigratorReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
 
         // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
         // This needs to be done for just about anything that has only public dependencies.
-        bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(AstyanaxDataWriterDAO.class).asEagerSingleton();
 
         expose(DataReaderDAO.class);
@@ -59,6 +58,69 @@ public class DAOModule extends PrivateModule {
     @Provides
     @DoubleWrite
     boolean provideDoubleWrite(DataStoreConfiguration configuration) {
-        return configuration.getDoubleWrite();
+        return configuration.getMigrationPhase() == 1 || configuration.getMigrationPhase() == 2;
     }
+
+    @Provides
+    @Singleton
+    DataReaderDAO provideDataReaderDAO(DataStoreConfiguration configuration, @CqlReaderDAODelegate DataReaderDAO delegate,
+                                       PlacementCache placementCache, CqlDriverConfiguration driverConfig,
+                                       ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
+                                       DAOUtils daoUtils, @PrefixLength int prefixLength) {
+        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+            return new CqlDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry);
+        }
+        else if (configuration.getMigrationPhase() == 2) {
+            return new CqlBlockedDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        }
+        throw new RuntimeException("Invalid Migration Phase");
+    }
+
+    @Provides
+    @Singleton
+    @CqlReaderDAODelegate
+    DataReaderDAO provideCqlReaderDAODelegate(DataStoreConfiguration configuration, PlacementCache placementCache,
+                                              ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
+                                              @PrefixLength int prefixLength) {
+        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
+        }
+        else if (configuration.getMigrationPhase() == 2) {
+            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        }
+        throw new RuntimeException("Invalid Migration Phase");
+    }
+
+    @Provides
+    @Singleton
+    DataCopyDAO provideDataCopyDAO(DataStoreConfiguration configuration, PlacementCache placementCache,
+                                   ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
+                                   @PrefixLength int prefixLength) {
+        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
+        }
+        else if (configuration.getMigrationPhase() == 2) {
+            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        }
+        throw new RuntimeException("Invalid Migration Phase");
+
+    }
+
+    @Provides
+    @Singleton
+    AstyanaxKeyScanner provideAstyanaxKeyScanner(DataStoreConfiguration configuration, PlacementCache placementCache,
+                                                       ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
+                                                       @PrefixLength int prefixLength) {
+        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
+        }
+        else if (configuration.getMigrationPhase() == 2) {
+            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        }
+        throw new RuntimeException("Invalid Migration Phase");
+    }
+
+
+
+
 }

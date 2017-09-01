@@ -80,7 +80,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private static final int MAX_DELTA_SIZE = 10 * 1024 * 1024;   // 10 MB delta limit, measured in UTF-8 bytes
     private static final int MAX_AUDIT_SIZE = 1 * 1024 * 1024;    // 1 MB audit limit, measured in UTF-8 bytes
 
-    private final AstyanaxDataReaderDAO _readerDao;
+    private final AstyanaxKeyScanner _keyScanner;
     private final DataWriterDAO _cqlWriterDAO;
     private final ChangeEncoder _changeEncoder;
     private final Meter _updateMeter;
@@ -100,14 +100,14 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final AuditStore _auditStore;
 
     @Inject
-    public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate, AstyanaxDataReaderDAO readerDao,
+    public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate, AstyanaxKeyScanner keyScanner,
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
                                  @DoubleWrite boolean doubleWrite) {
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
-        _readerDao = checkNotNull(readerDao, "readerDao");
+        _keyScanner = checkNotNull(keyScanner, "keyScanner");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
         _auditStore = checkNotNull(auditStore, "auditStore");
@@ -363,7 +363,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
         // Scan all the shards and delete all the rows we find.
         MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(WriteConsistency.STRONG));
-        Iterator<String> keyIter = _readerDao.scanKeys(storage, ReadConsistency.STRONG);
+        Iterator<String> keyIter = _keyScanner.scanKeys(storage, ReadConsistency.STRONG);
         while (keyIter.hasNext()) {
             ByteBuffer rowKey = storage.getRowKey(keyIter.next());
             mutation.withRow(placement.getDeltaColumnFamily(), rowKey).delete();
