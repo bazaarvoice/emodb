@@ -41,6 +41,7 @@ import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -86,7 +87,7 @@ public class UserAccessControlJerseyTest extends ResourceTest {
         _roleManager = new InMemoryRoleManager(permissionManager);
 
         LocalSubjectUserAccessControl uac = new LocalSubjectUserAccessControl(_roleManager, permissionResolver,
-                _authIdentityManager, HostAndPort.fromParts("localhost", 8080));
+                _authIdentityManager, HostAndPort.fromParts("localhost", 8080), new MetricRegistry());
         
         createRole(_roleManager, null, "uac-all", ImmutableSet.of("role|*", "apikey|*"));
         createRole(_roleManager, null, "uac-none", ImmutableSet.of());

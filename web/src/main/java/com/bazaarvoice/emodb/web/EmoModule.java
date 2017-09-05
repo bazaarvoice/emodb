@@ -457,7 +457,8 @@ public class EmoModule extends AbstractModule {
             SubjectDatabus client = ServicePoolBuilder.create(SubjectDatabus.class)
                     .withHostDiscovery(hostDiscovery)
                     .withServiceFactory(
-                            new PartitionAwareServiceFactory<>(SubjectDatabus.class, serviceFactory, localSubjectDatabus, self, healthCheckRegistry))
+                            new PartitionAwareServiceFactory<>(SubjectDatabus.class, serviceFactory, localSubjectDatabus,
+                                    self, healthCheckRegistry, metricRegistry))
                     .withMetricRegistry(metricRegistry)
                     .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
                     .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
@@ -501,7 +502,7 @@ public class EmoModule extends AbstractModule {
             MultiThreadedServiceFactory<AuthQueueService> serviceFactory = new PartitionAwareServiceFactory<>(
                     AuthQueueService.class,
                     QueueClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient),
-                    new TrustedQueueService(queueService), self, healthCheckRegistry);
+                    new TrustedQueueService(queueService), self, healthCheckRegistry, metricRegistry);
             AuthQueueService client = ServicePoolBuilder.create(AuthQueueService.class)
                     .withHostDiscovery(new ZooKeeperHostDiscovery(curator, serviceFactory.getServiceName(), metricRegistry))
                     .withServiceFactory(serviceFactory)
@@ -533,11 +534,14 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @PartitionAwareClient
         DedupQueueServiceAuthenticator provideDedupQueueClient(MultiThreadedServiceFactory<AuthDedupQueueService> serviceFactory,
                                                                @DedupQueueHostDiscovery HostDiscovery hostDiscovery,
-                                                               DedupQueueService databus, @SelfHostAndPort HostAndPort self, HealthCheckRegistry healthCheckRegistry) {
+                                                               DedupQueueService databus, @SelfHostAndPort HostAndPort self,
+                                                               HealthCheckRegistry healthCheckRegistry,
+                                                               MetricRegistry metricRegistry) {
             AuthDedupQueueService client = ServicePoolBuilder.create(AuthDedupQueueService.class)
                     .withHostDiscovery(hostDiscovery)
                     .withServiceFactory(new PartitionAwareServiceFactory<>(
-                            AuthDedupQueueService.class, serviceFactory, new TrustedDedupQueueService(databus), self, healthCheckRegistry))
+                            AuthDedupQueueService.class, serviceFactory, new TrustedDedupQueueService(databus), self,
+                            healthCheckRegistry, metricRegistry))
                     .withMetricRegistry(_environment.metrics())
                     .withCachingPolicy(ServiceCachingPolicyBuilder.getMultiThreadedClientPolicy())
                     .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));

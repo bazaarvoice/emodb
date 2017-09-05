@@ -34,6 +34,8 @@ import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.bazaarvoice.emodb.web.auth.EmoPermission;
 import com.bazaarvoice.emodb.web.auth.Permissions;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -68,15 +70,17 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     private final PermissionResolver _permissionResolver;
     private final AuthIdentityManager<ApiKey> _authIdentityManager;
     private final HostAndPort _hostAndPort;
+    private final Meter _lockTimeoutMeter;
 
     @Inject
     public LocalSubjectUserAccessControl(RoleManager roleManager, PermissionResolver permissionResolver,
                                          AuthIdentityManager<ApiKey> authIdentityManager,
-                                         @SelfHostAndPort HostAndPort selfHostAndPort) {
+                                         @SelfHostAndPort HostAndPort selfHostAndPort, MetricRegistry metricRegistry) {
         _roleManager = roleManager;
         _permissionResolver = permissionResolver;
         _authIdentityManager = authIdentityManager;
         _hostAndPort = selfHostAndPort;
+        _lockTimeoutMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.web.uac", "acquire-update-lock", "timeouts"));
     }
 
     @Override
@@ -623,6 +627,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
      */
     private RuntimeException convertUncheckedException(Exception e) {
         if (Throwables.getRootCause(e) instanceof TimeoutException) {
+            _lockTimeoutMeter.mark();
             throw new ServiceUnavailableException("Failed to acquire update lock, try again later", new Random().nextInt(5) + 1);
         }
         throw Throwables.propagate(e);

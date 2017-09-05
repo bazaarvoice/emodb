@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.partition;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.net.HostAndPort;
@@ -38,6 +39,7 @@ public class PartitionAwareServiceFactoryTest {
     private MultiThreadedServiceFactory<TestInterface> _delegateServiceFactory;
     private TestInterface _local;
     private TestInterface _delegate;
+    private MetricRegistry _metricRegistry;
 
     private ServiceEndPoint _localEndPoint = mock(ServiceEndPoint.class);
     private ServiceEndPoint _remoteEndPoint = mock(ServiceEndPoint.class);
@@ -56,8 +58,10 @@ public class PartitionAwareServiceFactoryTest {
         _delegateServiceFactory = mock(MultiThreadedServiceFactory.class);
         when(_delegateServiceFactory.create(_remoteEndPoint)).thenReturn(_delegate);
 
+        _metricRegistry = new MetricRegistry();
+
         _serviceFactory = new PartitionAwareServiceFactory<>(TestInterface.class, _delegateServiceFactory, _local,
-                HostAndPort.fromParts("localhost", 8080), mock(HealthCheckRegistry.class));
+                HostAndPort.fromParts("localhost", 8080), mock(HealthCheckRegistry.class), _metricRegistry);
     }
 
     @AfterMethod
@@ -83,6 +87,7 @@ public class PartitionAwareServiceFactoryTest {
         verify(_delegateServiceFactory).destroy(_remoteEndPoint, _delegate);
     }
 
+    @Test
     public void testDelegateDeclaredExceptionPropagation() throws Exception {
         doThrow(new JsonParseException("Simulated declared exception", JsonLocation.NA)).when(_delegate).doIt();
         TestInterface service = _serviceFactory.create(_remoteEndPoint);
@@ -91,9 +96,11 @@ public class PartitionAwareServiceFactoryTest {
             service.doIt();
             fail("JsonParseException not thrown");
         } catch (JsonParseException e) {
-            assertEquals(e.getMessage(), "Simulated declared exception");
+            assertEquals(e.getOriginalMessage(), "Simulated declared exception");
         }
 
+        assertEquals(_metricRegistry.getMeters().get("bv.emodb.web.partition-forwarding.TestInterface.errors").getCount(), 0);
+        
         verify(_delegateServiceFactory).create(_remoteEndPoint);
         verify(_delegate).doIt();
     }
@@ -110,6 +117,8 @@ public class PartitionAwareServiceFactoryTest {
             // ok
         }
 
+        assertEquals(_metricRegistry.getMeters().get("bv.emodb.web.partition-forwarding.TestInterface.errors").getCount(), 0);
+
         verify(_delegateServiceFactory).create(_remoteEndPoint);
         verify(_delegate).doIt();
     }
@@ -124,6 +133,8 @@ public class PartitionAwareServiceFactoryTest {
         } catch (PartitionForwardingException e) {
             assertTrue(e.getCause() instanceof ConnectTimeoutException);
         }
+
+        assertEquals(_metricRegistry.getMeters().get("bv.emodb.web.partition-forwarding.TestInterface.errors").getCount(), 1);
 
         verify(_delegateServiceFactory).create(_remoteEndPoint);
         verify(_delegate).doIt();
