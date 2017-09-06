@@ -27,6 +27,7 @@ import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -108,6 +109,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private final CqlDriverConfiguration _driverConfig;
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
+    private final Histogram _deltaSizeHistogram;
 
     // Support AB testing of various uses of the CQL driver versus the older but (at this point) more vetted Astyanax driver.
     private volatile Supplier<Boolean> _useCqlForMultiGets = Suppliers.ofInstance(true);
@@ -123,6 +125,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
         _changeEncoder = changeEncoder;
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
+        _deltaSizeHistogram = metricRegistry.histogram(getMetricName("delta-size"));
     }
 
     private String getMetricName(String name) {
@@ -278,6 +281,17 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
         Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(rows.iterator());
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(rows.iterator());
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(rows.iterator());
+
+        return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
+    }
+
+    private Record newRecordFromCqlForStash(Key key, Iterable<Row> rows) {
+        Iterator<Map.Entry<UUID, Change>> changeIter = Iterators.transform(rows.iterator(), row -> {
+            _deltaSizeHistogram.update(getValue(row).remaining());
+            return Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row)));
+        });
         Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(rows.iterator());
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(rows.iterator());
 
@@ -637,7 +651,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), filteredRows);
+                    Record record = newRecordFromCqlForStash(new Key(_table, key), filteredRows);
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
