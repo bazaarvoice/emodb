@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AuditStore;
-import com.bazaarvoice.emodb.sor.core.DoubleWrite;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
@@ -90,7 +89,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
-    private final boolean _doubleWrite;
+    private final boolean _writeToOld;
+    private final boolean _writeToNew;
+
 
     // The difference between full consistency and "raw" consistency provider is that full consistency also includes
     //  a minimum lag of 5 minutes, whereas "raw" consistency timestamp just gives us the last known good FCT which could be less than 5 minutes.
@@ -105,7 +106,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
-                                 @DoubleWrite boolean doubleWrite) {
+                                 @WriteToOld boolean writeToOld, @WriteToNew boolean writeToNew) {
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _keyScanner = checkNotNull(keyScanner, "keyScanner");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -118,7 +119,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixLength = deltaPrefixLength;
-        _doubleWrite = doubleWrite;
+        _writeToOld = writeToOld;
+        _writeToNew = writeToNew;
     }
 
     private String getMetricName(String name) {
@@ -236,14 +238,16 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                     .set(Audit.TAGS, tags)
                     .build();
 
+            // Regardless of migration stage, we will still encode both deltas versions
+
             // The values are encoded in a flexible format that allows versioning of the strings
             ByteBuffer encodedBlockDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(_deltaPrefix)).toString());
             ByteBuffer encodedDelta = encodedBlockDelta.duplicate();
             encodedDelta.position(encodedDelta.position() + _deltaPrefixLength);
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
 
-            int deltaSize = encodedDelta.remaining();
-            int blockDeltaSize = encodedBlockDelta.remaining();
+            int deltaSize = _writeToOld ? encodedDelta.remaining(): 0;
+            int blockDeltaSize = _writeToNew ? encodedBlockDelta.remaining() : 0;
             int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
@@ -266,13 +270,14 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                //this wil be removed in the next version
-                potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
-
                 potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
-                // this will be removed in the next version
-                if (_doubleWrite) {
+                if (_writeToOld) {
+                    //this will be removed in the next version
+                    potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
+                }
+
+                if (_writeToNew) {
                     putBlockedDeltaColumn(potentiallyOversizeMutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
                 }
 
@@ -285,14 +290,17 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
             // this will be removed in the next version
-            if (_doubleWrite) {
+            if (_writeToOld) {
+                mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
+            }
+
+            if (_writeToNew) {
                 putBlockedDeltaColumn(mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
             }
-            approxMutationSize += deltaSize + auditSize;
+            approxMutationSize += deltaSize + blockDeltaSize + auditSize;
             updateCount += 1;
         }
         execute(mutation, "batch update %d records in placement %s", updateCount, placement.getName());

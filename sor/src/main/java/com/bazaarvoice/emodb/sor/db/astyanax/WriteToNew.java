@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.sor.core;
+package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.google.inject.BindingAnnotation;
 
@@ -11,9 +11,9 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for double write boolean config.
+ * Guice binding annotation for writing to new blocked tables.
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
-public @interface DoubleWrite {
+public @interface WriteToNew {
 }

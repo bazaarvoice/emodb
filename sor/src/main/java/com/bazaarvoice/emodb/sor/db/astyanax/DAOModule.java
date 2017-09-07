@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
-import com.bazaarvoice.emodb.sor.core.DoubleWrite;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
@@ -13,6 +12,8 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+
+import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Guice module for DAO implementations.  Separate from {@link com.bazaarvoice.emodb.sor.DataStoreModule} to allow
@@ -56,9 +57,19 @@ public class DAOModule extends PrivateModule {
     }
 
     @Provides
-    @DoubleWrite
-    boolean provideDoubleWrite(DataStoreConfiguration configuration) {
-        return configuration.getMigrationPhase() == 1 || configuration.getMigrationPhase() == 2;
+    @WriteToOld
+    boolean provideWriteToOld(DataStoreConfiguration configuration) {
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+        return migrationPhase == 0 || migrationPhase == 1 || migrationPhase == 2;
+    }
+
+    @Provides
+    @WriteToNew
+    boolean provideWriteToNew(DataStoreConfiguration configuration) {
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+        return migrationPhase == 1 || migrationPhase == 2 || migrationPhase == 3;
     }
 
     @Provides
@@ -67,13 +78,15 @@ public class DAOModule extends PrivateModule {
                                        PlacementCache placementCache, CqlDriverConfiguration driverConfig,
                                        ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                        DAOUtils daoUtils, @PrefixLength int prefixLength) {
-        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+
+        if (migrationPhase == 0 || migrationPhase == 1) {
             return new CqlDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry);
         }
-        else if (configuration.getMigrationPhase() == 2) {
-            return new CqlBlockedDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry, daoUtils, prefixLength);
-        }
-        throw new RuntimeException("Invalid Migration Phase");
+
+        return new CqlBlockedDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry, daoUtils, prefixLength);
     }
 
     @Provides
@@ -82,13 +95,14 @@ public class DAOModule extends PrivateModule {
     DataReaderDAO provideCqlReaderDAODelegate(DataStoreConfiguration configuration, PlacementCache placementCache,
                                               ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
                                               @PrefixLength int prefixLength) {
-        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+
+        if (migrationPhase == 0 || migrationPhase == 1) {
             return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
         }
-        else if (configuration.getMigrationPhase() == 2) {
-            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
-        }
-        throw new RuntimeException("Invalid Migration Phase");
+
+        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
     }
 
     @Provides
@@ -96,13 +110,15 @@ public class DAOModule extends PrivateModule {
     DataCopyDAO provideDataCopyDAO(DataStoreConfiguration configuration, PlacementCache placementCache,
                                    ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
                                    @PrefixLength int prefixLength) {
-        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+
+        if (migrationPhase == 0 || migrationPhase == 1) {
             return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
         }
-        else if (configuration.getMigrationPhase() == 2) {
-            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
-        }
-        throw new RuntimeException("Invalid Migration Phase");
+
+        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
 
     }
 
@@ -111,13 +127,15 @@ public class DAOModule extends PrivateModule {
     AstyanaxKeyScanner provideAstyanaxKeyScanner(DataStoreConfiguration configuration, PlacementCache placementCache,
                                                        ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
                                                        @PrefixLength int prefixLength) {
-        if (configuration.getMigrationPhase() == 0 || configuration.getMigrationPhase() == 1) {
+
+        int migrationPhase = configuration.getMigrationPhase();
+        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
+
+        if (migrationPhase == 0 || migrationPhase == 1) {
             return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
         }
-        else if (configuration.getMigrationPhase() == 2) {
-            return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
-        }
-        throw new RuntimeException("Invalid Migration Phase");
+
+        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
     }
 
 
