@@ -824,11 +824,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
-    public Collection<String> getLocalPlacements() {
-        return _dataReaderDao.getLocalPlacements();
-    }
-
-    @Override
     public URI getStashRoot()
             throws StashNotAvailableException {
         if (!_stashRootDirectory.isPresent()) {

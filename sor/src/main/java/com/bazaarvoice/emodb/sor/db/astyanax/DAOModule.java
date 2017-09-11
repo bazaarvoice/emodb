@@ -1,19 +1,16 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
-import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
+import com.bazaarvoice.emodb.sor.DeltaMigrationPhase;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.table.db.astyanax.DataCopyDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
-import com.codahale.metrics.MetricRegistry;
 import com.google.inject.PrivateModule;
+import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Guice module for DAO implementations.  Separate from {@link com.bazaarvoice.emodb.sor.DataStoreModule} to allow
@@ -41,6 +38,13 @@ public class DAOModule extends PrivateModule {
         // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
         // This needs to be done for just about anything that has only public dependencies.
         bind(AstyanaxDataWriterDAO.class).asEagerSingleton();
+        bind(CqlDataWriterDAO.class).asEagerSingleton();
+
+        // For migration stages, will be reverted in future version
+        bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
+        bind(AstyanaxBlockedDataReaderDAO.class).asEagerSingleton();
+        bind(CqlDataReaderDAO.class).asEagerSingleton();
+        bind(CqlBlockedDataReaderDAO.class).asEagerSingleton();
 
         expose(DataReaderDAO.class);
         expose(DataWriterDAO.class);
@@ -57,86 +61,52 @@ public class DAOModule extends PrivateModule {
     }
 
     @Provides
-    @WriteToOld
-    boolean provideWriteToOld(DataStoreConfiguration configuration) {
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-        return migrationPhase == 0 || migrationPhase == 1 || migrationPhase == 2;
+    @WriteToLegacyDeltaTable
+    boolean provideWriteToLegacyDeltaTable(DataStoreConfiguration configuration) {
+        DeltaMigrationPhase migrationPhase = configuration.getMigrationPhase();
+        return migrationPhase.isWriteToLegacyDeltaTables();
     }
 
     @Provides
-    @WriteToNew
-    boolean provideWriteToNew(DataStoreConfiguration configuration) {
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-        return migrationPhase == 1 || migrationPhase == 2 || migrationPhase == 3;
+    @WriteToBlockedDeltaTable
+    boolean provideWriteToBlockedDeltaTable(DataStoreConfiguration configuration) {
+        DeltaMigrationPhase migrationPhase = configuration.getMigrationPhase();
+        return migrationPhase.isWriteToBlockedDeltaTables();
     }
 
     @Provides
     @Singleton
-    DataReaderDAO provideDataReaderDAO(DataStoreConfiguration configuration, @CqlReaderDAODelegate DataReaderDAO delegate,
-                                       PlacementCache placementCache, CqlDriverConfiguration driverConfig,
-                                       ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                       DAOUtils daoUtils, @PrefixLength int prefixLength) {
+    DataReaderDAO provideDataReaderDAO(DataStoreConfiguration configuration, Provider<CqlDataReaderDAO> legacyReader,
+                                       Provider<CqlBlockedDataReaderDAO> blockedReader) {
 
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-
-        if (migrationPhase == 0 || migrationPhase == 1) {
-            return new CqlDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry);
-        }
-
-        return new CqlBlockedDataReaderDAO(delegate, placementCache, driverConfig, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
     }
 
     @Provides
     @Singleton
     @CqlReaderDAODelegate
-    DataReaderDAO provideCqlReaderDAODelegate(DataStoreConfiguration configuration, PlacementCache placementCache,
-                                              ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
-                                              @PrefixLength int prefixLength) {
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-
-        if (migrationPhase == 0 || migrationPhase == 1) {
-            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
-        }
-
-        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
+    DataReaderDAO provideCqlReaderDAODelegate(DataStoreConfiguration configuration,
+                                              Provider<AstyanaxDataReaderDAO> legacyReader,
+                                              Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
+        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
     }
 
     @Provides
     @Singleton
-    DataCopyDAO provideDataCopyDAO(DataStoreConfiguration configuration, PlacementCache placementCache,
-                                   ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
-                                   @PrefixLength int prefixLength) {
+    DataCopyDAO provideDataCopyDAO(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
+                                   Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
 
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-
-        if (migrationPhase == 0 || migrationPhase == 1) {
-            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
-        }
-
-        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
-
+        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
     }
 
     @Provides
     @Singleton
-    AstyanaxKeyScanner provideAstyanaxKeyScanner(DataStoreConfiguration configuration, PlacementCache placementCache,
-                                                       ChangeEncoder changeEncoder, MetricRegistry metricRegistry, DAOUtils daoUtils,
-                                                       @PrefixLength int prefixLength) {
+    AstyanaxKeyScanner provideAstyanaxKeyScanner(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
+                                                 Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
 
-        int migrationPhase = configuration.getMigrationPhase();
-        checkArgument(migrationPhase >= 0 && migrationPhase <= 3, "Invalid Migration Phase");
-
-        if (migrationPhase == 0 || migrationPhase == 1) {
-            return new AstyanaxDataReaderDAO(placementCache, changeEncoder, metricRegistry);
-        }
-
-        return new AstyanaxBlockedDataReaderDAO(placementCache, changeEncoder, metricRegistry, daoUtils, prefixLength);
+        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
     }
+
 
 
 

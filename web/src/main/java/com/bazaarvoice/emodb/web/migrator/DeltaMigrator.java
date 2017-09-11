@@ -77,7 +77,7 @@ public class DeltaMigrator {
     }
 
     private void checkLocalPlacement(String placement) {
-        if (!_dataTools.getLocalPlacements().contains(placement)) {
+        if (!_dataTools.getTablePlacements(true, true).contains(placement)) {
             throw new WebApplicationException(
                     Response.status(Response.Status.CONFLICT)
                             .type(MediaType.APPLICATION_JSON_TYPE)

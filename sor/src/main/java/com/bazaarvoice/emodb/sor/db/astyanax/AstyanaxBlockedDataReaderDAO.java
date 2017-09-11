@@ -1246,11 +1246,6 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
         };
     }
 
-    @Override
-    public Collection<String> getLocalPlacements() {
-        return _placementCache.getLocalPlacements();
-    }
-
     @VisibleForTesting
     public static Iterator<Column<DeltaKey>> getFilteredColumnIter(Iterator<Column<DeltaKey>> columnIter, @Nullable DateTime cutoffTime) {
         if (cutoffTime == null) {

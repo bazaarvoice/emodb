@@ -1203,11 +1203,6 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         };
     }
 
-    @Override
-    public Collection<String> getLocalPlacements() {
-        return _placementCache.getLocalPlacements();
-    }
-
     @VisibleForTesting
     public static Iterator<Column<UUID>> getFilteredColumnIter(Iterator<Column<UUID>> columnIter, @Nullable DateTime cutoffTime) {
         if (cutoffTime == null) {

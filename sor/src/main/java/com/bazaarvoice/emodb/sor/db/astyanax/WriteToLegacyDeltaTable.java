@@ -11,9 +11,9 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for writing to new blocked tables.
+ * Guice binding annotation for writing to the old unblocked delta tables.
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
-public @interface WriteToNew {
+public @interface WriteToLegacyDeltaTable {
 }

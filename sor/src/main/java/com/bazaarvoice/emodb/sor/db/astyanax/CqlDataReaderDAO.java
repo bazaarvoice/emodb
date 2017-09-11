@@ -959,8 +959,4 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
                 .iterator();
     }
 
-    @Override
-    public Collection<String> getLocalPlacements() {
-        return _placementCache.getLocalPlacements();
-    }
 }

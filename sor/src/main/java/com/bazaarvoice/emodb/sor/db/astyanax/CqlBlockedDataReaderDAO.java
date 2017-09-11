@@ -918,8 +918,4 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         return _astyanaxReaderDAO.count(table, limit, consistency);
     }
 
-    @Override
-    public Collection<String> getLocalPlacements() {
-        return _placementCache.getLocalPlacements();
-    }
 }

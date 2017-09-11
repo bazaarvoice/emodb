@@ -64,6 +64,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -89,8 +90,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
-    private final boolean _writeToOld;
-    private final boolean _writeToNew;
+    private final boolean _writeToLegacyDeltaTable;
+    private final boolean _writeToBlockedDeltaTable;
 
 
     // The difference between full consistency and "raw" consistency provider is that full consistency also includes
@@ -106,7 +107,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
-                                 @WriteToOld boolean writeToOld, @WriteToNew boolean writeToNew) {
+                                 @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable,
+                                 @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
+
+        checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
+
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _keyScanner = checkNotNull(keyScanner, "keyScanner");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
@@ -119,8 +124,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixLength = deltaPrefixLength;
-        _writeToOld = writeToOld;
-        _writeToNew = writeToNew;
+        _writeToLegacyDeltaTable = writeToLegacyDeltaTable;
+        _writeToBlockedDeltaTable = writeToBlockedDeltaTable;
     }
 
     private String getMetricName(String name) {
@@ -246,8 +251,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             encodedDelta.position(encodedDelta.position() + _deltaPrefixLength);
             ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
 
-            int deltaSize = _writeToOld ? encodedDelta.remaining(): 0;
-            int blockDeltaSize = _writeToNew ? encodedBlockDelta.remaining() : 0;
+            int deltaSize = _writeToLegacyDeltaTable ? encodedDelta.remaining(): 0;
+            int blockDeltaSize = _writeToBlockedDeltaTable ? encodedBlockDelta.remaining() : 0;
             int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
@@ -272,12 +277,12 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
                 potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
-                if (_writeToOld) {
+                if (_writeToLegacyDeltaTable) {
                     //this will be removed in the next version
                     potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
                 }
 
-                if (_writeToNew) {
+                if (_writeToBlockedDeltaTable) {
                     putBlockedDeltaColumn(potentiallyOversizeMutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
                 }
 
@@ -291,16 +296,23 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             }
 
             mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
+            approxMutationSize += auditSize;
 
             // this will be removed in the next version
-            if (_writeToOld) {
+            if (_writeToLegacyDeltaTable) {
                 mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
+                approxMutationSize += deltaSize;
             }
 
-            if (_writeToNew) {
-                putBlockedDeltaColumn(mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
+            if (deltaSize + blockDeltaSize + auditSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
+                execute(mutation, "update large record in old table in placement %s", placement.getName());
+                approxMutationSize = 0;
             }
-            approxMutationSize += deltaSize + blockDeltaSize + auditSize;
+
+            if (_writeToBlockedDeltaTable) {
+                putBlockedDeltaColumn(mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
+                approxMutationSize += blockDeltaSize;
+            }
             updateCount += 1;
         }
         execute(mutation, "batch update %d records in placement %s", updateCount, placement.getName());

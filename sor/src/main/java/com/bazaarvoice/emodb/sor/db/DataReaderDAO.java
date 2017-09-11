@@ -63,6 +63,4 @@ public interface DataReaderDAO {
     Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
                                                   ReadConsistency consistency, @Nullable DateTime cutoffTime);
 
-    /** Return all placements that are in the local datacenter */
-    Collection<String> getLocalPlacements();
 }
