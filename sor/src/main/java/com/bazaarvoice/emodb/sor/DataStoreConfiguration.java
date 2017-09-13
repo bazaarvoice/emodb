@@ -65,7 +65,7 @@ public class DataStoreConfiguration {
     @Valid
     @NotNull
     @JsonProperty("migrationPhase")
-    DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
+    private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
 
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
