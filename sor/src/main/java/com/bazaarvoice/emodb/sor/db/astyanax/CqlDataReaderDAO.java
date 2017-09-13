@@ -260,7 +260,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
      */
     private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), _daoUtils.removePrefix(getValue(row)))));
+                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), _daoUtils.skipPrefix(getValue(row)))));
     }
 
     /**
@@ -272,7 +272,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Row row = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.removePrefix(getValue(row)));
+                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.skipPrefix(getValue(row)));
                     if (compaction != null) {
                         return Maps.immutableEntry(getChangeId(row), compaction);
                     }
@@ -288,7 +288,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
                 .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
-                .withSize(_daoUtils.removePrefix(getValue(row)).remaining()));
+                .withSize(_daoUtils.skipPrefix(getValue(row)).remaining()));
     }
 
     /**
@@ -813,7 +813,7 @@ public class CqlDataReaderDAO implements DataReaderDAO {
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Row> iter) {
-        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), _daoUtils.removePrefix(getValue(row))));
+        return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), _daoUtils.skipPrefix(getValue(row))));
     }
 
     /**

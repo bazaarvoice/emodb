@@ -1161,14 +1161,14 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
     }
 
     private Iterator<Change> decodeDeltaColumns(Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), _daoUtils.removePrefix(column.getByteBufferValue())));
+        return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), _daoUtils.skipPrefix(column.getByteBufferValue())));
     }
 
     private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
             @Override
             public Map.Entry<UUID, Change> apply(Column<UUID> column) {
-                Change change = _changeEncoder.decodeChange(column.getName(), _daoUtils.removePrefix(column.getByteBufferValue()));
+                Change change = _changeEncoder.decodeChange(column.getName(), _daoUtils.skipPrefix(column.getByteBufferValue()));
                 return Maps.immutableEntry(column.getName(), change);
             }
         });
@@ -1180,7 +1180,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             protected Map.Entry<UUID, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Column<UUID> column = iter.next();
-                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.removePrefix(column.getByteBufferValue()));
+                    Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.skipPrefix(column.getByteBufferValue()));
                     if (compaction != null) {
                         return Maps.immutableEntry(column.getName(), compaction);
                     }
@@ -1196,7 +1196,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
             public RecordEntryRawMetadata apply(Column<UUID> column) {
                 return new RecordEntryRawMetadata()
                         .withTimestamp(TimeUUIDs.getTimeMillis(column.getName()))
-                        .withSize(_daoUtils.removePrefix(column.getByteBufferValue()).remaining());
+                        .withSize(_daoUtils.skipPrefix(column.getByteBufferValue()).remaining());
             }
         });
     }

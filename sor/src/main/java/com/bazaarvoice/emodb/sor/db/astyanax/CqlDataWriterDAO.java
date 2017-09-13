@@ -21,6 +21,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Charsets;
@@ -39,7 +40,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 // Delegates to AstyanaxWriterDAO for non-Compaction stuff
 // Once we transition fully, we will stop delegating to Astyanax
-public class CqlDataWriterDAO implements DataWriterDAO{
+public class CqlDataWriterDAO implements DataWriterDAO {
 
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
@@ -92,7 +93,7 @@ public class CqlDataWriterDAO implements DataWriterDAO{
 
     @Override
     public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
-        _astyanaxWriterDAO.updateAll(updates,listener);
+        _astyanaxWriterDAO.updateAll(updates, listener);
     }
 
     @Override
@@ -160,29 +161,36 @@ public class CqlDataWriterDAO implements DataWriterDAO{
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
 
         // delete the old deltas & compaction records
-
         DeltaTableDDL tableDDL = placement.getDeltaTableDDL();
 
         // each individual delete statement will be atomic, so the batch can be unlogged
         // if any delete fails in this batch it will be deleted again the next time it is read
-        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        BatchStatement deltaBatchStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+
+        ResultSetFuture auditTableFuture = null;
 
         for (UUID change : changesToDelete) {
-            batchStatement.add(QueryBuilder.delete()
+            deltaBatchStatement.add(QueryBuilder.delete()
                     .from(tableDDL.getTableMetadata())
                     .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
                     .and(eq(tableDDL.getChangeIdColumnName(), change))
-                .setConsistencyLevel(consistencyLevel));
+                    .setConsistencyLevel(consistencyLevel));
         }
 
 
         if (historyList != null && !historyList.isEmpty()) {
-            AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(batchStatement, placement.getDeltaHistoryTableDDL(),
-                    _changeEncoder, _auditStore);
+            BatchStatement auditBatchStatement = new BatchStatement();
+            AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(deltaBatchStatement, placement.getDeltaHistoryTableDDL(),
+                    _changeEncoder, _auditStore, consistencyLevel);
             _auditStore.putDeltaAudits(rowKey, historyList, auditBatchPersister);
+            session.executeAsync(auditBatchStatement);
         }
 
-        session.execute(batchStatement);
+        session.execute(deltaBatchStatement);
+
+        if (auditTableFuture != null) {
+            auditTableFuture.getUninterruptibly();
+        }
 
     }
 

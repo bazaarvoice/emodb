@@ -23,14 +23,13 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private R _oldDelta;
     private final boolean _reverse;
     private final int _prefixLength;
+    private boolean _firstIteration;
 
     public DeltaIterator(Iterator<R> iterator, boolean reverse, int prefixLength) {
         _iterator = iterator;
-        if (iterator.hasNext()) {
-            _next = iterator.next();
-        }
         _reverse = reverse;
         _prefixLength = prefixLength;
+        _firstIteration = true;
     }
 
     // stitch delta together in reverse
@@ -107,6 +106,13 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     @Override
     protected T computeNext() {
 
+        if (_firstIteration) {
+            if (_iterator.hasNext()) {
+                _next = _iterator.next();
+                _firstIteration = false;
+            }
+        }
+
         while(true) {
 
             if (_next == null) {
@@ -140,14 +146,9 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                 content = reverseCompute();
             }
 
-            _list.clear();
-
-            if (content == null) {
-                continue;
+            if (content != null) {
+                return convertDelta(_oldDelta, content);
             }
-
-
-            return convertDelta(_oldDelta, content);
 
         }
     }
@@ -180,6 +181,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
             content.put(getValue(delta));
         }
         content.position(0);
+        _list.clear();
         return content;
     }
 

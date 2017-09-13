@@ -50,7 +50,7 @@ public class DeltaBlockingTest {
         Iterator<ByteBuffer> iterator = new ListDeltaIterator(rows.iterator(), false, _prefixLength);
         for (int i = 0; i < deltas.length; i++) {
             assertEquals(iterator.hasNext(), true);
-            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(iterator.next())), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.skipPrefix(iterator.next())), deltas[i]);
         }
         assertEquals(iterator.hasNext(), false);
 
@@ -59,7 +59,7 @@ public class DeltaBlockingTest {
 
         for (int i = deltas.length - 1; i >= 0; i--) {
             assertEquals(reversedIterator.hasNext(), true);
-            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(reversedIterator.next())), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.skipPrefix(reversedIterator.next())), deltas[i]);
         }
         assertEquals(reversedIterator.hasNext(), false);
     }
@@ -71,7 +71,7 @@ public class DeltaBlockingTest {
         List<TestRow> rows = Lists.newArrayListWithCapacity(deltas.length * 5); // lazy guess at future size
         for (int i = 0; i < encodedDeltas.length; i++) {
             ByteBuffer byteDelta = ByteBuffer.wrap((encodedDeltas[i].getBytes()));
-            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.removePrefix(byteDelta)), deltas[i]);
+            assertEquals(StringSerializer.get().fromByteBuffer(_daoUtils.skipPrefix(byteDelta)), deltas[i]);
         }
     }
 
@@ -97,13 +97,13 @@ public class DeltaBlockingTest {
 
         Iterator<ByteBuffer> iterator = new ListDeltaIterator(rows.iterator(), false, _prefixLength);
         assertEquals(iterator.hasNext(), true);
-        assertEquals(StringSerializer.get().fromByteBuffer(daoUtils.removePrefix(iterator.next())), delta);
+        assertEquals(StringSerializer.get().fromByteBuffer(daoUtils.skipPrefix(iterator.next())), delta);
         assertEquals(iterator.hasNext(), false);
 
         List<TestRow> reversedRows = Lists.reverse(rows);
         Iterator<ByteBuffer> reversedIterator = new ListDeltaIterator(reversedRows.iterator(), true, _prefixLength);
         assertEquals(reversedIterator.hasNext(), true);
-        assertEquals(StringSerializer.get().fromByteBuffer(daoUtils.removePrefix(reversedIterator.next())), delta);
+        assertEquals(StringSerializer.get().fromByteBuffer(daoUtils.skipPrefix(reversedIterator.next())), delta);
         assertEquals(reversedIterator.hasNext(), false);
     }
 
