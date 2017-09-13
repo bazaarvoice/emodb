@@ -34,10 +34,9 @@ import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
-
 
 
 public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
@@ -100,7 +99,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
     @Override
     public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
-        _astyanaxWriterDAO.updateAll(updates,listener);
+        _astyanaxWriterDAO.updateAll(updates, listener);
     }
 
     @Override
@@ -161,14 +160,14 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         ResultSetFuture oldTableFuture = null;
 
         // this write statement should be removed in the next version
-        if(_writeToLegacyDeltaTable) {
+        if (_writeToLegacyDeltaTable) {
             TableDDL deltaTableDDL = placement.getDeltaTableDDL();
             Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
                     .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
                     .value(deltaTableDDL.getChangeIdColumnName(), compactionKey)
                     .value(deltaTableDDL.getValueColumnName(), encodedCompaction)
                     .setConsistencyLevel(consistencyLevel);
-            oldTableFuture =  session.executeAsync(oldTableStatement);
+            oldTableFuture = session.executeAsync(oldTableStatement);
         }
 
 
@@ -209,7 +208,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         if (historyList != null && !historyList.isEmpty()) {
             BatchStatement auditBatchStatement = new BatchStatement();
             AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(auditBatchStatement,
-                    placement.getDeltaHistoryTableDDL(), _changeEncoder, _auditStore);
+                    placement.getDeltaHistoryTableDDL(), _changeEncoder, _auditStore, consistencyLevel);
             _auditStore.putDeltaAudits(rowKey, historyList, auditBatchPersister);
             auditBatchFuture = session.executeAsync(auditBatchStatement);
         }
@@ -283,7 +282,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             }
         };
 
-        while(iterator.hasNext()) {
+        while (iterator.hasNext()) {
             MigrationScanResult result = iterator.next();
 
             ByteBuffer rowKey = result.getRowKey();

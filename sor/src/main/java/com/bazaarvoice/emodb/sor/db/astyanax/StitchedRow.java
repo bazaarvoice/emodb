@@ -22,8 +22,7 @@ public class StitchedRow extends AbstractGettableData implements Row {
 
     @Override
     protected int getIndexOf(String name) {
-        int i = _oldRow.getColumnDefinitions().getIndexOf(name);
-        return i;
+        return _oldRow.getColumnDefinitions().getIndexOf(name);
     }
 
     @Override

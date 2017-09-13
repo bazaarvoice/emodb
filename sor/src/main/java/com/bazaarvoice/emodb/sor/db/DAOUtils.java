@@ -55,7 +55,7 @@ public class DAOUtils {
     }
 
     // removes the hex prefix that indicates the number of blocks in the delta
-    public ByteBuffer removePrefix(ByteBuffer value) {
+    public ByteBuffer skipPrefix(ByteBuffer value) {
         value.position(value.position() + _prefixLength);
         return value;
     }
