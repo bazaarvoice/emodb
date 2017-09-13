@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>5.5.7-SNAPSHOT</version>
+    <version>5.5.7</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -20,7 +20,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
+      <tag>emodb-5.5.7</tag>
   </scm>
 
     <properties>
