@@ -67,6 +67,15 @@ public class DataStoreConfiguration {
     @JsonProperty("migrationPhase")
     private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
 
+
+    /*
+    Only temporarily configurable during the migration period
+    */
+    @Valid
+    @NotNull
+    @JsonProperty
+    private int _deltaBlockSizeInKb = 64;
+
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
     }
@@ -163,5 +172,9 @@ public class DataStoreConfiguration {
 
     public DeltaMigrationPhase getMigrationPhase() {
         return _migrationPhase;
+    }
+
+    public int getDeltaBlockSizeInKb() {
+        return _deltaBlockSizeInKb;
     }
 }

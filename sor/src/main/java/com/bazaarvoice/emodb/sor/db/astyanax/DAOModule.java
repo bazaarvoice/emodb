@@ -20,12 +20,10 @@ import com.google.inject.Singleton;
  */
 public class DAOModule extends PrivateModule {
 
-    private static final int DELTA_BLOCK_SIZE = 64 * 1024; // 64 KB block size (this must remain larger than (exclusive) 32 KB
     private static final int DELTA_PREFIX_LENGTH = 4;
 
     @Override
     protected void configure() {
-        bind(Integer.class).annotatedWith(BlockSize.class).toInstance(DELTA_BLOCK_SIZE);
         bind(Integer.class).annotatedWith(PrefixLength.class).toInstance(DELTA_PREFIX_LENGTH);
         bind(DAOUtils.class).asEagerSingleton();
         bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
@@ -105,6 +103,13 @@ public class DAOModule extends PrivateModule {
                                                  Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
 
         return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
+    }
+
+    @Provides
+    @Singleton
+    @BlockSize
+    int provideBlockSize(DataStoreConfiguration configuration) {
+        return configuration.getDeltaBlockSizeInKb() * 1024;
     }
 
 
