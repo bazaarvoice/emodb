@@ -176,7 +176,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             BlockedDeltaTableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
             BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.LOGGED);
             insertBlockedDeltas(newTableStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
-            session.executeAsync(newTableStatement).getUninterruptibly();
+            session.execute(newTableStatement);
         }
 
         // Wait for both statements to return
@@ -227,7 +227,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             for (UUID change : changesToDelete) {
                 newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change, consistencyLevel));
             }
-            session.executeAsync(newTableStatement).getUninterruptibly();
+            session.execute(newTableStatement);
         }
 
         if (legacyTableFuture != null) {
