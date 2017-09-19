@@ -11,7 +11,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.MultiDCDataStores;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
@@ -47,8 +47,8 @@ public class MultiDCVersionTest {
         MultiDCDataStores allDCs = new MultiDCDataStores(2, new MetricRegistry());
         DataStore dc1 = allDCs.dc(0);
         DataStore dc2 = allDCs.dc(1);
-        InMemoryDataDAO dao1 = allDCs.dao(0);
-        InMemoryDataDAO dao2 = allDCs.dao(1);
+        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
+        InMemoryDataReaderDAO dao2 = allDCs.dao(1);
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));

@@ -96,7 +96,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
  */
-public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
+public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, AstyanaxKeyScanner {
     private static final int MAX_RANDOM_ROWS_BATCH = 50;
     private static final int MAX_SCAN_ROWS_BATCH = 250;
     private static final int SCAN_ROW_BATCH_INCREMENT = 50;
@@ -338,7 +338,8 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO {
         }));
     }
 
-    Iterator<String> scanKeys(AstyanaxStorage storage, final ReadConsistency consistency) {
+    @Override
+    public Iterator<String> scanKeys(AstyanaxStorage storage, final ReadConsistency consistency) {
         checkNotNull(storage, "storage");
         checkNotNull(consistency, "consistency");
 

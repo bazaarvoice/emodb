@@ -62,6 +62,20 @@ public class DataStoreConfiguration {
     @JsonProperty("stashRoot")
     private Optional<String> _stashRoot = Optional.absent();
 
+    @Valid
+    @NotNull
+    @JsonProperty("migrationPhase")
+    private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
+
+
+    /*
+    Only temporarily configurable during the migration period
+    */
+    @Valid
+    @NotNull
+    @JsonProperty
+    private int _deltaBlockSizeInKb = 64;
+
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
     }
@@ -154,5 +168,13 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setDeltaEncodingVersion(int deltaEncodingVersion) {
         _deltaEncodingVersion = deltaEncodingVersion;
         return this;
+    }
+
+    public DeltaMigrationPhase getMigrationPhase() {
+        return _migrationPhase;
+    }
+
+    public int getDeltaBlockSizeInKb() {
+        return _deltaBlockSizeInKb;
     }
 }

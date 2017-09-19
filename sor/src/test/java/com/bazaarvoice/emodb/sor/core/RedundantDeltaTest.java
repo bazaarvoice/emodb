@@ -17,20 +17,16 @@ import com.bazaarvoice.emodb.sor.core.test.DiscardingExecutorService;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
-import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
-import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -40,7 +36,6 @@ import com.google.common.eventbus.EventBus;
 import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
-import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Iterator;
@@ -62,7 +57,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testRedundantDeltas() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
                 Optional.<URI>absent(), new MetricRegistry());
@@ -118,7 +113,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testRedundancyWithTags() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
                 Optional.<URI>absent(), new MetricRegistry());
@@ -198,7 +193,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testTagsForNestedMapDeltas() {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
                 Optional.<URI>absent(), new MetricRegistry());
@@ -217,7 +212,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testRedundancyWithCompactionAndUnchangedTag() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
                 Optional.<URI>absent(), new MetricRegistry());
@@ -291,7 +286,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testPartialCompactionWithNoRedundancy() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
@@ -362,7 +357,7 @@ public class RedundantDeltaTest {
 
     @Test
     public void testPartialCompactionWithRedundancy() throws Exception {
-        InMemoryDataDAO dataDao = new InMemoryDataDAO();
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,

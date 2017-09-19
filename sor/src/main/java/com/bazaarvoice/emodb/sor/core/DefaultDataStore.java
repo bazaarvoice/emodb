@@ -823,8 +823,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     }
 
-
-
     @Override
     public URI getStashRoot()
             throws StashNotAvailableException {

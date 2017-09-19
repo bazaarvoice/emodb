@@ -1,6 +1,6 @@
 USE ${keyspace};
 
-CREATE TABLE ${table} (
+CREATE TABLE IF NOT EXISTS ${table} (
     blobid blob,
     group ascii,
     chunkid int,
