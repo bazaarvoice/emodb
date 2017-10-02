@@ -141,30 +141,42 @@ public class CassandraKeyspace implements Managed {
     }
 
     public void errorIfPartitionerMismatch(Class<? extends IPartitioner> expectedPartitioner) {
-        String partitioner;
-        try {
-            partitioner = _astyanaxKeyspace.describePartitioner();
-        } catch (ConnectionException e) {
-            throw Throwables.propagate(e);
-        }
-        if (!expectedPartitioner.getName().equals(partitioner)) {
+        String mismatchedPartitioner = getMismatchedPartitioner(expectedPartitioner);
+        if (mismatchedPartitioner != null) {
             throw new IllegalStateException(format(
                     "Cassandra keyspace '%s' must be configured with the %s.  It currently uses %s.",
-                    getName(), expectedPartitioner.getSimpleName(), partitioner));
+                    getName(), expectedPartitioner.getSimpleName(), mismatchedPartitioner));
         }
     }
 
     public void warnIfPartitionerMismatch(Class<? extends IPartitioner> expectedPartitioner) {
-        String partitioner;
-        try {
-            partitioner = _astyanaxKeyspace.describePartitioner();
-        } catch (ConnectionException e) {
-            throw Throwables.propagate(e);
-        }
-        if (!expectedPartitioner.getName().equals(partitioner)) {
+        String mismatchedPartitioner = getMismatchedPartitioner(expectedPartitioner);
+        if (mismatchedPartitioner != null) {
             LoggerFactory.getLogger(CassandraKeyspace.class).warn(
                     "Cassandra keyspace '{}' would perform better if it was configured with the {}.  It currently uses the {}.",
-                    getName(), expectedPartitioner.getSimpleName(), partitioner);
+                    getName(), expectedPartitioner.getSimpleName(), mismatchedPartitioner);
         }
+    }
+
+    /**
+     * Returns the actual partitioner in use by Cassandra if it does not match the expected partitioner, null if it matches.
+     */
+    private String getMismatchedPartitioner(Class<? extends IPartitioner> expectedPartitioner) {
+        String partitioner = null;
+        try {
+            partitioner = _astyanaxKeyspace.describePartitioner();
+            boolean matches = CassandraPartitioner.fromClass(partitioner).matches(expectedPartitioner.getName());
+            if (matches) {
+                return null;
+            } else {
+                return partitioner;
+            }
+        } catch (ConnectionException e) {
+            throw Throwables.propagate(e);
+        } catch (IllegalArgumentException e) {
+            // Only thrown if the partitioner doesn't match any compatible partitioner, so by definition it is mismatched.
+            return partitioner;
+        }
+
     }
 }
