@@ -28,6 +28,7 @@ import com.google.common.base.Optional;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
@@ -49,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -60,6 +62,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -89,6 +92,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     private final Counter _waitingForBatchesComplete;
     private final Counter _waitingForAllTransfersComplete;
     private final Meter _failedRangeScans;
+    private final Meter _hungRangeScans;
 
     private final LoadingCache<String, Counter> _shardsUploaded;
     private final LoadingCache<String, Counter> _rawBytesUploaded;
@@ -134,6 +138,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         _waitingForBatchesComplete = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "waiting-for-batches-complete"));
         _waitingForAllTransfersComplete = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "waiting-for-all-transfers-complete"));
         _failedRangeScans = metricRegistry.meter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "failed-range-scans"));
+        _hungRangeScans = metricRegistry.meter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "hung-range-scans"));
 
         _shardsUploaded = CacheBuilder.newBuilder()
                 .build(new CacheLoader<String, Counter>() {
@@ -183,7 +188,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
         final Counter shardCounter = _shardsUploaded.getUnchecked(placement);
         final Counter rawBytesUploadedCounter = _rawBytesUploaded.getUnchecked(placement);
-        final ExecutorService batchService = Executors.newFixedThreadPool(_threadCount);
+        final ExecutorService batchService = Executors.newFixedThreadPool(_threadCount,
+                new ThreadFactoryBuilder().setNameFormat("ScanRangeTask-" + taskId + "-Batch-%d").build());
         _batchServices.add(batchService);
 
         _log.info("Scanning placement {}: {}", placement, scanRange);
@@ -194,6 +200,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         Future<?> timeoutFuture =
                 _timeoutService.schedule(timeout, options.getMaxRangeScanTime().getMillis(), TimeUnit.MILLISECONDS);
 
+        RangeScanHungCheck rangeScanHungCheck = null;
+
         final BatchContext context = new BatchContext(
                 _batchSize, placement, scanRange, shardCounter, rawBytesUploadedCounter, options.isCompactionEnabled());
 
@@ -201,34 +209,46 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         try (ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(taskId, options.getDestinations())) {
             context.setScanWriter(scanWriter);
             final ArrayBlockingQueue<Batch> queue = Queues.newArrayBlockingQueue(_threadCount);
+            final Set<Thread> batchThreads = Sets.newConcurrentHashSet();
 
+            // Create a callback to stop processing if this thread appears hung
+            rangeScanHungCheck = new RangeScanHungCheck(taskId, Thread.currentThread(), batchThreads);
+            _timeoutService.schedule(rangeScanHungCheck, options.getMaxRangeScanTime().plus(Duration.standardMinutes(5)).getMillis(), TimeUnit.MILLISECONDS);
+            
             // Start threads for concurrently processing batch results
             for (int t=0; t < _threadCount; t++ ){
                 batchService.submit(new Runnable() {
                     @Override
                     public void run() {
-                        Batch batch;
-                        while (context.continueProcessing()) {
-                            try {
-                                batch = queue.poll(1, TimeUnit.SECONDS);
-                                if (batch != null) {
-                                    _activeBatches.inc();
-                                    try {
-                                        processBatch(taskId, batch);
-                                    } finally {
-                                        _activeBatches.dec();
+                        batchThreads.add(Thread.currentThread());
+                        try {
+                            Batch batch;
+                            while (context.continueProcessing()) {
+                                try {
+                                    batch = queue.poll(1, TimeUnit.SECONDS);
+                                    if (batch != null) {
+                                        _activeBatches.inc();
+                                        try {
+                                            processBatch(taskId, batch);
+                                        } finally {
+                                            _activeBatches.dec();
+                                        }
+                                    }
+                                } catch (Throwable t) {
+                                    if (context.continueProcessing()) {
+                                        _log.error("Unexpected error in scan batch processing thread", t);
+                                        context.registerException(t);
                                     }
                                 }
-                            } catch (Throwable t) {
-                                _log.error("Unexpected error in scan batch processing thread", t);
-                                context.registerException(t);
                             }
-                        }
 
-                        // Release any batches that may have been left over if we terminated early due to
-                        // shutdown or some error.
-                        while ((batch = queue.poll()) != null) {
-                            context.closeBatch(batch, null);
+                            // Release any batches that may have been left over if we terminated early due to
+                            // shutdown or some error.
+                            while ((batch = queue.poll()) != null) {
+                                context.closeBatch(batch, null);
+                            }
+                        } finally {
+                            batchThreads.remove(Thread.currentThread());
                         }
                     }
                 });
@@ -311,18 +331,25 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
             return RangeScanUploaderResult.success();
         } catch (Throwable t) {
-            _log.error("Scanning placement failed for task id={}, {}: {}", taskId, placement, scanRange, t);
+            if (Thread.interrupted()) {
+                _log.error("Scanning placement failed and interrupted for task id={}, {}: {}", taskId, placement, scanRange, t);
+            } else {
+                _log.error("Scanning placement failed for task id={}, {}: {}", taskId, placement, scanRange, t);
+            }
             context.registerException(t);
             _failedRangeScans.mark(1);
             return RangeScanUploaderResult.failure();
         } finally {
             _activeRangeScans.dec();
+            if (rangeScanHungCheck != null) {
+                rangeScanHungCheck.rangeScanComplete();
+            }
             timeoutFuture.cancel(false);
 
-            if (batchService != null) {
-                batchService.shutdown();
-                _batchServices.remove(batchService);
+            if (!batchService.isShutdown()) {
+                batchService.shutdownNow();
             }
+            _batchServices.remove(batchService);
         }
     }
 
@@ -752,6 +779,44 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
         public boolean isTimedOut() {
             return _timedOut;
+        }
+    }
+
+    private class RangeScanHungCheck implements Runnable {
+        private final int _taskId;
+        private final Thread _scanThread;
+        private final Collection<Thread> _batchThreads;
+        private final AtomicBoolean _taskComplete;
+
+        public RangeScanHungCheck(int taskId, Thread scanThread, Collection<Thread> batchThreads) {
+            _taskId = taskId;
+            _scanThread = scanThread;
+            _batchThreads = batchThreads;
+            _taskComplete = new AtomicBoolean(false);
+        }
+
+        @Override
+        public void run() {
+            // Check if the task is complete.  If not interrupt the scan thread and shut down its batch processing threads.
+            if (!_taskComplete.get()) {
+                _hungRangeScans.mark();
+                _log.warn("Scan range appears hung: interrupting threads, stack traces to follow: id={}", _taskId);
+                for (Thread thread : Iterables.concat(Collections.singleton(_scanThread), _batchThreads)) {
+                    // Quick and dirty way to log the thread's stack trace -- put it in an Exception
+                    Exception threadException = new Exception("Stack trace for " + thread.getName());
+                    threadException.setStackTrace(thread.getStackTrace());
+                    _log.warn("Stack trace for hung task: id={}, thread={}", _taskId, thread.getName(), threadException);
+                    try {
+                        thread.interrupt();
+                    } catch (Exception e) {
+                        _log.warn("Failed to interrupt thread for hung task: id={}, thread={}", _taskId, thread.getName(), e);
+                    }
+                }
+            }
+        }
+
+        public void rangeScanComplete() {
+            _taskComplete.set(true);
         }
     }
 }
