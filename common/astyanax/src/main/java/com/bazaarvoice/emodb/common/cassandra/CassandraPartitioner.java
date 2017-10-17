@@ -45,22 +45,21 @@ public enum CassandraPartitioner {
 
         /**
          * EmoDB requires a partitioner whose token generation is identical to {@link ByteOrderedPartitioner}.
-         * However, the Emo team has found it beneficial to sometimes utilize an alternate implementation of BOP
-         * in the Cassandra ring, whether for logging or to solve performance issues of the partitioner unrelated to
-         * the task of generating tokens.
+         * However, the EmoDB team has found that ByteOrderedPartitioner itself has inefficiencies at scale unrelated to
+         * token management.  To address this the EmoDB team has created an alternate implementation, EmoPartitioner,
+         * which resolves these inefficiencies while otherwise behaving identically to BOP.  (As of this writing
+         * EmoPartitioner is not yet open sourced but this is the intention.)
          *
          * Currently EmoDB uses a mix of the native Cassandra driver and the thrift Astyanax driver.  Without going
-         * into the full details of why this is or why it would be difficult to abandon Asytanax completely it is
-         * undesirable to create a new implementation of the Astyanax {@link Partitioner} class for each alternate
-         * BOP implementation. This is especially true since Astyanax only requires the partitioner for a limited
-         * number of calls and for those the implementation would be identical to that in {@link BOP20Partitioner}.
+         * into the full details of why this is or why it would be difficult to abandon Asytanax completely, to support
+         * EmoPartitioner we would normally need to create a corresponding implementation of the Astyanax
+         * {@link Partitioner} for it.  However, Astyanax only requires the partitioner for a limited number of
+         * calls and for those the implementation would be identical to that in {@link BOP20Partitioner}  So if
+         * the Cassandra partitioner is EmoPartitioner then return BOP as an equivalent substitute.
          *
-         * As a compromise, rather than create a new partitioner implementation for each alternate BOP implementation or
-         * even require an enumeration of all possible alternate BOP implementations this method simply looks for the
-         * substring "emo" within the partitioner name and, if found, presumes it is a BOP-compatible partitioner.
          */
         private boolean isEmoBOPImplementation(String cassandraPartitioner) {
-            return cassandraPartitioner.toLowerCase().contains("emo");
+            return "com.bazaarvoice.emodb.partitioner.EmoPartitioner".equals(cassandraPartitioner);
         }
     };
 
