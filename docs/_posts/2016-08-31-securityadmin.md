@@ -70,16 +70,14 @@ other sensitive credential.
 Anonymous Access
 ----------------
 
-If you choose you can configure EmoDB to allow anonymous access.  An anonymous user has full permission to perform
-most standard operations in the data store, blob, databus, and queue services (see
-[DefaultRoles.java](https://github.com/bazaarvoice/emodb/blob/master/web/src/main/java/com/bazaarvoice/emodb/web/auth/DefaultRoles.java#L126)
-for full anonymous permissions).  While we don't recommend running EmoDB with anonymous access enabled it does
-lower the bar for quickly getting going with EmoDB.  To enable anonymous access set the following attribute in
-your `config.yaml` file:
+If you choose you can configure EmoDB to allow anonymous access.  An anonymous user has the roles explicitly defined
+in `config.yaml`.  The permissions associated with those roles can be configured using the User Access Control API.
+To enable anonymous access set the following attribute with the anonymous role(s) in your `config.yaml` file:
 
 ```
 auth:
-  allowAnonymousAccess: true
+  anonymousRoles:
+  - list_of_roles
 ```
 
 Anonymous access enables the following behavior:

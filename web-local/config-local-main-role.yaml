@@ -216,7 +216,8 @@ auth:
   adminApiKey:       "zl+p3AU4/EgT8OtR0ZmLrkL70j0SklugAzd+xxYR1Dz/rioe5aXo4yay7sKi7PSKD59h7/HumH7442nGhlR2rw"  # local_admin
   replicationApiKey: "iuOPUIfI0lyxRrNZ9j9Aa68m1yrALBbVMw8kdqb6FVhSwMgOXVsuUblLr9nL73D4xpMVEZZHZr50pCBy1gbjDg"  # local_replication
   tablePlacement: "app_global:sys"
-  allowAnonymousAccess: true
+  anonymousRoles:
+  - anonymous
 
 # Configure the HTTP server that listens for inbound requests
 server:
