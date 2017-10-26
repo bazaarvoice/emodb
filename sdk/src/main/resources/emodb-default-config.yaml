@@ -68,6 +68,7 @@ systemOfRecord:
   cassandraClusters:
     emo:
       cluster: emo_cluster
+      clusterMetric: sor_emo_cluster
       dataCenter: datacenter1
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
@@ -92,6 +93,7 @@ databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
+    clusterMetric: databus_emo_cluster
     dataCenter: datacenter1
     seeds: 127.0.0.1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
@@ -118,6 +120,7 @@ blobStore:
   cassandraClusters:
     media_global:
       cluster: emo_cluster
+      clusterMetric: blob_emo_cluster
       dataCenter: datacenter1
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
@@ -155,6 +158,7 @@ queueService:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
+    clusterMetric: queue_emo_cluster
     dataCenter: datacenter1
     seeds: 127.0.0.1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
