@@ -127,8 +127,7 @@ public class SecurityModule extends PrivateModule {
         bind(new TypeLiteral<Set<String>>() {})
                 .annotatedWith(ReservedRoles.class)
                 .toInstance(ImmutableSet.of(
-                        DefaultRoles.replication.toString(),
-                        DefaultRoles.anonymous.toString()));
+                        DefaultRoles.replication.toString()));
 
         bind(PermissionResolver.class).to(EmoPermissionResolver.class).asEagerSingleton();
         bind(SecurityManager.class).to(EmoSecurityManager.class);
@@ -203,9 +202,16 @@ public class SecurityModule extends PrivateModule {
 
     @Provides
     @Singleton
+    @Named("AnonymousRoles")
+    Set<String> provideAnonymousRoles(AuthorizationConfiguration config) {
+        return config.getAnonymousRoles();
+    }
+
+    @Provides
+    @Singleton
     @Named("AnonymousKey")
-    Optional<String> provideAnonymousKey(AuthorizationConfiguration config) {
-        if (config.isAllowAnonymousAccess()) {
+    Optional<String> provideAnonymousKey(@Named("AnonymousRoles") Set<String> anonymousRoles) {
+        if (!anonymousRoles.isEmpty()) {
             return Optional.of(ANONYMOUS_KEY);
         }
         return Optional.absent();
@@ -213,7 +219,7 @@ public class SecurityModule extends PrivateModule {
 
     /**
      * Supplier for generating uniquey IDs for API keys.  Note that, critically, the values returned will never
-     * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, AuthIdentityManager)}
+     * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, Set, AuthIdentityManager)}
      */
     @Provides
     @Singleton
@@ -245,6 +251,7 @@ public class SecurityModule extends PrivateModule {
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerWithDefaults(
             @ReplicationKey String replicationKey,
             @Named("AdminKey") String adminKey, @Named("AnonymousKey") Optional<String> anonymousKey,
+            @Named("AnonymousRoles") Set<String> anonymousRoles,
             @Named("dao") AuthIdentityManager<ApiKey> daoManager) {
 
         ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
@@ -255,7 +262,7 @@ public class SecurityModule extends PrivateModule {
 
         if (anonymousKey.isPresent()) {
             reservedIdentities.put(anonymousKey.get(),
-                    createReservedApiKey(ANONYMOUS_ID, "anonymous", ImmutableSet.of(DefaultRoles.anonymous.toString())));
+                    createReservedApiKey(ANONYMOUS_ID, "anonymous", anonymousRoles));
         }
 
         return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());

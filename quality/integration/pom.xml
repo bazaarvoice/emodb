@@ -200,6 +200,17 @@
                             <autoStartEmo>true</autoStartEmo>
                             <skip>${skipTests}</skip>
                             <emoLogFile>${basedir}/target/emodb-main.log</emoLogFile>
+                            <roles>
+                                <role>
+                                    <name>anonymous</name>
+                                    <permissions>
+                                        <permission>sor|if(or("read","create_table"))|*</permission>
+                                        <permission>blob|read|*</permission>
+                                        <permission>databus|*</permission>
+                                        <permission>queue|*</permission>
+                                    </permissions>
+                                </role>
+                            </roles>
                         </configuration>
                     </execution>
 

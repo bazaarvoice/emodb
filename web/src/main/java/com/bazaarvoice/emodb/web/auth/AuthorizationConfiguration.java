@@ -1,6 +1,9 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.google.common.collect.ImmutableSet;
+
 import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  * Configuration for the API keys of internal EmoDB users.
@@ -37,8 +40,8 @@ public class AuthorizationConfiguration {
     // Replication key used for replicating across data centers
     @NotNull
     private String _replicationApiKey;
-    // If true allow anonymous access, otherwise all restricted resources will require authentication
-    private boolean _allowAnonymousAccess;
+    // Set of roles assigned for anonymous user.  If the set is empty anonymous access is disabled.
+    private Set<String> _anonymousRoles = ImmutableSet.of();
 
     public String getIdentityTable() {
         return _identityTable;
@@ -112,12 +115,12 @@ public class AuthorizationConfiguration {
         return this;
     }
 
-    public boolean isAllowAnonymousAccess() {
-        return _allowAnonymousAccess;
+    public Set<String> getAnonymousRoles() {
+        return _anonymousRoles;
     }
 
-    public AuthorizationConfiguration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
-        _allowAnonymousAccess = allowAnonymousAccess;
+    public AuthorizationConfiguration setAnonymousRoles(Set<String> anonymousRoles) {
+        _anonymousRoles = anonymousRoles;
         return this;
     }
 }

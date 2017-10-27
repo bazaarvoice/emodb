@@ -131,13 +131,8 @@ public enum DefaultRoles {
     // Reserved role for replication databus traffic between data centers
     replication (
             ImmutableSet.of(sor_read),
-            Permissions.replicateDatabus()),
-
-    // Reserved role for anonymous access
-    anonymous (
-            // TODO:  Lock this down.  For now this will permit all standard client operations with excluding pii tables/placements in SOR.
-            ImmutableSet.of(sor_standard_without_pii, blob_standard, queue_standard, databus_standard));
-
+            Permissions.replicateDatabus());
+    
     private Set<String> _permissions;
 
     private DefaultRoles(String... permissions) {
