@@ -67,7 +67,10 @@ public class S3ScanWriterTest {
                         }
                     });
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3, uploadService);
+            AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+            when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
+
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
             ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
             shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
             shardWriter.closeAndTransferAysnc(Optional.of(1));
@@ -95,7 +98,10 @@ public class S3ScanWriterTest {
         when(amazonS3.putObject(any(PutObjectRequest.class)))
                 .thenThrow(new AmazonClientException("Simulated transfer failure"));
 
-        S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3, uploadService);
+        AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+        when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
+
+        S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
         scanWriter.setRetryDelay(Duration.millis(10));
 
         try {
@@ -130,7 +136,10 @@ public class S3ScanWriterTest {
             when(amazonS3.putObject(argThat(putsIntoBucket("test-bucket"))))
                     .thenReturn(putObjectResult);
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3, uploadService);
+            AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+            when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
+
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService);
 
             ShardWriter shardWriter[] = new ShardWriter[2];
 
@@ -165,7 +174,10 @@ public class S3ScanWriterTest {
             when(amazonS3.putObject(argThat(putsIntoBucket("test-bucket"))))
                     .thenReturn(putObjectResult);
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3, uploadService);
+            AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+            when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
+
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService);
 
             ShardWriter shardWriter[] = new ShardWriter[2];
 

@@ -43,6 +43,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.InMemoryScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
+import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
@@ -282,6 +283,9 @@ public class ScanUploaderTest {
                 }
         );
 
+        final AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+        when(amazonS3Provider.getS3ClientForBucket(anyString())).thenReturn(amazonS3);
+
         AmazonS3Exception notFoundException = new AmazonS3Exception("not found");
         notFoundException.setStatusCode(404);
         when(amazonS3.getObjectMetadata("testbucket", "test/path/_SUCCESS"))
@@ -298,7 +302,7 @@ public class ScanUploaderTest {
                         int taskId = (Integer) invocation.getArguments()[0];
                         URI uri = (URI) invocation.getArguments()[1];
                         Optional<Integer> maxOpenShards = (Optional<Integer>) invocation.getArguments()[2];
-                        return new S3ScanWriter(taskId, uri, maxOpenShards, metricRegistry, amazonS3, _service);
+                        return new S3ScanWriter(taskId, uri, maxOpenShards, metricRegistry, amazonS3Provider, _service);
                     }
                 }
         );
@@ -1019,8 +1023,11 @@ public class ScanUploaderTest {
             when(amazonS3.putObject(any(PutObjectRequest.class)))
                     .thenThrow(new AmazonClientException("Simulated putObject exception"));
 
+            AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
+            when(amazonS3Provider.getS3ClientForBucket(anyString())).thenReturn(amazonS3);
+
             S3ScanWriter s3ScanWriter = new S3ScanWriter(
-                    1, URI.create("http://dummy-s3-bucket/root"), Optional.of(10), metricRegistry, amazonS3, uploadService);
+                    1, URI.create("http://dummy-s3-bucket/root"), Optional.of(10), metricRegistry, amazonS3Provider, uploadService);
             s3ScanWriter.setRetryDelay(Duration.millis(1));
 
             ScanWriterGenerator scanWriterGenerator = mock(ScanWriterGenerator.class);
