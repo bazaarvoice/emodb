@@ -28,6 +28,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Clock;
 import java.util.Date;
 
 import static org.mockito.Matchers.any;
@@ -77,7 +78,7 @@ public class DefaultFanoutTest {
 
         _defaultFanout = new DefaultFanout("test", mock(EventSource.class), eventSink, true, Duration.standardSeconds(1),
                 _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
-                new MetricRegistry());
+                new MetricRegistry(), Clock.systemUTC());
     }
 
     @Test

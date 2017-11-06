@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -14,8 +15,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -72,7 +75,7 @@ public class SubscriptionEvaluator {
 
     public MatchEventData getMatchEventData(ByteBuffer eventData) throws UnknownTableException {
         UpdateRef ref = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
-        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getTags());
+        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getTags(), ref.getChangeId());
     }
 
     private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
@@ -82,10 +85,12 @@ public class SubscriptionEvaluator {
     protected class MatchEventData {
         private final Table _table;
         private final Set<String> _tags;
+        private final UUID _changeId;
 
-        public MatchEventData(Table table, Set<String> tags) {
+        public MatchEventData(Table table, Set<String> tags, UUID changeId) {
             _table = checkNotNull(table, "table");
             _tags = tags;
+            _changeId = changeId;
         }
 
         public Table getTable() {
@@ -94,6 +99,10 @@ public class SubscriptionEvaluator {
 
         public Set<String> getTags() {
             return _tags;
+        }
+
+        public Date getEventTime() {
+            return TimeUUIDs.getDate(_changeId);
         }
     }
 }
