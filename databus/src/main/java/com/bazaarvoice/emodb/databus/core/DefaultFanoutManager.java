@@ -26,8 +26,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.Iterator;
+import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -45,12 +44,14 @@ public class DefaultFanoutManager implements FanoutManager {
     private final RateLimitedLogFactory _logFactory;
     private final SubscriptionEvaluator _subscriptionEvaluator;
     private final MetricRegistry _metricRegistry;
+    private final Clock _clock;
 
     @Inject
     public DefaultFanoutManager(final EventStore eventStore, final SubscriptionDAO subscriptionDao,
                                 SubscriptionEvaluator subscriptionEvaluator, DataCenters dataCenters,
                                 @DatabusZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort self,
-                                LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory, MetricRegistry metricRegistry) {
+                                LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory,
+                                MetricRegistry metricRegistry, Clock clock) {
         _eventStore = checkNotNull(eventStore, "eventStore");
         _subscriptionDao = checkNotNull(subscriptionDao, "subscriptionDao");
         _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
@@ -60,6 +61,7 @@ public class DefaultFanoutManager implements FanoutManager {
         _dropwizardTask = checkNotNull(dropwizardTask, "dropwizardTask");
         _logFactory = checkNotNull(logFactory, "logFactory");
         _metricRegistry = metricRegistry;
+        _clock = clock;
     }
 
     @Override
@@ -93,7 +95,7 @@ public class DefaultFanoutManager implements FanoutManager {
                     public Service get() {
                         return new DefaultFanout(name, eventSource, eventSink, replicateOutbound, sleepWhenIdle,
                                 subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
-                                _metricRegistry);
+                                _metricRegistry, _clock);
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
