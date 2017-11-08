@@ -38,9 +38,16 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class CQLStashTableDAO {
     
     private final static String STASH_TOKEN_RANGE_TABLE = "stash_token_range";
-    // No Stash run should take over 1 day, so set the TTL to clean up stash tables if they aren't explicitly cleaned by then,
-    // plus a small buffer.
-    private final static int TTL = (int) TimeUnit.HOURS.toSeconds(28);
+    // Clean up stash tables if they aren't explicitly cleaned after 3 days.  No Stash should take over 1 day
+    // so this should provide ample buffer.
+    private final static int TTL = (int) TimeUnit.DAYS.toSeconds(3);
+
+    private final static String STASH_ID_COLUMN = "stash_id";
+    private final static String DATA_CENTER_COLUMN = "data_center";
+    private final static String PLACEMENT_COLUMN = "placement";
+    private final static String RANGE_TOKEN_COLUMN = "range_token";
+    private final static String IS_START_TOKEN_COLUMN = "is_start_token";
+    private final static String TABLE_JSON_COLUMN = "table_json";
 
     private final String _systemTablePlacement;
     private final PlacementCache _placementCache;
@@ -67,20 +74,20 @@ public class CQLStashTableDAO {
         // later on.
         readStorage.scanIterator(null).forEachRemaining(range -> {
             batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
-                    .value("stash_id", stashId)
-                    .value("data_center", _dataCenters.getSelf().getName())
-                    .value("placement", placement)
-                    .value("range_token", range.getStart())
-                    .value("is_start_token", true)
-                    .value("table_json", tableInfo));
+                    .value(STASH_ID_COLUMN, stashId)
+                    .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
+                    .value(PLACEMENT_COLUMN, placement)
+                    .value(RANGE_TOKEN_COLUMN, range.getStart())
+                    .value(IS_START_TOKEN_COLUMN, true)
+                    .value(TABLE_JSON_COLUMN, tableInfo));
 
             batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
-                    .value("stash_id", stashId)
-                    .value("data_center", _dataCenters.getSelf().getName())
-                    .value("placement", placement)
-                    .value("range_token", range.getEnd())
-                    .value("is_start_token", false)
-                    .value("table_json", tableInfo));
+                    .value(STASH_ID_COLUMN, stashId)
+                    .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
+                    .value(PLACEMENT_COLUMN, placement)
+                    .value(RANGE_TOKEN_COLUMN, range.getEnd())
+                    .value(IS_START_TOKEN_COLUMN, false)
+                    .value(TABLE_JSON_COLUMN, tableInfo));
         });
 
         _placementCache.get(_systemTablePlacement)
@@ -130,13 +137,13 @@ public class CQLStashTableDAO {
                 .getKeyspace()
                 .getCqlSession()
                 .execute(
-                        QueryBuilder.select("table_json")
+                        QueryBuilder.select(TABLE_JSON_COLUMN)
                                 .from(STASH_TOKEN_RANGE_TABLE)
-                                .where(QueryBuilder.eq("stash_id", stashId))
-                                .and(QueryBuilder.eq("data_center", _dataCenters.getSelf().getName()))
-                                .and(QueryBuilder.eq("placement", placement))
-                                .and(QueryBuilder.eq("range_token", startToken))
-                                .and(QueryBuilder.eq("is_start_token", true))
+                                .where(QueryBuilder.eq(STASH_ID_COLUMN, stashId))
+                                .and(QueryBuilder.eq(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName()))
+                                .and(QueryBuilder.eq(PLACEMENT_COLUMN, placement))
+                                .and(QueryBuilder.eq(RANGE_TOKEN_COLUMN, startToken))
+                                .and(QueryBuilder.eq(IS_START_TOKEN_COLUMN, true))
                                 .limit(1)
                                 .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
 
@@ -160,13 +167,13 @@ public class CQLStashTableDAO {
                 .getKeyspace()
                 .getCqlSession()
                 .execute(
-                        QueryBuilder.select("range_token", "is_start_token", "table_json")
+                        QueryBuilder.select(RANGE_TOKEN_COLUMN, IS_START_TOKEN_COLUMN, TABLE_JSON_COLUMN)
                                 .from(STASH_TOKEN_RANGE_TABLE)
-                                .where(QueryBuilder.eq("stash_id", stashId))
-                                .and(QueryBuilder.eq("data_center", _dataCenters.getSelf().getName()))
-                                .and(QueryBuilder.eq("placement", placement))
-                                .and(QueryBuilder.gte("range_token", fromInclusive))
-                                .and(QueryBuilder.lt("range_token", toExclusive))
+                                .where(QueryBuilder.eq(STASH_ID_COLUMN, stashId))
+                                .and(QueryBuilder.eq(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName()))
+                                .and(QueryBuilder.eq(PLACEMENT_COLUMN, placement))
+                                .and(QueryBuilder.gte(RANGE_TOKEN_COLUMN, fromInclusive))
+                                .and(QueryBuilder.lt(RANGE_TOKEN_COLUMN, toExclusive))
                                 .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM)
                                 .setFetchSize(100));
 
@@ -242,8 +249,8 @@ public class CQLStashTableDAO {
                 .execute(
                         QueryBuilder.delete()
                                 .from(STASH_TOKEN_RANGE_TABLE)
-                                .where(QueryBuilder.eq("stash_id", stashId))
-                                .and(QueryBuilder.eq("data_center", _dataCenters.getSelf().getName()))
+                                .where(QueryBuilder.eq(STASH_ID_COLUMN, stashId))
+                                .and(QueryBuilder.eq(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName()))
                                 .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
     }
 
@@ -261,13 +268,17 @@ public class CQLStashTableDAO {
                             .getCqlSession()
                             .execute(SchemaBuilder.createTable(STASH_TOKEN_RANGE_TABLE)
                                     .ifNotExists()
-                                    .addPartitionKey("stash_id", DataType.text())
-                                    .addPartitionKey("data_center", DataType.text())
-                                    .addClusteringColumn("placement", DataType.text())
-                                    .addClusteringColumn("range_token", DataType.blob())
-                                    .addClusteringColumn("is_start_token", DataType.cboolean())
-                                    .addColumn("table_json", DataType.text())
+                                    .addPartitionKey(STASH_ID_COLUMN, DataType.text())
+                                    .addPartitionKey(DATA_CENTER_COLUMN, DataType.text())
+                                    .addClusteringColumn(PLACEMENT_COLUMN, DataType.text())
+                                    .addClusteringColumn(RANGE_TOKEN_COLUMN, DataType.blob())
+                                    .addClusteringColumn(IS_START_TOKEN_COLUMN, DataType.cboolean())
+                                    .addColumn(TABLE_JSON_COLUMN, DataType.text())
                                     .withOptions()
+                                    // The following cluster orders should be the defaults but for clarity let's be explicit
+                                    .clusteringOrder(PLACEMENT_COLUMN, SchemaBuilder.Direction.ASC)
+                                    .clusteringOrder(RANGE_TOKEN_COLUMN, SchemaBuilder.Direction.ASC)
+                                    .clusteringOrder(IS_START_TOKEN_COLUMN, SchemaBuilder.Direction.ASC)
                                     .compactStorage()
                                     .defaultTimeToLive(TTL));
 

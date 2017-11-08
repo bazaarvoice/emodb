@@ -901,6 +901,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     
     @Override
     public void clearStashTokenRangeSnapshot(String stashId) {
+        checkNotNull(stashId, "stashId");
         checkState(_stashTableDao != null, "Cannot clear stash snapshot without a StashTableDAO implementation");
         _stashTableDao.clearStashTokenRangeSnapshot(stashId);
     }
