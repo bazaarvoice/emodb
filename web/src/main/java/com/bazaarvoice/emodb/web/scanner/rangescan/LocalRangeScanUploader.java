@@ -13,8 +13,8 @@ import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
+import com.bazaarvoice.emodb.web.scanner.writer.ShardMetadata;
 import com.bazaarvoice.emodb.web.scanner.writer.ShardWriter;
-import com.bazaarvoice.emodb.web.scanner.writer.TransferKey;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferStatus;
 import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResult;
 import com.codahale.metrics.Counter;
@@ -390,7 +390,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         DateTime startWaitTime = DateTime.now();
         DateTime lastCheckTime = null;
         DateTime startNoProgressTime = null;
-        Map<TransferKey, TransferStatus> lastStatusMap = null;
+        Map<ShardMetadata, TransferStatus> lastStatusMap = null;
 
         _waitingForAllTransfersComplete.inc();
         try {
@@ -403,13 +403,13 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                 DateTime now = DateTime.now();
 
                 // Get the transfer status for all active transfers
-                Map<TransferKey, TransferStatus> currentStatusMap = result.getActiveTransferStatusMap();
+                Map<ShardMetadata, TransferStatus> currentStatusMap = result.getActiveTransferStatusMap();
 
                 if (lastStatusMap != null) {
                     // Check if there has been any progress since the last iteration
                     boolean progressMade = false;
                     for (TransferStatus lastStatus : lastStatusMap.values()) {
-                        TransferStatus currentStatus = currentStatusMap.get(lastStatus.getKey());
+                        TransferStatus currentStatus = currentStatusMap.get(lastStatus.getMetadata());
                         if (currentStatus == null ||
                                 currentStatus.getAttempts() > lastStatus.getAttempts() ||
                                 currentStatus.getBytesTransferred() > lastStatus.getBytesTransferred()) {
@@ -485,7 +485,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                         totalPartsForShard = 1;
                     }
 
-                    writer = scanWriter.writeShardRows(result.getTable().getName(), placement, shardId, tableUuid);
+                    writer = scanWriter.writeShardRows(new ShardMetadata(
+                            result.getTable().getName(), placement, result.getTable().getAttributes(), shardId, tableUuid));
                     out = new MetricCounterOutputStream(writer.getOutputStream(), rawBytesUploaded);
                     generator = createGenerator(out);
 

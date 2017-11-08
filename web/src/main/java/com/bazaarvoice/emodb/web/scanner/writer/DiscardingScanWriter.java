@@ -25,12 +25,12 @@ public class DiscardingScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file) {
+    protected ListenableFuture<?> transfer(ShardMetadata metadata, URI uri, File file) {
         return Futures.immediateFuture(null);
     }
 
     @Override
-    protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers() {
+    protected Map<ShardMetadata, TransferStatus> getStatusForActiveTransfers() {
         return ImmutableMap.of();
     }
 

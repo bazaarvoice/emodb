@@ -19,7 +19,7 @@ import java.util.Map;
  */
 public class FileScanWriter extends TemporaryFileScanWriter {
 
-    private Map<TransferKey, File> _activeFiles = Maps.newConcurrentMap();
+    private Map<ShardMetadata, File> _activeFiles = Maps.newConcurrentMap();
 
     @Inject
     public FileScanWriter(@Assisted int taskId, @Assisted URI baseUri, @Assisted Optional<Integer> maxOpenShards,
@@ -28,8 +28,8 @@ public class FileScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file){
-        _activeFiles.put(transferKey, file);
+    protected ListenableFuture<?> transfer(ShardMetadata metadata, URI uri, File file){
+        _activeFiles.put(metadata, file);
         try {
             File dest = new File(uri.toURL().getFile());
             Files.createParentDirs(dest);
@@ -38,7 +38,7 @@ public class FileScanWriter extends TemporaryFileScanWriter {
         } catch (Exception e) {
             return Futures.immediateFailedFuture(e);
         } finally {
-            _activeFiles.remove(transferKey);
+            _activeFiles.remove(metadata);
         }
 
     }
@@ -48,9 +48,9 @@ public class FileScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers() {
-        Map<TransferKey, TransferStatus> statusMap = Maps.newHashMap();
-        for (Map.Entry<TransferKey, File> entry : _activeFiles.entrySet()) {
+    protected Map<ShardMetadata, TransferStatus> getStatusForActiveTransfers() {
+        Map<ShardMetadata, TransferStatus> statusMap = Maps.newHashMap();
+        for (Map.Entry<ShardMetadata, File> entry : _activeFiles.entrySet()) {
             statusMap.put(entry.getKey(), new TransferStatus(entry.getKey(), entry.getValue().length(), 1, 0));
         }
         return statusMap;

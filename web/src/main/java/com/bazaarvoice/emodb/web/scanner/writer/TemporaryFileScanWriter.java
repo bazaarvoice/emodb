@@ -45,7 +45,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     // Default number of shards that can be written and/or transferred concurrently
     private final static int DEFAULT_MAX_OPEN_SHARDS = 20;
 
-    private final Map<TransferKey, ShardFiles> _openShardFiles = Maps.newHashMap();
+    private final Map<ShardMetadata, ShardFiles> _openShardFiles = Maps.newHashMap();
     private final int _maxOpenShards;
     private final ReentrantLock _lock = new ReentrantLock();
     private final Condition _shardFilesClosedOrExceptionCaught = _lock.newCondition();
@@ -66,17 +66,17 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     /**
      * Implementation-specific call to asynchronously transfer the temporary file to the given URI.
      */
-    abstract protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file);
+    abstract protected ListenableFuture<?> transfer(ShardMetadata metadata, URI uri, File file);
 
     /**
      * Implementation-specific call to get TransferStatus objects for all active transfers.
      */
-    abstract protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers();
+    abstract protected Map<ShardMetadata, TransferStatus> getStatusForActiveTransfers();
 
     @Override
-    public ShardWriter writeShardRows(String tableName, final String placement, int shardId, long tableUuid)
+    public ShardWriter writeShardRows(ShardMetadata metadata)
             throws IOException, InterruptedException {
-        final ShardFiles shardFiles = getShardFiles(shardId, tableUuid);
+        final ShardFiles shardFiles = getShardFiles(metadata);
 
         // Fail immediately if there has already been a failure
         propagateExceptionIfPresent();
@@ -84,7 +84,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         blockNewShardIfNecessary(shardFiles);
 
         if (shardFiles.isCanceled()) {
-            throw new IOException("Shard file closed: " + shardFiles.getKey());
+            throw new IOException("Shard file closed: " + shardFiles.getMetadata());
         }
 
         if (_closed) {
@@ -94,15 +94,15 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         final File shardFile = shardFiles.addShardFile();
 
         try {
-            final URI uri = getUriForShard(tableName, shardId, tableUuid);
-            OutputStream out = open(shardFile, getCounterForPlacement(placement));
+            final URI uri = getUriForShard(metadata);
+            OutputStream out = open(shardFile, getCounterForPlacement(metadata.getPlacement()));
 
             return new ShardWriter(out) {
                 @Override
                 synchronized protected void ready(boolean isEmpty, Optional<Integer> finalPartCount)
                         throws IOException {
                     if (shardFiles.isCanceled()) {
-                        throw new IOException("Shard file closed: " + shardFiles.getKey());
+                        throw new IOException("Shard file closed: " + shardFiles.getMetadata());
                     }
                     if (finalPartCount.isPresent()) {
                         shardFiles.setFinalPartCount(finalPartCount);
@@ -125,7 +125,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                 public void asyncTransfer(final File completeFile) {
                     _log.debug("Initiating async transfer: id={}, file={}, uri={}", _taskId, completeFile, uri);
                     _openTransfers.inc();
-                    ListenableFuture<?> future = transfer(shardFiles.getKey(), uri, completeFile);
+                    ListenableFuture<?> future = transfer(metadata, uri, completeFile);
                     Futures.addCallback(future, new FutureCallback<Object>() {
                         @Override
                         public void onSuccess(Object result) {
@@ -137,7 +137,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                             if (!_closed) {
                                 // Frequently a spurious exception related to cancellation is thrown if this instance
                                 // has been closed.  Only register the exception if the instance has not been closed.
-                                registerException(placement, t);
+                                registerException(metadata.getPlacement(), t);
                             }
                             transferComplete(shardFiles);
                         }
@@ -160,17 +160,12 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         }
     }
 
-    private ShardFiles getShardFiles(int shardId, long tableUuid) {
-        TransferKey key = new TransferKey(tableUuid, shardId);
+    private ShardFiles getShardFiles(ShardMetadata metadata) {
         ShardFiles shardFiles;
 
         _lock.lock();
         try {
-            shardFiles = _openShardFiles.get(key);
-            if (shardFiles == null) {
-                shardFiles = new ShardFiles(key);
-                _openShardFiles.put(key, shardFiles);
-            }
+            shardFiles = _openShardFiles.computeIfAbsent(metadata, k -> new ShardFiles(metadata));
         } finally {
             _lock.unlock();
         }
@@ -183,7 +178,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         shardFiles.deleteAllShardFiles();
         _lock.lock();
         try {
-            _openShardFiles.remove(shardFiles.getKey());
+            _openShardFiles.remove(shardFiles.getMetadata());
             _shardFilesClosedOrExceptionCaught.signalAll();
         } finally {
             _lock.unlock();
@@ -208,10 +203,10 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
 
     private void blockNewShardIfNecessary(ShardFiles shardFiles)
             throws IOException, InterruptedException {
-        if (maxOpenShardsGreaterThan(_maxOpenShards - 1, shardFiles.getKey())) {
+        if (maxOpenShardsGreaterThan(_maxOpenShards - 1, shardFiles.getMetadata())) {
             _blockedNewShards.inc();
             try {
-                blockUntilOpenShardsAtMost(_maxOpenShards - 1, shardFiles.getKey());
+                blockUntilOpenShardsAtMost(_maxOpenShards - 1, shardFiles.getMetadata());
             } finally {
                 _blockedNewShards.dec();
             }
@@ -219,24 +214,24 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     }
 
     /** Blocks until the number of open shards is equal to or less than the provided threshold. */
-    private void blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable TransferKey permittedKey)
+    private void blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable ShardMetadata permittted)
             throws IOException, InterruptedException {
-        blockUntilOpenShardsAtMost(maxOpenShards, permittedKey, Long.MAX_VALUE);
+        blockUntilOpenShardsAtMost(maxOpenShards, permittted, Long.MAX_VALUE);
     }
 
     /**
      * Blocks until the number of open shards is equal to or less than the provided threshold or the current time
      * is after the timeout timestamp.
      */
-    private boolean blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable TransferKey permittedKey, long timeoutTimestamp)
+    private boolean blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable ShardMetadata permitted, long timeoutTimestamp)
             throws IOException, InterruptedException {
-        Stopwatch stopWatch = new Stopwatch().start();
+        Stopwatch stopWatch = Stopwatch.createStarted();
         long now;
 
         _lock.lock();
         try {
             while (!_closed &&
-                    maxOpenShardsGreaterThan(maxOpenShards, permittedKey) &&
+                    maxOpenShardsGreaterThan(maxOpenShards, permitted) &&
                     (now = System.currentTimeMillis()) < timeoutTimestamp) {
                 // Stop blocking if there is an exception
                 propagateExceptionIfPresent();
@@ -245,7 +240,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                 long waitTime = Math.min(Duration.standardSeconds(30).getMillis(), timeoutTimestamp - now);
                 _shardFilesClosedOrExceptionCaught.await(waitTime, TimeUnit.MILLISECONDS);
 
-                if (!maxOpenShardsGreaterThan(maxOpenShards, permittedKey)) {
+                if (!maxOpenShardsGreaterThan(maxOpenShards, permitted)) {
                     propagateExceptionIfPresent();
                     return true;
                 }
@@ -255,15 +250,15 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
             }
 
             propagateExceptionIfPresent();
-            return !maxOpenShardsGreaterThan(maxOpenShards, permittedKey);
+            return !maxOpenShardsGreaterThan(maxOpenShards, permitted);
         } finally {
             _lock.unlock();
         }
     }
 
-    private boolean maxOpenShardsGreaterThan(int maxOpenShards, @Nullable TransferKey permittedKey) {
+    private boolean maxOpenShardsGreaterThan(int maxOpenShards, @Nullable ShardMetadata permitted) {
         return _openShardFiles.size() > maxOpenShards && // Too many open shards
-                (permittedKey == null || !_openShardFiles.containsKey(permittedKey)); // Never block if the permitted key's shard is already open
+                (permitted == null || !_openShardFiles.containsKey(permitted)); // Never block if the permitted key's shard is already open
     }
 
     private void registerException(String placement, Throwable e) {
@@ -291,7 +286,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     public WaitForAllTransfersCompleteResult waitForAllTransfersComplete(Duration duration) throws IOException, InterruptedException {
         boolean complete = blockUntilOpenShardsAtMost(0, null, DateTime.now().plus(duration).getMillis());
         if (complete) {
-            return new WaitForAllTransfersCompleteResult(ImmutableMap.<TransferKey, TransferStatus>of());
+            return new WaitForAllTransfersCompleteResult(ImmutableMap.<ShardMetadata, TransferStatus>of());
         }
 
         return new WaitForAllTransfersCompleteResult(getStatusForActiveTransfers());
@@ -316,17 +311,17 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     }
 
     private class ShardFiles {
-        private final TransferKey _key;
+        private final ShardMetadata _metadata;
         private final List<ShardFile> _parts = Lists.newArrayList();
         private Optional<Integer> _finalPartCount = Optional.absent();
         private volatile boolean _canceled;
 
-        private ShardFiles(TransferKey key) {
-            _key = key;
+        private ShardFiles(ShardMetadata metadata) {
+            _metadata = metadata;
         }
 
-        private TransferKey getKey() {
-            return _key;
+        private ShardMetadata getMetadata() {
+            return _metadata;
         }
 
         synchronized public void setFinalPartCount(Optional<Integer> finalPartCount) {
@@ -334,7 +329,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
                 if (!_finalPartCount.isPresent()) {
                     _finalPartCount = finalPartCount;
                 } else if (!_finalPartCount.get().equals(finalPartCount.get())) {
-                    throw new IllegalStateException("Shard set with inconsistent final part counts: " + _key);
+                    throw new IllegalStateException("Shard set with inconsistent final part counts: " + _metadata);
                 }
             }
         }
@@ -352,7 +347,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
         private File createTemporaryShardFile()
                 throws IOException {
             return File.createTempFile(
-                    format("emoshard_%02x_%016x", _key.getShardId(), _key.getTableUuid()), _compression.getExtension());
+                    format("emoshard_%02x_%016x", _metadata.getShardId(), _metadata.getTableUuid()), _compression.getExtension());
         }
 
         /**

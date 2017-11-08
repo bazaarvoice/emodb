@@ -5,6 +5,7 @@ import org.joda.time.Duration;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Base interface for writing {@link ScanWriter} files to a file system.
@@ -15,7 +16,7 @@ public interface ScanWriter extends Closeable {
      * The contents are actually written by writing to {@link ShardWriter#getOutputStream()}
      * then transferred to the file system using {@link ShardWriter#closeAndTransferAysnc(com.google.common.base.Optional)}.
      */
-    ShardWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
+    ShardWriter writeShardRows(ShardMetadata metadata)
             throws IOException, InterruptedException;
 
     /**

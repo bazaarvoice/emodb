@@ -15,6 +15,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
+import com.google.common.net.UrlEscapers;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -31,6 +32,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +40,10 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.bazaarvoice.emodb.common.stash.StashUtil.getPlacementTagKey;
+import static com.bazaarvoice.emodb.common.stash.StashUtil.getTableTagKey;
+import static com.bazaarvoice.emodb.common.stash.StashUtil.getTagValue;
+import static com.bazaarvoice.emodb.common.stash.StashUtil.getTemplateTagKey;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -69,8 +75,8 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected ListenableFuture<?> transfer(TransferKey transferKey, URI uri, File file) {
-        ActiveUpload activeUpload = new ActiveUpload(transferKey, uri, file);
+    protected ListenableFuture<?> transfer(ShardMetadata metadata, URI uri, File file) {
+        ActiveUpload activeUpload = new ActiveUpload(metadata, uri, file);
         ActiveUploadRunner runner = new ActiveUploadRunner(activeUpload);
         return runner.start();
     }
@@ -79,7 +85,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
      * Callable class to perform an active upload and get metadata about the progress.
      */
     private class ActiveUpload {
-        private final TransferKey _transferKey;
+        private final ShardMetadata _metadata;
         private final URI _uri;
         private final String _bucket;
         private final String _key;
@@ -89,8 +95,8 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
         private Future<?> _uploadFuture;
         private SettableFuture<String> _resultFuture;
 
-        ActiveUpload(TransferKey transferKey, URI uri, File file) {
-            _transferKey = transferKey;
+        ActiveUpload(ShardMetadata metadata, URI uri, File file) {
+            _metadata = metadata;
             _uri = uri;
             _bucket = uri.getHost();
             _key = getKeyFromPath(uri);
@@ -125,6 +131,14 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
 
                         PutObjectRequest putObjectRequest = new PutObjectRequest(_bucket, _key, _file);
                         putObjectRequest.setGeneralProgressListener(progressListener);
+
+                        // Starting with AWS Java SDK 1.11.x the AmazonS3 interface for putting objects includes
+                        // methods for S3 object tagging.  However, upgrading from the current 1.9.x version requires
+                        // upgrading several other packages that are incompatible with Emo's current dependencies, such
+                        // as Jackson and Guava.  Rather than forcing a mass-upgrade to support this one feature we use
+                        // custom headers on the current version to achieve the same outcome.
+                        putObjectRequest.putCustomRequestHeader("x-amz-tagging", getObjectTagsHeader());
+
                         PutObjectResult result = _amazonS3.putObject(putObjectRequest);
                         _resultFuture.set(result.getETag());
                     } catch (Throwable t) {
@@ -136,8 +150,41 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
             return _resultFuture;
         }
 
+        private String getObjectTagsHeader() {
+            final StringBuilder header = new StringBuilder();
+            appendToTagHeader(header, getTableTagKey(), getTagValue(_metadata.getTableName()));
+            appendToTagHeader(header, getPlacementTagKey(), getTagValue(_metadata.getPlacement()));
+
+            // S3 object tagging only allow up to 10 total tags and two are reserved for the table and placement
+            // intrinsics.  If there are more than 8 table attributes then deterministically sort and take the first 8.
+
+            Map<String, Object> attrs = _metadata.getTableMetadata();
+            if (attrs.size() <= 8) {
+               attrs.forEach((key, value) -> appendToTagHeader(header, getTemplateTagKey(key), getTagValue(value)));
+            } else {
+                _log.warn("Table {} has more than 8 table attributes; only the first 8 can be included as S3 object tags",
+                        _metadata.getTableName());
+
+                attrs.entrySet().stream()
+                        .sorted(Comparator.comparing(Map.Entry::getKey))
+                        .limit(8)
+                        .forEach(entry -> appendToTagHeader(header, getTemplateTagKey(entry.getKey()), getTagValue(entry.getValue())));
+            }
+
+            return header.toString();
+        }
+
+        private void appendToTagHeader(StringBuilder header, String key, String value) {
+            if (header.length() != 0) {
+                header.append("&");
+            }
+            header.append(UrlEscapers.urlFormParameterEscaper().escape(key))
+                    .append("=")
+                    .append(UrlEscapers.urlFormParameterEscaper().escape(value));
+        }
+
         synchronized TransferStatus getTransferStatus() {
-            return new TransferStatus(_transferKey, _file.length(), _attempts, _bytesTransferred);
+            return new TransferStatus(_metadata, _file.length(), _attempts, _bytesTransferred);
         }
 
         synchronized void abort() {
@@ -175,12 +222,12 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
             }
 
             ActiveUpload that = (ActiveUpload) o;
-            return _transferKey.equals(that._transferKey);
+            return _metadata.equals(that._metadata);
         }
 
         @Override
         public int hashCode() {
-            return _transferKey.hashCode();
+            return _metadata.hashCode();
         }
     }
 
@@ -247,11 +294,11 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
     }
 
     @Override
-    protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers() {
-        Map<TransferKey, TransferStatus> statusMap = Maps.newHashMap();
+    protected Map<ShardMetadata, TransferStatus> getStatusForActiveTransfers() {
+        Map<ShardMetadata, TransferStatus> statusMap = Maps.newHashMap();
         for (ActiveUpload activeUpload : _activeUploads) {
             TransferStatus transferStatus = activeUpload.getTransferStatus();
-            statusMap.put(transferStatus.getKey(), transferStatus);
+            statusMap.put(transferStatus.getMetadata(), transferStatus);
         }
         return statusMap;
     }
