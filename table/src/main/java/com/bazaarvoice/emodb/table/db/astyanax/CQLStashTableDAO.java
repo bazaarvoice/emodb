@@ -7,12 +7,14 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.DataType;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.schemabuilder.SchemaBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
+import com.netflix.astyanax.model.ByteBufferRange;
 
 import java.nio.ByteBuffer;
 import java.util.Iterator;
@@ -67,33 +69,36 @@ public class CQLStashTableDAO {
         ensureStashTokenRangeTableExists();
 
         String tableInfo = JsonHelper.asJson(tableJson.getRawJson());
-        BatchStatement batchStatement = new BatchStatement();
+        Session session = _placementCache.get(_systemTablePlacement).getKeyspace().getCqlSession();
 
         // Add two records for each shard for the table: one which identifies the start token for the shard, and
         // one that identifies (exclusively) the end token for the shard.  This will allow for efficient range queries
         // later on.
-        readStorage.scanIterator(null).forEachRemaining(range -> {
-            batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
-                    .value(STASH_ID_COLUMN, stashId)
-                    .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
-                    .value(PLACEMENT_COLUMN, placement)
-                    .value(RANGE_TOKEN_COLUMN, range.getStart())
-                    .value(IS_START_TOKEN_COLUMN, true)
-                    .value(TABLE_JSON_COLUMN, tableInfo));
 
-            batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
-                    .value(STASH_ID_COLUMN, stashId)
-                    .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
-                    .value(PLACEMENT_COLUMN, placement)
-                    .value(RANGE_TOKEN_COLUMN, range.getEnd())
-                    .value(IS_START_TOKEN_COLUMN, false)
-                    .value(TABLE_JSON_COLUMN, tableInfo));
+        Iterator<ByteBufferRange> tableTokenRanges = readStorage.scanIterator(null);
+        // To prevent sending over-large batches split into groups of 8 ranges which results in 16 statements per batch
+        Iterators.partition(tableTokenRanges, 8).forEachRemaining(ranges -> {
+            BatchStatement batchStatement = new BatchStatement();
+            for (ByteBufferRange range : ranges) {
+                batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
+                        .value(STASH_ID_COLUMN, stashId)
+                        .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
+                        .value(PLACEMENT_COLUMN, placement)
+                        .value(RANGE_TOKEN_COLUMN, range.getStart())
+                        .value(IS_START_TOKEN_COLUMN, true)
+                        .value(TABLE_JSON_COLUMN, tableInfo));
+
+                batchStatement.add(QueryBuilder.insertInto(STASH_TOKEN_RANGE_TABLE)
+                        .value(STASH_ID_COLUMN, stashId)
+                        .value(DATA_CENTER_COLUMN, _dataCenters.getSelf().getName())
+                        .value(PLACEMENT_COLUMN, placement)
+                        .value(RANGE_TOKEN_COLUMN, range.getEnd())
+                        .value(IS_START_TOKEN_COLUMN, false)
+                        .value(TABLE_JSON_COLUMN, tableInfo));
+            }
+
+            session.execute(batchStatement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
         });
-
-        _placementCache.get(_systemTablePlacement)
-                .getKeyspace()
-                .getCqlSession()
-                .execute(batchStatement.setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
     }
 
     public Iterator<ProtoStashTokenRange> getTokenRangesBetween(String stashId, String placement, ByteBuffer fromInclusive, ByteBuffer toExclusive) {
