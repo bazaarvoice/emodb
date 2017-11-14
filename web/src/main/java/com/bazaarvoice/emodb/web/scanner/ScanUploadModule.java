@@ -8,8 +8,6 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.Dimension;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sqs.AmazonSQS;
@@ -55,8 +53,10 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanParticipationService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
+import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
+import com.bazaarvoice.emodb.web.scanner.writer.S3CredentialsProvider;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterFactory;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
@@ -158,6 +158,7 @@ public class ScanUploadModule extends PrivateModule {
         bind(ScanParticipationService.class).asEagerSingleton();
 
         bind(AWSCredentialsProvider.class).toInstance(new DefaultAWSCredentialsProviderChain());
+        bind(AmazonS3Provider.class).asEagerSingleton();
 
         expose(ScanUploader.class);
     }
@@ -177,16 +178,15 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    protected AmazonS3 provideAmazonS3(Region region, AWSCredentialsProvider credentialsProvider,
-                                       @SelfHostAndPort HostAndPort hostAndPort) {
+    @S3CredentialsProvider
+    protected AWSCredentialsProvider provideAmazonS3CredentialsProvider(AWSCredentialsProvider credentialsProvider,
+                                                                        @SelfHostAndPort HostAndPort hostAndPort) {
         AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
         if (_config.getS3AssumeRole().isPresent()) {
             s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider(
                     credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHostText());
         }
-        AmazonS3Client amazonS3 = new AmazonS3Client(s3CredentialsProvider);
-        amazonS3.setRegion(region);
-        return amazonS3;
+        return s3CredentialsProvider;
     }
 
     @Provides
