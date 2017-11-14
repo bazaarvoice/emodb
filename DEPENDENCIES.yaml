@@ -1,0 +1,18 @@
+Common Name:
+  - EmoDB
+  - EmoDB/App
+  - EmoDB/BlobStore
+  - EmoDB/DataBus
+  - EmoDB/DataStore
+  - EmoDB/Queue
+  - EmoDB/Stash
+
+Dependencies:
+  - AWS/ec2
+  - AWS/sns
+  - AWS/sqs
+  - AWS/s3
+  - Badger
+  - Cabertoss
+  - Datadog
+  - Zookeeper
