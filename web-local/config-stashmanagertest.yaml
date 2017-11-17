@@ -1,15 +1,36 @@
-# Select service mode
-serviceMode: STASH
+# Select service mode - See EmoServiceMode class to see all available options
+# This allows you to split Emo's micro services deployed separately. The default is STANDARD_ALL
+serviceMode: STASH_MANAGER
+#serviceMode: STANDARD_ALL
+#serviceMode: STANDARD_MAIN
+#serviceMode: STANDARD_BLOB
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
 # Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#datadog:
-#  apiKey: <api-key>
-#  host: <output-of-"hostname -f">
-#  whiteList:  # Exclude measurements that we don't use in Datadog graphs or alerts
-#  - ".*$(?<!5MinuteRate|15MinuteRate|meanRate|min|max|mean|stddev|95percentile|99percentile|999percentile)"
+#metrics:
+#  reporters:
+#  - type: datadogExpansionFiltered
+#    host: test-host
+#    excludes:
+#    - ch.qos.logback
+#    - com.bazaarvoice.ostrich.pool
+#    excludeExpansions:
+#    - 5MinuteRate
+#    - 15MinuteRate
+#    - meanRate
+#    - min
+#    - max
+#    - mean
+#    - stddev
+#    - p95
+#    - p99
+#    - p999
+#    transport:
+#      type: http
+#      apiKey: invalid-key
+
 
 
 dataCenter:
@@ -23,23 +44,24 @@ dataCenter:
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8680
+  dataCenterServiceUri: http://localhost:8080
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8681
+  dataCenterAdminUri: http://localhost:8081
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
-  systemDataCenterServiceUri: http://localhost:8480
+  systemDataCenterServiceUri: http://localhost:8080
 
 
 systemOfRecord:
+  stashRoot: s3://emodb-us-east-1/stash/ci
   # Where does the SoR store system information such as table definitions?
   systemTablePlacement: app_global:sys
 
   # How long should we retain historical deltas? To disable, use PT0S
-  historyTtl: PT0S
- 
+  historyTtl: PT48H
+
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "app_global:sys"
@@ -56,7 +78,7 @@ systemOfRecord:
   cassandraClusters:
     emo_cluster:
       cluster: emo_cluster
-      clusterMetric: emo_cluster_metric_name
+      clusterMetric: emo_sor_metric_name
       dataCenter: datacenter1
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
@@ -70,7 +92,8 @@ systemOfRecord:
       keyspaces:
         app_global: {}
         ugc_global: {}
-        catalog_global: {}
+        catalog_global:  {}
+        pii_us: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -103,6 +126,13 @@ blobStore:
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "media_global:ugc"
+  - "media_global_mirror:media"
+  - "blob_global:media"
+  - "blob_remote:media"     # a dummy placement specific to a remote data center.  for testing only, not for practical use
+
+  # source_placement: dest_placement
+  placementsUnderMove:
+    "media_global:ugc": media_global_mirror:media
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
@@ -110,8 +140,9 @@ blobStore:
 
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:
-    media_global:
+    media:
       cluster: emo_cluster
+      clusterMetric: emo_media_metric_name
       dataCenter: datacenter1
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
@@ -124,6 +155,8 @@ blobStore:
         name: blob-cassandra
       keyspaces:
         media_global: {}
+        media_global_mirror: {}
+        blob_global: {}
 
 
 queueService:
@@ -167,22 +200,23 @@ auth:
   anonymousRoles:
   - anonymous
 
-
 scanner:
   scanStatusTable: "__system_scan_upload"
   scannerApiKey: "local_admin"
   useSQSQueues: false
   notifications:
     enableCloudWatchMetrics: false
+    stashStateListeners:
+      - class: com.bazaarvoice.emodb.plugin.stash.LoggingStashStateListener
 
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:
-    - type: http
-      port: 8680
+    - type: instrumentedHttp
+      port: 8780
   adminConnectors:
-    - type: http
-      port: 8681
+    - type: instrumentedHttp
+      port: 8781
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
@@ -226,9 +260,10 @@ httpClient:
 # Configure Logback logging
 logging:
   level: INFO
+  appenders:
+    - type: console
+      logFormat: "%-5p [%d{ISO8601,UTC}] [%thread] %c: %m%n%xEx"
   loggers:
     "org.apache.zookeeper": OFF
     "org.apache.curator": WARN
     "com.bazaarvoice.emodb.web.ddl.CassandraThriftFacade": WARN
-  appenders:
-  - type: console

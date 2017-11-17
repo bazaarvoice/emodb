@@ -20,9 +20,15 @@ import java.util.EnumSet;
  * <li>CLI_TOOL:
  *      Only those services, tasks, and resources required to run non-server applications are started.
  *      A typical use case for this is running command-line tools, such as reports.</li>
- * <li>SCANNER:
- *      Only services, tasks, and resources required to support the scan and upload server.</li>
- * <li>SCANNER:
+ * <li>STASH_WORKER:
+ *      Only Services, tasks, and resources for generating Stash.  Note that at least one server in STASH_MANAGER or
+ *      STASH is also necessary to run Stash successfully.</li>
+ * <li>STASH_MANAGER:
+ *      Only Services, tasks, and resources for scheduling and managing Stash jobs.  Note that at least one server in
+ *      STASH_WORKER or STASH is also necessary to run Stash successfully.</li>
+ * <li>STASH:
+ *      Combination of all services, tasks, and resources in STASH_WORKER and STASH_MANAGER.</li>
+ * <li>DELTA_MIGRATOR:
  *      Only services, tasks, and resources required to migrate all delta from old tables to new "blocked" tables.</li>
  * </ul>
  */
@@ -87,14 +93,39 @@ public enum EmoServiceMode {
             Aspect.security
     ),
 
-    SCANNER(
+    STASH_WORKER(
             Aspect.web,
             Aspect.cache,
             Aspect.leader_control,
             Aspect.dataCenter,
             Aspect.dataStore_module,
             Aspect.blobStore_module, // needed for permission resolver
-            Aspect.scanner,
+            Aspect.stash_worker,
+            Aspect.security,
+            Aspect.full_consistency
+    ),
+
+    STASH_MANAGER(
+            Aspect.web,
+            Aspect.cache,
+            Aspect.leader_control,
+            Aspect.dataCenter,
+            Aspect.dataStore_module,
+            Aspect.blobStore_module, // needed for permission resolver
+            Aspect.stash_manager,
+            Aspect.security,
+            Aspect.full_consistency
+    ),
+
+    STASH(
+            Aspect.web,
+            Aspect.cache,
+            Aspect.leader_control,
+            Aspect.dataCenter,
+            Aspect.dataStore_module,
+            Aspect.blobStore_module, // needed for permission resolver
+            Aspect.stash_worker,
+            Aspect.stash_manager,
             Aspect.security,
             Aspect.full_consistency
     ),
@@ -169,7 +200,8 @@ public enum EmoServiceMode {
         full_consistency, // This wires in the fct global zookeeper location
         security,
         invalidation_cache_listener, // This makes sure the node is registered in zookeeper to invalidate its caches
-        scanner(false),
+        stash_worker(false),
+        stash_manager(false),
         delta_migrator(false),
         swagger,
         uac;
