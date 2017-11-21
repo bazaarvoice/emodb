@@ -2,9 +2,11 @@ package com.bazaarvoice.emodb.web.scanner.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.Maps;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.util.Map;
 
 /**
  * Scanner-specific service configurations.
@@ -14,6 +16,7 @@ public class ScannerConfiguration {
     private static final int DEFAULT_SCAN_THREAD_COUNT = 8;
     private static final int DEFAULT_UPLOAD_THREAD_COUNT = 12;
     private static final String DEFAULT_SCAN_STATUS_TABLE = "__system_scan_upload";
+    private static final String DEFAULT_SCAN_REQUEST_TABLE = "__system_scan_request";
     private static final int DEFAULT_MAX_S3_CONNECTIONS = 60;
 
     // Controls whether to use SQS or EmoDB queues for the scan's queue implementation
@@ -46,6 +49,12 @@ public class ScannerConfiguration {
     @JsonProperty ("scanStatusTable")
     private String _scanStatusTable = DEFAULT_SCAN_STATUS_TABLE;
 
+    // Name of the table which holds scan request entries.
+    @Valid
+    @NotNull
+    @JsonProperty ("scanRequestTable")
+    private String _scanRequestTable = DEFAULT_SCAN_REQUEST_TABLE;
+
     // Maximum number of open S3 connections
     @Valid
     @NotNull
@@ -70,8 +79,8 @@ public class ScannerConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty ("scheduledScan")
-    private ScheduledScanConfiguration _scheduledScan = new ScheduledScanConfiguration();
+    @JsonProperty ("scheduledScans")
+    private Map<String, ScheduledScanConfiguration> _scheduledScans = Maps.newHashMap();
 
     @Valid
     @NotNull
@@ -127,6 +136,15 @@ public class ScannerConfiguration {
         return this;
     }
 
+    public String getScanRequestTable() {
+        return _scanRequestTable;
+    }
+
+    public ScannerConfiguration setScanRequestTable(String scanRequestTable) {
+        _scanRequestTable = scanRequestTable;
+        return this;
+    }
+
     public int getMaxS3Connections() {
         return _maxS3Connections;
     }
@@ -152,12 +170,12 @@ public class ScannerConfiguration {
         _notifications = notifications;
     }
 
-    public ScheduledScanConfiguration getScheduledScan() {
-        return _scheduledScan;
+    public Map<String, ScheduledScanConfiguration> getScheduledScans() {
+        return _scheduledScans;
     }
 
-    public ScannerConfiguration setScheduledScan(ScheduledScanConfiguration scheduledScan) {
-        _scheduledScan = scheduledScan;
+    public ScannerConfiguration setScheduledScans(Map<String, ScheduledScanConfiguration> scheduledScans) {
+        _scheduledScans = scheduledScans;
         return this;
     }
 

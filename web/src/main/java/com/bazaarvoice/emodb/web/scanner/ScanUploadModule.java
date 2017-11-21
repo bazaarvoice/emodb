@@ -45,11 +45,16 @@ import com.bazaarvoice.emodb.web.scanner.notifications.SNSStashStateListener;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.rangescan.LocalRangeScanUploader;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploader;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreScanRequestDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreScanStatusDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestTable;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTable;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanParticipationService;
+import com.bazaarvoice.emodb.web.scanner.scheduling.ScanRequestManager;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
@@ -117,7 +122,9 @@ public class ScanUploadModule extends PrivateModule {
         binder().requireExplicitBindings();
 
         bind(ScanUploader.class).asEagerSingleton();
+        bind(ScanRequestManager.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(DataStoreScanStatusDAO.class).asEagerSingleton();
+        bind(ScanRequestDAO.class).to(DataStoreScanRequestDAO.class).asEagerSingleton();
         bind(RangeScanUploader.class).to(LocalRangeScanUploader.class).asEagerSingleton();
 
         bind(MetricsScanCountListener.class).asEagerSingleton();
@@ -132,6 +139,7 @@ public class ScanUploadModule extends PrivateModule {
         bind(ScanWorkflow.class).toProvider(scanWorkflowProvider).asEagerSingleton();
 
         bind(String.class).annotatedWith(ScanStatusTable.class).toInstance(_config.getScanStatusTable());
+        bind(String.class).annotatedWith(ScanRequestTable.class).toInstance(_config.getScanRequestTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
 
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingScanRangeQueueName"))
@@ -159,6 +167,7 @@ public class ScanUploadModule extends PrivateModule {
         bind(AmazonS3Provider.class).asEagerSingleton();
 
         expose(ScanUploader.class);
+        expose(ScanRequestManager.class);
     }
 
     @Provides
@@ -168,6 +177,13 @@ public class ScanUploadModule extends PrivateModule {
         return config.getSystemTablePlacement();
     }
 
+    @Provides
+    @Singleton
+    @ScanRequestTablePlacement
+    protected String provideScanRequestTablePlacement(DataStoreConfiguration config) {
+        return config.getSystemTablePlacement();
+    }
+    
     @Provides
     @Singleton
     protected Region provideAmazonRegion() {
@@ -222,33 +238,48 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     protected List<ScheduledDailyScanUpload> provideScheduledScanUploads(DataStore dataStore) {
-        ScheduledScanConfiguration scheduledScanConfig = _config.getScheduledScan();
-        if (!scheduledScanConfig.getDailyScanTime().isPresent()) {
-            // No daily scan is configured
+        Map<String, ScheduledScanConfiguration> scheduledScanConfigs = _config.getScheduledScans();
+        if (scheduledScanConfigs.isEmpty()) {
             return ImmutableList.of();
         }
 
-        checkArgument(!scheduledScanConfig.getPlacements().isEmpty(), "Scheduled scan must contain at least one placement");
-        checkArgument(scheduledScanConfig.getScanId().isPresent(), "Scan ID not set");
-        checkArgument(scheduledScanConfig.getMaxRangeConcurrency().isPresent(), "Max range concurrency not set");
+        ImmutableList.Builder<ScheduledDailyScanUpload> scheduledScanUploads = ImmutableList.builder();
 
-        ScanDestination destination = ScanDestination.to(dataStore.getStashRoot());
-        DateTimeFormatter scanIdFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanId().get()).withZoneUTC();
-        DateTimeFormatter dateFormatter;
-        if (scheduledScanConfig.getScanDirectory().isPresent()) {
-            dateFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanDirectory().get()).withZoneUTC();
-        } else {
-            dateFormatter = StashUtil.STASH_DIRECTORY_DATE_FORMAT;
+        for (Map.Entry<String, ScheduledScanConfiguration> entry : scheduledScanConfigs.entrySet()) {
+            String id = entry.getKey();
+            ScheduledScanConfiguration scheduledScanConfig = entry.getValue();
+
+            if (!scheduledScanConfig.getDailyScanTime().isPresent()) {
+                // Not configured to run daily, so skip it
+                continue;
+            }
+
+            checkArgument(!scheduledScanConfig.getPlacements().isEmpty(), "Scheduled scan must contain at least one placement");
+            checkArgument(scheduledScanConfig.getScanId().isPresent(), "Scan ID not set");
+            checkArgument(scheduledScanConfig.getMaxRangeConcurrency().isPresent(), "Max range concurrency not set");
+
+            ScanDestination destination = ScanDestination.to(dataStore.getStashRoot());
+            DateTimeFormatter scanIdFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanId().get()).withZoneUTC();
+            DateTimeFormatter dateFormatter;
+            if (scheduledScanConfig.getScanDirectory().isPresent()) {
+                dateFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanDirectory().get()).withZoneUTC();
+            } else {
+                dateFormatter = StashUtil.STASH_DIRECTORY_DATE_FORMAT;
+            }
+
+            scheduledScanUploads.add(new ScheduledDailyScanUpload(
+                    id,
+                    scheduledScanConfig.getDailyScanTime().get(),
+                    scanIdFormatter,
+                    destination,
+                    dateFormatter,
+                    scheduledScanConfig.getPlacements(),
+                    scheduledScanConfig.getMaxRangeConcurrency().get(),
+                    scheduledScanConfig.getScanByAZ().get(),
+                    scheduledScanConfig.isRequestRequired()));
         }
 
-        return ImmutableList.of(new ScheduledDailyScanUpload(
-                scheduledScanConfig.getDailyScanTime().get(),
-                scanIdFormatter,
-                destination,
-                dateFormatter,
-                scheduledScanConfig.getPlacements(),
-                scheduledScanConfig.getMaxRangeConcurrency().get(),
-                scheduledScanConfig.getScanByAZ().get()));
+        return scheduledScanUploads.build();
     }
 
     @Provides

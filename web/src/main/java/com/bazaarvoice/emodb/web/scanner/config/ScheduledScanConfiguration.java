@@ -22,7 +22,8 @@ public class ScheduledScanConfiguration {
     @JsonProperty ("dailyScanTime")
     private Optional<String> _dailyScanTime = Optional.absent();
 
-    // SimpleDateFormat string which defines each daily scan's ID.  Required iff dailyScanTime is set.
+    // SimpleDateFormat string which is used to generate a unique identifier for each instance of the scan's execution.
+    // Required iff dailyScanTime is set.
     @Valid
     @NotNull
     @JsonProperty ("scanId")
@@ -53,6 +54,13 @@ public class ScheduledScanConfiguration {
     @NotNull
     @JsonProperty ("scanByAZ")
     private Optional<Boolean> _scanByAZ = Optional.of(true);
+
+    // Flag to indicate whether the scan only runs by request.  When true if there have been no requests then the scan
+    // will not run for that day.  Default is false.
+    @Valid
+    @NotNull
+    @JsonProperty ("requestRequired")
+    private boolean _requestRequired = false;
 
     public Optional<String> getDailyScanTime() {
         return _dailyScanTime;
@@ -105,6 +113,15 @@ public class ScheduledScanConfiguration {
 
     public ScheduledScanConfiguration setScanByAZ(Optional<Boolean> scanByAZ) {
         _scanByAZ = scanByAZ;
+        return this;
+    }
+
+    public boolean isRequestRequired() {
+        return _requestRequired;
+    }
+
+    public ScheduledScanConfiguration setRequestRequired(boolean requestRequired) {
+        _requestRequired = requestRequired;
         return this;
     }
 }

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Random;
 
 import static java.lang.String.format;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
 /**
@@ -49,12 +50,13 @@ public class StashRoleInclusionTest extends BaseRoleRestHelper {
         try (CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator()) {
             curator.start();
 
-            // Make sure that scanner port is nowhere to be seen in the zookeeper cache registry
+            // Make sure that scanner port is registered in the zookeeper cache registry
             String matchingString = format(":%d", getServiceBasePort());
-            String matchingPath;
-            assertNull((matchingPath = matchFound(curator, "/ostrich", matchingString, null)),
-                    format("Scanner registered in zookeeper at: %s", matchingPath));
+            assertNotNull(matchFound(curator, "/ostrich/local_default-emodb-stash-1", matchingString, null),
+                    "Scanner registered not zookeeper");
+            // Make sure scanner is not registered for any non-Stash EmoDB zk managed services.
             // Scanner does leader election, so we make sure we exclude the leader zk path
+            String matchingPath;
             assertNull((matchingPath = matchFound(curator, "/applications/emodb/local_default", matchingString,
                     "/applications/emodb/local_default/scanner/leader")), format("Scanner registered in zookeeper at: %s", matchingPath));
         }
@@ -74,7 +76,7 @@ public class StashRoleInclusionTest extends BaseRoleRestHelper {
         String randomName = "test" + Integer.toString(new Random().nextInt());
         super.httpPost(ImmutableMap.<String, Object>of("placement", "catalog_global:cat", "dest", "null"),
                 false,
-                "scanner", "1", "upload", randomName);
+                "stash", "1", "job", randomName);
     }
 
     private String matchFound(CuratorFramework curator, String path, String matchingString, String exclusion) {

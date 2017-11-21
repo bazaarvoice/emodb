@@ -26,6 +26,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,14 +54,15 @@ public class ScanUploadSchedulingService extends LeaderService {
     @Inject
     public ScanUploadSchedulingService(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                                        final ScanUploader scanUploader, final List<ScheduledDailyScanUpload> scheduledScans,
-                                       final ScanCountListener scanCountListener, LifeCycleRegistry lifecycle,
-                                       LeaderServiceTask leaderServiceTask, final MetricRegistry metricRegistry,
+                                       final ScanCountListener scanCountListener, final ScanRequestManager scanRequestManager,
+                                       LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
+                                       final MetricRegistry metricRegistry,
                                        final Clock clock) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new DelegateSchedulingService(scanUploader, scheduledScans, scanCountListener, clock);
+                        return new DelegateSchedulingService(scanUploader, scanRequestManager, scheduledScans, scanCountListener, clock);
                     }
                 });
 
@@ -74,15 +76,18 @@ public class ScanUploadSchedulingService extends LeaderService {
         private final Logger _log = LoggerFactory.getLogger(ScanUploadSchedulingService.class);
 
         private final ScanUploader _scanUploader;
+        private final ScanRequestManager _scanRequestManager;
         private final List<ScheduledDailyScanUpload> _scheduledScans;
         private final ScanCountListener _scanCountListener;
         private final Set<ScheduledDailyScanUpload> _pendingScans = Sets.newHashSet();
         private final Clock _clock;
         private ScheduledExecutorService _service;
 
-        public DelegateSchedulingService(ScanUploader scanUploader, List<ScheduledDailyScanUpload> scheduledScans,
+        public DelegateSchedulingService(ScanUploader scanUploader, ScanRequestManager scanRequestManager,
+                                         List<ScheduledDailyScanUpload> scheduledScans,
                                          ScanCountListener scanCountListener, Clock clock) {
             _scanUploader = scanUploader;
+            _scanRequestManager = scanRequestManager;
             _scheduledScans = scheduledScans;
             _scanCountListener = scanCountListener;
             _clock = clock;
@@ -166,22 +171,31 @@ public class ScanUploadSchedulingService extends LeaderService {
             if (pendingExecTime.isBefore(now)) {
                 // We're already within the pending exec time.  Mark that the scan is pending and schedule the
                 // first iteration for the next day.
-                _pendingScans.add(scanUpload);
+                maybeAddPendingScan(scanUpload, nextExecTime);
                 pendingExecTime = pendingExecTime.plusDays(1);
             }
 
             _service.scheduleAtFixedRate(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            if (_pendingScans.add(scanUpload)) {
-                                notifyPendingScanCountChanged();
-                            }
-                        }
-                    },
+                    () -> maybeAddPendingScan(scanUpload, scanUpload.getNextExecutionTimeAfter(now())),
                     new Duration(now, pendingExecTime).getMillis(),
                     Duration.standardDays(1).getMillis(),
                     TimeUnit.MILLISECONDS);
+        }
+
+        private void maybeAddPendingScan(final ScheduledDailyScanUpload scanUpload, final DateTime nextExecutionTime) {
+            if (scanUpload.isRequestRequired() && _scanRequestManager.getRequestsForScan(scanUpload.getId(), nextExecutionTime).isEmpty()) {
+                // This scan runs only by request and there are currently no requests for this scan.  However, that
+                // could change between now and the next execution time.  Schedule to re-check in 30 seconds.
+                if (now().isBefore(nextExecutionTime.minusMinutes(1))) {
+                    _service.schedule(() -> maybeAddPendingScan(scanUpload, nextExecutionTime), 30, TimeUnit.SECONDS);
+                }
+                return;
+            }
+
+            // Last chance to make sure the scan is still pending
+            if (now().isBefore(nextExecutionTime) && _pendingScans.add(scanUpload)) {
+                notifyPendingScanCountChanged();
+            }
         }
 
         /**
@@ -225,6 +239,13 @@ public class ScanUploadSchedulingService extends LeaderService {
         @VisibleForTesting
         synchronized ScanStatus startScheduledScan(ScheduledDailyScanUpload scheduledScan, DateTime scheduledTime)
                 throws RepeatScanException, ScanExecutionTimeException {
+            // Verify that the scan either doesn't require requests or has at least one request
+            if (scheduledScan.isRequestRequired() && _scanRequestManager.getRequestsForScan(scheduledScan.getId(), scheduledTime).isEmpty()) {
+                _log.info("Scan {} did not receive any requests and will not be executed for {}",
+                        scheduledScan.getId(), DateTimeFormat.mediumDateTime().print(scheduledTime));
+                return null;
+            }
+
             // Name the scan ID and directory for when the scan was scheduled
             String scanId = scheduledScan.getScanIdFormat().print(scheduledTime);
             String directory = scheduledScan.getDirectoryFormat().print(scheduledTime);
