@@ -32,7 +32,7 @@ public class ScanUploadMonitor extends LeaderService {
     @Inject
     public ScanUploadMonitor(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                              final ScanWorkflow scanWorkflow, final ScanStatusDAO scanStatusDAO,
-                             final ScanTableSetManager scanTableSetManager, final ScanWriterGenerator scanWriterGenerator,
+                             final ScanWriterGenerator scanWriterGenerator,
                              final StashStateListener stashStateListener, final ScanCountListener scanCountListener,
                              final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                              MetricRegistry metricRegistry) {
@@ -40,8 +40,8 @@ public class ScanUploadMonitor extends LeaderService {
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, scanTableSetManager,
-                                scanWriterGenerator, stashStateListener, scanCountListener, dataTools);
+                        return new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, scanWriterGenerator,
+                                stashStateListener, scanCountListener, dataTools);
                     }
                 });
 

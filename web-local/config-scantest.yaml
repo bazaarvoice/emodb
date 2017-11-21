@@ -1,6 +1,6 @@
 # Select service mode - See EmoServiceMode class to see all available options
 # This allows you to split Emo's micro services deployed separately. The default is STANDARD_ALL
-serviceMode: SCANNER 
+serviceMode: SCANNER
 #serviceMode: STANDARD_ALL
 #serviceMode: STANDARD_MAIN
 #serviceMode: STANDARD_BLOB
@@ -69,6 +69,8 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
+  - "pii_us:pii"
+  - "pii_eu:pii"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
@@ -87,13 +89,13 @@ systemOfRecord:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: sor-cassandra
       keyspaces:
-        app_global:
-          healthCheckColumnFamily: default_delta
-        ugc_global:
-          healthCheckColumnFamily: ugc_delta
-        catalog_global:
-          healthCheckColumnFamily: cat_delta
+        app_global: {}
+        ugc_global: {}
+        catalog_global:  {}
+        pii_us: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -102,6 +104,9 @@ systemOfRecord:
 
 
 databus:
+  longPollPollingThreadCount: 0
+  longPollKeepAliveThreadCount: 0
+
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
@@ -113,9 +118,10 @@ databus:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: databus-cassandra
     keyspaces:
-      databus:
-        healthCheckColumnFamily: subscription
+      databus: {}
 
 
 blobStore:
@@ -150,14 +156,32 @@ blobStore:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+      healthCheck:
+        name: blob-cassandra
       keyspaces:
-        media_global:
-          healthCheckColumnFamily: ugc_blob
-        media_global_mirror:
-          healthCheckColumnFamily: media_blob
-        blob_global:
-          healthCheckColumnFamily: media_blob
+        media_global: {}
+        media_global_mirror: {}
+        blob_global: {}
 
+  approvedContentTypes:
+  - application/json
+  - audio/aac
+  - audio/mp4
+  - audio/mpeg
+  - audio/ogg
+  - audio/wav
+  - image/bmp
+  - image/gif
+  - image/jpeg
+  - image/png
+  - image/tiff
+  - image/x-xbitmap
+  - text/plain
+  - video/mp4
+  - video/mpeg
+  - video/ogg
+  - video/quicktime
+  - video/x-msvideo
 
 queueService:
   # Cassandra connection settings
@@ -172,10 +196,15 @@ queueService:
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
+    healthCheck:
+      name: queue-cassandra
     keyspaces:
-      queue:
-        healthCheckColumnFamily: manifest
+      queue: {}
 
+
+cqlDriver:
+  multiRowFetchSize: 100
+  multiRowPrefetchLimit: 50
 
 jobs:
   # Placement for table which holds jobs metadata and results
@@ -255,6 +284,8 @@ httpClient:
   # Re-use connections so we don't run out of ports if many requests are made in rapid succession.
   keepAlive: 2s
 
+serverStartedListeners:
+   - class: com.bazaarvoice.emodb.plugin.lifecycle.LoggingServerStartedListener
 
 # Configure Logback logging
 logging:

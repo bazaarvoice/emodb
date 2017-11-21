@@ -32,10 +32,13 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
+import com.bazaarvoice.emodb.table.db.DroppedTableException;
+import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -58,6 +61,7 @@ import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Collections;
@@ -74,6 +78,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 
 public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore {
@@ -95,6 +100,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     protected final Counter _archiveDeltaSize;
     private final Meter _discardedCompactions;
     private final Compactor _compactor;
+
+    private StashTableDAO _stashTableDao;
 
     @Inject
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, EventBus eventBus, TableDAO tableDao,
@@ -121,6 +128,14 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         _discardedCompactions = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", "discarded_compactions"));
         _compactor = new DistributedCompactor(_archiveDeltaSize, _auditStore.isDeltaHistoryEnabled(), metricRegistry);
+    }
+
+    /**
+     * Optional binding, required only if running in stash mode.
+     */
+    @Inject(optional=true)
+    public void setStashDAO(StashTableDAO stashTableDao) {
+        _stashTableDao = stashTableDao;
     }
 
     private static ExecutorService defaultCompactionExecutor(LifeCycleRegistry lifeCycle) {
@@ -785,6 +800,50 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
+    public Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit,
+                                                              ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+        checkNotNull(stashId, "stashId");
+        checkNotNull(placement, "placement");
+        checkNotNull(scanRange, "scanRange");
+        checkNotNull(limit, "limit");
+        checkNotNull(consistency, "consistency");
+
+        // Since the range may wrap from high to low end of the token range we need to unwrap it
+        List<ScanRange> unwrappedRanges = scanRange.unwrapped();
+
+        Iterator<StashTokenRange> stashTokenRanges = Iterators.concat(
+                Iterators.transform(
+                        unwrappedRanges.iterator(),
+                        unwrappedRange -> _stashTableDao.getStashTokenRangesFromSnapshot(stashId, placement, unwrappedRange.getFrom(), unwrappedRange.getTo())));
+
+        return Iterators.concat(
+                Iterators.transform(stashTokenRanges, stashTokenRange -> {
+                    // Create a table set which always returns the table, since we know all records in this range come
+                    // exclusively from this table.
+                    TableSet tableSet = new TableSet() {
+                        @Override
+                        public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+                            return stashTokenRange.getTable();
+                        }
+
+                        @Override
+                        public void close() throws IOException {
+                            // No-op
+                        }
+                    };
+
+                    MultiTableScanOptions tableQuery = new MultiTableScanOptions()
+                            .setScanRange(ScanRange.create(stashTokenRange.getFrom(), stashTokenRange.getTo()))
+                            .setPlacement(placement)
+                            .setIncludeDeletedTables(false)
+                            .setIncludeMirrorTables(false);
+
+                    return multiTableScan(tableQuery, tableSet, limit, consistency, cutoffTime);
+                })
+        );
+    }
+
+    @Override
     public Map<String, Object> toContent(MultiTableScanResult result, ReadConsistency consistency, boolean allowAsyncCompaction) {
         return toContent(resolve(result.getRecord(), consistency, allowAsyncCompaction), consistency);
     }
@@ -830,6 +889,21 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             throw new StashNotAvailableException();
         }
         return _stashRootDirectory.get();
+    }
+
+    @Override
+    public void createStashTokenRangeSnapshot(String stashId, Set<String> placements) {
+        checkNotNull(stashId, "stashId");
+        checkNotNull(placements, "placements");
+        checkState(_stashTableDao != null, "Cannot create stash snapshot without a StashTableDAO implementation");
+        _stashTableDao.createStashTokenRangeSnapshot(stashId, placements);
+    }
+    
+    @Override
+    public void clearStashTokenRangeSnapshot(String stashId) {
+        checkNotNull(stashId, "stashId");
+        checkState(_stashTableDao != null, "Cannot clear stash snapshot without a StashTableDAO implementation");
+        _stashTableDao.clearStashTokenRangeSnapshot(stashId);
     }
 
     private void decrementDeltaSizes(PendingCompaction pendingCompaction) {

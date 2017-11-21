@@ -30,12 +30,14 @@ import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
+import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
+import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
 import com.bazaarvoice.emodb.table.db.tableset.TableSerializer;
 import com.codahale.metrics.annotation.Timed;
@@ -57,6 +59,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
@@ -79,6 +82,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Collection;
 import java.util.Iterator;
@@ -103,7 +107,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 
-public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
+public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO, Managed {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxTableDAO.class);
 
     private static final Ordering<Comparable> NULLS_LAST = Ordering.natural().nullsLast();
@@ -144,7 +148,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     private final ValueStore<Boolean> _tableChangesEnabled;
     private final CacheHandle _tableCacheHandle;
     private final Map<String, String> _placementsUnderMove;
-
+    private CQLStashTableDAO _stashTableDao;
+    
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
                             @SystemTableNamespace String systemTableNamespace,
@@ -196,6 +201,14 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     @Inject
     public void setBackingStore(TableBackingStore backingStore) {
         _backingStore = backingStore;
+    }
+
+    /**
+     * Optional binding, required only if running in stash mode.
+     */
+    @Inject(optional=true)
+    public void setCQLStashTableDAO(CQLStashTableDAO stashTableDao) {
+        _stashTableDao = stashTableDao;
     }
 
     @Override
@@ -1335,5 +1348,42 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                 delegate.run();
             }
         };
+    }
+
+    @Override
+    public void createStashTokenRangeSnapshot(String stashId, Set<String> placements) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+
+        // Since we need to snapshot the TableJson call the backing store directly.
+        final Iterator<Map<String, Object>> tableIter =
+                _backingStore.scan(_systemTable, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        while (tableIter.hasNext()) {
+            TableJson tableJson = new TableJson(tableIter.next());
+            Table table = tableFromJson(tableJson);
+            if (table != null && table.getAvailability() != null) {
+                AstyanaxStorage readStorage = ((AstyanaxTable) table).getReadStorage();
+                if (placements.contains(readStorage.getPlacement().getName())) {
+                    _stashTableDao.addTokenRangesForTable(stashId, readStorage, tableJson);
+                }
+            }
+        }
+    }
+
+    @Override
+    public Iterator<StashTokenRange> getStashTokenRangesFromSnapshot(String stashId, String placement, ByteBuffer fromInclusive, ByteBuffer toExclusive) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+
+        Iterator<CQLStashTableDAO.ProtoStashTokenRange> protoRanges = _stashTableDao.getTokenRangesBetween(stashId, placement, fromInclusive, toExclusive);
+
+        // Convert the TableJson from the stash table DAO into Tables.
+        return Iterators.transform(protoRanges, protoRange ->
+                new StashTokenRange(protoRange.getFrom(), protoRange.getTo(), tableFromJson(protoRange.getTableJson())));
+    }
+
+    @Override
+    public void clearStashTokenRangeSnapshot(String stashId) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+        _stashTableDao.clearTokenRanges(stashId);
     }
 }

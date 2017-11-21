@@ -229,7 +229,7 @@ public class ScanUploadSchedulingServiceTest {
 
         ScanUploader scanUploader = mock(ScanUploader.class);
         when(scanUploader.getStatus(expectedScanId)).thenReturn(new ScanStatus(
-                expectedScanId, new ScanOptions("placement1"), false, new Date(), ImmutableList.<ScanRangeStatus>of(),
+                expectedScanId, new ScanOptions("placement1"), true, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of()));
 
         ScanCountListener scanCountListener = mock(ScanCountListener.class);

@@ -34,7 +34,6 @@ import com.bazaarvoice.emodb.web.scanner.control.DistributedScanRangeMonitor;
 import com.bazaarvoice.emodb.web.scanner.control.MaxConcurrentScans;
 import com.bazaarvoice.emodb.web.scanner.control.QueueScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.control.SQSScanWorkflow;
-import com.bazaarvoice.emodb.web.scanner.control.ScanTableSetManager;
 import com.bazaarvoice.emodb.web.scanner.control.ScanUploadMonitor;
 import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.notifications.CloudWatchScanCountListener;
@@ -119,7 +118,6 @@ public class ScanUploadModule extends PrivateModule {
 
         bind(ScanUploader.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(DataStoreScanStatusDAO.class).asEagerSingleton();
-        bind(ScanTableSetManager.class).asEagerSingleton();
         bind(RangeScanUploader.class).to(LocalRangeScanUploader.class).asEagerSingleton();
 
         bind(MetricsScanCountListener.class).asEagerSingleton();

@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 
 public interface DataTools {
     /**
@@ -51,4 +51,31 @@ public interface DataTools {
     /** Return a consistent TableSet view of all tables in the system. */
     TableSet createTableSet();
 
+    /**
+     * Create a snapshot of all tables in the provided placements and their token ranges for Stash.  Must be called
+     * prior to {@link #stashMultiTableScan(String, String, ScanRange, LimitCounter, ReadConsistency, DateTime)} 
+     * otherwise that call will return no results.
+     */
+    void createStashTokenRangeSnapshot(String stashId, Set<String> placements);
+
+    /**
+     * Similar to {@link #multiTableScan(MultiTableScanOptions, TableSet, LimitCounter, ReadConsistency, DateTime)} with
+     * the following differences:
+     *
+     * <li>
+     *     Instead of using an explicit {@link TableSet} it loads table information from the snapshot created in a
+     *     previous call to {@link #createStashTokenRangeSnapshot(String, Set)} using the same stash ID.
+     * </li>
+     * <li>
+     *     Only the token ranges explicitly identified in the snapshot are scanned.  Any token ranges in between
+     *     are skipped, meaning that deleted and migrating data are never returned.  An additional benefit of this is that
+     *     any token ranges containing tombstones from deleted tables are never queried.
+     * </li>
+     */
+    Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime);
+
+    /**
+     * Clears a stash token range snapshot previously created using {@link #createStashTokenRangeSnapshot(String, Set)}.
+     */
+    void clearStashTokenRangeSnapshot(String stashId);
 }
