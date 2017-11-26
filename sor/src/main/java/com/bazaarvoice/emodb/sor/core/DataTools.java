@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
 import org.joda.time.DateTime;
@@ -52,7 +53,7 @@ public interface DataTools {
     TableSet createTableSet();
 
     /**
-     * Create a snapshot of all tables in the provided placements and their token ranges for Stash.  Must be called
+     * Create a snapshot of all tables excluding the ones listed in the {@link StashBlackListTableCondition} in the provided placements and their token ranges for Stash.  Must be called
      * prior to {@link #stashMultiTableScan(String, String, ScanRange, LimitCounter, ReadConsistency, DateTime)} 
      * otherwise that call will return no results.
      */

@@ -24,6 +24,8 @@ import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
@@ -35,6 +37,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
@@ -149,7 +152,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final CacheHandle _tableCacheHandle;
     private final Map<String, String> _placementsUnderMove;
     private CQLStashTableDAO _stashTableDao;
-    
+
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
                             @SystemTableNamespace String systemTableNamespace,
@@ -1351,7 +1354,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public void createStashTokenRangeSnapshot(String stashId, Set<String> placements) {
+    public void createStashTokenRangeSnapshot(String stashId, Set<String> placements, Condition blackListTableCondition) {
         checkState(_stashTableDao != null, "Call only valid in Stash mode");
 
         // Since we need to snapshot the TableJson call the backing store directly.
@@ -1363,8 +1366,12 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             Table table = tableFromJson(tableJson);
             if (table != null && table.getAvailability() != null) {
                 AstyanaxStorage readStorage = ((AstyanaxTable) table).getReadStorage();
-                if (placements.contains(readStorage.getPlacement().getName())) {
-                    _stashTableDao.addTokenRangesForTable(stashId, readStorage, tableJson);
+                String placementName = readStorage.getPlacement().getName();
+                if (placements.contains(placementName)) {
+                    // don't add the token ranges for the table mentioned in the blackList condition.
+                    if(!isTableBlacklisted(table, blackListTableCondition)) {
+                        _stashTableDao.addTokenRangesForTable(stashId, readStorage, tableJson);
+                    }
                 }
             }
         }
@@ -1385,5 +1392,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public void clearStashTokenRangeSnapshot(String stashId) {
         checkState(_stashTableDao != null, "Call only valid in Stash mode");
         _stashTableDao.clearTokenRanges(stashId);
+    }
+
+    @VisibleForTesting
+    static boolean isTableBlacklisted(Table table, Condition blackListTableCondition) {
+        Map<String, Object> tableAttributes = table.getAttributes();
+        return ConditionEvaluator.eval(blackListTableCondition, tableAttributes, new TableFilterIntrinsics(table));
     }
 }
