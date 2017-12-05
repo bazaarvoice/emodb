@@ -14,7 +14,7 @@ public class MigratorConfiguration {
     private static final int DEFAULT_READ_THREAD_COUNT = 8;
     private static final String DEFAULT_MIGRATE_STATUS_TABLE = "__system_migrate";
     private static final String DEFAULT_MIGRATE_STATUS_TABLE_PLACEMENT = "app_global:migration";
-    private static final int DEFAULT_MAX_CONCURRENT_WRITES = 500;
+    private static final int DEFAULT_MAX_WRITES_PER_SECOND = 1000;
 
     // If using EmoDB queues, the API key to use
     @Valid
@@ -42,8 +42,8 @@ public class MigratorConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty ("maxConcurrentWrites")
-    private int _maxConcurrentWrites = DEFAULT_MAX_CONCURRENT_WRITES;
+    @JsonProperty ("maxWritesPerSecond")
+    private int _maxWritesPerSecond = DEFAULT_MAX_WRITES_PER_SECOND;
 
     @Valid
     @NotNull
@@ -107,7 +107,7 @@ public class MigratorConfiguration {
         return this;
     }
 
-    public int getMaxConcurrentWrites() {
-        return _maxConcurrentWrites;
+    public int getMaxWritesPerSecond() {
+        return _maxWritesPerSecond;
     }
 }

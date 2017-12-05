@@ -7,7 +7,8 @@ cluster: local_default
 
 deltaMigrator:
   migrateStatusTablePlacement: "app_global:migration"
-  maxConcurrentWrites: 500
+  migrateApiKey:    "zl+p3AU4/EgT8OtR0ZmLrkL70j0SklugAzd+xxYR1Dz/rioe5aXo4yay7sKi7PSKD59h7/HumH7442nGhlR2rw"
+  maxWritesPerSecond: 1000
 #  pendingReadRangeQueueName: pendingQueue
 #  completeReadRangeQueueName: completeQueue
 

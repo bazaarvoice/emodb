@@ -4,5 +4,5 @@ import java.util.Iterator;
 
 public interface MigratorWriterDAO {
 
-    void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites);
+    void writeRows(String placement, Iterator<MigrationScanResult> results, int maxWritesPerSecond);
 }

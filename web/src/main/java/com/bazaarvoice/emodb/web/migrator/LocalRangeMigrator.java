@@ -10,6 +10,7 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.joda.time.Duration;
@@ -42,7 +43,7 @@ public class LocalRangeMigrator {
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
     }
 
-    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxConcurrentWrites) throws IOException, InterruptedException {
+    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxWritesPerSecond) throws IOException, InterruptedException {
         
         _log.info("Migrating placement {}: {}", placement, range);
 
@@ -58,7 +59,7 @@ public class LocalRangeMigrator {
             while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().getMillis() && results.hasNext()) {
 
                 Iterator<MigrationScanResult> batchIterator = Iterators.limit(results, BATCH_SIZE);
-                _migratorTools.writeRows(placement, results, maxConcurrentWrites);
+                _migratorTools.writeRows(placement, results, maxWritesPerSecond);
 
             }
 

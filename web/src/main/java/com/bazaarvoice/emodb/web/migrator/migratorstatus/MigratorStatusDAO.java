@@ -79,7 +79,7 @@ public class MigratorStatusDAO {
                         .put("canceled", false)
                         .put("startTime", status.getStartTime().getTime())
                         .put("completeTime", status.getCompleteTime() != null ? status.getCompleteTime().getTime() : null)
-                        .put("maxConcurrentWrites", status.getMaxConcurrentWrites())
+                        .put("maxWritesPerSecond", status.getMaxWritesPerSecond())
                         .build(),
                 new AuditBuilder().setLocalHost().setComment("Starting migration").build());
     }
@@ -131,7 +131,7 @@ public class MigratorStatusDAO {
         ScanOptions options = JsonHelper.convert(map.get("options"), ScanOptions.class);
         Long completeTs = (Long) map.get("completeTime");
         Date completeTime = completeTs != null ? new Date(completeTs) : null;
-        int maxConcurrentWrites = (Integer) map.get("maxConcurrentWrites");
+        int maxWritesPerSecond = (Integer) map.get("maxWritesPerSecond");
 
         //noinspection unchecked
         Map<String, Object> ranges = (Map<String, Object>) map.get("ranges");
@@ -177,7 +177,7 @@ public class MigratorStatusDAO {
         Date startTime = new Date((Long) map.get("startTime"));
 
         return new MigratorStatus(Intrinsic.getId(map), options, canceled, startTime, pendingMigrationRanges, activeMigrationRanges,
-                completeMigrationRanges, completeTime, maxConcurrentWrites);
+                completeMigrationRanges, completeTime, maxWritesPerSecond);
     }
 
     public void setMigratorRangeTaskQueued(String migrationId, int taskId, Date queuedTime) {
@@ -281,16 +281,16 @@ public class MigratorStatusDAO {
                 new AuditBuilder().setLocalHost().setComment("Canceling migration").build());
     }
 
-    public void setMaxConcurrentWrites(String migrationId, int maxConcurrentWrites) {
+    public void setMaxWritesPerSecond(String migrationId, int maxWritesPerSecond) {
         _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
-        .put("maxConcurrentWrites", maxConcurrentWrites).build(),
-                new AuditBuilder().setLocalHost().setComment("modifying maxConcurrentWrites").build());
+        .put("maxWritesPerSecond", maxWritesPerSecond).build(),
+                new AuditBuilder().setLocalHost().setComment("modifying maxWritesPerSecond").build());
     }
 
-    public int getMaxConcurrentWrites(String migrationId) {
+    public int getMaxWritesPerSecond(String migrationId) {
         Map<String, Object> status = _dataStore.get(getTable(), migrationId);
-        return (int) status.get("maxConcurrentWrites");
+        return (int) status.get("maxWritesPerSecond");
     }
 
     private String toRangeKey(int taskId) {

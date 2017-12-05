@@ -22,6 +22,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
 
@@ -256,7 +257,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, int maxConcurrentWrites) {
+    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, int maxWritesPerSecond) {
 
         if (!iterator.hasNext()) {
             return;
@@ -265,19 +266,17 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         Session session = placement.getKeyspace().getCqlSession();
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
-        final Semaphore semaphore = new Semaphore(maxConcurrentWrites);
         AtomicReference<Throwable> error = new AtomicReference<>();
+        RateLimiter rateLimiter = RateLimiter.create(1000);
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
             @Override
             public void onSuccess(@Nullable ResultSet result) {
-                semaphore.release();
             }
 
             @Override
             public void onFailure(Throwable t) {
-                semaphore.release();
                 error.compareAndSet(null, t);
             }
         };
@@ -300,7 +299,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             // execute statement if we have encountered a new C* wide row OR if statement has become too large
             if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
 
-                semaphore.acquireUninterruptibly();
+                rateLimiter.acquire();
                 Futures.addCallback(session.executeAsync(statement), callback);
                 statement = new BatchStatement(BatchStatement.Type.LOGGED);
                 currentStatementSize = 0;
@@ -315,9 +314,9 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
         }
 
-        semaphore.acquireUninterruptibly();
+        rateLimiter.acquire();
         Futures.addCallback(session.executeAsync(statement), callback);
-        semaphore.acquireUninterruptibly(maxConcurrentWrites);
+        rateLimiter.acquire((int) rateLimiter.getRate());
         checkError(error);
 
     }

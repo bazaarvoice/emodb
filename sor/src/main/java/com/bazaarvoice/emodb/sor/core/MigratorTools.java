@@ -9,7 +9,7 @@ import java.util.Iterator;
 // interface to migrate deltas from old tables to new tables with blocking
 public interface MigratorTools {
 
-    void writeRows(String placement, Iterator<MigrationScanResult> results, int maxConcurrentWrites);
+    void writeRows(String placement, Iterator<MigrationScanResult> results, int maxWritesPerSecond);
 
     Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
 }
