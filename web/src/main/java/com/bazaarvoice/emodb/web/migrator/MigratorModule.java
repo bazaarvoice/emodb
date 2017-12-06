@@ -42,7 +42,7 @@ public class MigratorModule extends PrivateModule {
         _config = config.getDeltaMigrator().get();
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
-        checkArgument(_config.getMaxWritesPerSecond() > 0, "Max concurrent writes must be at least 1");
+        checkArgument(_config.getMaxWritesPerSecond() > 0, "Max writes per second must be at least 1");
     }
 
     @Override
