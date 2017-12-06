@@ -32,6 +32,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -268,15 +269,18 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         AtomicReference<Throwable> error = new AtomicReference<>();
         RateLimiter rateLimiter = RateLimiter.create(1000);
+        Phaser phaser = new Phaser();
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
             @Override
             public void onSuccess(@Nullable ResultSet result) {
+                phaser.arriveAndDeregister();
             }
 
             @Override
             public void onFailure(Throwable t) {
+                phaser.arriveAndDeregister();
                 error.compareAndSet(null, t);
             }
         };
@@ -300,6 +304,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
 
                 rateLimiter.acquire();
+                phaser.register();
+
                 Futures.addCallback(session.executeAsync(statement), callback);
                 statement = new BatchStatement(BatchStatement.Type.LOGGED);
                 currentStatementSize = 0;
@@ -316,7 +322,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
         rateLimiter.acquire();
         Futures.addCallback(session.executeAsync(statement), callback);
-        rateLimiter.acquire((int) rateLimiter.getRate());
+        phaser.arriveAndAwaitAdvance();
         checkError(error);
 
     }
