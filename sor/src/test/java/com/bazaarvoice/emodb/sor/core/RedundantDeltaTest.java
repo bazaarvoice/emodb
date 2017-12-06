@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.test.DiscardingExecutorService;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
 import com.bazaarvoice.emodb.sor.db.Key;
@@ -60,7 +61,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -116,7 +117,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -196,7 +197,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -215,7 +216,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -291,7 +292,7 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -362,7 +363,7 @@ public class RedundantDeltaTest {
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
-                Optional.<URI>absent(), new MetricRegistry());
+                Optional.<URI>absent(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));

@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -129,7 +130,7 @@ public class CasStashTableTest  {
         addTable("table0", "ugc_global:ugc", 0x2000L);
         addTable("table1", "app_global:sys", 0x2000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-inter", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-inter", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-inter", "ugc_global:ugc",
                         toToken("10000000000000200001"), toToken("10000000000000200099")));
@@ -144,7 +145,7 @@ public class CasStashTableTest  {
         addTable("table2", "ugc_global:ugc", 0x3000L);
         addTable("table3", "app_global:sys", 0x3000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-starts-within", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-starts-within", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-starts-within", "ugc_global:ugc",
                         toToken("10000000000000300099"), toToken("1000000000000030a0ff")));
@@ -159,7 +160,7 @@ public class CasStashTableTest  {
         addTable("table4", "ugc_global:ugc", 0x4000L);
         addTable("table5", "app_global:sys", 0x4000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-ends-within", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-ends-within", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-ends-within", "ugc_global:ugc",
                         toToken("100000000000003fff00"), toToken("10000000000000400099")));
@@ -174,7 +175,7 @@ public class CasStashTableTest  {
         addTable("table6", "ugc_global:ugc", 0x5000L);
         addTable("table7", "app_global:sys", 0x5000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-matches", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-matches", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-matches", "ugc_global:ugc",
                         toToken("100000000000005000"), toToken("100000000000005001")));
@@ -189,7 +190,7 @@ public class CasStashTableTest  {
         addTable("table8", "ugc_global:ugc", 0x6000L);
         addTable("table9", "app_global:sys", 0x6000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-surrounds", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-surrounds", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-surrounds", "ugc_global:ugc",
                         toToken("100000000000005fff"), toToken("100000000000006002")));
@@ -210,7 +211,7 @@ public class CasStashTableTest  {
         addTable("table13", "ugc_global:ugc", 0x7030L);
         addTable("table15", "app_global:sys", 0x7000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-multiple", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-multiple", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-multiple", "ugc_global:ugc",
                         toToken("100000000000006fff"), toToken("100000000000007100")));
@@ -235,7 +236,7 @@ public class CasStashTableTest  {
         addTable("table16", "ugc_global:ugc", 0x8000L);
         addTable("table17", "ugc_global:ugc", 0x8001L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-consecutive", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-consecutive", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
         List<StashTokenRange> ranges = ImmutableList.copyOf(
                 _astyanaxTableDAO.getStashTokenRangesFromSnapshot("stash-consecutive", "ugc_global:ugc",
                         toToken("100000000000007fff"), toToken("10000000000000800a")));
@@ -253,7 +254,7 @@ public class CasStashTableTest  {
         // Create a single table
         addTable("table18", "ugc_global:ugc", 0x9000L);
 
-        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-all-shards", ImmutableSet.of("ugc_global:ugc"));
+        _astyanaxTableDAO.createStashTokenRangeSnapshot("stash-all-shards", ImmutableSet.of("ugc_global:ugc"), Conditions.alwaysFalse());
 
         // Get all possible ranges.  This should return every shard for the table.
         List<StashTokenRange> ranges = ImmutableList.copyOf(

@@ -24,7 +24,20 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.core.*;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
+import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.sor.core.DefaultAuditStore;
+import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
+import com.bazaarvoice.emodb.sor.core.DefaultMigratorTools;
+import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
+import com.bazaarvoice.emodb.sor.core.LocalDataStore;
+import com.bazaarvoice.emodb.sor.core.MigratorTools;
+import com.bazaarvoice.emodb.sor.core.StashRoot;
+import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
@@ -37,6 +50,7 @@ import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.Placements;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
+import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
@@ -410,6 +424,13 @@ public class DataStoreModule extends PrivateModule {
             return Optional.of(URI.create(configuration.getStashRoot().get()));
         }
         return Optional.absent();
+    }
+
+    @Provides @Singleton @StashBlackListTableCondition
+    protected Condition provideStashBlackListTableCondition(DataStoreConfiguration configuration) {
+        return configuration.getStashBlackListTableCondition()
+                .transform(Conditions::fromString)
+                .or(Conditions.alwaysFalse());
     }
 
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {

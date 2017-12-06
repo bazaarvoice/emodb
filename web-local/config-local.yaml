@@ -56,6 +56,10 @@ dataCenter:
 systemOfRecord:
   migrationPhase: PRE_MIGRATION
   stashRoot: s3://emodb-us-east-1/stash/ci
+
+  # Optional property - to exclude the tables satisfying the condition from the daily Stash run.
+  stashBlackListTableCondition: "intrinsic(\"~table\":like(\"nostash:*\"))"
+
   # Where does the SoR store system information such as table definitions?
   systemTablePlacement: app_global:sys
 

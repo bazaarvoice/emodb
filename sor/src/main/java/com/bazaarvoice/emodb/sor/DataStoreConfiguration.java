@@ -76,6 +76,19 @@ public class DataStoreConfiguration {
     @JsonProperty
     private int _deltaBlockSizeInKb = 64;
 
+    @Valid
+    @NotNull
+    @JsonProperty("stashBlackListTableCondition")
+    private Optional<String> _stashBlackListTableCondition = Optional.absent();
+
+    public Optional<String> getStashBlackListTableCondition() {
+        return _stashBlackListTableCondition;
+    }
+
+    public void setStashBlackListTableCondition(Optional<String> stashBlackListTableCondition) {
+        _stashBlackListTableCondition = stashBlackListTableCondition;
+    }
+
     public String getSystemTablePlacement() {
         return _systemTablePlacement;
     }

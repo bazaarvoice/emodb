@@ -1,13 +1,13 @@
-package com.bazaarvoice.emodb.databus.core;
+package com.bazaarvoice.emodb.table.db;
 
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.bazaarvoice.emodb.table.db.Table;
 
-class TableFilterIntrinsics implements Intrinsics {
+public class TableFilterIntrinsics implements Intrinsics {
     private final Table _table;
 
-    TableFilterIntrinsics(Table table) {
+    public TableFilterIntrinsics(Table table) {
         _table = table;
     }
 

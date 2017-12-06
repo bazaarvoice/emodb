@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
@@ -33,6 +34,7 @@ import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
+import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
@@ -94,6 +96,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final ExecutorService _compactionExecutor;
     private final AuditStore _auditStore;
     private final Optional<URI> _stashRootDirectory;
+    private final Condition _stashBlackListTableCondition;
     private final Timer _resolveAnnotatedEventTimer;
 
     @VisibleForTesting
@@ -106,15 +109,15 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Inject
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, EventBus eventBus, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, AuditStore auditStore,
-                            @StashRoot Optional<URI> stashRootDirectory) {
+                            @StashRoot Optional<URI> stashRootDirectory, @StashBlackListTableCondition Condition stashBlackListTableCondition) {
         this(eventBus, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                auditStore, stashRootDirectory, metricRegistry);
+                auditStore, stashRootDirectory, stashBlackListTableCondition, metricRegistry);
     }
 
     @VisibleForTesting
     public DefaultDataStore(EventBus eventBus, TableDAO tableDao, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, AuditStore auditStore,
-                            Optional<URI> stashRootDirectory, MetricRegistry metricRegistry) {
+                            Optional<URI> stashRootDirectory, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
         _eventBus = checkNotNull(eventBus, "eventBus");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -123,6 +126,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactionExecutor = checkNotNull(compactionExecutor, "compactionExecutor");
         _auditStore = checkNotNull(auditStore, "auditStore");
         _stashRootDirectory = checkNotNull(stashRootDirectory, "stashRootDirectory");
+        _stashBlackListTableCondition = checkNotNull(stashBlackListTableCondition, "stashBlackListTableCondition");
         _resolveAnnotatedEventTimer = metricRegistry.timer(getMetricName("resolve_event"));
 
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
@@ -896,7 +900,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkNotNull(stashId, "stashId");
         checkNotNull(placements, "placements");
         checkState(_stashTableDao != null, "Cannot create stash snapshot without a StashTableDAO implementation");
-        _stashTableDao.createStashTokenRangeSnapshot(stashId, placements);
+        _stashTableDao.createStashTokenRangeSnapshot(stashId, placements, _stashBlackListTableCondition);
     }
     
     @Override
