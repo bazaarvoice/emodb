@@ -20,6 +20,7 @@ import com.datastax.driver.core.*;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.RateLimiter;
@@ -268,19 +269,17 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         Session session = placement.getKeyspace().getCqlSession();
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         AtomicReference<Throwable> error = new AtomicReference<>();
-        RateLimiter rateLimiter = RateLimiter.create(1000);
-        Phaser phaser = new Phaser();
+        RateLimiter rateLimiter = RateLimiter.create(maxWritesPerSecond);
+        List<ResultSetFuture> resultSetFutures = Lists.newArrayList();
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
             @Override
             public void onSuccess(@Nullable ResultSet result) {
-                phaser.arriveAndDeregister();
             }
 
             @Override
             public void onFailure(Throwable t) {
-                phaser.arriveAndDeregister();
                 error.compareAndSet(null, t);
             }
         };
@@ -304,9 +303,11 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
 
                 rateLimiter.acquire();
-                phaser.register();
 
-                Futures.addCallback(session.executeAsync(statement), callback);
+                ResultSetFuture resultSetFuture = session.executeAsync(statement);
+                Futures.addCallback(resultSetFuture, callback);
+                resultSetFutures.add(resultSetFuture);
+
                 statement = new BatchStatement(BatchStatement.Type.LOGGED);
                 currentStatementSize = 0;
             }
@@ -321,8 +322,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         }
 
         rateLimiter.acquire();
-        Futures.addCallback(session.executeAsync(statement), callback);
-        phaser.arriveAndAwaitAdvance();
+        ResultSetFuture future = session.executeAsync(statement);
+        Futures.addCallback(future, callback);
+        resultSetFutures.add(future);
+
+        resultSetFutures.forEach(Futures::getUnchecked);
+
         checkError(error);
 
     }
