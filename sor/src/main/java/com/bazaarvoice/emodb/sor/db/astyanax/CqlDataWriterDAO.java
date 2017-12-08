@@ -321,6 +321,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         }
 
         rateLimiter.acquire();
+        phaser.register();
         Futures.addCallback(session.executeAsync(statement), callback);
         phaser.arriveAndAwaitAdvance();
         checkError(error);
