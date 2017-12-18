@@ -5,8 +5,6 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
 
 import javax.annotation.Nullable;
 import java.util.Date;
@@ -14,13 +12,13 @@ import java.util.List;
 
 public class MigratorStatus extends ScanStatus {
 
-    private int _maxConcurrentWrites;
+    private int _maxWritesPerSecond;
 
-    public MigratorStatus(ScanStatus scanStatus, int maxConcurrentWrites) {
+    public MigratorStatus(ScanStatus scanStatus, int maxWritesPerSecond) {
         this(scanStatus.getScanId(), scanStatus.getOptions(), scanStatus.isCanceled(),
                 scanStatus.getStartTime(), scanStatus.getPendingScanRanges(),
                 scanStatus.getActiveScanRanges(), scanStatus.getCompleteScanRanges(),
-                scanStatus.getCompleteTime(), maxConcurrentWrites);
+                scanStatus.getCompleteTime(), maxWritesPerSecond);
     }
 
     @JsonCreator
@@ -32,16 +30,16 @@ public class MigratorStatus extends ScanStatus {
                       @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeMigrationRanges,
                       @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeMigrationRanges,
                       @JsonProperty ("completeTime") @Nullable Date completeTime,
-                      @JsonProperty ("maxConcurrentWrites") int maxConcurrentWrites) {
+                      @JsonProperty ("maxWritesPerSecond") int maxWritesPerSecond) {
         super(scanId, options, false, canceled, startTime, pendingMigrationRanges, activeMigrationRanges, completeMigrationRanges, completeTime);
-        _maxConcurrentWrites = maxConcurrentWrites;
+        _maxWritesPerSecond = maxWritesPerSecond;
     }
 
-    public int getMaxConcurrentWrites() {
-        return _maxConcurrentWrites;
+    public int getMaxWritesPerSecond() {
+        return _maxWritesPerSecond;
     }
 
-    public void setMaxConcurrentWrites(int maxConcurrentWrites) {
-        _maxConcurrentWrites = maxConcurrentWrites;
+    public void setMaxWritesPerSecond(int maxWritesPerSecond) {
+        _maxWritesPerSecond = maxWritesPerSecond;
     }
 }

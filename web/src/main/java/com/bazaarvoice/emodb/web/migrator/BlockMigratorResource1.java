@@ -32,7 +32,7 @@ public class BlockMigratorResource1 {
             response = SuccessResponse.class
     )
     public MigratorStatus migrate(@PathParam("placement") String placement,
-                                  @QueryParam("maxConcurrentWrites") int maxConcurrentWrites) {
+                                  @QueryParam("maxWritesPerSecond") int maxWritesPerSecond) {
 
         if (_deltaMigrator.getStatus(placement) != null) {
             throw new WebApplicationException(
@@ -42,7 +42,7 @@ public class BlockMigratorResource1 {
                             .build());
         }
 
-        return _deltaMigrator.migratePlacement(placement, maxConcurrentWrites);
+        return _deltaMigrator.migratePlacement(placement, maxWritesPerSecond);
 
     }
 
@@ -99,8 +99,8 @@ public class BlockMigratorResource1 {
     @POST
     @Path ("migrate/{placement}/throttle")
     public MigratorStatus throttleMigration(@PathParam ("placement") String placement,
-                                            @QueryParam ("maxConcurrentWrites") int maxConcurrentWrites) {
-        checkArgument(maxConcurrentWrites > 0, "maxConcurrentWrites is required");
+                                            @QueryParam ("maxWritesPerSecond") int maxWritesPerSecond) {
+        checkArgument(maxWritesPerSecond > 0, "maxWritesPerSecond is required");
 
         MigratorStatus migratorStatus = _deltaMigrator.getStatus(placement);
         if (migratorStatus == null) {
@@ -111,7 +111,7 @@ public class BlockMigratorResource1 {
                             .build());
         }
 
-        _deltaMigrator.throttle(placement, maxConcurrentWrites);
+        _deltaMigrator.throttle(placement, maxWritesPerSecond);
 
         return _deltaMigrator.getStatus(placement);
 

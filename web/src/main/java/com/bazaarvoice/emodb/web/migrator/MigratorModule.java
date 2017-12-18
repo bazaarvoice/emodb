@@ -42,7 +42,7 @@ public class MigratorModule extends PrivateModule {
         _config = config.getDeltaMigrator().get();
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
-        checkArgument(_config.getMaxConcurrentWrites() > 0, "Max concurrent writes must be at least 1");
+        checkArgument(_config.getMaxWritesPerSecond() > 0, "Max writes per second must be at least 1");
     }
 
     @Override
@@ -63,8 +63,8 @@ public class MigratorModule extends PrivateModule {
                 .toInstance(_config.getPendingMigrationRangeQueueName());
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeMigrationRangeQueueName"))
                 .toInstance(_config.getCompleteMigrationRangeQueueName());
-        bind(Integer.class).annotatedWith(Names.named("maxConcurrentWrites"))
-                .toInstance(_config.getMaxConcurrentWrites());
+        bind(Integer.class).annotatedWith(Names.named("maxWritesPerSecond"))
+                .toInstance(_config.getMaxWritesPerSecond());
 
         bind(MigratorMonitor.class).asEagerSingleton();
         bind(DistributedMigratorRangeMonitor.class).asEagerSingleton();

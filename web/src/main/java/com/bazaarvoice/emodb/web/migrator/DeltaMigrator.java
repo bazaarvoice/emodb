@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collection;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -31,23 +30,23 @@ public class DeltaMigrator {
     private final DataTools _dataTools;
     private final MigratorStatusDAO _statusDAO;
     private final ScanWorkflow _workflow;
-    private final int _defaultMaxConcurrentWrites;
+    private final int _defaultMaxWritesPerSecond;
 
     @Inject
     public DeltaMigrator(DataTools dataTools, MigratorStatusDAO statusDAO, ScanWorkflow workflow,
-                         @Named ("maxConcurrentWrites") Integer maxConcurrentWrites) {
+                         @Named ("maxWritesPerSecond") Integer maxWritesPerSecond) {
         _dataTools = checkNotNull(dataTools, "dataTools");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _workflow = checkNotNull(workflow, "workflow");
-        _defaultMaxConcurrentWrites = maxConcurrentWrites;
+        _defaultMaxWritesPerSecond = maxWritesPerSecond;
 
     }
 
-    public MigratorStatus migratePlacement(String placement, int maxConcurrentWrites) {
+    public MigratorStatus migratePlacement(String placement, int maxWritesPerSecond) {
         ScanOptions options = new ScanOptions(placement)
                 .setScanByAZ(true);
         MigratorPlan plan = createPlan(placement, options);
-        MigratorStatus status = plan.toMigratorStatus(maxConcurrentWrites > 0 ? maxConcurrentWrites: _defaultMaxConcurrentWrites);
+        MigratorStatus status = plan.toMigratorStatus(maxWritesPerSecond > 0 ? maxWritesPerSecond: _defaultMaxWritesPerSecond);
 
         startMigration(placement, status);
 
@@ -150,8 +149,8 @@ public class DeltaMigrator {
 
     }
 
-    public void throttle(String placement, int maxConcurrentWrites) {
-        _statusDAO.setMaxConcurrentWrites(placement, maxConcurrentWrites);
+    public void throttle(String placement, int maxWritesPerSecond) {
+        _statusDAO.setMaxWritesPerSecond(placement, maxWritesPerSecond);
     }
 
     private class MigratorPlan extends ScanPlan {
@@ -160,8 +159,8 @@ public class DeltaMigrator {
             super(placement, options);
         }
 
-        public MigratorStatus toMigratorStatus(int maxConcurrentWrites) {
-            return new MigratorStatus(toScanStatus(), maxConcurrentWrites);
+        public MigratorStatus toMigratorStatus(int maxWritesPerSecond) {
+            return new MigratorStatus(toScanStatus(), maxWritesPerSecond);
         }
     }
 }
