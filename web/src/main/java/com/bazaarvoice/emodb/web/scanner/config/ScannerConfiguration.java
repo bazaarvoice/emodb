@@ -83,6 +83,13 @@ public class ScannerConfiguration {
     @JsonProperty ("completeScanRangeQueueName")
     private Optional<String> _completeScanRangeQueueName = Optional.absent();
 
+    // Region for AWS clients such as for SQS and S3.  Typically this is the local region and is introspected from the
+    // EC2 instance, but for debugging purposes it can be explicitly set here.
+    @Valid
+    @NotNull
+    @JsonProperty ("awsRegion")
+    private Optional<String> _awsRegion = Optional.absent();
+
     public boolean isUseSQSQueues() {
         return _useSQSQueues;
     }
@@ -185,6 +192,15 @@ public class ScannerConfiguration {
 
     public ScannerConfiguration setS3AssumeRole(Optional<String> s3AssumeRole) {
         _s3AssumeRole = s3AssumeRole;
+        return this;
+    }
+
+    public Optional<String> getAwsRegion() {
+        return _awsRegion;
+    }
+
+    public ScannerConfiguration setAwsRegion(Optional<String> awsRegion) {
+        _awsRegion = awsRegion;
         return this;
     }
 }

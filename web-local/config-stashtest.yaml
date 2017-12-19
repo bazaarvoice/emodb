@@ -1,6 +1,6 @@
 # Select service mode - See EmoServiceMode class to see all available options
 # This allows you to split Emo's micro services deployed separately. The default is STANDARD_ALL
-serviceMode: SCANNER
+serviceMode: STASH
 #serviceMode: STANDARD_ALL
 #serviceMode: STANDARD_MAIN
 #serviceMode: STANDARD_BLOB

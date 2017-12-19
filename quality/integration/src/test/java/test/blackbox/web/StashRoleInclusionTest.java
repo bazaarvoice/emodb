@@ -19,7 +19,7 @@ import static java.lang.String.format;
 import static org.testng.Assert.assertNull;
 
 /**
- * Verifies access to SOA endpoints, REST resources and Tasks included with SCANNER.
+ * Verifies access to SOA endpoints, REST resources and Tasks included with STASH.
  */
 public class StashRoleInclusionTest extends BaseRoleRestHelper {
 

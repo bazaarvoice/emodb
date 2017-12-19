@@ -94,7 +94,20 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.*;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.stash_manager;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class EmoService extends Application<EmoConfiguration> {
@@ -297,13 +310,13 @@ public class EmoService extends Application<EmoConfiguration> {
 
     private void evaluateScanner()
             throws Exception {
-        if (!runPerServiceMode(scanner)) {
+        if (!runPerServiceMode(stash_manager)) {
             return;
         }
 
         ScanUploader scanUploader = _injector.getInstance(ScanUploader.class);
         _environment.jersey().register(new ScanUploadResource1(scanUploader));
-        // No admin tasks are registered automatically in SCANNER ServiceMode
+        // No admin tasks are registered automatically in STASH ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 

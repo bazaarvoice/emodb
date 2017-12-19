@@ -15,6 +15,7 @@ import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
@@ -65,7 +66,6 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -92,10 +92,12 @@ import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.stash_manager;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.stash_worker;
 import static com.google.common.base.Preconditions.checkArgument;
 
 /**
- * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#SCANNER}
+ * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#STASH}
  * <p>
  *
  * Exports the following:
@@ -103,9 +105,11 @@ import static com.google.common.base.Preconditions.checkArgument;
  * </ul>
  */
 public class ScanUploadModule extends PrivateModule {
+    private final EmoServiceMode _serviceMode;
     private final ScannerConfiguration _config;
 
-    public ScanUploadModule(EmoConfiguration config) {
+    public ScanUploadModule(EmoServiceMode serviceMode, EmoConfiguration config) {
+        _serviceMode = serviceMode;
         _config = config.getScanner().get();
 
         checkArgument(_config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
@@ -118,7 +122,6 @@ public class ScanUploadModule extends PrivateModule {
 
         bind(ScanUploader.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(DataStoreScanStatusDAO.class).asEagerSingleton();
-        bind(RangeScanUploader.class).to(LocalRangeScanUploader.class).asEagerSingleton();
 
         bind(MetricsScanCountListener.class).asEagerSingleton();
         bind(CloudWatchScanCountListener.class);   // Lazily load only if configured
@@ -146,14 +149,21 @@ public class ScanUploadModule extends PrivateModule {
                 .implement(DiscardingScanWriter.class, DiscardingScanWriter.class)
                 .build(ScanWriterFactory.class));
 
-        // Monitors active upload status, active only by leader election
-        bind(ScanUploadMonitor.class).asEagerSingleton();
-        // Monitors for new scans waiting to start
-        bind(DistributedScanRangeMonitor.class).asEagerSingleton();
-        // Schedules any daily scans
-        bind(ScanUploadSchedulingService.class).asEagerSingleton();
-        // Sends notification that the service is active at the start of a scheduled scan
-        bind(ScanParticipationService.class).asEagerSingleton();
+        if (_serviceMode.specifies(stash_manager)) {
+            // Schedules any daily scans
+            bind(ScanUploadSchedulingService.class).asEagerSingleton();
+            // Monitors active upload status
+            bind(ScanUploadMonitor.class).asEagerSingleton();
+        }
+
+        if (_serviceMode.specifies(stash_worker)) {
+            // Monitors for new scan range tasks waiting to start
+            bind(DistributedScanRangeMonitor.class).asEagerSingleton();
+            // Executor for scanning and uploading scan ranges locally
+            bind(RangeScanUploader.class).to(LocalRangeScanUploader.class).asEagerSingleton();
+            // Sends notification that the service is active at the start of a scheduled scan
+            bind(ScanParticipationService.class).asEagerSingleton();
+        }
 
         bind(AWSCredentialsProvider.class).toInstance(new DefaultAWSCredentialsProviderChain());
         bind(AmazonS3Provider.class).asEagerSingleton();
@@ -171,7 +181,10 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     protected Region provideAmazonRegion() {
-        return Objects.firstNonNull(Regions.getCurrentRegion(), Region.getRegion(Regions.US_EAST_1));
+        if (_config.getAwsRegion().isPresent()) {
+            return Region.getRegion(Regions.fromName(_config.getAwsRegion().get()));
+        }
+        return Optional.fromNullable(Regions.getCurrentRegion()).or(Region.getRegion(Regions.US_EAST_1));
     }
 
     @Provides

@@ -4,7 +4,7 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.Test;
 
 /**
- *  Verifies no access to SOA endpoints, REST resources and Tasks excluded from SCANNER.
+ *  Verifies no access to SOA endpoints, REST resources and Tasks excluded from STASH.
  */
 public class StashRoleExclusionTest extends BaseRoleRestHelper {
 

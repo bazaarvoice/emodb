@@ -126,6 +126,7 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.registry.zookeeper.ZooKeeperServiceRegistry;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -147,6 +148,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.time.Clock;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
@@ -184,7 +186,7 @@ public class EmoModule extends AbstractModule {
         evaluate(leader_control, new LeaderControlSetup());
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
-        evaluate(scanner, new ScannerSetup());
+        evaluate(EnumSet.of(stash_manager, stash_worker), new ScannerSetup());
         evaluate(delta_migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
         evaluate(job, new JobSetup());
@@ -612,7 +614,7 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ScanUploadModule(_configuration));
+            install(new ScanUploadModule(_serviceMode, _configuration));
         }
 
         /** Provide ZooKeeper namespaced to scanner data. */
@@ -687,6 +689,13 @@ public class EmoModule extends AbstractModule {
     private void evaluate (EmoServiceMode.Aspect aspect, AbstractModule module)  {
         if (_serviceMode.specifies(aspect)) {
             _log.info("running {}", aspect);
+            install (module);
+        }
+    }
+
+    private void evaluate (EnumSet<EmoServiceMode.Aspect> aspects, AbstractModule module)  {
+        if (aspects.stream().anyMatch(_serviceMode::specifies)) {
+            _log.info("running {}", Joiner.on(",").join(aspects.iterator()));
             install (module);
         }
     }

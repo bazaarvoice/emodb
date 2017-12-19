@@ -249,8 +249,8 @@ public class ScanUploadTest {
         File scanUploadDir = new File(args[2]);
 
         checkArgument(scanUploadDir.isDirectory(), "Not a valid directory: %s", scanUploadDir);
-        checkArgument(configuration.getServiceMode() == EmoServiceMode.SCANNER,
-                "Not configured for scanner: %s", configuration.getServiceMode());
+        checkArgument(configuration.getServiceMode() == EmoServiceMode.STASH,
+                "Not configured for stash: %s", configuration.getServiceMode());
 
         // To prevent conflicting with EmoDB running on this same server adjust the host and admin ports.
         updatePortsToAvoidCollision(configuration.getServerFactory());
