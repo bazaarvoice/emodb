@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.scheduling;
 
 import com.bazaarvoice.emodb.sor.api.InvalidStashRequestException;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequest;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
@@ -18,25 +18,25 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * Manager for maintaining the ste of scan requests.  Mostly acts as an entry point to a {@link ScanRequestDAO} with
+ * Manager for maintaining the state of stash requests.  Mostly acts as an entry point to a {@link StashRequestDAO} with
  * additional business logic and state validation.
  */
-public class ScanRequestManager {
+public class StashRequestManager {
 
-    private final ScanRequestDAO _scanRequestDAO;
+    private final StashRequestDAO _stashRequestDAO;
     private final Map<String, ScheduledDailyScanUpload> _scheduledScans;
     private final Clock _clock;
 
     @Inject
-    public ScanRequestManager(ScanRequestDAO scanRequestDAO, List<ScheduledDailyScanUpload> scheduledScans, Clock clock) {
-        _scanRequestDAO = checkNotNull(scanRequestDAO, "scanRequestDAO");
+    public StashRequestManager(StashRequestDAO stashRequestDAO, List<ScheduledDailyScanUpload> scheduledScans, Clock clock) {
+        _stashRequestDAO = checkNotNull(stashRequestDAO, "stashRequestDAO");
         _scheduledScans = Maps.uniqueIndex(
                 checkNotNull(scheduledScans, "scheduledScans"),
                 ScheduledDailyScanUpload::getId);
         _clock = checkNotNull(clock, "clock");
     }
 
-    public void requestScanOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
+    public void requestStashOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
         checkNotNull(id, "id");
         checkNotNull(requestedBy, "requestedBy");
 
@@ -48,10 +48,10 @@ public class ScanRequestManager {
         }
 
         String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
-        _scanRequestDAO.requestScan(scanId, new ScanRequest(requestedBy, new Date(_clock.millis())));
+        _stashRequestDAO.requestStash(scanId, new StashRequest(requestedBy, new Date(_clock.millis())));
     }
 
-    public void undoRequestForScanOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
+    public void undoRequestForStashOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
         checkNotNull(id, "id");
         checkNotNull(requestedBy, "requestedBy");
 
@@ -63,10 +63,10 @@ public class ScanRequestManager {
         }
 
         String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
-        _scanRequestDAO.undoRequestScan(scanId, new ScanRequest(requestedBy, new Date(_clock.millis())));
+        _stashRequestDAO.undoRequestStash(scanId, new StashRequest(requestedBy, new Date(_clock.millis())));
     }
 
-    public Set<ScanRequest> getRequestsForScan(String id, @Nullable DateTime time) {
+    public Set<StashRequest> getRequestsForStash(String id, @Nullable DateTime time) {
         checkNotNull(id, "id");
 
         ScheduledDailyScanUpload scheduledScan = _scheduledScans.get(id);
@@ -76,7 +76,7 @@ public class ScanRequestManager {
 
         DateTime nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
         String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
-        return _scanRequestDAO.getRequestsForScan(scanId);
+        return _stashRequestDAO.getRequestsForStash(scanId);
     }
 
     private ScheduledDailyScanUpload getAndValidateScan(String id) {

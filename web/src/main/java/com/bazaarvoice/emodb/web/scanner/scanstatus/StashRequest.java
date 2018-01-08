@@ -9,12 +9,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * POJO for metadata about a request for a scan.
  */
-public class ScanRequest {
+public class StashRequest {
 
     private final String _requestedBy;
     private final Date _requestTime;
 
-    public ScanRequest(String requestedBy, Date requestTime) {
+    public StashRequest(String requestedBy, Date requestTime) {
         _requestedBy = checkNotNull(requestedBy, "requestedBy");
         _requestTime = checkNotNull(requestTime, "requestTime");
     }
@@ -32,11 +32,11 @@ public class ScanRequest {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ScanRequest)) {
+        if (!(o instanceof StashRequest)) {
             return false;
         }
 
-        ScanRequest that = (ScanRequest) o;
+        StashRequest that = (StashRequest) o;
 
         return _requestedBy.equals(that._requestedBy) &&
                 _requestTime.equals(that._requestTime);

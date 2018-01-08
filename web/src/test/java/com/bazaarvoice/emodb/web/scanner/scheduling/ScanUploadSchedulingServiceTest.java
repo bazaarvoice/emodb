@@ -7,7 +7,7 @@ import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequest;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -87,7 +87,7 @@ public class ScanUploadSchedulingServiceTest {
             throws Exception {
 
         ScanUploader scanUploader = mock(ScanUploader.class);
-        ScanRequestManager scanRequestManager = mock(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
@@ -113,7 +113,7 @@ public class ScanUploadSchedulingServiceTest {
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scanRequestManager, scheduledScans, scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock);
 
         service.setExecutorService(executorService);
         service.initializeScans();
@@ -148,7 +148,7 @@ public class ScanUploadSchedulingServiceTest {
     @Test(dataProvider = "every10minutes")
     public void testMissedScansStarted(DateTime now) {
         ScanUploader scanUploader = mock(ScanUploader.class);
-        ScanRequestManager scanRequestManager = mock(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
@@ -172,7 +172,7 @@ public class ScanUploadSchedulingServiceTest {
         }
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scanRequestManager, scheduledScans, scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock);
 
         service.setExecutorService(executorService);
         service.initializeScans();
@@ -211,13 +211,13 @@ public class ScanUploadSchedulingServiceTest {
                         ImmutableList.of("placement1"), 1, true, false);
 
         ScanUploader scanUploader = mock(ScanUploader.class);
-        ScanRequestManager scanRequestManager = mock(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
         Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scanRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
 
         service.startScheduledScan(scanUpload, now);
 
@@ -257,13 +257,13 @@ public class ScanUploadSchedulingServiceTest {
                 expectedScanId, new ScanOptions("placement1"), true, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of()));
 
-        ScanRequestManager scanRequestManager = mock(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
         Clock clock = Clock.fixed(Instant.ofEpochMilli(now.getMillis()), ZoneId.systemDefault());
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scanRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
 
         try {
             service.startScheduledScan(scanUpload, now);
@@ -326,7 +326,7 @@ public class ScanUploadSchedulingServiceTest {
     @Test(dataProvider = "every10minutesByRequest")
     public void testByRequestStashStartsWhenRequested(DateTime now, boolean requested) {
         ScanUploader scanUploader = mock(ScanUploader.class);
-        ScanRequestManager scanRequestManager = mock(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
@@ -357,7 +357,7 @@ public class ScanUploadSchedulingServiceTest {
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, scanRequestManager, scheduledScans, scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock);
 
         service.setExecutorService(executorService);
         service.initializeScans();
@@ -390,12 +390,12 @@ public class ScanUploadSchedulingServiceTest {
                 longThat(withinNSeconds(10, nowPlus23Hours.minus(now.getMillis()).getMillis())),
                 eq(TimeUnit.MILLISECONDS));
 
-        Set<ScanRequest> requests = requested ?
-                ImmutableSet.of(new ScanRequest("key", new Date(now.getMillis()))) :
+        Set<StashRequest> requests = requested ?
+                ImmutableSet.of(new StashRequest("key", new Date(now.getMillis()))) :
                 ImmutableSet.of();
 
-        when(scanRequestManager.getRequestsForScan("future", nowPlus1Hour)).thenReturn(requests);
-        when(scanRequestManager.getRequestsForScan("past", nowPlus23Hours)).thenReturn(requests);
+        when(stashRequestManager.getRequestsForStash("future", nowPlus1Hour)).thenReturn(requests);
+        when(stashRequestManager.getRequestsForStash("past", nowPlus23Hours)).thenReturn(requests);
         when(scanUploader.getStatus(anyString())).thenReturn(null);
 
         String futureScanId = futureScanUpload.getScanIdFormat().print(nowPlus1Hour.getMillis());
@@ -436,10 +436,10 @@ public class ScanUploadSchedulingServiceTest {
         verify(executorService, times(2)).schedule(any(Runnable.class), eq(TimeUnit.DAYS.toMillis(1)), eq(TimeUnit.MILLISECONDS));
 
         // Verify incidental calls made while checking requests for the scan
-        verify(scanRequestManager, atLeastOnce()).getRequestsForScan("future", nowPlus1Hour);
-        verify(scanRequestManager, atLeastOnce()).getRequestsForScan("past", nowPlus23Hours);
+        verify(stashRequestManager, atLeastOnce()).getRequestsForStash("future", nowPlus1Hour);
+        verify(stashRequestManager, atLeastOnce()).getRequestsForStash("past", nowPlus23Hours);
 
-        verifyNoMoreInteractions(executorService, scanRequestManager, scanUploader, scanCountListener);
+        verifyNoMoreInteractions(executorService, stashRequestManager, scanUploader, scanCountListener);
     }
 
     private Matcher<Long> withinNSeconds(final int seconds, final long expected) {

@@ -54,7 +54,7 @@ public class ScanUploadSchedulingService extends LeaderService {
     @Inject
     public ScanUploadSchedulingService(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                                        final ScanUploader scanUploader, final List<ScheduledDailyScanUpload> scheduledScans,
-                                       final ScanCountListener scanCountListener, final ScanRequestManager scanRequestManager,
+                                       final ScanCountListener scanCountListener, final StashRequestManager stashRequestManager,
                                        LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                                        final MetricRegistry metricRegistry,
                                        final Clock clock) {
@@ -62,7 +62,7 @@ public class ScanUploadSchedulingService extends LeaderService {
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new DelegateSchedulingService(scanUploader, scanRequestManager, scheduledScans, scanCountListener, clock);
+                        return new DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock);
                     }
                 });
 
@@ -76,18 +76,18 @@ public class ScanUploadSchedulingService extends LeaderService {
         private final Logger _log = LoggerFactory.getLogger(ScanUploadSchedulingService.class);
 
         private final ScanUploader _scanUploader;
-        private final ScanRequestManager _scanRequestManager;
+        private final StashRequestManager _stashRequestManager;
         private final List<ScheduledDailyScanUpload> _scheduledScans;
         private final ScanCountListener _scanCountListener;
         private final Set<ScheduledDailyScanUpload> _pendingScans = Sets.newHashSet();
         private final Clock _clock;
         private ScheduledExecutorService _service;
 
-        public DelegateSchedulingService(ScanUploader scanUploader, ScanRequestManager scanRequestManager,
+        public DelegateSchedulingService(ScanUploader scanUploader, StashRequestManager stashRequestManager,
                                          List<ScheduledDailyScanUpload> scheduledScans,
                                          ScanCountListener scanCountListener, Clock clock) {
             _scanUploader = scanUploader;
-            _scanRequestManager = scanRequestManager;
+            _stashRequestManager = stashRequestManager;
             _scheduledScans = scheduledScans;
             _scanCountListener = scanCountListener;
             _clock = clock;
@@ -183,7 +183,7 @@ public class ScanUploadSchedulingService extends LeaderService {
         }
 
         private void maybeAddPendingScan(final ScheduledDailyScanUpload scanUpload, final DateTime nextExecutionTime) {
-            if (scanUpload.isRequestRequired() && _scanRequestManager.getRequestsForScan(scanUpload.getId(), nextExecutionTime).isEmpty()) {
+            if (scanUpload.isRequestRequired() && _stashRequestManager.getRequestsForStash(scanUpload.getId(), nextExecutionTime).isEmpty()) {
                 // This scan runs only by request and there are currently no requests for this scan.  However, that
                 // could change between now and the next execution time.  Schedule to re-check in 30 seconds.
                 if (now().isBefore(nextExecutionTime.minusMinutes(1))) {
@@ -240,7 +240,7 @@ public class ScanUploadSchedulingService extends LeaderService {
         synchronized ScanStatus startScheduledScan(ScheduledDailyScanUpload scheduledScan, DateTime scheduledTime)
                 throws RepeatScanException, ScanExecutionTimeException {
             // Verify that the scan either doesn't require requests or has at least one request
-            if (scheduledScan.isRequestRequired() && _scanRequestManager.getRequestsForScan(scheduledScan.getId(), scheduledTime).isEmpty()) {
+            if (scheduledScan.isRequestRequired() && _stashRequestManager.getRequestsForStash(scheduledScan.getId(), scheduledTime).isEmpty()) {
                 _log.info("Scan {} did not receive any requests and will not be executed for {}",
                         scheduledScan.getId(), DateTimeFormat.mediumDateTime().print(scheduledTime));
                 return null;

@@ -52,7 +52,7 @@ import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBo
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.resource.StashResource1;
-import com.bazaarvoice.emodb.web.scanner.scheduling.ScanRequestManager;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.throttling.AdHocConcurrentRequestRegulatorSupplier;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
@@ -319,9 +319,9 @@ public class EmoService extends Application<EmoConfiguration> {
 
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         ScanUploader scanUploader = _injector.getInstance(ScanUploader.class);
-        ScanRequestManager scanRequestManager = _injector.getInstance(ScanRequestManager.class);
+        StashRequestManager stashRequestManager = _injector.getInstance(StashRequestManager.class);
 
-        resources.addResource(_cluster, "emodb-stash-1", new StashResource1(scanUploader, scanRequestManager));
+        resources.addResource(_cluster, "emodb-stash-1", new StashResource1(scanUploader, stashRequestManager));
         // No admin tasks are registered automatically in SCANNER ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }

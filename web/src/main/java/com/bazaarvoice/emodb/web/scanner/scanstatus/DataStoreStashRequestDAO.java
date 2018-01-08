@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * {@link ScanRequestDAO} implementation which uses a DataStore table for persistence.
+ * {@link StashRequestDAO} implementation which uses a DataStore table for persistence.
  */
-public class DataStoreScanRequestDAO implements ScanRequestDAO {
+public class DataStoreStashRequestDAO implements StashRequestDAO {
 
     private final DataStore _dataStore;
     private final String _tableName;
@@ -31,9 +31,9 @@ public class DataStoreScanRequestDAO implements ScanRequestDAO {
     private volatile boolean _tableChecked = false;
 
     @Inject
-    public DataStoreScanRequestDAO(DataStore dataStore,
-                                  @ScanRequestTable String tableName,
-                                  @ScanRequestTablePlacement String tablePlacement) {
+    public DataStoreStashRequestDAO(DataStore dataStore,
+                                    @StashRequestTable String tableName,
+                                    @StashRequestTablePlacement String tablePlacement) {
         _dataStore = dataStore;
         _tableName = tableName;
         _tablePlacement = tablePlacement;
@@ -51,16 +51,16 @@ public class DataStoreScanRequestDAO implements ScanRequestDAO {
                         new TableOptionsBuilder().setPlacement(_tablePlacement).build(),
                         ImmutableMap.<String, Object>of(),
                         new AuditBuilder().setLocalHost().setComment("Create scan request table").build());
-
-                _tableChecked = true;
             }
+
+            _tableChecked = true;
         }
 
         return _tableName;
     }
 
     @Override
-    public void requestScan(String scanId, ScanRequest request) {
+    public void requestStash(String scanId, StashRequest request) {
         checkNotNull(scanId, "scanId");
         checkNotNull(request, "request");
 
@@ -75,7 +75,7 @@ public class DataStoreScanRequestDAO implements ScanRequestDAO {
     }
 
     @Override
-    public void undoRequestScan(String scanId, ScanRequest request) {
+    public void undoRequestStash(String scanId, StashRequest request) {
         checkNotNull(scanId, "scanId");
         checkNotNull(request, "request");
 
@@ -92,7 +92,7 @@ public class DataStoreScanRequestDAO implements ScanRequestDAO {
     }
 
     @Override
-    public Set<ScanRequest> getRequestsForScan(String scanId) {
+    public Set<StashRequest> getRequestsForStash(String scanId) {
         Map<String, Object> map = _dataStore.get(getTable(), scanId);
         if (Intrinsic.isDeleted(map)) {
             return ImmutableSet.of();
@@ -101,7 +101,7 @@ public class DataStoreScanRequestDAO implements ScanRequestDAO {
                 map.getOrDefault("requests", ImmutableMap.of()), new TypeReference<Map<String, Date>>(){});
 
         return requestMap.entrySet().stream()
-                .map(entry -> new ScanRequest(entry.getKey(), entry.getValue()))
+                .map(entry -> new StashRequest(entry.getKey(), entry.getValue()))
                 .collect(Collectors.toSet());
     }
 }

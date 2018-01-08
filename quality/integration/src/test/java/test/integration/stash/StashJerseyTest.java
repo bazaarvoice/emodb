@@ -16,8 +16,8 @@ import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.resource.StashResource1;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequest;
-import com.bazaarvoice.emodb.web.scanner.scheduling.ScanRequestManager;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -48,7 +48,7 @@ public class StashJerseyTest extends ResourceTest {
     private String _stashKeyId;
     private String _unauthKeyId;
     private ScanUploader _scanUploader;
-    private ScanRequestManager _scanRequestManager;
+    private StashRequestManager _stashRequestManager;
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule();
@@ -68,18 +68,18 @@ public class StashJerseyTest extends ResourceTest {
                         .withPermissionUpdate(new PermissionUpdateRequest().permit("stash|*")));
 
         _scanUploader = mock(ScanUploader.class);
-        _scanRequestManager = mock(ScanRequestManager.class);
+        _stashRequestManager = mock(StashRequestManager.class);
 
         return setupResourceTestRule(
-                ImmutableList.of(new StashResource1(_scanUploader, _scanRequestManager)),
+                ImmutableList.of(new StashResource1(_scanUploader, _stashRequestManager)),
                 authIdentityManager,
                 permissionManager);
     }
 
     @After
     public void resetMocks() {
-        verifyNoMoreInteractions(_scanUploader, _scanRequestManager);
-        reset(_scanUploader, _scanRequestManager);
+        verifyNoMoreInteractions(_scanUploader, _stashRequestManager);
+        reset(_scanUploader, _stashRequestManager);
     }
 
     @Test
@@ -88,7 +88,7 @@ public class StashJerseyTest extends ResourceTest {
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
                 .put();
 
-        verify(_scanRequestManager).requestScanOnOrAfter("id0", null, _stashKeyId);
+        verify(_stashRequestManager).requestStashOnOrAfter("id0", null, _stashKeyId);
     }
 
     @Test
@@ -104,10 +104,10 @@ public class StashJerseyTest extends ResourceTest {
 
     @Test
     public void testViewRequestStash() {
-        when(_scanRequestManager.getRequestsForScan("id0", null)).thenReturn(ImmutableSet.of(
-                new ScanRequest("__otherKey0", new Date(1511820710000L)),
-                new ScanRequest(_stashKeyId, new Date(1511820711000L)),
-                new ScanRequest("__otherKey1", new Date(1511820712000L))));
+        when(_stashRequestManager.getRequestsForStash("id0", null)).thenReturn(ImmutableSet.of(
+                new StashRequest("__otherKey0", new Date(1511820710000L)),
+                new StashRequest(_stashKeyId, new Date(1511820711000L)),
+                new StashRequest("__otherKey1", new Date(1511820712000L))));
 
         String response = _resourceTestRule.client().resource("/stash/1/request/id0")
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
@@ -115,12 +115,12 @@ public class StashJerseyTest extends ResourceTest {
 
         assertEquals("\"2017-11-27T22:11:51.000Z\"", response);
 
-        verify(_scanRequestManager).getRequestsForScan("id0", null);
+        verify(_stashRequestManager).getRequestsForStash("id0", null);
     }
 
     @Test
     public void testViewUnrequestedStash() {
-        when(_scanRequestManager.getRequestsForScan("id0", null)).thenReturn(ImmutableSet.of());
+        when(_stashRequestManager.getRequestsForStash("id0", null)).thenReturn(ImmutableSet.of());
 
         try {
             _resourceTestRule.client().resource("/stash/1/request/id0")
@@ -130,7 +130,7 @@ public class StashJerseyTest extends ResourceTest {
             assertEquals(Response.Status.NOT_FOUND.getStatusCode(), e.getResponse().getStatus());
         }
 
-        verify(_scanRequestManager).getRequestsForScan("id0", null);
+        verify(_stashRequestManager).getRequestsForStash("id0", null);
     }
 
     @Test
@@ -150,7 +150,7 @@ public class StashJerseyTest extends ResourceTest {
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
                 .delete();
 
-        verify(_scanRequestManager).undoRequestForScanOnOrAfter("id0", null, _stashKeyId);
+        verify(_stashRequestManager).undoRequestForStashOnOrAfter("id0", null, _stashKeyId);
     }
 
     @Test

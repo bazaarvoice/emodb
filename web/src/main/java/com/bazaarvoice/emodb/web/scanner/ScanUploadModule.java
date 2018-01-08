@@ -45,16 +45,16 @@ import com.bazaarvoice.emodb.web.scanner.notifications.SNSStashStateListener;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.rangescan.LocalRangeScanUploader;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploader;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreScanRequestDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreStashRequestDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.DataStoreScanStatusDAO;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestDAO;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestTable;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequestTablePlacement;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTable;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTable;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanParticipationService;
-import com.bazaarvoice.emodb.web.scanner.scheduling.ScanRequestManager;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
@@ -122,9 +122,9 @@ public class ScanUploadModule extends PrivateModule {
         binder().requireExplicitBindings();
 
         bind(ScanUploader.class).asEagerSingleton();
-        bind(ScanRequestManager.class).asEagerSingleton();
+        bind(StashRequestManager.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(DataStoreScanStatusDAO.class).asEagerSingleton();
-        bind(ScanRequestDAO.class).to(DataStoreScanRequestDAO.class).asEagerSingleton();
+        bind(StashRequestDAO.class).to(DataStoreStashRequestDAO.class).asEagerSingleton();
         bind(RangeScanUploader.class).to(LocalRangeScanUploader.class).asEagerSingleton();
 
         bind(MetricsScanCountListener.class).asEagerSingleton();
@@ -139,7 +139,7 @@ public class ScanUploadModule extends PrivateModule {
         bind(ScanWorkflow.class).toProvider(scanWorkflowProvider).asEagerSingleton();
 
         bind(String.class).annotatedWith(ScanStatusTable.class).toInstance(_config.getScanStatusTable());
-        bind(String.class).annotatedWith(ScanRequestTable.class).toInstance(_config.getScanRequestTable());
+        bind(String.class).annotatedWith(StashRequestTable.class).toInstance(_config.getScanRequestTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
 
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingScanRangeQueueName"))
@@ -167,7 +167,7 @@ public class ScanUploadModule extends PrivateModule {
         bind(AmazonS3Provider.class).asEagerSingleton();
 
         expose(ScanUploader.class);
-        expose(ScanRequestManager.class);
+        expose(StashRequestManager.class);
     }
 
     @Provides
@@ -179,7 +179,7 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    @ScanRequestTablePlacement
+    @StashRequestTablePlacement
     protected String provideScanRequestTablePlacement(DataStoreConfiguration config) {
         return config.getSystemTablePlacement();
     }

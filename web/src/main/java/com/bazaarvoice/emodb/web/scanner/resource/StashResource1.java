@@ -6,9 +6,9 @@ import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRequest;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
-import com.bazaarvoice.emodb.web.scanner.scheduling.ScanRequestManager;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
@@ -43,11 +43,11 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class StashResource1 {
 
     private final ScanUploader _scanUploader;
-    private final ScanRequestManager _scanRequestManager;
+    private final StashRequestManager _stashRequestManager;
 
-    public StashResource1(ScanUploader scanUploader, ScanRequestManager scanRequestManager) {
+    public StashResource1(ScanUploader scanUploader, StashRequestManager stashRequestManager) {
         _scanUploader = scanUploader;
-        _scanRequestManager = scanRequestManager;
+        _stashRequestManager = stashRequestManager;
     }
 
     @POST
@@ -139,25 +139,25 @@ public class StashResource1 {
     @PUT
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public SuccessResponse requestScan(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
-                                       @Authenticated Subject subject) {
+    public SuccessResponse requestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                        @Authenticated Subject subject) {
         final DateTime time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
-        _scanRequestManager.requestScanOnOrAfter(id, time, requestedBy);
+        _stashRequestManager.requestStashOnOrAfter(id, time, requestedBy);
         return SuccessResponse.instance();
     }
 
     @GET
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public Date getScanRequest(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
-                               @Authenticated Subject subject) {
+    public Date getStashRequest(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                @Authenticated Subject subject) {
 
         final DateTime time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
-        return _scanRequestManager.getRequestsForScan(id, time).stream()
+        return _stashRequestManager.getRequestsForStash(id, time).stream()
                 .filter(request -> request.getRequestedBy().equals(requestedBy))
-                .map(ScanRequest::getRequestTime)
+                .map(StashRequest::getRequestTime)
                 .findFirst()
                 .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
     }
@@ -166,12 +166,12 @@ public class StashResource1 {
     @DELETE
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public SuccessResponse undoRequestScan(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
-                                           @Authenticated Subject subject) {
+    public SuccessResponse undoRequestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                            @Authenticated Subject subject) {
 
         final DateTime time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
-        _scanRequestManager.undoRequestForScanOnOrAfter(id, time, requestedBy);
+        _stashRequestManager.undoRequestForStashOnOrAfter(id, time, requestedBy);
         return SuccessResponse.instance();
     }
 
