@@ -99,7 +99,7 @@ public class DefaultFanoutManager implements FanoutManager {
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
-        _dropwizardTask.register("databus-fanout", leaderService);
+        _dropwizardTask.register("databus-fanout-" + name, leaderService);
         return leaderService;
     }
 }
