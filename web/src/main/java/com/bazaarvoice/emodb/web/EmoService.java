@@ -51,7 +51,8 @@ import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
-import com.bazaarvoice.emodb.web.scanner.resource.ScanUploadResource1;
+import com.bazaarvoice.emodb.web.scanner.resource.StashResource1;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.throttling.AdHocConcurrentRequestRegulatorSupplier;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
@@ -94,7 +95,21 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.*;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.web;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class EmoService extends Application<EmoConfiguration> {
@@ -192,6 +207,7 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateBlackList();
         evaluateReporting();
         evaluateThrottling();
+        evaluateSecurity();
         evaluateScanner();
         evaluateDeltaMigrator();
         evaluateServiceStartedListeners();
@@ -301,8 +317,11 @@ public class EmoService extends Application<EmoConfiguration> {
             return;
         }
 
+        ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         ScanUploader scanUploader = _injector.getInstance(ScanUploader.class);
-        _environment.jersey().register(new ScanUploadResource1(scanUploader));
+        StashRequestManager stashRequestManager = _injector.getInstance(StashRequestManager.class);
+
+        resources.addResource(_cluster, "emodb-stash-1", new StashResource1(scanUploader, stashRequestManager));
         // No admin tasks are registered automatically in SCANNER ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
@@ -349,8 +368,6 @@ public class EmoService extends Application<EmoConfiguration> {
 
         AdHocThrottleManager adHocThrottleManager = _injector.getInstance(AdHocThrottleManager.class);
 
-        DropwizardAuthConfigurator authConfigurator = _injector.getInstance(DropwizardAuthConfigurator.class);
-
         // Add filter to allow ad-hoc throttling of API calls
         ConcurrentRequestsThrottlingFilter adHocThrottleFilter =
                 new ConcurrentRequestsThrottlingFilter(new AdHocConcurrentRequestRegulatorSupplier(adHocThrottleManager, _environment.metrics()));
@@ -363,6 +380,14 @@ public class EmoService extends Application<EmoConfiguration> {
         _environment.jersey().getResourceConfig().getContainerRequestFilters().add(adHocThrottleFilter);
         //noinspection unchecked
         _environment.jersey().getResourceConfig().getContainerResponseFilters().add(adHocThrottleFilter);
+    }
+
+    private void evaluateSecurity() {
+        if (!runPerServiceMode(security)) {
+            return;
+        }
+
+        DropwizardAuthConfigurator authConfigurator = _injector.getInstance(DropwizardAuthConfigurator.class);
         // Add API Key authentication and authorization
         authConfigurator.configure(_environment);
     }

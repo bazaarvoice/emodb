@@ -15,7 +15,7 @@ public class ScheduledDailyScanUpload {
 
     private static final DateTimeFormatter TIME_OF_DAY_FORMAT = DateTimeFormat.forPattern("HH:mmZ").withZoneUTC();
 
-
+    private final String _id;
     private final String _timeOfDay;
     private final DateTimeFormatter _scanIdFormat;
     private final ScanDestination _rootDestination;
@@ -23,11 +23,13 @@ public class ScheduledDailyScanUpload {
     private final List<String> _placements;
     private final int _maxRangeConcurrency;
     private final boolean _scanByAZ;
+    private final boolean requestRequired;
 
-    public ScheduledDailyScanUpload(String timeOfDay, DateTimeFormatter scanIdFormat,
+    public ScheduledDailyScanUpload(String id, String timeOfDay, DateTimeFormatter scanIdFormat,
                                     ScanDestination rootDestination, DateTimeFormatter directoryFormat,
                                     List<String> placements, int maxRangeConcurrency,
-                                    boolean scanByAZ) {
+                                    boolean scanByAZ, boolean requestRequired) {
+        _id = id;
         _timeOfDay = timeOfDay;
         _scanIdFormat = scanIdFormat;
         _rootDestination = rootDestination;
@@ -35,6 +37,11 @@ public class ScheduledDailyScanUpload {
         _placements = placements;
         _maxRangeConcurrency = maxRangeConcurrency;
         _scanByAZ = scanByAZ;
+        this.requestRequired = requestRequired;
+    }
+
+    public String getId() {
+        return _id;
     }
 
     public String getTimeOfDay() {
@@ -63,6 +70,10 @@ public class ScheduledDailyScanUpload {
 
     public boolean isScanByAZ() {
         return _scanByAZ;
+    }
+
+    public boolean isRequestRequired() {
+        return requestRequired;
     }
 
     /**

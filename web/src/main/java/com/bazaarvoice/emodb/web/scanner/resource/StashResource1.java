@@ -1,17 +1,28 @@
 package com.bazaarvoice.emodb.web.scanner.resource;
 
+import com.bazaarvoice.emodb.auth.jersey.Authenticated;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.dropwizard.jersey.params.DateTimeParam;
+import org.apache.shiro.authz.annotation.RequiresAuthentication;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.joda.time.DateTime;
 
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -20,23 +31,28 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-@Path ("/scanner/1")
+@Path ("/stash/1")
 @Produces (MediaType.APPLICATION_JSON)
 @Consumes (MediaType.WILDCARD)
-public class ScanUploadResource1 {
+@RequiresAuthentication
+public class StashResource1 {
 
     private final ScanUploader _scanUploader;
+    private final StashRequestManager _stashRequestManager;
 
-    public ScanUploadResource1(ScanUploader scanUploader) {
+    public StashResource1(ScanUploader scanUploader, StashRequestManager stashRequestManager) {
         _scanUploader = scanUploader;
+        _stashRequestManager = stashRequestManager;
     }
 
     @POST
-    @Path ("upload/{id}")
+    @Path ("job/{id}")
+    @RequiresPermissions("stash|create|{id}")
     public ScanStatus startScan(@PathParam ("id") String id,
                                 @QueryParam ("placement") List<String> placements,
                                 @QueryParam ("dest") List<String> destinationParams,
@@ -76,7 +92,8 @@ public class ScanUploadResource1 {
     }
 
     @GET
-    @Path ("upload/{id}")
+    @Path ("job/{id}")
+    @RequiresPermissions("stash|view|{id}")
     public ScanStatus getScanStatus(@PathParam ("id") String id) {
         ScanStatus scanStatus = _scanUploader.getStatus(id);
 
@@ -92,7 +109,8 @@ public class ScanUploadResource1 {
     }
 
     @POST
-    @Path ("upload/{id}/cancel")
+    @Path ("job/{id}/cancel")
+    @RequiresPermissions("stash|cancel|{id}")
     public ScanStatus cancelScan(@PathParam ("id") String id) {
         ScanStatus scanStatus = _scanUploader.getStatus(id);
         if (scanStatus == null) {
@@ -107,7 +125,8 @@ public class ScanUploadResource1 {
     }
 
     @POST
-    @Path ("upload/{id}/recover")
+    @Path ("job/{id}/recover")
+    @RequiresPermissions("stash|create|{id}")
     public ScanStatus recoverScan(@PathParam ("id") String id) {
         ScanStatus scanStatus = _scanUploader.resubmitWorkflowTasks(id);
         if (scanStatus == null) {
@@ -116,4 +135,44 @@ public class ScanUploadResource1 {
 
         return scanStatus;
     }
+
+    @PUT
+    @Path("request/{id}")
+    @RequiresPermissions("stash|request|{id}")
+    public SuccessResponse requestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                        @Authenticated Subject subject) {
+        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final String requestedBy = subject.getId();
+        _stashRequestManager.requestStashOnOrAfter(id, time, requestedBy);
+        return SuccessResponse.instance();
+    }
+
+    @GET
+    @Path("request/{id}")
+    @RequiresPermissions("stash|request|{id}")
+    public Date getStashRequest(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                @Authenticated Subject subject) {
+
+        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final String requestedBy = subject.getId();
+        return _stashRequestManager.getRequestsForStash(id, time).stream()
+                .filter(request -> request.getRequestedBy().equals(requestedBy))
+                .map(StashRequest::getRequestTime)
+                .findFirst()
+                .orElseThrow(() -> new WebApplicationException(Response.Status.NOT_FOUND));
+    }
+
+
+    @DELETE
+    @Path("request/{id}")
+    @RequiresPermissions("stash|request|{id}")
+    public SuccessResponse undoRequestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+                                            @Authenticated Subject subject) {
+
+        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final String requestedBy = subject.getId();
+        _stashRequestManager.undoRequestForStashOnOrAfter(id, time, requestedBy);
+        return SuccessResponse.instance();
+    }
+
 }

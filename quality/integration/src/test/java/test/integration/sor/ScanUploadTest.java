@@ -169,7 +169,7 @@ public class ScanUploadTest {
 
             // Use the API to start the scan and upload
             Client client = new JerseyClientBuilder(environment).build("scanUploadTest");
-            ScanStatus scanStatus = client.resource(String.format("http://localhost:%d/scanner/1/upload/%s", hostAndPort.getPort(), scanId))
+            ScanStatus scanStatus = client.resource(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId))
                     .queryParam("placement", "ugc_global:ugc")
                     .queryParam("dest", dir.toURI().toString())
                     .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -183,7 +183,7 @@ public class ScanUploadTest {
             while (!complete) {
                 Thread.sleep(5000);
 
-                scanStatus = client.resource(URI.create(String.format("http://localhost:%d/scanner/1/upload/%s", hostAndPort.getPort(), scanId)))
+                scanStatus = client.resource(URI.create(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId)))
                         .accept(MediaType.APPLICATION_JSON_TYPE)
                         .get(ScanStatus.class);
 

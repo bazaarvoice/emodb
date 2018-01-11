@@ -208,6 +208,7 @@
                                         <permission>blob|read|*</permission>
                                         <permission>databus|*</permission>
                                         <permission>queue|*</permission>
+                                        <permission>stash|*</permission>
                                     </permissions>
                                 </role>
                             </roles>
