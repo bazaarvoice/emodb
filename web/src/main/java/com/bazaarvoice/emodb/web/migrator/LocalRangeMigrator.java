@@ -59,7 +59,7 @@ public class LocalRangeMigrator {
             while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().getMillis() && results.hasNext()) {
 
                 Iterator<MigrationScanResult> batchIterator = Iterators.limit(results, BATCH_SIZE);
-                _migratorTools.writeRows(placement, results, maxWritesPerSecond);
+                _migratorTools.writeRows(placement, batchIterator, maxWritesPerSecond);
 
             }
 
