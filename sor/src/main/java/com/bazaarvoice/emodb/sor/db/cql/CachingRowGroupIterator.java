@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.datastax.driver.core.Row;
-import com.google.common.base.Predicates;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 
+import java.lang.ref.Reference;
 import java.lang.ref.SoftReference;
 import java.util.Iterator;
 import java.util.List;
@@ -109,7 +109,7 @@ public class CachingRowGroupIterator extends AbstractIterator<Iterable<Row>> {
                     // the backend.  Start by dereferencing all of the remaining cached row groups that can no
                     // longer be used, though keep the current row group to signal future iterations to reload
                     // remaining rows.
-                    Iterators.removeIf(_softGroupsIterator, Predicates.alwaysTrue());
+                    _softGroupsIterator.forEachRemaining(Reference::clear);
 
                     _sourceIterator = rowGroup.reloadRowsAfter(_lastCacheRow);
                     return getNextFromSourceIterator();
