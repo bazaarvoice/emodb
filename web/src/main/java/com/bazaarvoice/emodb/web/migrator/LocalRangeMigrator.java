@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.core.MigratorTools;
 import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.codahale.metrics.Counter;
@@ -26,7 +27,8 @@ import static com.google.common.base.Preconditions.checkState;
 public class LocalRangeMigrator {
 
     private final static float RESPLIT_FACTOR = 3;
-    private final static int BATCH_SIZE = 2500;
+    private final static int READ_RATE_LIMITER_SECONDS = 60;
+    private final static int MAX_BATCH_SIZE = 10000;
 
     private final static Logger _log = LoggerFactory.getLogger(LocalRangeMigrator.class);
 
@@ -43,7 +45,8 @@ public class LocalRangeMigrator {
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
     }
 
-    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxWritesPerSecond) throws IOException, InterruptedException {
+    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range,
+                                           MigratorStatusDAO statusDAO, String migrationId) throws IOException, InterruptedException {
         
         _log.info("Migrating placement {}: {}", placement, range);
 
@@ -56,9 +59,19 @@ public class LocalRangeMigrator {
 
             Iterator<MigrationScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
 
+            int maxWritesPerSecond = statusDAO.getMaxWritesPerSecond(migrationId);
+            long maxWritesTimestamp = System.currentTimeMillis();
+
             while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().getMillis() && results.hasNext()) {
 
-                Iterator<MigrationScanResult> batchIterator = Iterators.limit(results, BATCH_SIZE);
+                if (maxWritesTimestamp + (READ_RATE_LIMITER_SECONDS * 1000) > System.currentTimeMillis()) {
+                    maxWritesPerSecond = statusDAO.getMaxWritesPerSecond(migrationId);
+                    maxWritesTimestamp = System.currentTimeMillis();
+                }
+
+                Iterator<MigrationScanResult> batchIterator = Iterators.limit(results,
+                        Math.min(MAX_BATCH_SIZE, maxWritesPerSecond * READ_RATE_LIMITER_SECONDS));
+
                 _migratorTools.writeRows(placement, batchIterator, maxWritesPerSecond);
 
             }

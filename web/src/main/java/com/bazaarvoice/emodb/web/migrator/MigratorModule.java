@@ -43,6 +43,8 @@ public class MigratorModule extends PrivateModule {
 
         checkArgument(_config.getReadThreadCount() > 0, "Read thread count must be at least 1");
         checkArgument(_config.getMaxWritesPerSecond() > 0, "Max writes per second must be at least 1");
+        checkArgument(_config.getMigratorSplitSize() > 0, "Migrator split size must be at least 1");
+
     }
 
     @Override
@@ -65,6 +67,8 @@ public class MigratorModule extends PrivateModule {
                 .toInstance(_config.getCompleteMigrationRangeQueueName());
         bind(Integer.class).annotatedWith(Names.named("maxWritesPerSecond"))
                 .toInstance(_config.getMaxWritesPerSecond());
+
+        bind(Integer.class).annotatedWith(MigratorSplitSize.class).toInstance(_config.getMigratorSplitSize());
 
         bind(MigratorMonitor.class).asEagerSingleton();
         bind(DistributedMigratorRangeMonitor.class).asEagerSingleton();

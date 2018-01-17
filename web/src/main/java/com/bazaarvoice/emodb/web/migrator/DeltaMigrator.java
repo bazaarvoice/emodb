@@ -31,20 +31,24 @@ public class DeltaMigrator {
     private final MigratorStatusDAO _statusDAO;
     private final ScanWorkflow _workflow;
     private final int _defaultMaxWritesPerSecond;
+    private final int _migratorSplitSize;
 
     @Inject
     public DeltaMigrator(DataTools dataTools, MigratorStatusDAO statusDAO, ScanWorkflow workflow,
-                         @Named ("maxWritesPerSecond") Integer maxWritesPerSecond) {
+                         @Named ("maxWritesPerSecond") Integer maxWritesPerSecond, @MigratorSplitSize int migratorSplitSize) {
         _dataTools = checkNotNull(dataTools, "dataTools");
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _workflow = checkNotNull(workflow, "workflow");
         _defaultMaxWritesPerSecond = maxWritesPerSecond;
+        _migratorSplitSize = migratorSplitSize;
 
     }
 
     public MigratorStatus migratePlacement(String placement, int maxWritesPerSecond) {
         ScanOptions options = new ScanOptions(placement)
-                .setScanByAZ(true);
+                .setScanByAZ(true)
+                .setRangeScanSplitSize(_migratorSplitSize);
+
         MigratorPlan plan = createPlan(placement, options);
         MigratorStatus status = plan.toMigratorStatus(maxWritesPerSecond > 0 ? maxWritesPerSecond: _defaultMaxWritesPerSecond);
 

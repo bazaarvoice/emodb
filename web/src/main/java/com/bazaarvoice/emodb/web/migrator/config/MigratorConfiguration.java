@@ -15,6 +15,7 @@ public class MigratorConfiguration {
     private static final String DEFAULT_MIGRATE_STATUS_TABLE = "__system_migrate";
     private static final String DEFAULT_MIGRATE_STATUS_TABLE_PLACEMENT = "app_global:migration";
     private static final int DEFAULT_MAX_WRITES_PER_SECOND = 1000;
+    private static final int DEFAULT_MIGRATOR_SPLIT_SIZE = 1000000;
 
     // If using EmoDB queues, the API key to use
     @Valid
@@ -44,6 +45,12 @@ public class MigratorConfiguration {
     @NotNull
     @JsonProperty ("maxWritesPerSecond")
     private int _maxWritesPerSecond = DEFAULT_MAX_WRITES_PER_SECOND;
+
+
+    @Valid
+    @NotNull
+    @JsonProperty ("migratorSplitSize")
+    private int _migratorSplitSize = DEFAULT_MIGRATOR_SPLIT_SIZE;
 
     @Valid
     @NotNull
@@ -107,7 +114,19 @@ public class MigratorConfiguration {
         return this;
     }
 
+    public int setMaxWritesPerSecond() {
+        return _maxWritesPerSecond;
+    }
+
     public int getMaxWritesPerSecond() {
         return _maxWritesPerSecond;
+    }
+
+    public int setMigratorSplitSize() {
+        return _migratorSplitSize;
+    }
+
+    public int getMigratorSplitSize() {
+        return _migratorSplitSize;
     }
 }
