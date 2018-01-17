@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.datastax.driver.core.Row;
 import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Table;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -14,8 +15,10 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
@@ -89,6 +92,8 @@ public class CachingRowGroupIteratorTest {
         assertTrue(iterator.hasNext());
         // Get the rows from the row group
         Iterable<Row> rows = iterator.next();
+        // Create an iterator but from the iterable but delay iteratoring over it for now
+        Iterator<Row> delayedRowIterator = rows.iterator();
         assertTrue(groupsEqual(rows, row("a", "1", "1"), row("a", "2", "2"), row("a", "3", "3"),
                 row("a", "4", "4"), row("a", "5", "5"), row("a", "6", "6"), row("a", "7", "7"), row("a", "8", "8")));
         // Last 6 rows should have been put in the soft cache
@@ -107,6 +112,10 @@ public class CachingRowGroupIteratorTest {
 
         // This time rows 5 through 8 should have come from a reload
         assertTrue(groupsEqual(_reloadedRows, row("a", "5", "5"), row("a", "6", "6"), row("a", "7", "7"), row("a", "8", "8")));
+
+        // Verify the delayed iterable can still be traversed and return correct results
+        assertTrue(groupsEqual(ImmutableList.copyOf(delayedRowIterator), row("a", "1", "1"), row("a", "2", "2"), row("a", "3", "3"),
+                row("a", "4", "4"), row("a", "5", "5"), row("a", "6", "6"), row("a", "7", "7"), row("a", "8", "8")));
     }
 
     private class CachingRowGroupIteratorWithMockSoftReferences extends CachingRowGroupIterator {
@@ -119,10 +128,12 @@ public class CachingRowGroupIteratorTest {
         protected SoftReference<List<Row>> softlyReferenced(List<Row> rows) {
             //noinspection unchecked
             SoftReference<List<Row>> ref = mock(SoftReference.class);
+            final AtomicReference<List<Row>> rowsRef = new AtomicReference<>(rows);
             // Record this list was returned in a soft reference, keyed by the first record
             _softReferences.put(rows.get(0).getString(0), rows.get(0).getString(1), ref);
             // By default the reference will return the rows.  Callers can reset the mock to override this behavior.
-            when(ref.get()).thenReturn(rows);
+            when(ref.get()).thenAnswer(ignore -> rowsRef.get());
+            doAnswer(ignore -> { rowsRef.set(null); return null; }).when(ref).clear();
             return ref;
         }
     }
