@@ -53,6 +53,7 @@ public class MigratorModule extends PrivateModule {
 
         bind(DeltaMigrator.class).asEagerSingleton();
         bind(MigratorStatusDAO.class).asEagerSingleton();
+        bind(MigratorRateLimiter.class).to(MigratorStatusDAO.class);
         bind(LocalRangeMigrator.class).asEagerSingleton();
 
         bind(ScanWorkflow.class).toProvider(QueueScanWorkflowProvider.class).asEagerSingleton();

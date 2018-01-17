@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
+import com.bazaarvoice.emodb.web.migrator.MigratorRateLimiter;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.*;
 import com.google.common.base.Optional;
@@ -20,7 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-public class MigratorStatusDAO {
+public class MigratorStatusDAO implements MigratorRateLimiter {
 
     private final DataStore _dataStore;
     private final String _tableName;
@@ -281,6 +282,7 @@ public class MigratorStatusDAO {
                 new AuditBuilder().setLocalHost().setComment("Canceling migration").build());
     }
 
+    @Override
     public void setMaxWritesPerSecond(String migrationId, int maxWritesPerSecond) {
         _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
@@ -288,6 +290,7 @@ public class MigratorStatusDAO {
                 new AuditBuilder().setLocalHost().setComment("modifying maxWritesPerSecond").build());
     }
 
+    @Override
     public int getMaxWritesPerSecond(String migrationId) {
         Map<String, Object> status = _dataStore.get(getTable(), migrationId);
         return (int) status.get("maxWritesPerSecond");
