@@ -58,7 +58,7 @@ public class MigratorStatusDAO {
 
     public Iterator<MigratorStatus> list(@Nullable String fromIdExclusive, long limit) {
         return Iterators.transform(
-                _dataStore.scan(getTable(), fromIdExclusive, limit, ReadConsistency.STRONG),
+                _dataStore.scan(getTable(), fromIdExclusive, limit, false, ReadConsistency.STRONG),
                         map -> fromMap(map));
     }
 

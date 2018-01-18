@@ -69,7 +69,7 @@ public class DataStoreScanStatusDAO implements ScanStatusDAO {
     @Override
     public Iterator<ScanStatus> list(@Nullable String fromIdExclusive, long limit) {
         return Iterators.transform(
-                _dataStore.scan(getTable(), fromIdExclusive, limit, ReadConsistency.STRONG),
+                _dataStore.scan(getTable(), fromIdExclusive, limit, false, ReadConsistency.STRONG),
                 new Function<Map<String, Object>, ScanStatus>() {
                     @Override
                     public ScanStatus apply(Map<String, Object> map) {

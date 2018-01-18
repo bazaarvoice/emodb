@@ -477,26 +477,31 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public Iterator<Map<String, Object>> scan(String tableName, @Nullable String fromKeyExclusive,
-                                              long limit, ReadConsistency consistency) {
+                                              long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkArgument(limit > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
 
         LimitCounter remaining = new LimitCounter(limit);
-        return remaining.limit(scan(tableName, fromKeyExclusive, remaining, consistency));
+        return remaining.limit(scan(tableName, fromKeyExclusive, remaining, includeDeletes, consistency));
     }
 
     // Internal API used by table DAOs that supports a LimitCounter instead of a long limit.
     @Override
     public Iterator<Map<String, Object>> scan(String tableName, @Nullable String fromKeyExclusive,
                                               LimitCounter limit, ReadConsistency consistency) {
+        return scan(tableName, fromKeyExclusive, limit, false, consistency);
+    }
+
+    private Iterator<Map<String, Object>> scan(String tableName, @Nullable String fromKeyExclusive,
+                                              LimitCounter limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkArgument(limit.remaining() > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
 
         Table table = _tableDao.get(tableName);
         Iterator<Record> records = _dataReaderDao.scan(table, fromKeyExclusive, limit, consistency);
-        return resolveScanResults(records, consistency);
+        return resolveScanResults(records, consistency, includeDeletes);
     }
 
     @Override
@@ -511,7 +516,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     @Override
     public Iterator<Map<String, Object>> getSplit(String tableName, String split,
                                                   @Nullable String fromKeyExclusive,
-                                                  long limit, ReadConsistency consistency) {
+                                                  long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkNotNull(split, "split");
         checkArgument(limit > 0, "Limit must be >0");
@@ -520,7 +525,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         Table table = _tableDao.get(tableName);
         LimitCounter remaining = new LimitCounter(limit);
         Iterator<Record> records = _dataReaderDao.getSplit(table, split, fromKeyExclusive, remaining, consistency);
-        return remaining.limit(resolveScanResults(records, consistency));
+        return remaining.limit(resolveScanResults(records, consistency, includeDeletes));
     }
 
     @Override
@@ -546,11 +551,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         });
     }
 
-    /** Incrementally resolves all the specified records, skipping deleted objects. */
-    private Iterator<Map<String, Object>> resolveScanResults(final Iterator<Record> records,
-                                                             final ReadConsistency consistency) {
-        return resolveScanResults(records, consistency, false);
-    }
     private Iterator<Map<String, Object>> resolveScanResults(final Iterator<Record> records,
                                                              final ReadConsistency consistency,
                                                              final boolean includeDeletes) {

@@ -150,13 +150,13 @@ class DataStoreAuthenticatorProxy implements DataStore {
     }
 
     @Override
-    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _authDataStore.scan(_apiKey, table, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _authDataStore.scan(_apiKey, table, fromKeyExclusive, limit, includeDeletes, consistency);
     }
 
     @Override
-    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _authDataStore.getSplit(_apiKey, table, split, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _authDataStore.getSplit(_apiKey, table, split, fromKeyExclusive, limit, includeDeletes, consistency);
     }
 
     @Override

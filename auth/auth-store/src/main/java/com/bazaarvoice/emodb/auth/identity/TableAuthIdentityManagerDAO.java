@@ -319,7 +319,7 @@ public class TableAuthIdentityManagerDAO<T extends AuthIdentity> implements Auth
         if (identity == null) {
             // This should be rare, but if the record was not found or was stale in the index table then scan for it.
 
-            Iterator<Map<String, Object>> entries = _dataStore.scan(_identityTableName, null, Long.MAX_VALUE, ReadConsistency.STRONG);
+            Iterator<Map<String, Object>> entries = _dataStore.scan(_identityTableName, null, Long.MAX_VALUE, false, ReadConsistency.STRONG);
             while (entries.hasNext() && identity == null) {
                 Map<String, Object> entry = entries.next();
                 T potentialIdentity = convertDataStoreEntryToIdentity(entry);

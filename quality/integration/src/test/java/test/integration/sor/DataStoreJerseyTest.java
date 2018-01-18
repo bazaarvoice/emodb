@@ -47,6 +47,8 @@ import com.bazaarvoice.emodb.web.auth.DefaultRoles;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.base.Strings;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -200,23 +202,23 @@ public class DataStoreJerseyTest extends ResourceTest {
     }
 
     @Test public void testScanRestricted() {
-        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer");
-        when(_server.scan("a-table-1", null, 10, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
+        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer", Intrinsic.DELETED, false);
+        when(_server.scan("a-table-1", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
             @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                 return ImmutableList.of(doc).iterator();
             }
         });
 
         {
-            final Iterator<Map<String, Object>> scan = sorClient(APIKEY_READ_TABLES_A).scan("a-table-1", null, 10L, ReadConsistency.STRONG);
+            final Iterator<Map<String, Object>> scan = sorClient(APIKEY_READ_TABLES_A).scan("a-table-1", null, 10L, false, ReadConsistency.STRONG);
             final Map<String, Object> result = scan.next();
             assertFalse(scan.hasNext());
             assertEquals(doc, result);
-            verify(_server).scan("a-table-1", null, 10, ReadConsistency.STRONG);
+            verify(_server).scan("a-table-1", null, Long.MAX_VALUE, true, ReadConsistency.STRONG);
         }
         {
             try {
-                sorClient(APIKEY_READ_TABLES_B).scan("a-table-1", null, 10L, ReadConsistency.STRONG);
+                sorClient(APIKEY_READ_TABLES_B).scan("a-table-1", null, 10L, false, ReadConsistency.STRONG);
                 fail("should have thrown");
             } catch (Exception e) {
                 assertTrue(e instanceof UnauthorizedException);
@@ -245,24 +247,24 @@ public class DataStoreJerseyTest extends ResourceTest {
     }
 
     @Test public void testGetSplitRestricted() {
-        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer");
-        when(_server.getSplit("a-table-1", "schplit", null, 10, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
+        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer", Intrinsic.DELETED, false);
+        when(_server.getSplit("a-table-1", "schplit", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
             @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                 return ImmutableList.of(doc).iterator();
             }
         });
 
         {
-            final Iterator<Map<String, Object>> split = sorClient(APIKEY_READ_TABLES_A).getSplit("a-table-1", "schplit", null, 10, ReadConsistency.STRONG);
+            final Iterator<Map<String, Object>> split = sorClient(APIKEY_READ_TABLES_A).getSplit("a-table-1", "schplit", null, 10, false, ReadConsistency.STRONG);
             final Map<String, Object> result = split.next();
             assertFalse(split.hasNext());
             assertEquals(doc, result);
-            verify(_server).getSplit("a-table-1", "schplit", null, 10, ReadConsistency.STRONG);
+            verify(_server).getSplit("a-table-1", "schplit", null, Long.MAX_VALUE, true, ReadConsistency.STRONG);
         }
 
         {
             try {
-                sorClient(APIKEY_READ_TABLES_B).getSplit("a-table-1", "schplit", null, 10, ReadConsistency.STRONG);
+                sorClient(APIKEY_READ_TABLES_B).getSplit("a-table-1", "schplit", null, 10, false, ReadConsistency.STRONG);
                 fail("should have thrown");
             } catch (Exception e) {
                 assertTrue(e instanceof UnauthorizedException);
@@ -940,45 +942,45 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testScan() {
         List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", "count", 5678));
-        when(_server.scan("table-name", null, Long.MAX_VALUE, ReadConsistency.WEAK)).thenReturn(expected.iterator());
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        when(_server.scan("table-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
-                DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "table-name", ReadConsistency.WEAK));
+                DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "table-name", false, ReadConsistency.WEAK));
 
         assertEquals(actual, expected);
-        verify(_server).scan("table-name", null, Long.MAX_VALUE, ReadConsistency.WEAK);
+        verify(_server).scan("table-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK);
         verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testScanFrom() {
         List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", "count", 5678));
-        when(_server.scan("table-name", "from-key", 9876L, ReadConsistency.STRONG)).thenReturn(expected.iterator());
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        when(_server.scan("table-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
-                DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "table-name", "from-key", 9876L, ReadConsistency.STRONG));
+                DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "table-name", "from-key", 9876L, false, ReadConsistency.STRONG));
 
         assertEquals(actual, expected);
-        verify(_server).scan("table-name", "from-key", 9876L, ReadConsistency.STRONG);
+        verify(_server).scan("table-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testScanUnknownTable() {
         try {
-            when(_server.scan("non-existent-table", null, 100, ReadConsistency.STRONG)).thenThrow(new UnknownTableException());
+            when(_server.scan("non-existent-table", null, 100, true, ReadConsistency.STRONG)).thenThrow(new UnknownTableException());
             Iterable<Map<String, Object>> entries =
-                    DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "non-existent-table", null, 100, ReadConsistency.STRONG);
+                    DataStoreStreaming.scan(sorClient(APIKEY_TABLE), "non-existent-table", null, 100, true, ReadConsistency.STRONG);
             Iterables.getLast(entries);
             fail("UnknownTableException not thrown");
         } catch (UnknownTableException e) {
             // ok
         }
-        verify(_server).scan("non-existent-table", null, 100, ReadConsistency.STRONG);
+        verify(_server).scan("non-existent-table", null, 100, true, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);
     }
 
@@ -997,31 +999,76 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testGetSplit() {
         List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", "count", 5678));
-        when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, ReadConsistency.WEAK)).thenReturn(expected.iterator());
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
-                DataStoreStreaming.getSplit(sorClient(APIKEY_TABLE), "table-name", "split-name", ReadConsistency.WEAK));
+                DataStoreStreaming.getSplit(sorClient(APIKEY_TABLE), "table-name", "split-name", false, ReadConsistency.WEAK));
 
         assertEquals(actual, expected);
-        verify(_server).getSplit("table-name", "split-name", null, Long.MAX_VALUE, ReadConsistency.WEAK);
+        verify(_server).getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK);
         verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testGetSplitFrom() {
         List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", "count", 5678));
-        when(_server.getSplit("table-name", "split-name", "from-key", 9876L, ReadConsistency.STRONG)).thenReturn(expected.iterator());
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        when(_server.getSplit("table-name", "split-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
-                DataStoreStreaming.getSplit(sorClient(APIKEY_TABLE), "table-name", "split-name", "from-key", 9876L, ReadConsistency.STRONG));
+                DataStoreStreaming.getSplit(sorClient(APIKEY_TABLE), "table-name", "split-name", "from-key", 9876L, false, ReadConsistency.STRONG));
 
         assertEquals(actual, expected);
-        verify(_server).getSplit("table-name", "split-name", "from-key", 9876L, ReadConsistency.STRONG);
+        verify(_server).getSplit("table-name", "split-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);
+    }
+
+    @Test
+    public void testGetSplitWithMostContentDeleted() {
+        List<Map<String, Object>> content = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1),
+                ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, true, "count", 2),
+                ImmutableMap.of(Intrinsic.ID, "key3", Intrinsic.DELETED, true, "count", 3),
+                ImmutableMap.of(Intrinsic.ID, "key4", Intrinsic.DELETED, true, "count", 4),
+                ImmutableMap.of(Intrinsic.ID, "key5", Intrinsic.DELETED, false, "count", 5),
+                ImmutableMap.of(Intrinsic.ID, "key6", Intrinsic.DELETED, false, "count", 6));
+
+        // Create an iterator which delays 100ms before each deleted value
+        Iterator<Map<String, Object>> slowIterator = Iterators.filter(content.iterator(), t -> {
+            if (Intrinsic.isDeleted(t)) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw Throwables.propagate(e);
+                }
+            }
+            return true; });
+
+        when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(slowIterator);
+
+        // We need to examine the actual JSON response, so call the API directly
+        String response = _resourceTestRule.client().resource("/sor/1/_split/table-name/split-name")
+                .queryParam("limit", "2")
+                .queryParam("includeDeletes", "false")
+                .queryParam("consistency", ReadConsistency.STRONG.toString())
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
+                .get(String.class);
+
+        List<Map<String, Object>> actual = JsonHelper.fromJson(response, new TypeReference<List<Map<String, Object>>>() {});
+
+        assertEquals(actual, ImmutableList.of(content.get(0), content.get(4)));
+        verify(_server).getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.STRONG);
+        verifyNoMoreInteractions(_server);
+
+        // Because there was at least 200ms delay between deleted keys 2-4 there should be at least 2 whitespaces between
+        // the results which would otherwise not be present.
+        int endOfFirstEntry = response.indexOf('}') + 1;
+        int commaBeforeSecondEntry = response.indexOf(',', endOfFirstEntry);
+        assertTrue(commaBeforeSecondEntry - endOfFirstEntry >= 2);
+        assertEquals(Strings.repeat(" ", commaBeforeSecondEntry - endOfFirstEntry), response.substring(endOfFirstEntry, commaBeforeSecondEntry));
     }
 
     @Test

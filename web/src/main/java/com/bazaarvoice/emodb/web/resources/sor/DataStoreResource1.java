@@ -27,6 +27,7 @@ import com.bazaarvoice.emodb.sor.delta.MapDelta;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
+import com.bazaarvoice.emodb.web.jersey.FilteredJsonStreamingOutput;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
@@ -85,12 +86,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
@@ -122,16 +119,16 @@ public class DataStoreResource1 {
             notes = "Returns a Iterator of Table",
             response = Table.class
     )
-    public Iterator<Table> listTables(final @QueryParam("from") String fromKeyExclusive,
+    public Object listTables(final @QueryParam("from") String fromKeyExclusive,
                                       final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
                                       final @Authenticated Subject subject) {
-        return streamingIterator(
-            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
-                .filter(input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))))
-                .limit(limitParam.get())
-                .iterator(),
-            null
-        );
+        Iterator<Table> allTables = _dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE);
+        return new FilteredJsonStreamingOutput<Table>(allTables, limitParam.get()) {
+            @Override
+            public boolean include(Table table) {
+                return subject.hasPermission(Permissions.readSorTable(new NamedResource(table.getName())));
+            }
+        };
     }
 
     @PUT
@@ -377,14 +374,22 @@ public class DataStoreResource1 {
             response = Iterator.class
     )
     @ApiImplicitParams ({@ApiImplicitParam (name = "APIKey", required = true, dataType = "string", paramType = "query")})
-    public Iterator<Map<String, Object>> scan(@PathParam ("table") String table,
+    public Object scan(@PathParam ("table") String table,
                                               @QueryParam ("from") String fromKeyExclusive,
                                               @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                                              @QueryParam ("includeDeletes") @DefaultValue("false") BooleanParam includeDeletes,
                                               @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
                                               @QueryParam ("debug") BooleanParam debug) {
-        return streamingIterator(
-                _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), limit.get(), consistency.get()),
-                debug);
+        // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
+        // create long pauses in results.
+        Iterator<Map<String, Object>> unfilteredContent;
+        if (includeDeletes.get()) {
+            unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), limit.get(), true, consistency.get());
+            return streamingIterator(unfilteredContent, debug);
+        }
+        // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+        unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE, true, consistency.get());
+        return deletedContentFilteringStream(unfilteredContent, limit.get());
     }
 
     /**
@@ -415,15 +420,23 @@ public class DataStoreResource1 {
             notes = "Retrieves a list of content items in a particular table split.",
             response = Iterator.class
     )
-    public Iterator<Map<String, Object>> getSplit(@PathParam ("table") String table,
+    public Object getSplit(@PathParam ("table") String table,
                                                   @PathParam ("split") String split,
                                                   @QueryParam ("from") String key,
                                                   @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                                                  @QueryParam ("includeDeletes") @DefaultValue("false") BooleanParam includeDeletes,
                                                   @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
                                                   @QueryParam ("debug") BooleanParam debug) {
-        return streamingIterator(
-                _dataStore.getSplit(table, split, Strings.emptyToNull(key), limit.get(), consistency.get()),
-                debug);
+        // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
+        // create long pauses in results.
+        Iterator<Map<String, Object>> unfilteredContent;
+        if (includeDeletes.get()) {
+            unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), limit.get(), true, consistency.get());
+            return streamingIterator(unfilteredContent, debug);
+        }
+        // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+        unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), Long.MAX_VALUE, true, consistency.get());
+        return deletedContentFilteringStream(unfilteredContent, limit.get());
     }
 
     /**
@@ -966,5 +979,14 @@ public class DataStoreResource1 {
             });
         }
         return iterator;
+    }
+
+    private static FilteredJsonStreamingOutput<Map<String, Object>> deletedContentFilteringStream(Iterator<Map<String, Object>> iterator, long limit) {
+        return new FilteredJsonStreamingOutput<Map<String, Object>>(iterator, limit) {
+            @Override
+            public boolean include(Map<String, Object> value) {
+                return !Intrinsic.isDeleted(value);
+            }
+        };
     }
 }
