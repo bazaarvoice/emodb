@@ -282,7 +282,6 @@ public class MigratorStatusDAO implements MigratorRateLimiter {
                 new AuditBuilder().setLocalHost().setComment("Canceling migration").build());
     }
 
-    @Override
     public void setMaxWritesPerSecond(String migrationId, int maxWritesPerSecond) {
         _dataStore.update(getTable(), migrationId, TimeUUIDs.newUUID(),
                 Deltas.mapBuilder()
