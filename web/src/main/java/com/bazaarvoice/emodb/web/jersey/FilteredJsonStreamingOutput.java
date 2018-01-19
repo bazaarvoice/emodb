@@ -44,7 +44,7 @@ abstract public class FilteredJsonStreamingOutput<T> implements StreamingOutput 
 
         safeOut.write("[".getBytes(Charsets.UTF_8));
         byte[] sep = null;
-        long nextWhitespaceTime = Long.MAX_VALUE;
+        long lastWriteTime = 0;
         long remaining = _limit;
 
         while (_iterator.hasNext() && remaining != 0) {
@@ -57,15 +57,13 @@ abstract public class FilteredJsonStreamingOutput<T> implements StreamingOutput 
                     safeOut.write(sep);
                 }
                 JsonHelper.writeJson(safeOut, value);
-                nextWhitespaceTime = Long.MAX_VALUE;
+                lastWriteTime = System.currentTimeMillis();
                 remaining -= 1;
             } else {
                 // Target writing whitespace every 100ms to keep the stream alive
-                if (nextWhitespaceTime == Long.MAX_VALUE) {
-                    nextWhitespaceTime = System.currentTimeMillis() + 100;
-                } else if (System.currentTimeMillis() >= nextWhitespaceTime) {
+                if (System.currentTimeMillis() >= lastWriteTime + 100) {
                     safeOut.write(" ".getBytes(Charsets.UTF_8));
-                    nextWhitespaceTime = System.currentTimeMillis() + 100;
+                    lastWriteTime = System.currentTimeMillis();
                 }
             }
         }
