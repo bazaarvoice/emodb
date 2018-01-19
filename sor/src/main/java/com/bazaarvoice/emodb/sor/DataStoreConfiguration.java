@@ -73,7 +73,7 @@ public class DataStoreConfiguration {
     */
     @Valid
     @NotNull
-    @JsonProperty
+    @JsonProperty("deltaBlockSizeInKb")
     private int _deltaBlockSizeInKb = 64;
 
     @Valid

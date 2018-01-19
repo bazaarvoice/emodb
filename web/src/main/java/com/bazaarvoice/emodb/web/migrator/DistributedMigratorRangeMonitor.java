@@ -289,7 +289,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
 
             _statusDAO.setMigratorRangeTaskActive(migrationId, taskId, new Date());
 
-            result = _rangeMigrator.migrate(taskId, status.getOptions(), placement, range, _statusDAO.getMaxWritesPerSecond(migrationId));
+            result = _rangeMigrator.migrate(taskId, status.getOptions(), placement, range, migrationId);
 
 
             _log.info("Completed migration range task: {}", task);

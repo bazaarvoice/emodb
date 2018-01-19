@@ -9,10 +9,10 @@ import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
-import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
-import io.dropwizard.lifecycle.Managed;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
@@ -20,13 +20,13 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Iterator;
-
-import static com.google.common.base.Preconditions.checkState;
+import java.util.concurrent.TimeUnit;
 
 public class LocalRangeMigrator {
 
     private final static float RESPLIT_FACTOR = 3;
-    private final static int BATCH_SIZE = 2500;
+    private final static int READ_RATE_LIMITER_SECONDS = 60;
+    private final static int MAX_BATCH_SIZE = 10000;
 
     private final static Logger _log = LoggerFactory.getLogger(LocalRangeMigrator.class);
 
@@ -34,18 +34,26 @@ public class LocalRangeMigrator {
     private final Meter _failedRangeMigrations;
 
     private final MigratorTools _migratorTools;
+    private final MigratorRateLimiter _rateLimiter;
 
     @Inject
-    public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
+    public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry,
+                              MigratorRateLimiter rateLimiter) {
         _migratorTools = migratorTools;
+        _rateLimiter = rateLimiter;
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
     }
 
-    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range, int maxWritesPerSecond) throws IOException, InterruptedException {
+    public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range,
+                                           String migrationId) throws IOException, InterruptedException {
         
         _log.info("Migrating placement {}: {}", placement, range);
+
+        Supplier<Integer> writeRate = Suppliers.memoizeWithExpiration(
+                () -> _rateLimiter.getMaxWritesPerSecond(migrationId),
+                READ_RATE_LIMITER_SECONDS, TimeUnit.SECONDS);
 
         final long startTime = System.currentTimeMillis();
 
@@ -56,10 +64,16 @@ public class LocalRangeMigrator {
 
             Iterator<MigrationScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
 
+
             while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().getMillis() && results.hasNext()) {
 
-                Iterator<MigrationScanResult> batchIterator = Iterators.limit(results, BATCH_SIZE);
-                _migratorTools.writeRows(placement, results, maxWritesPerSecond);
+                // Only call get() on the supplier once in order to ensure consistency in the next two statements
+                int currentWriteRate = writeRate.get();
+
+                Iterator<MigrationScanResult> batchIterator = Iterators.limit(results,
+                        Math.min(MAX_BATCH_SIZE, currentWriteRate * READ_RATE_LIMITER_SECONDS));
+
+                _migratorTools.writeRows(placement, batchIterator, currentWriteRate);
 
             }
 
