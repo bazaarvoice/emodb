@@ -8,9 +8,9 @@ import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
@@ -61,6 +61,7 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Clock _clock;
     private final MetricsGroup _lag;
     private final Stopwatch _lastLagStopwatch;
+    private final MetricRegistry _metricRegistry;
     private int _lastLagSeconds = -1;
 
     public DefaultFanout(String name,
@@ -85,6 +86,7 @@ public class DefaultFanout extends AbstractScheduledService {
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
         _eventsWrittenLocal = newEventMeter("written-local", metricRegistry);
+        _metricRegistry = metricRegistry;
         _eventsWrittenOutboundReplication = newEventMeter("written-outbound-replication", metricRegistry);
         _lag = new MetricsGroup(metricRegistry);
         _lastLagStopwatch = Stopwatch.createStarted(ClockTicker.getTicker(clock));
@@ -95,7 +97,7 @@ public class DefaultFanout extends AbstractScheduledService {
     private Meter newEventMeter(String name, MetricRegistry metricRegistry) {
         return metricRegistry.meter(metricName(name));
     }
-    
+
     private String metricName(String name) {
         return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", name, _name);
     }
@@ -128,71 +130,79 @@ public class DefaultFanout extends AbstractScheduledService {
     }
 
     private boolean copyEvents() {
-        // Use peek() not poll() since LeaderSelector ensures we're not competing with other processes for claims.
-        List<EventData> rawEvents = _eventSource.get(1000);
+        try (Timer.Context ignored = _metricRegistry.timer(metricName("total-copy")).time()) {
+            // Use peek() not poll() since LeaderSelector ensures we're not competing with other processes for claims.
+            final Timer.Context peekTime = _metricRegistry.timer(metricName("fetch-events")).time();
+            List<EventData> rawEvents = _eventSource.get(1000);
+            peekTime.stop();
 
-        // If no events, sleep a little while before doing any more work to allow new events to arrive.
-        if (rawEvents.isEmpty()) {
-            // Update the lag metrics to indicate there is no lag
-            updateLagMetrics(null);
-            return false;
+            // If no events, sleep a little while before doing any more work to allow new events to arrive.
+            if (rawEvents.isEmpty()) {
+                // Update the lag metrics to indicate there is no lag
+                updateLagMetrics(null);
+                return false;
+            }
+
+            // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
+            return isRunning() && copyEvents(rawEvents);
         }
-
-        // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
-        return isRunning() && copyEvents(rawEvents);
     }
 
     @VisibleForTesting
     boolean copyEvents(List<EventData> rawEvents) {
         // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
         // creating a new subscription.
+        final Timer.Context subTime = _metricRegistry.timer(metricName("fetch-subscriptions")).time();
         Iterable<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
+        subTime.stop();
 
         // Copy the events to all the destination channels.
         List<String> eventKeys = Lists.newArrayListWithCapacity(rawEvents.size());
         ListMultimap<String, ByteBuffer> eventsByChannel = ArrayListMultimap.create();
         SubscriptionEvaluator.MatchEventData lastMatchEventData = null;
         int numOutboundReplicationEvents = 0;
-        for (EventData rawEvent : rawEvents) {
-            eventKeys.add(rawEvent.getId());
+        try (Timer.Context ignored = _metricRegistry.timer(metricName("fanout")).time()) {
+            for (EventData rawEvent : rawEvents) {
+                eventKeys.add(rawEvent.getId());
 
-            ByteBuffer eventData = rawEvent.getData();
+                ByteBuffer eventData = rawEvent.getData();
 
-            SubscriptionEvaluator.MatchEventData matchEventData;
-            try {
-                matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
-            } catch (UnknownTableException e) {
-                continue;
-            }
+                SubscriptionEvaluator.MatchEventData matchEventData;
+                try {
+                    matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
+                } catch (UnknownTableException e) {
+                    continue;
+                }
 
-            // Copy to subscriptions in the current data center.
-            for (OwnedSubscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
-                eventsByChannel.put(subscription.getName(), eventData);
-            }
+                // Copy to subscriptions in the current data center.
+                for (OwnedSubscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
+                    eventsByChannel.put(subscription.getName(), eventData);
+                }
 
-            // Copy to queues for eventual delivery to remote data centers.
-            if (_replicateOutbound) {
-                for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
-                    if (!dataCenter.equals(_currentDataCenter)) {
-                        String channel = ChannelNames.getReplicationFanoutChannel(dataCenter);
-                        eventsByChannel.put(channel, eventData);
-                        numOutboundReplicationEvents++;
+                // Copy to queues for eventual delivery to remote data centers.
+                if (_replicateOutbound) {
+                    for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
+                        if (!dataCenter.equals(_currentDataCenter)) {
+                            String channel = ChannelNames.getReplicationFanoutChannel(dataCenter);
+                            eventsByChannel.put(channel, eventData);
+                            numOutboundReplicationEvents++;
+                        }
                     }
                 }
+
+                // Flush to cap the amount of memory used to buffer events.
+                if (eventsByChannel.size() >= FLUSH_EVENTS_THRESHOLD) {
+                    flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
+                    numOutboundReplicationEvents = 0;
+                }
+
+                // Track the final match event data record returned
+                lastMatchEventData = matchEventData;
             }
 
-            // Flush to cap the amount of memory used to buffer events.
-            if (eventsByChannel.size() >= FLUSH_EVENTS_THRESHOLD) {
-                flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
-                numOutboundReplicationEvents = 0;
-            }
-
-            // Track the final match event data record returned
-            lastMatchEventData = matchEventData;
+            // Final flush.
+            flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
         }
-
-        // Final flush.
-        flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
 
         // Update the lag metrics based on the last event returned.  This isn't perfect for several reasons:
         // 1. In-order delivery is not guaranteed
