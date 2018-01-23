@@ -58,10 +58,16 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Meter _eventsRead;
     private final Meter _eventsWrittenLocal;
     private final Meter _eventsWrittenOutboundReplication;
+    private final Meter _subscriptionMatchEvaluations;
+    private final Timer _totalCopyTimer;
+    private final Timer _fetchEventsTimer;
+    private final Timer _fetchSubscriptionsTimer;
+    private final Timer _fanoutTimer;
+    private final Timer _matchSubscriptionsTimer;
+    private final Timer _eventFlushTimer;
     private final Clock _clock;
     private final MetricsGroup _lag;
     private final Stopwatch _lastLagStopwatch;
-    private final MetricRegistry _metricRegistry;
     private int _lastLagSeconds = -1;
 
     public DefaultFanout(String name,
@@ -86,8 +92,15 @@ public class DefaultFanout extends AbstractScheduledService {
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
         _eventsWrittenLocal = newEventMeter("written-local", metricRegistry);
-        _metricRegistry = metricRegistry;
         _eventsWrittenOutboundReplication = newEventMeter("written-outbound-replication", metricRegistry);
+        _subscriptionMatchEvaluations = newEventMeter("subscription-match-evaluations", metricRegistry);
+        _totalCopyTimer = metricRegistry.timer(metricName("total-copy"));
+        _fetchEventsTimer = metricRegistry.timer(metricName("fetch-events"));
+        _fetchSubscriptionsTimer = metricRegistry.timer(metricName("fetch-subscriptions"));
+        _fanoutTimer = metricRegistry.timer(metricName("fanout"));
+        _matchSubscriptionsTimer = metricRegistry.timer(metricName("match-subscriptions"));
+        _eventFlushTimer = metricRegistry.timer(metricName("flush-events"));
+
         _lag = new MetricsGroup(metricRegistry);
         _lastLagStopwatch = Stopwatch.createStarted(ClockTicker.getTicker(clock));
         _clock = clock;
@@ -130,9 +143,9 @@ public class DefaultFanout extends AbstractScheduledService {
     }
 
     private boolean copyEvents() {
-        try (Timer.Context ignored = _metricRegistry.timer(metricName("total-copy")).time()) {
+        try (Timer.Context ignored = _totalCopyTimer.time()) {
             // Use peek() not poll() since LeaderSelector ensures we're not competing with other processes for claims.
-            final Timer.Context peekTime = _metricRegistry.timer(metricName("fetch-events")).time();
+            final Timer.Context peekTime = _fetchEventsTimer.time();
             List<EventData> rawEvents = _eventSource.get(1000);
             peekTime.stop();
 
@@ -152,7 +165,7 @@ public class DefaultFanout extends AbstractScheduledService {
     boolean copyEvents(List<EventData> rawEvents) {
         // Read the list of subscriptions *after* reading events from the event store to avoid race conditions with
         // creating a new subscription.
-        final Timer.Context subTime = _metricRegistry.timer(metricName("fetch-subscriptions")).time();
+        final Timer.Context subTime = _fetchSubscriptionsTimer.time();
         Iterable<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
         subTime.stop();
 
@@ -161,7 +174,7 @@ public class DefaultFanout extends AbstractScheduledService {
         ListMultimap<String, ByteBuffer> eventsByChannel = ArrayListMultimap.create();
         SubscriptionEvaluator.MatchEventData lastMatchEventData = null;
         int numOutboundReplicationEvents = 0;
-        try (Timer.Context ignored = _metricRegistry.timer(metricName("fanout")).time()) {
+        try (Timer.Context ignored = _fanoutTimer.time()) {
             for (EventData rawEvent : rawEvents) {
                 eventKeys.add(rawEvent.getId());
 
@@ -175,9 +188,16 @@ public class DefaultFanout extends AbstractScheduledService {
                 }
 
                 // Copy to subscriptions in the current data center.
-                for (OwnedSubscription subscription : _subscriptionEvaluator.matches(subscriptions, matchEventData)) {
-                    eventsByChannel.put(subscription.getName(), eventData);
+                Timer.Context matchTime = _matchSubscriptionsTimer.time();
+                int subscriptionCount = 0;
+                for (OwnedSubscription subscription : subscriptions) {
+                    subscriptionCount += 1;
+                    if (_subscriptionEvaluator.matches(subscription, matchEventData)) {
+                        eventsByChannel.put(subscription.getName(), eventData);
+                    }
                 }
+                matchTime.stop();
+                _subscriptionMatchEvaluations.mark(subscriptionCount);
 
                 // Copy to queues for eventual delivery to remote data centers.
                 if (_replicateOutbound) {
@@ -238,16 +258,18 @@ public class DefaultFanout extends AbstractScheduledService {
 
     private void flush(List<String> eventKeys, Multimap<String, ByteBuffer> eventsByChannel,
                        int numOutboundReplicationEvents) {
-        if (!eventsByChannel.isEmpty()) {
-            _eventSink.apply(eventsByChannel);
-            _eventsWrittenLocal.mark(eventsByChannel.size() - numOutboundReplicationEvents);
-            _eventsWrittenOutboundReplication.mark(numOutboundReplicationEvents);
-            eventsByChannel.clear();
-        }
-        if (!eventKeys.isEmpty()) {
-            _eventSource.delete(eventKeys);
-            _eventsRead.mark(eventKeys.size());
-            eventKeys.clear();
+        try (Timer.Context ignore = _eventFlushTimer.time()) {
+            if (!eventsByChannel.isEmpty()) {
+                _eventSink.apply(eventsByChannel);
+                _eventsWrittenLocal.mark(eventsByChannel.size() - numOutboundReplicationEvents);
+                _eventsWrittenOutboundReplication.mark(numOutboundReplicationEvents);
+                eventsByChannel.clear();
+            }
+            if (!eventKeys.isEmpty()) {
+                _eventSource.delete(eventKeys);
+                _eventsRead.mark(eventKeys.size());
+                eventKeys.clear();
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.google.common.base.Objects;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
@@ -96,6 +97,10 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     private final LoadingCache<String, Map<String, OwnedSubscription>> _legacyCache;
     private final CacheHandle _legacyCacheHandle;
     private final Meter _invalidationEventMeter;
+    private final Meter _subscriptionFromCacheMeter;
+    private final Meter _subscriptionFromDelegateMeter;
+    private final Timer _reloadAllSubscriptionsTimer;
+    private final Meter _subscriptionsReloaded;
     private final CachingMode _cachingMode;
 
     @Inject
@@ -108,6 +113,8 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         _cachingMode = checkNotNull(cachingMode, "cachingMode");
 
         Ticker ticker = ClockTicker.getTicker(clock);
+        _reloadAllSubscriptionsTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "reload-all-subscriptions"));
+        _subscriptionsReloaded = metricRegistry.meter(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "subscriptions-reloaded"));
 
         // The all subscription cache is only used to track the set of all subscriptions and only has a single value.
         _allSubscriptionsCache = CacheBuilder.newBuilder()
@@ -117,20 +124,24 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                 .build(new CacheLoader<String, List<OwnedSubscription>>() {
                     @Override
                     public List<OwnedSubscription> load(String key) throws Exception {
-                        assert SUBSCRIPTIONS.equals(key) : "All subscriptions cache should only be accessed by a single key";
+                        try (Timer.Context ignore = _reloadAllSubscriptionsTimer.time()) {
+                            assert SUBSCRIPTIONS.equals(key) : "All subscriptions cache should only be accessed by a single key";
 
-                        Iterable<String> subscriptionNames = _delegate.getAllSubscriptionNames();
-                        ImmutableList.Builder<OwnedSubscription> subscriptions = ImmutableList.builder();
+                            Iterable<String> subscriptionNames = _delegate.getAllSubscriptionNames();
+                            ImmutableList.Builder<OwnedSubscription> subscriptionsBuilder = ImmutableList.builder();
 
-                        for (String name : subscriptionNames) {
-                            // As much as possible take advantage of already cached subscriptions
-                            OwnedSubscription subscription = getSubscription(name);
-                            if (subscription != null) {
-                                subscriptions.add(subscription);
+                            for (String name : subscriptionNames) {
+                                // As much as possible take advantage of already cached subscriptions
+                                OwnedSubscription subscription = getSubscription(name);
+                                if (subscription != null) {
+                                    subscriptionsBuilder.add(subscription);
+                                }
                             }
-                        }
 
-                        return subscriptions.build();
+                            List<OwnedSubscription> subscriptions = subscriptionsBuilder.build();
+                            _subscriptionsReloaded.mark(subscriptions.size());
+                            return subscriptions;
+                        }
                     }
                 });
 
@@ -221,6 +232,10 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
 
         _invalidationEventMeter = metricRegistry.meter(
                 MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "invalidation-events"));
+        _subscriptionFromCacheMeter = metricRegistry.meter(
+                MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "get-subscription-from-cache"));
+        _subscriptionFromDelegateMeter = metricRegistry.meter(
+                MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "get-subscription-from-delegate"));
     }
 
     @Override
@@ -260,11 +275,14 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         // only used as a failsafe.  If the value is dirty the cache will asynchronously reload it in the background.
 
         OwnedSubscription ownedSubscription = _subscriptionCache.getIfPresent(subscription);
-        if (ownedSubscription == null) {
+        if (ownedSubscription != null) {
+            _subscriptionFromCacheMeter.mark();
+        } else {
             // This time call get() to force the value to load, possibly synchronously.  This will also cause the value
             // to be cached.
 
             ownedSubscription = _subscriptionCache.getUnchecked(subscription);
+            _subscriptionFromDelegateMeter.mark();
         }
 
         // If the subscription did not exist return null
