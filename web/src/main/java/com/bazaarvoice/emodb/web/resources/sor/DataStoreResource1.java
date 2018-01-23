@@ -386,10 +386,11 @@ public class DataStoreResource1 {
         if (includeDeletes.get()) {
             unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), limit.get(), true, consistency.get());
             return streamingIterator(unfilteredContent, debug);
+        } else {
+            // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+            unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE, true, consistency.get());
+            return deletedContentFilteringStream(unfilteredContent, limit.get());
         }
-        // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
-        unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE, true, consistency.get());
-        return deletedContentFilteringStream(unfilteredContent, limit.get());
     }
 
     /**
@@ -433,10 +434,11 @@ public class DataStoreResource1 {
         if (includeDeletes.get()) {
             unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), limit.get(), true, consistency.get());
             return streamingIterator(unfilteredContent, debug);
+        } else {
+            // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+            unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), Long.MAX_VALUE, true, consistency.get());
+            return deletedContentFilteringStream(unfilteredContent, limit.get());
         }
-        // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
-        unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), Long.MAX_VALUE, true, consistency.get());
-        return deletedContentFilteringStream(unfilteredContent, limit.get());
     }
 
     /**
