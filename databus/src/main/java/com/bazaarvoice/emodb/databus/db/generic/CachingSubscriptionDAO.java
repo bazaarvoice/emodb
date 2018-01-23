@@ -97,6 +97,8 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     private final LoadingCache<String, Map<String, OwnedSubscription>> _legacyCache;
     private final CacheHandle _legacyCacheHandle;
     private final Meter _invalidationEventMeter;
+    private final Meter _subscriptionFromCacheMeter;
+    private final Meter _subscriptionFromDelegateMeter;
     private final Timer _reloadAllSubscriptionsTimer;
     private final Meter _subscriptionsReloaded;
     private final CachingMode _cachingMode;
@@ -230,6 +232,10 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
 
         _invalidationEventMeter = metricRegistry.meter(
                 MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "invalidation-events"));
+        _subscriptionFromCacheMeter = metricRegistry.meter(
+                MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "get-subscription-from-cache"));
+        _subscriptionFromDelegateMeter = metricRegistry.meter(
+                MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "get-subscription-from-delegate"));
     }
 
     @Override
@@ -269,11 +275,14 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         // only used as a failsafe.  If the value is dirty the cache will asynchronously reload it in the background.
 
         OwnedSubscription ownedSubscription = _subscriptionCache.getIfPresent(subscription);
-        if (ownedSubscription == null) {
+        if (ownedSubscription != null) {
+            _subscriptionFromCacheMeter.mark();
+        } else {
             // This time call get() to force the value to load, possibly synchronously.  This will also cause the value
             // to be cached.
 
             ownedSubscription = _subscriptionCache.getUnchecked(subscription);
+            _subscriptionFromDelegateMeter.mark();
         }
 
         // If the subscription did not exist return null
