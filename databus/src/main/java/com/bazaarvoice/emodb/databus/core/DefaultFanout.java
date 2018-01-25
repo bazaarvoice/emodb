@@ -32,7 +32,6 @@ import java.time.Clock;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -72,6 +71,8 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Timer _fanoutTimer;
     private final Timer _e2eFanoutTimer;
     private final Timer _matchSubscriptionsTimer;
+    private final Timer _replicateTimer;
+    private final Timer _fetchMatchEventDataTimer;
     private final Timer _eventFlushTimer;
     private final Clock _clock;
     private final MetricsGroup _lag;
@@ -110,6 +111,8 @@ public class DefaultFanout extends AbstractScheduledService {
         _fanoutTimer = metricRegistry.timer(metricName("fanout"));
         _e2eFanoutTimer = metricRegistry.timer(metricName("e2e-fanout"));
         _matchSubscriptionsTimer = metricRegistry.timer(metricName("match-subscriptions"));
+        _replicateTimer = metricRegistry.timer(metricName("replicate"));
+        _fetchMatchEventDataTimer = metricRegistry.timer(metricName("fetch-match-event-data"));
         _eventFlushTimer = metricRegistry.timer(metricName("flush-events"));
 
         _lag = new MetricsGroup(metricRegistry);
@@ -204,7 +207,7 @@ public class DefaultFanout extends AbstractScheduledService {
                                 ByteBuffer eventData = rawEvent.getData();
 
                                 SubscriptionEvaluator.MatchEventData matchEventData;
-                                try {
+                                try (Timer.Context ignored2 = _fetchMatchEventDataTimer.time()) {
                                     matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
                                 } catch (UnknownTableException e) {
                                     continue;
@@ -223,12 +226,14 @@ public class DefaultFanout extends AbstractScheduledService {
                                 _subscriptionMatchEvaluations.mark(subscriptionCount);
 
                                 // Copy to queues for eventual delivery to remote data centers.
-                                if (_replicateOutbound) {
-                                    for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
-                                        if (!dataCenter.equals(_currentDataCenter)) {
-                                            String channel = ChannelNames.getReplicationFanoutChannel(dataCenter);
-                                            eventsByChannel.put(channel, eventData);
-                                            numOutboundReplicationEvents++;
+                                try (Timer.Context ignored4 = _replicateTimer.time()) {
+                                    if (_replicateOutbound) {
+                                        for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
+                                            if (!dataCenter.equals(_currentDataCenter)) {
+                                                String channel = ChannelNames.getReplicationFanoutChannel(dataCenter);
+                                                eventsByChannel.put(channel, eventData);
+                                                numOutboundReplicationEvents++;
+                                            }
                                         }
                                     }
                                 }
