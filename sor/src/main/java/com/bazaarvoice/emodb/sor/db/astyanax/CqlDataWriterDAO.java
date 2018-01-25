@@ -258,7 +258,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, int maxWritesPerSecond) {
+    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, RateLimiter rateLimiter) {
 
         if (!iterator.hasNext()) {
             return;
@@ -268,7 +268,6 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         Session session = placement.getKeyspace().getCqlSession();
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         AtomicReference<Throwable> error = new AtomicReference<>();
-        RateLimiter rateLimiter = RateLimiter.create(maxWritesPerSecond);
         Phaser phaser = new Phaser();
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
