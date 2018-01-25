@@ -15,7 +15,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
-import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
@@ -32,7 +32,6 @@ import java.time.Clock;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -193,8 +192,8 @@ public class DefaultFanout extends AbstractScheduledService {
                 futures.add(_fanoutPool.submit(() -> {
                     try {
                         // multimap is not threadsafe
-                        final List<String> eventKeys = Lists.newArrayListWithCapacity(rawEventPartition.size());
-                        final ListMultimap<String, ByteBuffer> eventsByChannel = ArrayListMultimap.create();
+                        final List<String> eventKeys = new LinkedList<>();
+                        final ListMultimap<String, ByteBuffer> eventsByChannel = LinkedListMultimap.create();
                         SubscriptionEvaluator.MatchEventData lastMatchEventData = null;
                         int numOutboundReplicationEvents = 0;
                         try (Timer.Context ignored1 = _fanoutTimer.time()) {
