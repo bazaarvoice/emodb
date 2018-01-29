@@ -134,7 +134,7 @@ public class TablePermissionManagerDAO implements PermissionManager {
         validateTable();
 
         return () -> {
-            Iterator<Map<String, Object>> records = _dataStore.scan(_tableName, null, Long.MAX_VALUE, ReadConsistency.STRONG);
+            Iterator<Map<String, Object>> records = _dataStore.scan(_tableName, null, Long.MAX_VALUE, false, ReadConsistency.STRONG);
             return StreamSupport.stream(Spliterators.spliteratorUnknownSize(records, 0), false)
                     .map(record -> Maps.immutableEntry(Intrinsic.getId(record), extractPermissionsFromRecord(record)))
                     .iterator();

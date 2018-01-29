@@ -39,8 +39,9 @@ public abstract class DataStoreStreaming {
      */
     public static Iterable<Map<String, Object>> scan(DataStore dataStore,
                                                      String table,
+                                                     boolean includeDeletes,
                                                      ReadConsistency consistency) {
-        return scan(dataStore, table, null, Long.MAX_VALUE, consistency);
+        return scan(dataStore, table, null, Long.MAX_VALUE, includeDeletes, consistency);
     }
 
     /**
@@ -49,8 +50,9 @@ public abstract class DataStoreStreaming {
     public static Iterable<Map<String, Object>> getSplit(DataStore dataStore,
                                                          String table,
                                                          String split,
+                                                         boolean includeDeletes,
                                                          ReadConsistency consistency) {
-        return getSplit(dataStore, table, split, null, Long.MAX_VALUE, consistency);
+        return getSplit(dataStore, table, split, null, Long.MAX_VALUE, includeDeletes, consistency);
     }
 
     /**
@@ -84,12 +86,13 @@ public abstract class DataStoreStreaming {
                                                      final String table,
                                                      final @Nullable String fromKeyExclusive,
                                                      final long limit,
+                                                     final boolean includeDeletes,
                                                      final ReadConsistency consistency) {
         return RestartingStreamingIterator.stream(fromKeyExclusive, limit,
                 new StreamingIteratorSupplier<Map<String, Object>, String>() {
                     @Override
                     public Iterator<Map<String, Object>> get(String fromToken, long limit) {
-                        return dataStore.scan(table, fromToken, limit, consistency);
+                        return dataStore.scan(table, fromToken, limit, includeDeletes, consistency);
                     }
 
                     @Override
@@ -110,12 +113,13 @@ public abstract class DataStoreStreaming {
                                                          final String split,
                                                          final @Nullable String fromKeyExclusive,
                                                          final long limit,
+                                                         final boolean includeDeletes,
                                                          final ReadConsistency consistency) {
         return RestartingStreamingIterator.stream(fromKeyExclusive, limit,
                 new StreamingIteratorSupplier<Map<String, Object>, String>() {
                     @Override
                     public Iterator<Map<String, Object>> get(String fromToken, long limit) {
-                        return dataStore.getSplit(table, split, fromToken, limit, consistency);
+                        return dataStore.getSplit(table, split, fromToken, limit, includeDeletes, consistency);
                     }
 
                     @Override

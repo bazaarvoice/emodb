@@ -343,7 +343,7 @@ public class DataStoreClient implements AuthDataStore {
 
     @Override
     public Iterator<Map<String, Object>> scan(String apiKey, String table, @Nullable String fromKeyExclusive,
-                                              long limit, ReadConsistency consistency) {
+                                              long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkNotNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
@@ -352,6 +352,7 @@ public class DataStoreClient implements AuthDataStore {
                     .segment(table)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
+                    .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
             return _client.resource(uri)
@@ -383,7 +384,7 @@ public class DataStoreClient implements AuthDataStore {
 
     @Override
     public Iterator<Map<String, Object>> getSplit(String apiKey, String table, String split, @Nullable String fromKeyExclusive,
-                                                  long limit, ReadConsistency consistency) {
+                                                  long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(split, "split");
         checkArgument(limit > 0, "Limit must be >0");
@@ -393,6 +394,7 @@ public class DataStoreClient implements AuthDataStore {
                     .segment("_split", table, split)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
+                    .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
             return _client.resource(uri)

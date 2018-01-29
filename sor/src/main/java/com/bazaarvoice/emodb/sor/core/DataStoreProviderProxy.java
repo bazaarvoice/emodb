@@ -121,8 +121,8 @@ public class DataStoreProviderProxy implements DataStore {
     }
 
     @Override
-    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _local.get().scan(table, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _local.get().scan(table, fromKeyExclusive, limit,  includeDeletes, consistency);
     }
 
     @Override
@@ -131,8 +131,8 @@ public class DataStoreProviderProxy implements DataStore {
     }
 
     @Override
-    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _local.get().getSplit(table, split, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _local.get().getSplit(table, split, fromKeyExclusive, limit, includeDeletes, consistency);
     }
 
     @Override

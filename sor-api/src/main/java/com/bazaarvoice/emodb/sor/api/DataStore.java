@@ -126,7 +126,7 @@ public interface DataStore {
      * {@code com.bazaarvoice.emodb.sor.client.DataStoreStreaming} class which will restart the iterator in the
      * event that the connection to the EmoDB server is lost while streaming results.
      */
-    Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+    Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency);
 
     /**
      * Returns a list of split identifiers that can be used to scan all records in the specified table in parallel using
@@ -145,7 +145,7 @@ public interface DataStore {
      * {@code com.bazaarvoice.emodb.sor.client.DataStoreStreaming} class which will restart the iterator in the
      * event that the connection to the EmoDB server is lost while streaming results.
      */
-    Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+    Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency);
 
     /**
      * Retrieves records from the specified list of coordinates. The records will *not* be returned in the order it was

@@ -232,7 +232,7 @@ public class EmoFileSystem extends FileSystem implements EmoInputSplittable {
                     // Get the DataStore and begin streaming the split's rows.
                     _dataStore = HadoopDataStoreManager.getInstance().getDataStore(location, _apiKey, _metricRegistry);
                     Iterable<Map<String, Object>> rows =
-                            DataStoreStreaming.getSplit(_dataStore, table, split, ReadConsistency.STRONG);
+                            DataStoreStreaming.getSplit(_dataStore, table, split, false, ReadConsistency.STRONG);
                     return rows.iterator();
                 } catch (Exception e) {
                     close();
@@ -318,7 +318,7 @@ public class EmoFileSystem extends FileSystem implements EmoInputSplittable {
                 CloseableDataStore dataStore = HadoopDataStoreManager.getInstance().getDataStore(_uri, _apiKey, _metricRegistry);
                 _closer.register(dataStore);
 
-                _rows = DataStoreStreaming.getSplit(dataStore, table, split, ReadConsistency.STRONG).iterator();
+                _rows = DataStoreStreaming.getSplit(dataStore, table, split, false, ReadConsistency.STRONG).iterator();
             }
 
             _buffer.clear();

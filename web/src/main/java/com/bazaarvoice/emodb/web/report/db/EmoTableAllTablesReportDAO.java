@@ -286,7 +286,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
                         _limit = Long.MAX_VALUE;
                     }
 
-                    _batch = _dataStore.scan(reportTable, _from, _limit, ReadConsistency.STRONG);
+                    _batch = _dataStore.scan(reportTable, _from, _limit, false, ReadConsistency.STRONG);
                     if (!_batch.hasNext()) {
                         return endOfData();
                     }
