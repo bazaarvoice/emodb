@@ -8,17 +8,26 @@ import com.google.inject.Inject;
 import java.nio.ByteBuffer;
 import java.util.List;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class DAOUtils {
 
     private final int _prefixLength;
     private final int _deltaBlockSize;
     private final byte[] _singleBlockBytes;
+    private final int _maxBlocks;
 
     @Inject
     public DAOUtils(@PrefixLength  int prefixLength, @BlockSize int deltaBlockSize) {
+        checkArgument(prefixLength > 0, "Prefix length must be greater than 0");
+        checkArgument(deltaBlockSize > 0, "Delta block size must be greater than 0");
+
         _prefixLength = prefixLength;
         _deltaBlockSize = deltaBlockSize;
         _singleBlockBytes = String.format("%0" + prefixLength + "X", 1).getBytes();
+
+        // this is the maximum number that can be using hexidecimal using the # of digits equal to prefix length
+        _maxBlocks = (int) Math.pow(16, _prefixLength) - 1;
     }
 
     public List<ByteBuffer> getDeltaBlocks(ByteBuffer encodedDelta) {
@@ -45,7 +54,7 @@ public class DAOUtils {
             numBlocks++;
         }
 
-        assert numBlocks < Math.pow(16, _deltaBlockSize);
+        checkArgument(numBlocks <= _maxBlocks, "Delta is too large, as it has exceeded to maximum number of blocks");
 
         byte[] blockBytes = numBlocks == 1 ? _singleBlockBytes : String.format("%0" + _prefixLength + "X", numBlocks).getBytes();
         for (int i = encodedDelta.position(); i < blockBytes.length ; i++) {

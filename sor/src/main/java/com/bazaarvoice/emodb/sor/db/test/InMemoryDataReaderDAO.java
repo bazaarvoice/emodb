@@ -28,6 +28,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.RateLimiter;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 import org.joda.time.DateTime;
@@ -487,7 +488,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxWritesPerSecond) {
+    public void writeRows(String placement, Iterator<MigrationScanResult> results, RateLimiter rateLimiter) {
         throw new UnsupportedOperationException();
     }
 

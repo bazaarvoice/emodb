@@ -55,6 +55,7 @@ dataCenter:
 
 systemOfRecord:
   migrationPhase: PRE_MIGRATION
+  deltaBlockSizeInKb: 8
   stashRoot: s3://emodb-us-east-1/stash/ci
 
   # Optional property - to exclude the tables satisfying the condition from the daily Stash run.

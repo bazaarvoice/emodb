@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.MigratorReaderDAO;
 import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 
 import java.util.Iterator;
@@ -22,10 +23,10 @@ public class DefaultMigratorTools implements MigratorTools {
     }
 
     @Override
-    public void writeRows(String placement, Iterator<MigrationScanResult> results, int maxWritesPerSecond) {
+    public void writeRows(String placement, Iterator<MigrationScanResult> results, RateLimiter rateLimiter) {
         checkNotNull(placement, "placement");
         checkNotNull(results, "rows");
-        _migratorWriterDao.writeRows(placement, results, maxWritesPerSecond);
+        _migratorWriterDao.writeRows(placement, results, rateLimiter);
     }
 
     @Override

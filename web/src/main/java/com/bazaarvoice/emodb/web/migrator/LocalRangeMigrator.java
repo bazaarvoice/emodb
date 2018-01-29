@@ -12,6 +12,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
+import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import org.joda.time.Duration;
 import org.joda.time.format.PeriodFormat;
@@ -34,13 +35,13 @@ public class LocalRangeMigrator {
     private final Meter _failedRangeMigrations;
 
     private final MigratorTools _migratorTools;
-    private final MigratorRateLimiter _rateLimiter;
+    private final MigratorRateLimiter _migratorRateLimiter;
 
     @Inject
     public LocalRangeMigrator(MigratorTools migratorTools, LifeCycleRegistry lifecycle, MetricRegistry metricRegistry,
                               MigratorRateLimiter rateLimiter) {
         _migratorTools = migratorTools;
-        _rateLimiter = rateLimiter;
+        _migratorRateLimiter = rateLimiter;
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
@@ -48,12 +49,14 @@ public class LocalRangeMigrator {
 
     public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range,
                                            String migrationId) throws IOException, InterruptedException {
-        
+
         _log.info("Migrating placement {}: {}", placement, range);
 
         Supplier<Integer> writeRate = Suppliers.memoizeWithExpiration(
-                () -> _rateLimiter.getMaxWritesPerSecond(migrationId),
+                () -> _migratorRateLimiter.getMaxWritesPerSecond(migrationId),
                 READ_RATE_LIMITER_SECONDS, TimeUnit.SECONDS);
+
+        RateLimiter rateLimiter = RateLimiter.create(writeRate.get());
 
         final long startTime = System.currentTimeMillis();
 
@@ -69,11 +72,12 @@ public class LocalRangeMigrator {
 
                 // Only call get() on the supplier once in order to ensure consistency in the next two statements
                 int currentWriteRate = writeRate.get();
+                rateLimiter.setRate(currentWriteRate);
 
                 Iterator<MigrationScanResult> batchIterator = Iterators.limit(results,
                         Math.min(MAX_BATCH_SIZE, currentWriteRate * READ_RATE_LIMITER_SECONDS));
 
-                _migratorTools.writeRows(placement, batchIterator, currentWriteRate);
+                _migratorTools.writeRows(placement, batchIterator, rateLimiter);
 
             }
 

@@ -36,6 +36,8 @@ dataCenter:
 
 
 systemOfRecord:
+  migrationPhase: DOUBLE_WRITE_LEGACY_READ
+  deltaBlockSizeInKb: 8
   stashRoot: s3://emodb-us-east-1/stash/ci
   # Where does the SoR store system information such as table definitions?
   systemTablePlacement: app_global:sys
