@@ -25,6 +25,8 @@ public class DAOUtils {
         _prefixLength = prefixLength;
         _deltaBlockSize = deltaBlockSize;
         _singleBlockBytes = String.format("%0" + prefixLength + "X", 1).getBytes();
+
+        // this is the maximum number that can be using hexidecimal using the # of digits equal to prefix length
         _maxBlocks = (int) Math.pow(16, _prefixLength) - 1;
     }
 
