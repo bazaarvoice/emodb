@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
@@ -189,6 +190,8 @@ public class DefaultFanout extends AbstractScheduledService {
         Iterable<OwnedSubscription> subscriptions = _subscriptionsSupplier.get();
         subTime.stop();
 
+        List<Date> lastMatchEventBatchTimes = Collections.synchronizedList(Lists.newArrayList());
+        
         try(final Timer.Context ignored = _e2eFanoutTimer.time()) {
             final List<Future<?>> futures = new LinkedList<>();
             // Copy the events to all the destination channels.
@@ -251,17 +254,8 @@ public class DefaultFanout extends AbstractScheduledService {
                             // Final flush.
                             flush(eventKeys, eventsByChannel, numOutboundReplicationEvents);
 
-                            // Update the lag metrics based on the last event returned.  This isn't perfect for several reasons:
-                            // 1. In-order delivery is not guaranteed
-                            // 2. The event time is based on the change ID which is close-to but not precisely the time the update occurred
-                            // 3. Injected events have artificial change IDs which don't correspond to any clock-based time
-                            // However, this is still a useful metric because:
-                            // 1. Delivery is in-order the majority of the time
-                            // 2. Change IDs are typically within milliseconds of update times
-                            // 3. Injected events are extremely rare and should be avoided outside of testing anyway
-                            // 4. The lag only becomes a concern on the scale of minutes, far above the uncertainty introduced by the above
                             if (lastMatchEventData != null) {
-                                updateLagMetrics(lastMatchEventData.getEventTime());
+                                lastMatchEventBatchTimes.add(lastMatchEventData.getEventTime());
                             }
                         }
                     } catch (Throwable t) {
@@ -273,6 +267,20 @@ public class DefaultFanout extends AbstractScheduledService {
 
             for (final Future<?> future : futures) {
                 Futures.getUnchecked(future);
+            }
+
+            // Update the lag metrics based on the last event returned.  This isn't perfect for several reasons:
+            // 1. In-order delivery is not guaranteed
+            // 2. The event time is based on the change ID which is close-to but not precisely the time the update occurred
+            // 3. Injected events have artificial change IDs which don't correspond to any clock-based time
+            // However, this is still a useful metric because:
+            // 1. Delivery is in-order the majority of the time
+            // 2. Change IDs are typically within milliseconds of update times
+            // 3. Injected events are extremely rare and should be avoided outside of testing anyway
+            // 4. The lag only becomes a concern on the scale of minutes, far above the uncertainty introduced by the above
+            Date lastMatchEventTime = lastMatchEventBatchTimes.stream().max(Date::compareTo).orElse(null);
+            if (lastMatchEventTime != null) {
+                updateLagMetrics(lastMatchEventTime);
             }
         }
 
