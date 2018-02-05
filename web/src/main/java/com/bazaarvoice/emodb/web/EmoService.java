@@ -6,6 +6,8 @@ import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.jersey.ServerErrorResponseMetricsFilter;
+import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamFilter;
+import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamResourceFilterFactory;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
@@ -192,6 +194,11 @@ public class EmoService extends Application<EmoConfiguration> {
         for (Class mapperType : ExceptionMappers.getMapperTypes()) {
             environment.jersey().register(mapperType);
         }
+
+        // Configure support for streaming JSON responses without long delays due to buffering
+        //noinspection unchecked
+        environment.jersey().getResourceConfig().getResourceFilterFactories().add(new UnbufferedStreamResourceFilterFactory());
+        environment.getApplicationContext().addFilter(new FilterHolder(new UnbufferedStreamFilter()), "/*", EnumSet.of(DispatcherType.REQUEST));
 
         // Create all the major EmoDB components using Guice.  Note: This code is organized such that almost all
         // initialization is complete before we register with Ostrich so we don't start receiving inbound requests

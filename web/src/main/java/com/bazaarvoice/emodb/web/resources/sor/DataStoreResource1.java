@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.resources.sor;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
+import com.bazaarvoice.emodb.common.dropwizard.jersey.Unbuffered;
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
@@ -115,6 +116,7 @@ public class DataStoreResource1 {
     @GET
     @Path ("_table")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.listTables", absolute = true)
+    @Unbuffered
     @ApiOperation (value = "Returns all the existing tables",
             notes = "Returns a Iterator of Table",
             response = Table.class
@@ -366,6 +368,7 @@ public class DataStoreResource1 {
     @GET
     @Path ("{table}")
     @RequiresPermissions ("sor|read|{table}")
+    @Unbuffered
     @Timed (name = "bv.emodb.sor.DataStoreResource1.scan", absolute = true)
     @ApiOperation (value = "Retrieves a list of content items in a particular table.",
             notes = "Retrieves a list of content items in a particular table.  To retrieve <em>all</em> items in a table set the\n" +
@@ -416,6 +419,7 @@ public class DataStoreResource1 {
     @Path ("_split/{table}/{split}")
     @RequiresPermissions ("sor|read|{table}")
     @ThrottleConcurrentRequests (maxRequests = 550)
+    @Unbuffered
     @Timed (name = "bv.emodb.sor.DataStoreResource1.getSplit", absolute = true)
     @ApiOperation (value = "Retrieves a list of content items in a particular table split.",
             notes = "Retrieves a list of content items in a particular table split.",
