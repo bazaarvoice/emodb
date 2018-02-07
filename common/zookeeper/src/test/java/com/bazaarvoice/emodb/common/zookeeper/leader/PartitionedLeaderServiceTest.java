@@ -44,7 +44,7 @@ public class PartitionedLeaderServiceTest {
             curator.start();
             
             PartitionedLeaderService service = new PartitionedLeaderService(curator, "/leader/single", "instance0",
-                    "test-service", 3, 1, 1, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
+                    "test-service", 3, 1, 5000, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
 
             service.start();
 
@@ -77,7 +77,7 @@ public class PartitionedLeaderServiceTest {
                 curators.add(curator);
 
                 PartitionedLeaderService service = new PartitionedLeaderService(curator, "/leader/multi", "instance" + i,
-                        "test-service", 10, 1, 1, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
+                        "test-service", 10, 1, 5000, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
                 service.start();
                 services.add(service);
             }
@@ -132,7 +132,7 @@ public class PartitionedLeaderServiceTest {
                 curators.add(curator);
 
                 PartitionedLeaderService service = new PartitionedLeaderService(curator, "/leader/relinquish", "instance" + i,
-                        "test-service", 2, 1, 1, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
+                        "test-service", 2, 1, 5000, TimeUnit.MILLISECONDS, TestLeaderService::new, null);
                 services.add(service);
             }
 
