@@ -37,6 +37,16 @@ public class DatabusConfiguration {
     @JsonProperty("subscriptionCacheInvalidation")
     private CachingSubscriptionDAO.CachingMode _subscriptionCacheInvalidation = CachingSubscriptionDAO.CachingMode.normal;
 
+    @Valid
+    @NotNull
+    @JsonProperty("masterFanoutPartitions")
+    private int _masterFanoutPartitions = 4;
+
+    @Valid
+    @NotNull
+    @JsonProperty("dataCenterFanoutPartitions")
+    private int _dataCenterFanoutPartitions = 4;
+
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
     }
@@ -70,6 +80,24 @@ public class DatabusConfiguration {
 
     public DatabusConfiguration setSubscriptionCacheInvalidation(CachingSubscriptionDAO.CachingMode subscriptionCacheInvalidation) {
         _subscriptionCacheInvalidation = subscriptionCacheInvalidation;
+        return this;
+    }
+
+    public int getMasterFanoutPartitions() {
+        return _masterFanoutPartitions;
+    }
+
+    public DatabusConfiguration setMasterFanoutPartitions(int masterFanoutPartitions) {
+        _masterFanoutPartitions = masterFanoutPartitions;
+        return this;
+    }
+
+    public int getDataCenterFanoutPartitions() {
+        return _dataCenterFanoutPartitions;
+    }
+
+    public DatabusConfiguration setDataCenterFanoutPartitions(int dataCenterFanoutPartitions) {
+        _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
         return this;
     }
 }

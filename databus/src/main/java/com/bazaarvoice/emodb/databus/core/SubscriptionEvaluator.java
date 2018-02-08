@@ -76,7 +76,7 @@ public class SubscriptionEvaluator {
 
     public MatchEventData getMatchEventData(ByteBuffer eventData) throws UnknownTableException {
         UpdateRef ref = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
-        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getTags(), ref.getChangeId());
+        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getKey(), ref.getTags(), ref.getChangeId());
     }
 
     private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
@@ -85,17 +85,23 @@ public class SubscriptionEvaluator {
 
     protected class MatchEventData {
         private final Table _table;
+        private final String _key;
         private final Set<String> _tags;
         private final UUID _changeId;
 
-        public MatchEventData(Table table, Set<String> tags, UUID changeId) {
+        public MatchEventData(Table table, String key, Set<String> tags, UUID changeId) {
             _table = checkNotNull(table, "table");
+            _key = key;
             _tags = tags;
             _changeId = changeId;
         }
 
         public Table getTable() {
             return _table;
+        }
+
+        public String getKey() {
+            return _key;
         }
 
         public Set<String> getTags() {

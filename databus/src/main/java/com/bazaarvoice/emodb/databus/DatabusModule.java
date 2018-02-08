@@ -22,9 +22,12 @@ import com.bazaarvoice.emodb.databus.core.DedupMigrationTask;
 import com.bazaarvoice.emodb.databus.core.DefaultDatabus;
 import com.bazaarvoice.emodb.databus.core.DefaultFanoutManager;
 import com.bazaarvoice.emodb.databus.core.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.databus.core.DrainFanoutPartitionTask;
 import com.bazaarvoice.emodb.databus.core.FanoutManager;
+import com.bazaarvoice.emodb.databus.core.HashingPartitionSelector;
 import com.bazaarvoice.emodb.databus.core.MasterFanout;
 import com.bazaarvoice.emodb.databus.core.OwnerAwareDatabus;
+import com.bazaarvoice.emodb.databus.core.PartitionSelector;
 import com.bazaarvoice.emodb.databus.core.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.core.SubscriptionEvaluator;
 import com.bazaarvoice.emodb.databus.core.SystemQueueMonitorManager;
@@ -52,6 +55,7 @@ import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Range;
 import com.google.common.eventbus.EventBus;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -151,7 +155,8 @@ public class DatabusModule extends PrivateModule {
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
-
+        bind(DrainFanoutPartitionTask.class).asEagerSingleton();
+        
         // Expose the event store directly for use by debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);
@@ -212,4 +217,35 @@ public class DatabusModule extends PrivateModule {
         lifeCycleRegistry.manage(new ExecutorServiceManager(queueDrainService, Duration.seconds(1), "drainQueue-cache"));
         return queueDrainService;
     }
+
+    @Provides @Singleton @MasterFanoutPartitions
+    Integer provideMasterFanoutPartitions(DatabusConfiguration configuration) {
+        checkArgument(Range.closed(1, 16).contains(configuration.getMasterFanoutPartitions()),
+                "Master fanout partitions must be between 1 and 16");
+        return configuration.getMasterFanoutPartitions();
+    }
+
+    @Provides @Singleton @MasterFanoutPartitions
+    PartitionSelector provideMasterFanoutPartitionSelector(@MasterFanoutPartitions int numPartitions) {
+        if (numPartitions == 1) {
+            return PartitionSelector.SINGLE_PARTITION_SELECTOR;
+        }
+        return new HashingPartitionSelector(numPartitions);
+    }
+
+    @Provides @Singleton @DataCenterFanoutPartitions
+    Integer provideDataCenterFanoutPartitions(DatabusConfiguration configuration) {
+        checkArgument(Range.closed(1, 16).contains(configuration.getDataCenterFanoutPartitions()),
+                "Data center fanout partitions must be between 1 and 16");
+        return configuration.getDataCenterFanoutPartitions();
+    }
+
+    @Provides @Singleton @DataCenterFanoutPartitions
+    PartitionSelector provideDataCenterFanoutPartitionSelector(@DataCenterFanoutPartitions int numPartitions) {
+        if (numPartitions == 1) {
+            return PartitionSelector.SINGLE_PARTITION_SELECTOR;
+        }
+        return new HashingPartitionSelector(numPartitions);
+    }
+
 }

@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.databus.core;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.databus.ChannelNames;
+import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
@@ -29,13 +30,18 @@ public class SystemQueueMonitor extends AbstractScheduledService {
     private final DatabusEventStore _eventStore;
     private final DataCenters _dataCenters;
     private final Collection<ClusterInfo> _clusterInfo;
+    private final int _masterFanoutPartitions;
+    private final int _dataCenterFanoutPartitions;
     private final MetricsGroup _gauges;
 
     public SystemQueueMonitor(DatabusEventStore eventStore, DataCenters dataCenters,
-                              Collection<ClusterInfo> clusterInfo, MetricRegistry metricRegistry) {
+                              Collection<ClusterInfo> clusterInfo, int masterFanoutPartitions,
+                              int dataCenterFanoutPartitions, MetricRegistry metricRegistry) {
         _eventStore = checkNotNull(eventStore, "eventStore");
         _dataCenters = checkNotNull(dataCenters, "dataCenters");
         _clusterInfo = checkNotNull(clusterInfo, "clusterInfo");
+        _masterFanoutPartitions = masterFanoutPartitions;
+        _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
         _gauges = new MetricsGroup(metricRegistry);
         ServiceFailureListener.listenTo(this, metricRegistry);
     }
@@ -62,7 +68,12 @@ public class SystemQueueMonitor extends AbstractScheduledService {
     private void pollQueueSizes() {
         _gauges.beginUpdates();
 
-        pollQueueSize("master", ChannelNames.getMasterFanoutChannel());
+        pollQueueSize("legacy-master", ChannelNames.getLegacyMasterFanoutChannel());
+        long totalMasterQueueSize = 0;
+        for (int partition = 0; partition < _masterFanoutPartitions; partition++) {
+            totalMasterQueueSize += pollQueueSize("master-" + partition, ChannelNames.getMasterFanoutChannel(partition));
+        }
+        _gauges.gauge(newMetric("master")).set(totalMasterQueueSize);
 
         for (ClusterInfo cluster : _clusterInfo) {
             pollQueueSize("canary-" + cluster.getClusterMetric(), ChannelNames.getMasterCanarySubscription(cluster.getCluster()));
@@ -71,21 +82,30 @@ public class SystemQueueMonitor extends AbstractScheduledService {
         DataCenter self = _dataCenters.getSelf();
         for (DataCenter dataCenter : _dataCenters.getAll()) {
             if (!dataCenter.equals(self)) {
-                pollQueueSize("out-" + dataCenter.getName(), ChannelNames.getReplicationFanoutChannel(dataCenter));
+                long totalDataCenterQueueSize = 0;
+                for (int partition = 0; partition < _dataCenterFanoutPartitions; partition++) {
+                    totalDataCenterQueueSize += pollQueueSize("out-" + dataCenter.getName() + partition,
+                            ChannelNames.getReplicationFanoutChannel(dataCenter, partition));
+                }
+                _gauges.gauge(newMetric("out-" + dataCenter.getName())).set(totalDataCenterQueueSize);
+
+                pollQueueSize("legacy-out-" + dataCenter.getName(), ChannelNames.getLegacyReplicationFanoutChannel(dataCenter));
             }
         }
 
         _gauges.endUpdates();
     }
 
-    private void pollQueueSize(String name, String channel) {
+    private long pollQueueSize(String name, String channel) {
         try {
             // Exact count up to 500, estimate above that.
             long count = _eventStore.getSizeEstimate(channel, 500);
             _log.debug("System queue size {}: {} (channel={})", name, count, channel);
             _gauges.gauge(newMetric(name)).set(count);
+            return count;
         } catch (Exception e) {
             _log.error("Unexpected exception polling channel size: {}", channel, e);
+            return 0;
         }
     }
 

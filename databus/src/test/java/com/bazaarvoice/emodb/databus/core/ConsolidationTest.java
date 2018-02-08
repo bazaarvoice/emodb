@@ -341,7 +341,8 @@ public class ConsolidationTest {
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, databusAuthorizer, "replication",
-                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), new MetricRegistry(), clock);
+                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), 1, key -> 0,
+                new MetricRegistry(), clock);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

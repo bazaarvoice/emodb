@@ -18,15 +18,23 @@ public class ChannelNames {
     }
 
     public static boolean isSystemFanoutChannel(String channel) {
-        return channel.equals(MASTER_FANOUT) || channel.startsWith(REPLICATION_FANOUT_PREFIX);
+        return channel.startsWith(MASTER_FANOUT) || channel.startsWith(REPLICATION_FANOUT_PREFIX);
     }
 
-    public static String getMasterFanoutChannel() {
+    public static String getLegacyMasterFanoutChannel() {
         return MASTER_FANOUT;
     }
 
-    public static String getReplicationFanoutChannel(DataCenter dataCenter) {
+    public static String getMasterFanoutChannel(int partition) {
+        return String.format("%s[%d]", MASTER_FANOUT, partition);
+    }
+    
+    public static String getLegacyReplicationFanoutChannel(DataCenter dataCenter) {
         return REPLICATION_FANOUT_PREFIX + dataCenter.getName();
+    }
+
+    public static String getReplicationFanoutChannel(DataCenter dataCenter, int partition) {
+        return String.format("%s%s[%d]", REPLICATION_FANOUT_PREFIX, dataCenter.getName(), partition);
     }
 
     public static String getMasterReplayChannel() {

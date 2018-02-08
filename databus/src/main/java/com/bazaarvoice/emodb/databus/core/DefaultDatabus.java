@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
+import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Event;
@@ -52,6 +53,7 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -127,6 +129,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final JobService _jobService;
     private final DatabusAuthorizer _databusAuthorizer;
     private final String _systemOwnerId;
+    private final PartitionSelector _masterPartitionSelector;
+    private final List<String> _masterFanoutChannels;
     private final Meter _peekedMeter;
     private final Meter _polledMeter;
     private final Meter _renewedMeter;
@@ -155,6 +159,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @SystemIdentity String systemOwnerId,
                           @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition,
                           @QueueDrainExecutorService ExecutorService drainService,
+                          @MasterFanoutPartitions int masterPartitions,
+                          @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
         _eventBus = eventBus;
         _subscriptionDao = subscriptionDao;
@@ -166,6 +172,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _systemOwnerId = systemOwnerId;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
         _drainService = checkNotNull(drainService, "drainService");
+        _masterPartitionSelector = masterPartitionSelector;
         _ticker = ClockTicker.getTicker(clock);
         _clock = clock;
         _peekedMeter = newEventMeter("peeked", metricRegistry);
@@ -194,6 +201,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 });
         lifeCycle.manage(this);
 
+        ImmutableList.Builder<String> masterFanoutChannels = ImmutableList.builder();
+        for (int partition=0; partition < masterPartitions; partition++) {
+            masterFanoutChannels.add(ChannelNames.getMasterFanoutChannel(partition));
+        }
+        _masterFanoutChannels = masterFanoutChannels.build();
+        
         checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerMoveSubscriptionJobHandler(jobHandlerRegistry);
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
@@ -380,13 +393,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     @Subscribe
     public void onUpdateIntent(UpdateIntentEvent event) {
-        List<ByteBuffer> eventIds = Lists.newArrayListWithCapacity(event.getUpdateRefs().size());
+        ImmutableMultimap.Builder<String, ByteBuffer> eventIds = ImmutableMultimap.builder();
         for (UpdateRef ref : event.getUpdateRefs()) {
-            eventIds.add(UpdateRefSerializer.toByteBuffer(ref));
+            int partition = _masterPartitionSelector.getPartition(ref.getKey());
+            eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
         }
-        _eventStore.addAll(ChannelNames.getMasterFanoutChannel(), eventIds);
+        _eventStore.addAll(eventIds.build());
     }
-
+    
     @Override
     public long getEventCount(String ownerId, String subscription) {
         return getEventCountUpTo(ownerId, subscription, Long.MAX_VALUE);

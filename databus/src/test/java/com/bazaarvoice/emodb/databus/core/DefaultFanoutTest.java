@@ -21,6 +21,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
@@ -30,9 +32,12 @@ import org.testng.annotations.Test;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.util.Date;
+import java.util.List;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
@@ -47,6 +52,7 @@ public class DefaultFanoutTest {
     private DatabusAuthorizer _databusAuthorizer;
     private String _remoteChannel;
     private Multimap<String, ByteBuffer> _eventsSinked;
+    private PartitionSelector _outboundPartitionSelector;
 
     @BeforeMethod
     private void setUp() {
@@ -55,7 +61,9 @@ public class DefaultFanoutTest {
         Function<Multimap<String, ByteBuffer>, Void> eventSink = new Function<Multimap<String, ByteBuffer>, Void>() {
             @Override
             public Void apply(Multimap<String, ByteBuffer> input) {
-                _eventsSinked.putAll(input);
+                synchronized (this) {
+                    _eventsSinked.putAll(input);
+                }
                 return null;
             }
         };
@@ -65,7 +73,7 @@ public class DefaultFanoutTest {
         when(_currentDataCenter.getName()).thenReturn("local");
         _remoteDataCenter = mock(DataCenter.class);
         when(_remoteDataCenter.getName()).thenReturn("remote");
-        _remoteChannel = ChannelNames.getReplicationFanoutChannel(_remoteDataCenter);
+        _remoteChannel = ChannelNames.getReplicationFanoutChannel(_remoteDataCenter, 0);
 
         RateLimitedLogFactory rateLimitedLogFactory = mock(RateLimitedLogFactory.class);
         when(rateLimitedLogFactory.from(any(Logger.class))).thenReturn(mock(RateLimitedLog.class));
@@ -76,9 +84,12 @@ public class DefaultFanoutTest {
         SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(
                 _dataProvider, _databusAuthorizer, rateLimitedLogFactory);
 
-        _defaultFanout = new DefaultFanout("test", mock(EventSource.class), eventSink, true, Duration.standardSeconds(1),
-                _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
-                new MetricRegistry(), Clock.systemUTC());
+        _outboundPartitionSelector = mock(PartitionSelector.class);
+        when(_outboundPartitionSelector.getPartition(anyString())).thenReturn(0);
+
+        _defaultFanout = new DefaultFanout("test", mock(EventSource.class), eventSink, _outboundPartitionSelector,
+                Duration.standardSeconds(1), _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
+                "test", new MetricRegistry(), Clock.systemUTC());
     }
 
     @Test
@@ -145,6 +156,40 @@ public class DefaultFanoutTest {
         assertEquals(_eventsSinked,
                 ImmutableMultimap.of(_remoteChannel, event.getData()));
 
+    }
+
+    @Test
+    public void testFanoutToMultiplePartitions() {
+        reset(_outboundPartitionSelector);
+
+        when(_outboundPartitionSelector.getPartition("key0")).thenReturn(0);
+        when(_outboundPartitionSelector.getPartition("key1")).thenReturn(1);
+        when(_outboundPartitionSelector.getPartition("key2")).thenReturn(2);
+        when(_outboundPartitionSelector.getPartition("key3")).thenReturn(0);
+
+        addTable("partition-test-table");
+
+        List<String> remoteChannels = Lists.newArrayListWithCapacity(3);
+        for (int partition=0; partition < 3; partition++) {
+            remoteChannels.add(ChannelNames.getReplicationFanoutChannel(_remoteDataCenter, partition));
+        }
+        
+        List<EventData> events = Lists.newArrayListWithCapacity(4);
+        for (int i=0; i < 4; i++) {
+            EventData event = newEvent("id" + i, "partition-test-table", "key" + i);
+            events.add(event);
+        }
+
+        when(_subscriptionsSupplier.get()).thenReturn(ImmutableList.of());
+        _defaultFanout.copyEvents(ImmutableList.copyOf(events));
+
+        assertEquals(ImmutableSetMultimap.copyOf(_eventsSinked),
+                ImmutableSetMultimap.builder()
+                        .put(remoteChannels.get(0), events.get(0).getData())
+                        .put(remoteChannels.get(1), events.get(1).getData())
+                        .put(remoteChannels.get(2), events.get(2).getData())
+                        .put(remoteChannels.get(0), events.get(3).getData())
+                        .build());
     }
 
     private void addTable(String tableName) {
