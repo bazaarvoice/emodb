@@ -88,7 +88,7 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsPollerManager;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
-import com.bazaarvoice.emodb.table.db.curator.CuratorMutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAODelegate;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
@@ -257,16 +257,12 @@ public class DataStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton
-    Optional<Mutex>[] provideMutexes(DataCenterConfiguration dataCenterConfiguration, @DataStoreZooKeeper CuratorFramework curator) {
+    Optional<TableMutexManager> provideTableMutexManager(DataCenterConfiguration dataCenterConfiguration, @DataStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            Optional<Mutex>[] mutexes = new Optional[256];
-            for (int i = 0; i < mutexes.length; i++) {
-                mutexes[i] = Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables/" + i));
-            }
-            return mutexes;
+            return Optional.of(new TableMutexManager(curator, "/lock/tables"));
         }
-        return new Optional[] { Optional.absent() };
+        return Optional.absent();
     }
 
     @Provides @Singleton
