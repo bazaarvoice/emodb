@@ -88,6 +88,7 @@ import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
+import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.LoggerFactory;
@@ -257,6 +258,9 @@ public class ScanUploadModule extends PrivateModule {
             checkArgument(!scheduledScanConfig.getPlacements().isEmpty(), "Scheduled scan must contain at least one placement");
             checkArgument(scheduledScanConfig.getScanId().isPresent(), "Scan ID not set");
             checkArgument(scheduledScanConfig.getMaxRangeConcurrency().isPresent(), "Max range concurrency not set");
+            checkArgument(scheduledScanConfig.getScanByAZ().isPresent(), "Scan by availability zone is not set");
+            checkArgument(scheduledScanConfig.getRangeScanSplitSize() > 0, "Max range scan split size must be > 0");
+            checkArgument(scheduledScanConfig.getMaxRangeScanTime().isLongerThan(Duration.ZERO), "Duration must be longer than zero");
 
             ScanDestination destination = ScanDestination.to(dataStore.getStashRoot());
             DateTimeFormatter scanIdFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanId().get()).withZoneUTC();
@@ -276,7 +280,9 @@ public class ScanUploadModule extends PrivateModule {
                     scheduledScanConfig.getPlacements(),
                     scheduledScanConfig.getMaxRangeConcurrency().get(),
                     scheduledScanConfig.getScanByAZ().get(),
-                    scheduledScanConfig.isRequestRequired()));
+                    scheduledScanConfig.isRequestRequired(),
+                    scheduledScanConfig.getRangeScanSplitSize(),
+                    scheduledScanConfig.getMaxRangeScanTime()));
         }
 
         return scheduledScanUploads.build();

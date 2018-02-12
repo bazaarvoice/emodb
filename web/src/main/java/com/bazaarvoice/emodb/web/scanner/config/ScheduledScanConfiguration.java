@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.scanner.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import io.dropwizard.util.Duration;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -61,6 +62,19 @@ public class ScheduledScanConfiguration {
     @NotNull
     @JsonProperty ("requestRequired")
     private boolean _requestRequired = false;
+
+    // Flag to indicate the maximum number of rows to scan in a single range scan task.
+    @Valid
+    @NotNull
+    @JsonProperty ("rangeScanSplitSize")
+    private int _rangeScanSplitSize = 1000000;
+
+    // Flag to indicate the maximum time a range scan can run before it is automatically stopped and remaining work
+    // split to a new task
+    @Valid
+    @NotNull
+    @JsonProperty ("maxRangeScanTime")
+    private Duration _maxRangeScanTime = Duration.minutes(10);
 
     public Optional<String> getDailyScanTime() {
         return _dailyScanTime;
@@ -122,6 +136,24 @@ public class ScheduledScanConfiguration {
 
     public ScheduledScanConfiguration setRequestRequired(boolean requestRequired) {
         _requestRequired = requestRequired;
+        return this;
+    }
+
+    public int getRangeScanSplitSize() {
+        return _rangeScanSplitSize;
+    }
+
+    public ScheduledScanConfiguration setRangeScanSplitSize(int rangeScanSplitSize) {
+        _rangeScanSplitSize = rangeScanSplitSize;
+        return this;
+    }
+
+    public org.joda.time.Duration getMaxRangeScanTime() {
+        return org.joda.time.Duration.millis(_maxRangeScanTime.toMilliseconds());
+    }
+
+    public ScheduledScanConfiguration setMaxRangeScanTime(Duration maxRangeScanTime) {
+        _maxRangeScanTime = maxRangeScanTime;
         return this;
     }
 }

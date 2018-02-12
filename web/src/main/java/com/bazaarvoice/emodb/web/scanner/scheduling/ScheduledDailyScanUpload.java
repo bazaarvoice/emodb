@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.scanner.scheduling;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -23,12 +24,15 @@ public class ScheduledDailyScanUpload {
     private final List<String> _placements;
     private final int _maxRangeConcurrency;
     private final boolean _scanByAZ;
-    private final boolean requestRequired;
+    private final boolean _requestRequired;
+    private final int _maxRangeScanSplitSize;
+    private final Duration _maxRangeScanTime;
 
     public ScheduledDailyScanUpload(String id, String timeOfDay, DateTimeFormatter scanIdFormat,
                                     ScanDestination rootDestination, DateTimeFormatter directoryFormat,
                                     List<String> placements, int maxRangeConcurrency,
-                                    boolean scanByAZ, boolean requestRequired) {
+                                    boolean scanByAZ, boolean requestRequired,
+                                    int maxRangeScanSplitSize, Duration maxRangeScanTime) {
         _id = id;
         _timeOfDay = timeOfDay;
         _scanIdFormat = scanIdFormat;
@@ -37,7 +41,9 @@ public class ScheduledDailyScanUpload {
         _placements = placements;
         _maxRangeConcurrency = maxRangeConcurrency;
         _scanByAZ = scanByAZ;
-        this.requestRequired = requestRequired;
+        _requestRequired = requestRequired;
+        _maxRangeScanSplitSize = maxRangeScanSplitSize;
+        _maxRangeScanTime = maxRangeScanTime;
     }
 
     public String getId() {
@@ -72,8 +78,16 @@ public class ScheduledDailyScanUpload {
         return _scanByAZ;
     }
 
+    public int getMaxRangeScanSplitSize() {
+        return _maxRangeScanSplitSize;
+    }
+
+    public Duration getMaxRangeScanTime() {
+        return _maxRangeScanTime;
+    }
+
     public boolean isRequestRequired() {
-        return requestRequired;
+        return _requestRequired;
     }
 
     /**

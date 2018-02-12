@@ -236,6 +236,14 @@ scanner:
     enableCloudWatchMetrics: false
     stashStateListeners:
       - class: com.bazaarvoice.emodb.plugin.stash.LoggingStashStateListener
+  scheduledScans:
+      default:
+        dailyScanTime: 18:00-6:00      # 6pm Central
+        maxRangeConcurrency: 4
+        requestRequired: false
+        maxRangeScanTime: 10m
+        placements:
+          - "ugc_global:ugc"
 
 # Configure the HTTP server that listens for inbound requests
 server:
