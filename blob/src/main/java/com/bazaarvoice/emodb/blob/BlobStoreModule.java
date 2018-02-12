@@ -214,12 +214,16 @@ public class BlobStoreModule extends PrivateModule {
     }
     
     @Provides @Singleton
-    Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
+    Optional<Mutex>[] provideMutexes(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables"));
+            Optional<Mutex>[] mutexes = new Optional[256];
+            for (int i = 0; i < mutexes.length; i++) {
+                mutexes[i] = Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables/" + i));
+            }
+            return mutexes;
         }
-        return Optional.absent();
+        return new Optional[] { Optional.absent() };
     }
 
 
