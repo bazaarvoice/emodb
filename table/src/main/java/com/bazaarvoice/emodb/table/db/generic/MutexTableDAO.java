@@ -189,7 +189,7 @@ public class MutexTableDAO implements TableDAO {
     }
 
     private void withLock(Runnable runnable, String table) {
-        if (_mutexManager.isPresent()) {
+        if (!_mutexManager.isPresent()) {
             throw new UnsupportedOperationException(
                     "The table metadata mutex is unavailable from this data center. " +
                     "Make sure that the `systemDataCenter` property points to the right system datacenter. " +
