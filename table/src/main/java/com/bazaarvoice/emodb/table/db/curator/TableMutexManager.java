@@ -18,6 +18,6 @@ public class TableMutexManager {
     }
 
     public void runWithLockForTable(Runnable runnable, Duration acquireTimeout, String table) {
-        _mutexes[table.hashCode() % NUM_MUTEXES].runWithLock(runnable, acquireTimeout);
+        _mutexes[Math.abs(table.hashCode() % NUM_MUTEXES)].runWithLock(runnable, acquireTimeout);
     }
 }
