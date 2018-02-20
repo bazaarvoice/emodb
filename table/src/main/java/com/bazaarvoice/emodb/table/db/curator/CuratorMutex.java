@@ -33,7 +33,8 @@ public class CuratorMutex implements Mutex {
         }
     }
 
-    private InterProcessMutex acquire(Duration acquireTimeout) {
+    // temporarily public for table mutex migration
+    public InterProcessMutex acquire(Duration acquireTimeout) {
         InterProcessMutex mutex = new InterProcessMutex(_curatorFramework, _path);
         try {
             if (!mutex.acquire(acquireTimeout.getMillis(), TimeUnit.MILLISECONDS)) {
@@ -44,8 +45,9 @@ public class CuratorMutex implements Mutex {
         }
         return mutex;
     }
-
-    private void release(InterProcessMutex mutex) {
+    
+    // temporarily public for table mutex migration
+    public void release(InterProcessMutex mutex) {
         try {
             mutex.release();
         } catch (Exception e) {
