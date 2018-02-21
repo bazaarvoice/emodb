@@ -3,8 +3,7 @@ package com.bazaarvoice.emodb.web.scanner.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
-import org.joda.time.Duration;
-import org.joda.time.format.ISOPeriodFormat;
+import org.joda.time.Period;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -75,7 +74,7 @@ public class ScheduledScanConfiguration {
     @Valid
     @NotNull
     @JsonProperty ("maxRangeScanTime")
-    private String _maxRangeScanTime = "PT10M";
+    private Period _maxRangeScanTime = new Period("PT10M");
 
     public Optional<String> getDailyScanTime() {
         return _dailyScanTime;
@@ -149,12 +148,12 @@ public class ScheduledScanConfiguration {
         return this;
     }
 
-    public Duration getMaxRangeScanTime() {
-        return ISOPeriodFormat.standard().parsePeriod(_maxRangeScanTime).toStandardDuration();
+    public Period getMaxRangeScanTime() {
+        return _maxRangeScanTime;
     }
 
-    public ScheduledScanConfiguration setMaxRangeScanTime(Duration maxRangeScanTime) {
-        _maxRangeScanTime = maxRangeScanTime.toPeriod().toString();
+    public ScheduledScanConfiguration setMaxRangeScanTime(Period maxRangeScanTime) {
+        _maxRangeScanTime = maxRangeScanTime;
         return this;
     }
 }

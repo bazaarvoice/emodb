@@ -260,7 +260,7 @@ public class ScanUploadModule extends PrivateModule {
             checkArgument(scheduledScanConfig.getMaxRangeConcurrency().isPresent(), "Max range concurrency not set");
             checkArgument(scheduledScanConfig.getScanByAZ().isPresent(), "Scan by availability zone is not set");
             checkArgument(scheduledScanConfig.getRangeScanSplitSize() > 0, "Max range scan split size must be > 0");
-            checkArgument(scheduledScanConfig.getMaxRangeScanTime().isLongerThan(Duration.ZERO), "Duration must be longer than zero");
+            checkArgument(scheduledScanConfig.getMaxRangeScanTime().toStandardDuration().isLongerThan(Duration.ZERO), "Duration must be longer than zero");
 
             ScanDestination destination = ScanDestination.to(dataStore.getStashRoot());
             DateTimeFormatter scanIdFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanId().get()).withZoneUTC();
@@ -282,7 +282,7 @@ public class ScanUploadModule extends PrivateModule {
                     scheduledScanConfig.getScanByAZ().get(),
                     scheduledScanConfig.isRequestRequired(),
                     scheduledScanConfig.getRangeScanSplitSize(),
-                    scheduledScanConfig.getMaxRangeScanTime()));
+                    scheduledScanConfig.getMaxRangeScanTime().toStandardDuration()));
         }
 
         return scheduledScanUploads.build();
