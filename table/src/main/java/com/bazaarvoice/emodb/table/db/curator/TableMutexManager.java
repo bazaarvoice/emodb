@@ -25,11 +25,11 @@ public class TableMutexManager {
 
     public void runWithLockForTable(Runnable runnable, Duration acquireTimeout, String table) {
 
-        InterProcessMutex mutex = _oldMutex.acquire(acquireTimeout);
 
-        _mutexes[Math.abs(Hashing.murmur3_128().hashString(table, Charsets.UTF_8).asInt() % NUM_MUTEXES)]
-                .runWithLock(runnable, acquireTimeout);
+        _oldMutex.runWithLock(() -> {
+            _mutexes[Math.abs(Hashing.murmur3_128().hashString(table, Charsets.UTF_8).asInt() % NUM_MUTEXES)]
+                            .runWithLock(runnable, acquireTimeout);
+        }, acquireTimeout);
 
-        _oldMutex.release(mutex);
     }
 }

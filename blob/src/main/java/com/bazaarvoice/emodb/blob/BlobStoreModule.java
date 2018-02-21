@@ -216,7 +216,7 @@ public class BlobStoreModule extends PrivateModule {
     Optional<TableMutexManager> provideTableMutexManager(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return Optional.of(new TableMutexManager(curator, "locks/tables", "/lock/table-partitions"));
+            return Optional.of(new TableMutexManager(curator, "/lock/tables", "/lock/table-partitions"));
         }
         return Optional.absent();
     }
