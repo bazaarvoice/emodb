@@ -15,12 +15,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class DataStoreConfiguration {
-    /**
-     * Where does the SoR store system information such as table definitions?
-     */
-    @Valid
-    @NotNull
-    private String _systemTablePlacement;
 
     @Valid
     @NotNull
@@ -89,15 +83,6 @@ public class DataStoreConfiguration {
         _stashBlackListTableCondition = stashBlackListTableCondition;
     }
 
-    public String getSystemTablePlacement() {
-        return _systemTablePlacement;
-    }
-
-    public DataStoreConfiguration setSystemTablePlacement(String systemTablePlacement) {
-        _systemTablePlacement = systemTablePlacement;
-        return this;
-    }
-
     public Set<String> getValidTablePlacements() {
         return _validTablePlacements;
     }
@@ -131,17 +116,6 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setPlacementsUnderMove(Map<String, String> placementsUnderMove) {
         _placementsUnderMove = placementsUnderMove;
         return this;
-    }
-
-    @ValidationMethod(message = ".systemTablePlacement references a keyspace not defined in 'cassandraKeyspaces'")
-    public boolean isValidSystemTablePlacement() {
-        String systemKeyspace = _systemTablePlacement.substring(0, _systemTablePlacement.indexOf(':'));
-        for (CassandraConfiguration cassandraConfig : _cassandraClusters.values()) {
-            if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public SlowQueryLogConfiguration getSlowQueryLogConfiguration() {

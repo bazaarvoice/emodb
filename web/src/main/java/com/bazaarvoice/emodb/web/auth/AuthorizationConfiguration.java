@@ -31,9 +31,6 @@ public class AuthorizationConfiguration {
     // Table for storing mappings of role groups to roles
     @NotNull
     private String _roleGroupTable = DEFAULT_ROLE_GROUP_TABLE;
-    // Placement for preceding tables
-    @NotNull
-    private String _tablePlacement;
     // EmoDB administrator
     @NotNull
     private String _adminApiKey;
@@ -85,15 +82,6 @@ public class AuthorizationConfiguration {
 
     public AuthorizationConfiguration setRoleGroupTable(String roleGroupTable) {
         _roleGroupTable = roleGroupTable;
-        return this;
-    }
-
-    public String getTablePlacement() {
-        return _tablePlacement;
-    }
-
-    public AuthorizationConfiguration setTablePlacement(String tablePlacement) {
-        _tablePlacement = tablePlacement;
         return this;
     }
 

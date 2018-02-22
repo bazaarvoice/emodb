@@ -35,6 +35,7 @@ import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
 import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
 import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;
@@ -240,9 +241,9 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash,
-            @IdentityIdSupplier Supplier<String> identityIdSupplier) {
+            @IdentityIdSupplier Supplier<String> identityIdSupplier, @SystemTablePlacement String tablePlacement) {
         return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
-                config.getIdIndexTable(), config.getTablePlacement(), identityIdSupplier, hash);
+                config.getIdIndexTable(), tablePlacement, identityIdSupplier, hash);
     }
 
     @Provides
@@ -298,9 +299,10 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @Named("dao")
     PermissionManager providePermissionManagerDAO(
-            AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore) {
+            AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore,
+            @SystemTablePlacement String tablePlacement) {
         return new TablePermissionManagerDAO(
-                permissionResolver, dataStore, config.getPermissionsTable(), config.getTablePlacement());
+                permissionResolver, dataStore, config.getPermissionsTable(), tablePlacement);
     }
 
     @Provides
@@ -336,9 +338,9 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @Named("dao")
     RoleManager provideRoleManagerDAO(AuthorizationConfiguration config, DataStore dataStore,
-                                      PermissionManager permissionManager) {
+                                      PermissionManager permissionManager, @SystemTablePlacement String tablePlacement) {
         return new TableRoleManagerDAO(dataStore, config.getRoleTable(), config.getRoleGroupTable(),
-                config.getTablePlacement(), permissionManager);
+                tablePlacement, permissionManager);
     }
 
     @Provides

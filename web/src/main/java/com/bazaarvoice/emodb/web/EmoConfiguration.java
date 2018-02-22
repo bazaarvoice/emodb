@@ -35,6 +35,11 @@ public class EmoConfiguration extends Configuration {
 
     @Valid
     @NotNull
+    @JsonProperty("_systemTablePlacement")
+    private String _systemTablePlacement;
+
+    @Valid
+    @NotNull
     @JsonProperty("systemOfRecord")
     private DataStoreConfiguration _dataStoreConfiguration;
 
@@ -114,6 +119,15 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setCluster(String cluster) {
         _cluster = cluster;
+        return this;
+    }
+
+    public String getSystemTablePlacement() {
+        return _systemTablePlacement;
+    }
+
+    public EmoConfiguration setSystemTablePlacement(String systemTablePlacement) {
+        _systemTablePlacement = systemTablePlacement;
         return this;
     }
 

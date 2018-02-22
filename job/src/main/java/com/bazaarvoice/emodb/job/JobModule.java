@@ -21,6 +21,7 @@ import com.bazaarvoice.emodb.job.service.QueuePeekLimit;
 import com.bazaarvoice.emodb.job.service.QueueRefreshTime;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.google.common.base.Supplier;
+import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -60,6 +61,9 @@ public class JobModule extends PrivateModule {
 
     @Override
     protected void configure() {
+
+        requireBinding(Key.get(String.class, JobsTablePlacement.class));
+
         bind(String.class).annotatedWith(JobQueueName.class).toInstance(QUEUE_NAME);
 
         bind(JobStatusDAO.class).to(DataStoreJobStatusDAO.class).asEagerSingleton();
@@ -69,11 +73,6 @@ public class JobModule extends PrivateModule {
 
         expose(JobService.class);
         expose(JobHandlerRegistry.class);
-    }
-
-    @Provides @Singleton @JobsTablePlacement
-    protected String provideJobsTablePlacement(JobConfiguration configuration) {
-        return configuration.getTablePlacement();
     }
 
     @Provides @Singleton @JobsTableName

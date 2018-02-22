@@ -38,6 +38,7 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
+import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.HostDiscovery;
@@ -110,12 +111,14 @@ public class CasDatabusTest {
                         .setCassandraConfiguration(cassandraConfiguration));
 
                 bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
-                        .setSystemTablePlacement("app_global:sys")
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc", "app_remote:default"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
                         .setHistoryTtl(Period.days(2)));
+
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
+
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()

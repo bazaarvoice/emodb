@@ -41,6 +41,7 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.ServiceRegistry;
@@ -123,12 +124,14 @@ public class CasDataStoreTest {
                 bind(TaskRegistry.class).toInstance(mock(TaskRegistry.class));
 
                 bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
-                        .setSystemTablePlacement("app_global:sys")
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
                         .setHistoryTtl(Period.days(2)));
+
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
+
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));

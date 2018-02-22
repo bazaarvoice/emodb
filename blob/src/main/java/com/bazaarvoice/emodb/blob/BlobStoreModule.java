@@ -150,6 +150,8 @@ public class BlobStoreModule extends PrivateModule {
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
 
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
+
         // No bootstrap tables are required.  System tables are stored as regular SoR tables.
         bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class)
                 .toInstance(ImmutableMap.<String, Long>of());
@@ -220,12 +222,6 @@ public class BlobStoreModule extends PrivateModule {
             return Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables"));
         }
         return Optional.absent();
-    }
-
-
-    @Provides @Singleton @SystemTablePlacement
-    String provideSystemTablePlacement(BlobStoreConfiguration configuration) {
-        return configuration.getSystemTablePlacement();
     }
 
     @Provides @Singleton @CurrentDataCenter
