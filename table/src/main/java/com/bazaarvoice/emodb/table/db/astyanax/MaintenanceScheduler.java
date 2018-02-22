@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationEvent;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationListener;
-import com.bazaarvoice.emodb.table.db.Mutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
@@ -50,17 +50,17 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
             new ThreadFactoryBuilder().setNameFormat("TableMaintenance-%d").build();
 
     private final MaintenanceDAO _maintDao;
-    private final Optional<Mutex> _metadataMutex;
+    private final Optional<TableMutexManager> _tableMutexManager;
     private final String _selfDataCenter;
     private final ScheduledExecutorService _executor = Executors.newSingleThreadScheduledExecutor(_threadFactory);
     private final CacheHandle _tableCacheHandle;
     private final Map<String, Task> _scheduledTasks = Maps.newHashMap();  // By table name
     private Task _runningTask;
 
-    public MaintenanceScheduler(MaintenanceDAO maintenanceDao, Optional<Mutex> metadataMutex, String selfDataCenter,
+    public MaintenanceScheduler(MaintenanceDAO maintenanceDao, Optional<TableMutexManager> tableMutexManager, String selfDataCenter,
                                 CacheRegistry cacheRegistry, MoveTableTask task) {
         _maintDao = checkNotNull(maintenanceDao, "maintenanceDao");
-        _metadataMutex = checkNotNull(metadataMutex, "metadataMutex");
+        _tableMutexManager = checkNotNull(tableMutexManager, "tableMutexManager");
         _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         cacheRegistry.addListener(this);
@@ -172,7 +172,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
     private boolean mayPerformMaintenance(MaintenanceOp op) {
         switch (op.getType()) {
             case METADATA:
-                return _metadataMutex.isPresent();
+                return _tableMutexManager.isPresent();
             case DATA:
                 return _selfDataCenter.equals(op.getDataCenter());
             default:
@@ -214,12 +214,12 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
     }
 
     private void performMetadataMaintenance(final String table) {
-        _metadataMutex.get().runWithLock(new Runnable() {
+        _tableMutexManager.get().runWithLockForTable(new Runnable() {
             @Override
             public void run() {
                 _maintDao.performMetadataMaintenance(table);
             }
-        }, ACQUIRE_TIMEOUT);
+        }, ACQUIRE_TIMEOUT, table);
     }
 
     private void performDataMaintenance(final String table) {

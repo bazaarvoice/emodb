@@ -32,7 +32,6 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
@@ -69,7 +68,7 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsPollerManager;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
-import com.bazaarvoice.emodb.table.db.curator.CuratorMutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAODelegate;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
@@ -212,12 +211,12 @@ public class BlobStoreModule extends PrivateModule {
             return new BlobStoreProviderProxy(localBlobStoreProvider, systemBlobStoreProvider);
         }
     }
-    
+
     @Provides @Singleton
-    Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
+    Optional<TableMutexManager> provideTableMutexManager(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables"));
+            return Optional.of(new TableMutexManager(curator, "/lock/tables", "/lock/table-partitions"));
         }
         return Optional.absent();
     }

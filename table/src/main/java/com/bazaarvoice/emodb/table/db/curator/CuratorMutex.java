@@ -44,7 +44,7 @@ public class CuratorMutex implements Mutex {
         }
         return mutex;
     }
-
+    
     private void release(InterProcessMutex mutex) {
         try {
             mutex.release();

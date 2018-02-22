@@ -10,10 +10,10 @@ import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.joda.time.Duration;
@@ -30,15 +30,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * system.
  */
 public class MutexTableDAO implements TableDAO {
-    public static final Duration ACQUIRE_TIMEOUT = Duration.standardSeconds(30);
+    public static final Duration ACQUIRE_TIMEOUT = Duration.standardSeconds(5);
 
     private final TableDAO _delegate;
-    private final Optional<Mutex> _metadataMutex;
+    private final Optional<TableMutexManager> _mutexManager;
 
     @Inject
-    public MutexTableDAO(@MutexTableDAODelegate TableDAO delegate, Optional<Mutex> metadataMutex) {
+    public MutexTableDAO(@MutexTableDAODelegate TableDAO delegate, Optional<TableMutexManager> mutexManager) {
         _delegate = checkNotNull(delegate, "delegate");
-        _metadataMutex = checkNotNull(metadataMutex, "metadataMutex");
+        _mutexManager = checkNotNull(mutexManager, "table mutex manager");
     }
 
     @Override
@@ -63,12 +63,12 @@ public class MutexTableDAO implements TableDAO {
             // Ignore
         }
 
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.create(name, options, attributes, audit);
             }
-        });
+        }, name);
     }
 
     @Override
@@ -78,12 +78,12 @@ public class MutexTableDAO implements TableDAO {
             return;
         }
 
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.createFacade(name, options, audit);
             }
-        });
+        }, name);
     }
 
     @Override
@@ -94,45 +94,45 @@ public class MutexTableDAO implements TableDAO {
 
     @Override
     public void drop(final String name, final Audit audit) throws UnknownTableException {
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.drop(name, audit);
             }
-        });
+        }, name);
     }
 
     @Override
     public void dropFacade(final String name, final String placement, final Audit audit)
             throws UnknownFacadeException {
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.dropFacade(name, placement, audit);
             }
-        });
+        }, name);
     }
 
     @Override
     public void move(final String name, final String destPlacement,
                      final Optional<Integer> numShards, final Audit audit, final MoveType moveType) throws UnknownTableException {
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.move(name, destPlacement, numShards, audit, moveType);
             }
-        });
+        }, name);
     }
 
     @Override
     public void moveFacade(final String name, final String sourcePlacement, final String destPlacement,
                            final Optional<Integer> numShards, final Audit audit, final MoveType moveType) throws UnknownTableException {
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.moveFacade(name, sourcePlacement, destPlacement, numShards, audit, moveType);
             }
-        });
+        }, name);
     }
 
     @Override
@@ -145,12 +145,12 @@ public class MutexTableDAO implements TableDAO {
         }
 
         // Obtain the global lock so this doesn't race concurrent create()/drop() operations.
-        withGlobalLock(new Runnable() {
+        withLock(new Runnable() {
             @Override
             public void run() {
                 _delegate.setAttributes(name, attributes, audit);
             }
-        });
+        }, name);
     }
 
     @Override
@@ -188,14 +188,14 @@ public class MutexTableDAO implements TableDAO {
         return _delegate.createTableSet();
     }
 
-    private void withGlobalLock(Runnable runnable) {
-        if (!_metadataMutex.isPresent()) {
+    private void withLock(Runnable runnable, String table) {
+        if (!_mutexManager.isPresent()) {
             throw new UnsupportedOperationException(
-                    "The global table metadata mutex is unavailable from this data center. " +
+                    "The table metadata mutex is unavailable from this data center. " +
                     "Make sure that the `systemDataCenter` property points to the right system datacenter. " +
                     "If this is a new data center and not the system datacenter, then try repairing the new Cassandra cluster as it may not have all " +
                     "the system tables replicated yet.");
         }
-        _metadataMutex.get().runWithLock(runnable, ACQUIRE_TIMEOUT);
+        _mutexManager.get().runWithLockForTable(runnable, ACQUIRE_TIMEOUT, table);
     }
 }
