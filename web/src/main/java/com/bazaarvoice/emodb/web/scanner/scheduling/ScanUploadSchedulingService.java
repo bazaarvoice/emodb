@@ -269,7 +269,9 @@ public class ScanUploadSchedulingService extends LeaderService {
             ScanOptions scanOptions = new ScanOptions(scheduledScan.getPlacements())
                     .addDestination(destination)
                     .setMaxConcurrentSubRangeScans(scheduledScan.getMaxRangeConcurrency())
-                    .setScanByAZ(scheduledScan.isScanByAZ());
+                    .setScanByAZ(scheduledScan.isScanByAZ())
+                    .setRangeScanSplitSize(scheduledScan.getMaxRangeScanSplitSize())
+                    .setMaxRangeScanTime(scheduledScan.getMaxRangeScanTime());
 
             _log.info("Starting scheduled scan and upload to {} for time {}", destination, scheduledTime);
 

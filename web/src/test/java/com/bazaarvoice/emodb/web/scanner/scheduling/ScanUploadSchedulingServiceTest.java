@@ -104,11 +104,11 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledDailyScanUpload pastScanUpload =
                 new ScheduledDailyScanUpload("daily", pastTimeOfDay, DateTimeFormat.forPattern("'past'-yyyyMMddHHmmss").withZoneUTC(),
                         ScanDestination.discard(), DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement1"), 1, true, false);
+                        ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.standardMinutes(10));
         ScheduledDailyScanUpload futureScanUpload =
                 new ScheduledDailyScanUpload("daily", futureTimeOfDay, DateTimeFormat.forPattern("'future'-yyyyMMddHHmmss").withZoneUTC(),
                         ScanDestination.discard(),DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement2"), 1, true, false);
+                        ImmutableList.of("placement2"), 1, true, false, 1000000, Duration.standardMinutes(10));
 
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
 
@@ -168,7 +168,7 @@ public class ScanUploadSchedulingServiceTest {
             scheduledScans.add(
                     new ScheduledDailyScanUpload("daily", timeOfDay, DateTimeFormat.forPattern("'test'-yyyyMMddHHmmss").withZoneUTC(),
                             ScanDestination.discard(), DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                            ImmutableList.of("placement1"), 1, true, false));
+                            ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.standardMinutes(10)));
         }
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
@@ -208,7 +208,7 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledDailyScanUpload scanUpload =
                 new ScheduledDailyScanUpload("daily", timeOfDay, DateTimeFormat.forPattern("'test'-yyyyMMddHHmmss").withZoneUTC(),
                         destination, DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement1"), 1, true, false);
+                        ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.standardMinutes(10));
 
         ScanUploader scanUploader = mock(ScanUploader.class);
         StashRequestManager stashRequestManager = mock(StashRequestManager.class);
@@ -248,7 +248,7 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledDailyScanUpload scanUpload =
                 new ScheduledDailyScanUpload("daily", timeOfDay, DateTimeFormat.forPattern("'test'-yyyyMMddHHmmss").withZoneUTC(),
                         destination, DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement1"), 1, true, false);
+                        ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.standardMinutes(10));
 
         String expectedScanId = DateTimeFormat.forPattern("'test'-yyyyMMddHHmmss").withZoneUTC().print(now);
 
@@ -292,7 +292,7 @@ public class ScanUploadSchedulingServiceTest {
 
         ScheduledDailyScanUpload upload = new ScheduledDailyScanUpload(
                 "daily", startTime, DateTimeFormat.longDateTime(), ScanDestination.discard(), DateTimeFormat.longDateTime(),
-                ImmutableList.of("catalog_global:cat"), 5, true, false);
+                ImmutableList.of("catalog_global:cat"), 5, true, false, 1000000, Duration.standardMinutes(10));
 
         ScanParticipationService service = new ScanParticipationService(
                 ImmutableList.of(upload), stashStateListener, lifecycle, clock);
@@ -348,11 +348,11 @@ public class ScanUploadSchedulingServiceTest {
         ScheduledDailyScanUpload pastScanUpload =
                 new ScheduledDailyScanUpload("past", pastTimeOfDay, DateTimeFormat.forPattern("'past'-yyyyMMddHHmmss").withZoneUTC(),
                         ScanDestination.discard(), DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement1"), 1, true, true);
+                        ImmutableList.of("placement1"), 1, true, true, 1000000, Duration.standardMinutes(10));
         ScheduledDailyScanUpload futureScanUpload =
                 new ScheduledDailyScanUpload("future", futureTimeOfDay, DateTimeFormat.forPattern("'future'-yyyyMMddHHmmss").withZoneUTC(),
                         ScanDestination.discard(),DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
-                        ImmutableList.of("placement2"), 1, true, true);
+                        ImmutableList.of("placement2"), 1, true, true, 1000000, Duration.standardMinutes(10));
 
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
 

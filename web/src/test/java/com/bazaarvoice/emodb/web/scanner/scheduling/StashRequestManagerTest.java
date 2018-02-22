@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.ISODateTimeFormat;
 import org.testng.annotations.BeforeMethod;
@@ -37,10 +38,10 @@ public class StashRequestManagerTest {
         List<ScheduledDailyScanUpload> scanUploads = ImmutableList.of(
                 new ScheduledDailyScanUpload("always", "00:00Z", DateTimeFormat.forPattern("'always'-yyyy-MM-dd-HH-mm-ss"),
                         ScanDestination.discard(), DateTimeFormat.forPattern("'dest'-yyyy-MM-dd-HH-mm-ss"),
-                        ImmutableList.of("ugc_global:ugc"), 4, true, false),
+                        ImmutableList.of("ugc_global:ugc"), 4, true, false, 1000000, Duration.standardMinutes(10)),
                 new ScheduledDailyScanUpload("byrequest", "12:00Z", DateTimeFormat.forPattern("'byrequest'-yyyy-MM-dd-HH-mm-ss"),
                         ScanDestination.discard(), DateTimeFormat.forPattern("'dest'-yyyy-MM-dd-HH-mm-ss"),
-                        ImmutableList.of("ugc_global:ugc"), 4, true, true)
+                        ImmutableList.of("ugc_global:ugc"), 4, true, true, 1000000, Duration.standardMinutes(10))
         );
 
         _stashRequestManager = new StashRequestManager(_stashRequestDAO, scanUploads, _clock);

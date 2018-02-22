@@ -16,6 +16,8 @@ import io.dropwizard.jersey.params.DateTimeParam;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
+import org.joda.time.format.ISOPeriodFormat;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -59,6 +61,8 @@ public class StashResource1 {
                                 @QueryParam ("byAZ") @DefaultValue ("true") Boolean byAZ,
                                 @QueryParam ("maxConcurrency") @DefaultValue ("4") Integer maxConcurrency,
                                 @QueryParam ("compactionEnabled") @DefaultValue ("false") Boolean compactionEnabled,
+                                @QueryParam ("rangeScanSplitSize") @DefaultValue("1000000") Integer rangeScanSplitSize,
+                                @QueryParam ("maxRangeScanTime") @DefaultValue("PT10M") String maxRangeScanTime,
                                 @QueryParam ("dryRun") @DefaultValue ("false") Boolean dryRun) {
 
         checkArgument(!placements.isEmpty(), "Placement is required");
@@ -86,7 +90,9 @@ public class StashResource1 {
                 .addDestinations(destinations)
                 .setScanByAZ(byAZ)
                 .setMaxConcurrentSubRangeScans(maxConcurrency)
-                .setCompactionEnabled(compactionEnabled);
+                .setCompactionEnabled(compactionEnabled)
+                .setRangeScanSplitSize(rangeScanSplitSize)
+                .setMaxRangeScanTime(ISOPeriodFormat.standard().parsePeriod(maxRangeScanTime).toStandardDuration());
 
         return _scanUploader.scanAndUpload(id, options, dryRun);
     }
