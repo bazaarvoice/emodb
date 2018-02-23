@@ -329,7 +329,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
                         .queryParam("APIKey", adminApiKey)
                         .queryParam("key", value)
                         .type("application/x.json-create-api-key")
-                        .put(String.class, JsonHelper.asJson(entity));
+                        .post(String.class, JsonHelper.asJson(entity));
 
                 getLog().info("Response to create API key " + value);
                 getLog().info(response);
