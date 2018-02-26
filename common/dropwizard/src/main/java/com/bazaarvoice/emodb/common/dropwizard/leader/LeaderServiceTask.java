@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.common.dropwizard.leader;
 
 import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -46,6 +47,13 @@ public class LeaderServiceTask extends Task {
                 unregister(name, leaderService);
             }
         }, MoreExecutors.sameThreadExecutor());
+    }
+
+    public void register(final String name, final PartitionedLeaderService partitionedLeaderService) {
+        int partition = 0;
+        for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {
+            register(String.format("%s-%d", name, partition++), leaderService);
+        }
     }
 
     public void unregister(String name, LeaderService leaderService) {
