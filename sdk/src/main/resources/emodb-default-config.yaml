@@ -80,7 +80,7 @@ systemOfRecord:
       healthCheck:
         name: sor-cassandra
       keyspaces:
-        zglobal: {}
+        app_global: {}
         ugc_global: {}
         catalog_global: {}
 
