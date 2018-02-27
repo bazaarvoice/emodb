@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.databus.core;
 import com.google.common.base.Charsets;
 
 /**
- * Interface for getting the partition for an event.  All partitions numbers are in the range of [0..n], where n
+ * Interface for getting the partition for an event.  All partitions numbers are in the range of [0..n-1], where n
  * is the maximum number of available partitions.
  */
 public interface PartitionSelector {
