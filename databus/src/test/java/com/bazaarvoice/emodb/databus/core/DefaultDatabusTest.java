@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
@@ -19,15 +20,20 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.beust.jcommander.internal.Sets;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.SetMultimap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.hamcrest.BaseMatcher;
@@ -55,6 +61,7 @@ import static org.mockito.Matchers.anyCollectionOf;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -82,7 +89,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
-                mock(MetricRegistry.class), Clock.systemUTC());
+                1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
         testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.standardDays(7),
                 Duration.standardDays(7));
@@ -136,7 +143,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                new MetricRegistry(), Clock.systemUTC());
+                1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -179,7 +186,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                new MetricRegistry(), Clock.systemUTC());
+                1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -225,7 +232,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
-                new MetricRegistry(), Clock.systemUTC());
+                1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -277,7 +284,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
-                new MetricRegistry(), clock);
+                1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 500);
         assertFalse(pollResult.hasMoreEvents());
@@ -348,7 +355,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
-                new MetricRegistry(), clock);
+                1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 10);
         // Because of padding all events were read from the event store.  However, since the padded events will be
@@ -371,6 +378,49 @@ public class DefaultDatabusTest {
 
         // Verify the padded events were unclaimed
         verify(eventStore).renew(eq("subscription"), argThat(containsExactly(expectedUnclaimIds)), eq(Duration.ZERO), eq(false));
+    }
+    
+    @Test
+    @SuppressWarnings("unchecked")
+    public void testFanoutToMasterPartitions() {
+        Supplier<Condition> acceptAll = Suppliers.ofInstance(Conditions.alwaysTrue());
+
+        final SetMultimap<String, UpdateRef> eventsStored = HashMultimap.create();
+        DatabusEventStore eventStore = mock(DatabusEventStore.class);
+        doAnswer(invocationOnMock -> {
+            synchronized (eventsStored) {
+                Multimap<String, ByteBuffer> rawEvents = (Multimap<String, ByteBuffer>) invocationOnMock.getArguments()[0];
+                for (Map.Entry<String, ByteBuffer> entry : rawEvents.entries()) {
+                    eventsStored.put(entry.getKey(), UpdateRefSerializer.fromByteBuffer(entry.getValue()));
+                }
+            }
+            return null;
+        }).when(eventStore).addAll(any(Multimap.class));
+
+        PartitionSelector masterPartitioner = mock(PartitionSelector.class);
+        when(masterPartitioner.getPartition("key0")).thenReturn(0);
+        when(masterPartitioner.getPartition("key1")).thenReturn(1);
+        when(masterPartitioner.getPartition("key2")).thenReturn(2);
+        when(masterPartitioner.getPartition("key3")).thenReturn(0);
+
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider(), mock(SubscriptionDAO.class),
+                eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
+
+        List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
+        for (int i=0; i < 4; i++) {
+            updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
+        }
+
+        testDatabus.onUpdateIntent(new UpdateIntentEvent(this, updateRefs));
+
+        assertEquals(eventsStored, ImmutableSetMultimap.builder()
+                .putAll(ChannelNames.getMasterFanoutChannel(0), updateRefs.get(0), updateRefs.get(3))
+                .put(ChannelNames.getMasterFanoutChannel(1), updateRefs.get(1))
+                .put(ChannelNames.getMasterFanoutChannel(2), updateRefs.get(2))
+                .build());
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

@@ -57,11 +57,13 @@ public class DefaultFanout extends AbstractScheduledService {
     private final EventSource _eventSource;
     private final Function<Multimap<String, ByteBuffer>, Void> _eventSink;
     private final boolean _replicateOutbound;
+    private final PartitionSelector _outboundPartitionSelector;
     private final Duration _sleepWhenIdle;
     private final Supplier<Iterable<OwnedSubscription>> _subscriptionsSupplier;
     private final DataCenter _currentDataCenter;
     private final RateLimitedLog _rateLimitedLog;
     private final SubscriptionEvaluator _subscriptionEvaluator;
+    private final String _partitionSuffix;
     private final Meter _eventsRead;
     private final Meter _eventsWrittenLocal;
     private final Meter _eventsWrittenOutboundReplication;
@@ -85,22 +87,25 @@ public class DefaultFanout extends AbstractScheduledService {
     public DefaultFanout(String name,
                          EventSource eventSource,
                          Function<Multimap<String, ByteBuffer>, Void> eventSink,
-                         boolean replicateOutbound,
+                         @Nullable PartitionSelector outboundPartitionSelector,
                          Duration sleepWhenIdle,
                          Supplier<Iterable<OwnedSubscription>> subscriptionsSupplier,
                          DataCenter currentDataCenter,
                          RateLimitedLogFactory logFactory,
                          SubscriptionEvaluator subscriptionEvaluator,
+                         String partitionSuffix,
                          MetricRegistry metricRegistry, Clock clock) {
         _name = checkNotNull(name, "name");
         _eventSource = checkNotNull(eventSource, "eventSource");
         _eventSink = checkNotNull(eventSink, "eventSink");
-        _replicateOutbound = replicateOutbound;
+        _replicateOutbound = outboundPartitionSelector != null;
+        _outboundPartitionSelector = outboundPartitionSelector;
         _sleepWhenIdle = checkNotNull(sleepWhenIdle, "sleepWhenIdle");
         _subscriptionsSupplier = checkNotNull(subscriptionsSupplier, "subscriptionsSupplier");
         _currentDataCenter = checkNotNull(currentDataCenter, "currentDataCenter");
         _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
-
+        _partitionSuffix = checkNotNull(partitionSuffix, "partitionSuffix");
+        
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
         _eventsWrittenLocal = newEventMeter("written-local", metricRegistry);
@@ -132,7 +137,11 @@ public class DefaultFanout extends AbstractScheduledService {
     }
 
     private String metricName(String name) {
-        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", name, _name);
+        return metricName(name, null);
+    }
+
+    private String metricName(String name, @Nullable String suffix) {
+        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", name, _name, suffix);
     }
 
     @Override
@@ -233,7 +242,8 @@ public class DefaultFanout extends AbstractScheduledService {
                                     if (_replicateOutbound) {
                                         for (DataCenter dataCenter : matchEventData.getTable().getDataCenters()) {
                                             if (!dataCenter.equals(_currentDataCenter)) {
-                                                String channel = ChannelNames.getReplicationFanoutChannel(dataCenter);
+                                                int partition = _outboundPartitionSelector.getPartition(matchEventData.getKey());
+                                                String channel = ChannelNames.getReplicationFanoutChannel(dataCenter, partition);
                                                 eventsByChannel.put(channel, eventData);
                                                 numOutboundReplicationEvents++;
                                             }
@@ -295,7 +305,7 @@ public class DefaultFanout extends AbstractScheduledService {
 
         if (lagSeconds != _lastLagSeconds && _lastLagStopwatch.elapsed(TimeUnit.SECONDS) >= 5) {
             _lag.beginUpdates();
-            _lag.gauge(metricName("lagSeconds")).set(lagSeconds);
+            _lag.gauge(metricName("lagSeconds", _partitionSuffix)).set(lagSeconds);
             _lag.endUpdates();
 
             _lastLagSeconds = lagSeconds;
