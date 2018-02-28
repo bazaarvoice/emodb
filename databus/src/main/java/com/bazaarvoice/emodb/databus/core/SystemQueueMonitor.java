@@ -84,7 +84,7 @@ public class SystemQueueMonitor extends AbstractScheduledService {
             if (!dataCenter.equals(self)) {
                 long totalDataCenterQueueSize = 0;
                 for (int partition = 0; partition < _dataCenterFanoutPartitions; partition++) {
-                    totalDataCenterQueueSize += pollQueueSize("out-" + dataCenter.getName() + partition,
+                    totalDataCenterQueueSize += pollQueueSize("out-" + dataCenter.getName() + "-" + partition,
                             ChannelNames.getReplicationFanoutChannel(dataCenter, partition));
                 }
                 _gauges.gauge(newMetric("out-" + dataCenter.getName())).set(totalDataCenterQueueSize);
