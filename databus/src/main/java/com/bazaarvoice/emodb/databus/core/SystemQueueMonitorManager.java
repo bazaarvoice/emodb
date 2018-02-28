@@ -22,12 +22,7 @@ import org.apache.curator.framework.CuratorFramework;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Starts the System queue length monitor, subject to ZooKeeper leader election.
- * Additionally starts the System queue lag monitor.  The lag is the maximum lag of all system queues currently being
- * fanned out by this server, as determined by leadership election.  Therefore it is not subject to leadership election
- * and runs on every server, but the maximum it reports will only be the maximum for those queues with local leadership.
- */
+/** Starts the System queue length monitor, subject to ZooKeeper leader election. */
 public class SystemQueueMonitorManager {
     @Inject
     SystemQueueMonitorManager(LifeCycleRegistry lifeCycle,
@@ -51,8 +46,5 @@ public class SystemQueueMonitorManager {
         ServiceFailureListener.listenTo(leaderService, metricRegistry);
         dropwizardTask.register("queue-monitor", leaderService);
         lifeCycle.manage(new ManagedGuavaService(leaderService));
-
-        FanoutLagMonitor fanoutLagMonitor = new FanoutLagMonitor(masterFanoutPartitions, dataCenterFanoutPartitions, dataCenters, metricRegistry);
-        lifeCycle.manage(new ManagedGuavaService(fanoutLagMonitor));
     }
 }

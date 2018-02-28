@@ -1,40 +1,42 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
-import com.bazaarvoice.emodb.datacenter.api.DataCenter;
-import com.bazaarvoice.emodb.datacenter.api.DataCenters;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Sets;
+import com.google.common.collect.HashBasedTable;
+import com.google.common.collect.Table;
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.inject.Inject;
 import org.joda.time.Duration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Service which monitors the lags for all fanouts currently being performed by this server and publishes the maximum
- * as a single metric.
+ * per fanout as a single metric.
  */
 public class FanoutLagMonitor extends AbstractScheduledService {
 
     private static final Duration LAG_UPDATE_INTERVAL = Duration.standardSeconds(10);
 
-    private final int _masterFanoutPartitions;
-    private final int _dataCenterFanoutPartitions;
-    private final DataCenters _dataCenters;
+    private final Logger _log = LoggerFactory.getLogger(FanoutLagMonitor.class);
+
     private final MetricRegistry _metricRegistry;
     private final MetricsGroup _gauges;
+    private final Table<String, String, Lag> _lagTable;
 
-    public FanoutLagMonitor(int masterFanoutPartitions, int dataCenterFanoutPartitions, DataCenters dataCenters,
-                            MetricRegistry metricRegistry) {
-        _masterFanoutPartitions = masterFanoutPartitions;
-        _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
-        _dataCenters = checkNotNull(dataCenters, "dataCenters");
+    @Inject
+    public FanoutLagMonitor(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry) {
         _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
         _gauges = new MetricsGroup(metricRegistry);
+        _lagTable = HashBasedTable.create();
+
+        lifeCycle.manage(new ManagedGuavaService(this));
     }
 
     @Override
@@ -51,37 +53,74 @@ public class FanoutLagMonitor extends AbstractScheduledService {
     protected void runOneIteration() throws Exception {
         _gauges.beginUpdates();
 
-        _gauges.gauge(lagMetric("master")).set(getMaximumLag("master", _masterFanoutPartitions));
+        try {
+            for (String fanout : _lagTable.rowKeySet()) {
+                Integer maximumLagSeconds = null;
+                for (Lag lag : _lagTable.row(fanout).values()) {
+                    Integer lagSeconds = lag.getLagSeconds();
+                    if (lagSeconds != null) {
+                        maximumLagSeconds = maximumLagSeconds == null ? lagSeconds : Math.max(lagSeconds, maximumLagSeconds);
+                    }
+                }
 
-        DataCenter self = _dataCenters.getSelf();
-        for (DataCenter dataCenter : _dataCenters.getAll()) {
-            if (!dataCenter.equals(self)) {
-                String metricName = "in-" + dataCenter.getName();
-                _gauges.gauge(lagMetric(metricName)).set(getMaximumLag(metricName, _dataCenterFanoutPartitions));
+                if (maximumLagSeconds != null) {
+                    _gauges.gauge(lagMetric(fanout)).set(maximumLagSeconds);
+                }
             }
+        } catch (Exception e) {
+            _log.warn("Failed to update fanout lag metrics", e);
+        } finally {
+            _gauges.endUpdates();
         }
+    }
 
-        _gauges.endUpdates();
+    public Lag createForFanout(String fanout, String partitionName) {
+        Lag lag = new Lag(fanout, partitionName);
+        synchronized (_lagTable) {
+            if (_lagTable.contains(fanout, partitionName)) {
+                throw new IllegalStateException(String.format("Fanout lag gauge already exists for [fanout=%s, partition=%s]", fanout, partitionName));
+            }
+            _lagTable.put(fanout, partitionName, lag);
+        }
+        return lag;
     }
 
     private String lagMetric(String name) {
         return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", "lagSeconds", name);
     }
 
-    private String partitionLagMetric(String name, int partition) {
-        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", "lagSeconds", name, "partition-" + partition);
+    private String partitionLagMetric(String name, String partitionName) {
+        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", "lagSeconds", name, partitionName);
     }
 
-    private long getMaximumLag(String name, int partitions) {
-        final Set<String> metricNames = Sets.newHashSet();
-        for (int partition=0; partition < partitions; partition++) {
-            metricNames.add(partitionLagMetric(name, partition));
-        }
-        MetricFilter metricFilter = (metricName, metric) -> metricNames.contains(metricName);
+    public class Lag {
+        private final String _fanout;
+        private final String _partitionName;
+        private final MetricsGroup _lagGroup;
+        private volatile Integer _lag;
 
-        return _metricRegistry.getGauges(metricFilter).values().stream()
-                .map(gauge -> ((Number) gauge.getValue()).longValue())
-                .max(Long::compareTo)
-                .orElse(0L);
+        private Lag(String fanout, String partitionName) {
+            _fanout = fanout;
+            _partitionName = partitionName;
+            _lagGroup = new MetricsGroup(_metricRegistry);
+        }
+
+        public void setLagSeconds(int lagSeconds) {
+            _lagGroup.beginUpdates();
+            _lagGroup.gauge(partitionLagMetric(_fanout, _partitionName)).set(lagSeconds);
+            _lagGroup.endUpdates();
+            _lag = lagSeconds;
+        }
+
+        public void close() {
+            _lagGroup.close();
+            synchronized (_lagTable) {
+                _lagTable.remove(_fanout, _partitionName);
+            }
+        }
+
+        private Integer getLagSeconds() {
+            return _lag;
+        }
     }
 }

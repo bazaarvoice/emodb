@@ -22,7 +22,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Multimap;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.curator.framework.CuratorFramework;
@@ -51,6 +50,7 @@ public class DefaultFanoutManager implements FanoutManager {
     private final int _masterFanoutPartitions;
     private final int _dataCenterFanoutPartitions;
     private final PartitionSelector _dataCenterFanoutPartitionSelector;
+    private final FanoutLagMonitor _fanoutLagMonitor;
     private final MetricRegistry _metricRegistry;
     private final Clock _clock;
 
@@ -61,6 +61,7 @@ public class DefaultFanoutManager implements FanoutManager {
                                 @MasterFanoutPartitions int masterFanoutPartitions,
                                 @DataCenterFanoutPartitions int dataCenterFanoutPartitions,
                                 @DataCenterFanoutPartitions PartitionSelector dataCenterFanoutPartitionSelector,
+                                FanoutLagMonitor fanoutLagMonitor,
                                 LeaderServiceTask dropwizardTask, RateLimitedLogFactory logFactory,
                                 MetricRegistry metricRegistry, Clock clock) {
         _eventStore = checkNotNull(eventStore, "eventStore");
@@ -74,6 +75,7 @@ public class DefaultFanoutManager implements FanoutManager {
         _masterFanoutPartitions = masterFanoutPartitions;
         _dataCenterFanoutPartitions = dataCenterFanoutPartitions;
         _dataCenterFanoutPartitionSelector = checkNotNull(dataCenterFanoutPartitionSelector, "dataCenterFanoutPartitionSelector");
+        _fanoutLagMonitor = checkNotNull(fanoutLagMonitor, "fanoutLagMonitor");
         _metricRegistry = metricRegistry;
         _clock = clock;
     }
@@ -120,9 +122,9 @@ public class DefaultFanoutManager implements FanoutManager {
             EventSource eventSource = eventSourceSupplier.createEventSourceForPartition(0);
             LeaderService leaderService = new LeaderService(
                     _curator, ZKPaths.makePath("/leader/fanout", name), _selfId, "LeaderSelector-" + name, 1, TimeUnit.MINUTES,
-                    () -> new DefaultFanout(name, eventSource, eventSink, outboundPartitionSelector, sleepWhenIdle,
-                            subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
-                            "legacy", _metricRegistry, _clock));
+                    () -> new DefaultFanout(name, "legacy", eventSource, eventSink, outboundPartitionSelector,
+                            sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
+                            _fanoutLagMonitor, _metricRegistry, _clock));
             ServiceFailureListener.listenTo(leaderService, _metricRegistry);
             _dropwizardTask.register("databus-fanout-" + name, leaderService);
             return new ManagedGuavaService(leaderService);
@@ -130,9 +132,10 @@ public class DefaultFanoutManager implements FanoutManager {
             PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
                     _curator, ZKPaths.makePath("/leader/fanout", "partitioned-" + name),
                     _selfId, "PartitionedLeaderSelector-" + name, partitions, 1,  1, TimeUnit.MINUTES,
-                    partition -> new DefaultFanout(name, eventSourceSupplier.createEventSourceForPartition(partition),
+                    partition -> new DefaultFanout(name, "partition-" + partition,
+                            eventSourceSupplier.createEventSourceForPartition(partition),
                             eventSink, outboundPartitionSelector, sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(),
-                            _logFactory, _subscriptionEvaluator, "partition-" + partition, _metricRegistry, _clock),
+                            _logFactory, _subscriptionEvaluator, _fanoutLagMonitor, _metricRegistry, _clock),
                     _clock);
 
             for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {
