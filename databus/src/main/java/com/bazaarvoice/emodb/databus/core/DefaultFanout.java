@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
-import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
@@ -63,7 +62,6 @@ public class DefaultFanout extends AbstractScheduledService {
     private final DataCenter _currentDataCenter;
     private final RateLimitedLog _rateLimitedLog;
     private final SubscriptionEvaluator _subscriptionEvaluator;
-    private final String _partitionSuffix;
     private final Meter _eventsRead;
     private final Meter _eventsWrittenLocal;
     private final Meter _eventsWrittenOutboundReplication;
@@ -78,13 +76,14 @@ public class DefaultFanout extends AbstractScheduledService {
     private final Timer _fetchMatchEventDataTimer;
     private final Timer _eventFlushTimer;
     private final Clock _clock;
-    private final MetricsGroup _lag;
     private final Stopwatch _lastLagStopwatch;
+    private final FanoutLagMonitor.Lag _lagGauge;
     private int _lastLagSeconds = -1;
 
     private final ExecutorService _fanoutPool;
 
     public DefaultFanout(String name,
+                         String partitionName,
                          EventSource eventSource,
                          Function<Multimap<String, ByteBuffer>, Void> eventSink,
                          @Nullable PartitionSelector outboundPartitionSelector,
@@ -93,9 +92,10 @@ public class DefaultFanout extends AbstractScheduledService {
                          DataCenter currentDataCenter,
                          RateLimitedLogFactory logFactory,
                          SubscriptionEvaluator subscriptionEvaluator,
-                         String partitionSuffix,
+                         FanoutLagMonitor fanoutLagMonitor,
                          MetricRegistry metricRegistry, Clock clock) {
         _name = checkNotNull(name, "name");
+        checkNotNull(partitionName, "partitionName");
         _eventSource = checkNotNull(eventSource, "eventSource");
         _eventSink = checkNotNull(eventSink, "eventSink");
         _replicateOutbound = outboundPartitionSelector != null;
@@ -104,8 +104,7 @@ public class DefaultFanout extends AbstractScheduledService {
         _subscriptionsSupplier = checkNotNull(subscriptionsSupplier, "subscriptionsSupplier");
         _currentDataCenter = checkNotNull(currentDataCenter, "currentDataCenter");
         _subscriptionEvaluator = checkNotNull(subscriptionEvaluator, "subscriptionEvaluator");
-        _partitionSuffix = checkNotNull(partitionSuffix, "partitionSuffix");
-        
+
         _rateLimitedLog = logFactory.from(_log);
         _eventsRead = newEventMeter("read", metricRegistry);
         _eventsWrittenLocal = newEventMeter("written-local", metricRegistry);
@@ -121,7 +120,7 @@ public class DefaultFanout extends AbstractScheduledService {
         _fetchMatchEventDataTimer = metricRegistry.timer(metricName("fetch-match-event-data"));
         _eventFlushTimer = metricRegistry.timer(metricName("flush-events"));
 
-        _lag = new MetricsGroup(metricRegistry);
+        _lagGauge = checkNotNull(fanoutLagMonitor, "fanoutLagMonitor").createForFanout(name, partitionName);
         _lastLagStopwatch = Stopwatch.createStarted(ClockTicker.getTicker(clock));
         _clock = clock;
         ServiceFailureListener.listenTo(this, metricRegistry);
@@ -137,11 +136,7 @@ public class DefaultFanout extends AbstractScheduledService {
     }
 
     private String metricName(String name) {
-        return metricName(name, null);
-    }
-
-    private String metricName(String name, @Nullable String suffix) {
-        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", name, _name, suffix);
+        return MetricRegistry.name("bv.emodb.databus", "DefaultFanout", name, _name);
     }
 
     @Override
@@ -168,7 +163,7 @@ public class DefaultFanout extends AbstractScheduledService {
     @Override
     protected void shutDown() throws Exception {
         // Leadership lost, stop posting fanout lag
-        _lag.close();
+        _lagGauge.close();
     }
 
     private boolean copyEvents() {
@@ -304,10 +299,7 @@ public class DefaultFanout extends AbstractScheduledService {
         // 2. The lag changed since the last posting
 
         if (lagSeconds != _lastLagSeconds && _lastLagStopwatch.elapsed(TimeUnit.SECONDS) >= 5) {
-            _lag.beginUpdates();
-            _lag.gauge(metricName("lagSeconds", _partitionSuffix)).set(lagSeconds);
-            _lag.endUpdates();
-
+            _lagGauge.setLagSeconds(lagSeconds);
             _lastLagSeconds = lagSeconds;
             _lastLagStopwatch.reset().start();
         }

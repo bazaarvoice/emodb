@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
@@ -87,9 +88,11 @@ public class DefaultFanoutTest {
         _outboundPartitionSelector = mock(PartitionSelector.class);
         when(_outboundPartitionSelector.getPartition(anyString())).thenReturn(0);
 
-        _defaultFanout = new DefaultFanout("test", mock(EventSource.class), eventSink, _outboundPartitionSelector,
+        MetricRegistry metricRegistry = new MetricRegistry();
+
+        _defaultFanout = new DefaultFanout("test", "test", mock(EventSource.class), eventSink, _outboundPartitionSelector,
                 Duration.standardSeconds(1), _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
-                "test", new MetricRegistry(), Clock.systemUTC());
+                new FanoutLagMonitor(mock(LifeCycleRegistry.class), metricRegistry), metricRegistry, Clock.systemUTC());
     }
 
     @Test
