@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.databus.core;
 import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
 import com.bazaarvoice.emodb.databus.ChannelNames;
@@ -88,24 +87,10 @@ public class DefaultFanoutManager implements FanoutManager {
     }
 
     @Override
-    public Managed newLegacyMasterFanout() {
-        PartitionEventSourceSupplier eventSourceSupplier = ignore ->
-                new EventStoreEventSource(_eventStore, ChannelNames.getLegacyMasterFanoutChannel());
-        return create("master", eventSourceSupplier, _dataCenterFanoutPartitionSelector, SAME_DC_SLEEP_WHEN_IDLE, 0);
-    }
-
-    @Override
     public Managed newInboundReplicationFanout(DataCenter dataCenter, ReplicationSource replicationSource) {
         PartitionEventSourceSupplier eventSourceSupplier = partition ->
                 new ReplicationEventSource(replicationSource, ChannelNames.getReplicationFanoutChannel(_dataCenters.getSelf(), partition));
         return create("in-" + dataCenter.getName(), eventSourceSupplier, null, REMOTE_DC_SLEEP_WHEN_IDLE, _dataCenterFanoutPartitions);
-    }
-
-    @Override
-    public Managed newLegacyInboundReplicationFanout(DataCenter dataCenter, ReplicationSource replicationSource) {
-        PartitionEventSourceSupplier eventSourceSupplier = ignore ->
-                new ReplicationEventSource(replicationSource, ChannelNames.getLegacyReplicationFanoutChannel(_dataCenters.getSelf()));
-        return create("in-" + dataCenter.getName(), eventSourceSupplier, null, REMOTE_DC_SLEEP_WHEN_IDLE, 0);
     }
 
     private Managed create(final String name, final PartitionEventSourceSupplier eventSourceSupplier,
@@ -118,32 +103,20 @@ public class DefaultFanoutManager implements FanoutManager {
 
         final Supplier<Iterable<OwnedSubscription>> subscriptionsSupplier = _subscriptionDao::getAllSubscriptions;
 
-        if (partitions == 0) {
-            EventSource eventSource = eventSourceSupplier.createEventSourceForPartition(0);
-            LeaderService leaderService = new LeaderService(
-                    _curator, ZKPaths.makePath("/leader/fanout", name), _selfId, "LeaderSelector-" + name, 1, TimeUnit.MINUTES,
-                    () -> new DefaultFanout(name, "legacy", eventSource, eventSink, outboundPartitionSelector,
-                            sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(), _logFactory, _subscriptionEvaluator,
-                            _fanoutLagMonitor, _metricRegistry, _clock));
-            ServiceFailureListener.listenTo(leaderService, _metricRegistry);
-            _dropwizardTask.register("databus-fanout-" + name, leaderService);
-            return new ManagedGuavaService(leaderService);
-        } else {
-            PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
-                    _curator, ZKPaths.makePath("/leader/fanout", "partitioned-" + name),
-                    _selfId, "PartitionedLeaderSelector-" + name, partitions, 1,  1, TimeUnit.MINUTES,
-                    partition -> new DefaultFanout(name, "partition-" + partition,
-                            eventSourceSupplier.createEventSourceForPartition(partition),
-                            eventSink, outboundPartitionSelector, sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(),
-                            _logFactory, _subscriptionEvaluator, _fanoutLagMonitor, _metricRegistry, _clock),
-                    _clock);
+        PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
+                _curator, ZKPaths.makePath("/leader/fanout", "partitioned-" + name),
+                _selfId, "PartitionedLeaderSelector-" + name, partitions, 1,  1, TimeUnit.MINUTES,
+                partition -> new DefaultFanout(name, "partition-" + partition,
+                        eventSourceSupplier.createEventSourceForPartition(partition),
+                        eventSink, outboundPartitionSelector, sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(),
+                        _logFactory, _subscriptionEvaluator, _fanoutLagMonitor, _metricRegistry, _clock),
+                _clock);
 
-            for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {
-                ServiceFailureListener.listenTo(leaderService, _metricRegistry);
-            }
-            _dropwizardTask.register("databus-fanout-" + name, partitionedLeaderService);
-            return partitionedLeaderService;
+        for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {
+            ServiceFailureListener.listenTo(leaderService, _metricRegistry);
         }
+        _dropwizardTask.register("databus-fanout-" + name, partitionedLeaderService);
+        return partitionedLeaderService;
     }
 
     private interface PartitionEventSourceSupplier {

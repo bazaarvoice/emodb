@@ -146,11 +146,6 @@ public class DefaultReplicationManager extends AbstractScheduledService {
             protected void doStart() {
                 _fanout = _fanoutManager.newInboundReplicationFanout(dataCenter, replicationSource);
 
-                // Until both of the following are true we need to continue running the legacy master fanout:
-                // 1. All servers writing to the legacy un-partitioned replication queue have been taken out of service
-                // 2. All events previously written to the replication fanout have been processed and acknowledged
-                _legacyFanout = _fanoutManager.newLegacyInboundReplicationFanout(dataCenter, replicationSource);
-                
                 try {
                     _fanout.start();
                     _legacyFanout.start();
