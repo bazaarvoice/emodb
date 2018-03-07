@@ -193,6 +193,21 @@ public class EmoModule extends AbstractModule {
 
     private class CommonModuleSetup extends AbstractModule {
 
+        private CommonModuleSetup() {
+            checkValidSystemTablePlacement();
+        }
+
+        private void checkValidSystemTablePlacement() {
+            String systemTablePlacement = _configuration.getSystemTablePlacement();
+            String systemKeyspace = systemTablePlacement.substring(0, systemTablePlacement.indexOf(':'));
+            for (CassandraConfiguration cassandraConfig : _configuration.getDataStoreConfiguration().getCassandraClusters().values()) {
+                if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
+                    return;
+                }
+            }
+            throw new ProvisionException("System Table Placement references a keyspace not defined in 'cassandraKeyspaces");
+        }
+
         @Override
         protected void configure() {
             bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
@@ -273,21 +288,6 @@ public class EmoModule extends AbstractModule {
     }
 
     private class DataStoreSetup extends AbstractModule  {
-
-        private DataStoreSetup() {
-            checkValidSystemTablePlacement();
-        }
-
-        private void checkValidSystemTablePlacement() {
-            String systemTablePlacement = _configuration.getSystemTablePlacement();
-            String systemKeyspace = systemTablePlacement.substring(0, systemTablePlacement.indexOf(':'));
-            for (CassandraConfiguration cassandraConfig : _configuration.getDataStoreConfiguration().getCassandraClusters().values()) {
-                if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
-                    return;
-                }
-            }
-            throw new ProvisionException("System Table Placement references a keyspace not defined in 'cassandraKeyspaces");
-        }
 
         @Override
         protected void configure() {
