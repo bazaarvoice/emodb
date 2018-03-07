@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.datastax.driver.core.BatchStatement;

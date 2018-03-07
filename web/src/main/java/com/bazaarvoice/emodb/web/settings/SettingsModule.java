@@ -3,10 +3,8 @@ package com.bazaarvoice.emodb.web.settings;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.google.inject.*;
-
-import java.time.Clock;
 
 /**
  * Guice module which configures globally accessible server settings.

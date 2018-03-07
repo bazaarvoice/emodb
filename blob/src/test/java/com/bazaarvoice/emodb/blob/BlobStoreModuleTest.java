@@ -18,7 +18,7 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;

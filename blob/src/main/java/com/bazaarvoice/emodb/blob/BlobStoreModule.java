@@ -55,7 +55,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
 import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
 import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;

@@ -26,7 +26,7 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;

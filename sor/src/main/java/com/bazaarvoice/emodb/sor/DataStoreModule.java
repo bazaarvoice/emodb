@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -238,17 +239,6 @@ public class DataStoreModule extends PrivateModule {
         bind(MigratorTools.class).to(DefaultMigratorTools.class);
         expose(MigratorTools.class);
     }
-
-//    @ValidationMethod(message = ".systemTablePlacement references a keyspace not defined in 'cassandraKeyspaces'")
-//    public boolean isValidSystemTablePlacement() {
-//        String systemKeyspace = _systemTablePlacement.substring(0, _systemTablePlacement.indexOf(':'));
-//        for (CassandraConfiguration cassandraConfig : _cassandraClusters.values()) {
-//            if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
-//                return true;
-//            }
-//        }
-//        return false;
-//    }
 
     @Provides @Singleton
     Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @DataStoreZooKeeper CuratorFramework curator) {

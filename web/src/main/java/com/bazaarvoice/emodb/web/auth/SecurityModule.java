@@ -35,7 +35,7 @@ import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
 import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;

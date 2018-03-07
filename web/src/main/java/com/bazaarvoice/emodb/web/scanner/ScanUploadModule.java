@@ -25,7 +25,7 @@ import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScheduledScanConfiguration;

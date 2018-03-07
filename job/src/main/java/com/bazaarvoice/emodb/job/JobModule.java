@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.job;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
@@ -10,7 +11,6 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.job.dao.DataStoreJobStatusDAO;
 import com.bazaarvoice.emodb.job.dao.JobStatusDAO;
 import com.bazaarvoice.emodb.job.dao.JobsTableName;
-import com.bazaarvoice.emodb.job.dao.JobsTablePlacement;
 import com.bazaarvoice.emodb.job.handler.DefaultJobHandlerRegistry;
 import com.bazaarvoice.emodb.job.handler.JobHandlerRegistryInternal;
 import com.bazaarvoice.emodb.job.service.DefaultJobService;
@@ -62,7 +62,7 @@ public class JobModule extends PrivateModule {
     @Override
     protected void configure() {
 
-        requireBinding(Key.get(String.class, JobsTablePlacement.class));
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         bind(String.class).annotatedWith(JobQueueName.class).toInstance(QUEUE_NAME);
 

@@ -52,7 +52,6 @@ import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.job.JobConfiguration;
 import com.bazaarvoice.emodb.job.JobModule;
 import com.bazaarvoice.emodb.job.JobZooKeeper;
-import com.bazaarvoice.emodb.job.dao.JobsTablePlacement;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
@@ -83,7 +82,7 @@ import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
@@ -140,7 +139,6 @@ import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.Environment;
-import io.dropwizard.validation.ValidationMethod;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -293,7 +291,6 @@ public class EmoModule extends AbstractModule {
 
         @Override
         protected void configure() {
-            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             bind(DataStoreConfiguration.class).toInstance(_configuration.getDataStoreConfiguration());
             bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class)
                     .to(Key.get(new TypeLiteral<Setting<Boolean>>(){}, CqlForMultiGets.class));
@@ -349,7 +346,6 @@ public class EmoModule extends AbstractModule {
     private class BlobStoreSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             bind(BlobStoreConfiguration.class).toInstance(_configuration.getBlobStoreConfiguration());
             install(new BlobStoreModule(_serviceMode, "bv.emodb.blob", _environment.metrics()));
         }
@@ -566,7 +562,6 @@ public class EmoModule extends AbstractModule {
     private class ReportSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             install(new ReportsModule());
         }
     }
@@ -575,7 +570,6 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             bind(JobConfiguration.class).toInstance(_configuration.getJobConfiguration());
-            bind(String.class).annotatedWith(JobsTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             install(new JobModule(_serviceMode));
         }
 
@@ -589,7 +583,6 @@ public class EmoModule extends AbstractModule {
     private class SecuritySetup extends AbstractModule  {
         @Override
         protected void configure() {
-            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             bind(AuthorizationConfiguration.class).toInstance(_configuration.getAuthorizationConfiguration());
             install(new SecurityModule());
         }
@@ -634,7 +627,6 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             install(new ScanUploadModule(_configuration.getScanner().get()));
         }
 
