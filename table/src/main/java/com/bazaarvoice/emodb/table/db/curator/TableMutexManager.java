@@ -4,9 +4,10 @@ import com.bazaarvoice.emodb.table.db.Mutex;
 import com.google.common.base.Charsets;
 import com.google.common.hash.Hashing;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.locks.InterProcessMutex;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.Duration;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 public class TableMutexManager {
 
@@ -22,7 +23,8 @@ public class TableMutexManager {
     }
 
     public void runWithLockForTable(Runnable runnable, Duration acquireTimeout, String table) {
-
+        checkNotNull(table, "table cannot be null");
+        
         _mutexes[Math.abs(Hashing.murmur3_128().hashString(table, Charsets.UTF_8).asInt() % NUM_MUTEXES)]
                 .runWithLock(runnable, acquireTimeout);
 
