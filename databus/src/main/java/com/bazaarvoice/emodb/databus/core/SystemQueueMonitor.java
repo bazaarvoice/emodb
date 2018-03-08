@@ -68,7 +68,6 @@ public class SystemQueueMonitor extends AbstractScheduledService {
     private void pollQueueSizes() {
         _gauges.beginUpdates();
 
-        pollQueueSize("legacy-master", ChannelNames.getLegacyMasterFanoutChannel());
         long totalMasterQueueSize = 0;
         for (int partition = 0; partition < _masterFanoutPartitions; partition++) {
             totalMasterQueueSize += pollQueueSize("master-" + partition, ChannelNames.getMasterFanoutChannel(partition));
@@ -88,8 +87,6 @@ public class SystemQueueMonitor extends AbstractScheduledService {
                             ChannelNames.getReplicationFanoutChannel(dataCenter, partition));
                 }
                 _gauges.gauge(newMetric("out-" + dataCenter.getName())).set(totalDataCenterQueueSize);
-
-                pollQueueSize("legacy-out-" + dataCenter.getName(), ChannelNames.getLegacyReplicationFanoutChannel(dataCenter));
             }
         }
 

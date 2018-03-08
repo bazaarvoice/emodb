@@ -21,16 +21,8 @@ public class ChannelNames {
         return channel.startsWith(MASTER_FANOUT) || channel.startsWith(REPLICATION_FANOUT_PREFIX);
     }
 
-    public static String getLegacyMasterFanoutChannel() {
-        return MASTER_FANOUT;
-    }
-
     public static String getMasterFanoutChannel(int partition) {
         return String.format("%s[%d]", MASTER_FANOUT, partition);
-    }
-    
-    public static String getLegacyReplicationFanoutChannel(DataCenter dataCenter) {
-        return REPLICATION_FANOUT_PREFIX + dataCenter.getName();
     }
 
     public static String getReplicationFanoutChannel(DataCenter dataCenter, int partition) {
