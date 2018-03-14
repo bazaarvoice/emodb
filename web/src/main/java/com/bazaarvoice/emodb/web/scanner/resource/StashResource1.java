@@ -6,8 +6,8 @@ import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
+import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
@@ -16,7 +16,6 @@ import io.dropwizard.jersey.params.DateTimeParam;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.joda.time.format.ISOPeriodFormat;
 
 import javax.ws.rs.Consumes;
@@ -63,6 +62,7 @@ public class StashResource1 {
                                 @QueryParam ("compactionEnabled") @DefaultValue ("false") Boolean compactionEnabled,
                                 @QueryParam ("rangeScanSplitSize") @DefaultValue("1000000") Integer rangeScanSplitSize,
                                 @QueryParam ("maxRangeScanTime") @DefaultValue("PT10M") String maxRangeScanTime,
+                                @QueryParam ("usePlanFrom") String usePlanFromStashId,
                                 @QueryParam ("dryRun") @DefaultValue ("false") Boolean dryRun) {
 
         checkArgument(!placements.isEmpty(), "Placement is required");
@@ -94,7 +94,10 @@ public class StashResource1 {
                 .setRangeScanSplitSize(rangeScanSplitSize)
                 .setMaxRangeScanTime(ISOPeriodFormat.standard().parsePeriod(maxRangeScanTime).toStandardDuration());
 
-        return _scanUploader.scanAndUpload(id, options, dryRun);
+        return _scanUploader.scanAndUpload(id, options)
+                .dryRun(dryRun)
+                .usePlanFromStashId(usePlanFromStashId)
+                .start();
     }
 
     @GET

@@ -148,6 +148,8 @@ public class ScanUploadSchedulingServiceTest {
     @Test(dataProvider = "every10minutes")
     public void testMissedScansStarted(DateTime now) {
         ScanUploader scanUploader = mock(ScanUploader.class);
+        ScanUploader.ScanAndUploadBuilder scanAndUploadBuilder = mock(ScanUploader.ScanAndUploadBuilder.class);
+        when(scanUploader.scanAndUpload(anyString(), any(ScanOptions.class))).thenReturn(scanAndUploadBuilder);
         StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScheduledExecutorService executorService = mock(ScheduledExecutorService.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
@@ -193,6 +195,7 @@ public class ScanUploadSchedulingServiceTest {
         // Each were actually scanned.  Don't concern over the exact options, that's covered in #testStartScheduledScan().
         verify(scanUploader).scanAndUpload(eq(expectedScanId1), any(ScanOptions.class));
         verify(scanUploader).scanAndUpload(eq(expectedScanId9), any(ScanOptions.class));
+        verify(scanAndUploadBuilder, times(2)).start();
 
         verifyNoMoreInteractions(executorService, scanUploader);
     }
@@ -210,7 +213,9 @@ public class ScanUploadSchedulingServiceTest {
                         destination, DateTimeFormat.forPattern("yyyyMMddHHmmss").withZoneUTC(),
                         ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.standardMinutes(10));
 
+        ScanUploader.ScanAndUploadBuilder builder = mock(ScanUploader.ScanAndUploadBuilder.class);
         ScanUploader scanUploader = mock(ScanUploader.class);
+        when(scanUploader.scanAndUpload(anyString(), any(ScanOptions.class))).thenReturn(builder);
         StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
 
@@ -234,6 +239,8 @@ public class ScanUploadSchedulingServiceTest {
                         .setMaxConcurrentSubRangeScans(1)
                         .setScanByAZ(true));
 
+        verify(builder).start();
+        
         verifyNoMoreInteractions(scanUploader);
     }
 
