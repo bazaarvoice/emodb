@@ -80,12 +80,16 @@ import org.apache.cassandra.thrift.EndpointDetails;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.thrift.transport.TTransportException;
 import org.joda.time.DateTime;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -97,6 +101,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
  */
 public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, AstyanaxKeyScanner {
+
+    private final Logger _log = LoggerFactory.getLogger(AstyanaxDataReaderDAO.class);
+
     private static final int MAX_RANDOM_ROWS_BATCH = 50;
     private static final int MAX_SCAN_ROWS_BATCH = 250;
     private static final int SCAN_ROW_BATCH_INCREMENT = 50;
@@ -573,15 +580,68 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         // Split the token range into sub-ranges with approximately the desired number of records per split
         String rangeStart = tokenRange.getStartToken();
 
-        List<CfSplit> splits = getCfSplits(
-                keyspace.getAstyanaxKeyspace(), cf, tokenRange.getStartToken(), tokenRange.getEndToken(),
-                desiredRecordsPerSplit, allTokenRanges);
+        Deque<ScanRangeSplitWorkItem> splitWorkQueue = new LinkedList<>();
+        splitWorkQueue.push(new ScanRangeSplitWorkItem(tokenRange, desiredRecordsPerSplit, true));
 
-        for (CfSplit split : splits) {
-            ByteBuffer begin = parseTokenString(split.getStartToken());
-            ByteBuffer finish = parseTokenString(split.getEndToken());
+        ScanRangeSplitWorkItem splitWork;
+        while ((splitWork = splitWorkQueue.poll()) != null) {
+            try {
+                List<CfSplit> splits = getCfSplits(
+                        keyspace.getAstyanaxKeyspace(), cf, splitWork.range.getStartToken(), splitWork.range.getEndToken(),
+                        splitWork.desiredRecordsPerSplit, allTokenRanges);
 
-            builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                for (CfSplit split : splits) {
+                    if (splitWork.desiredRecordsPerSplit <= desiredRecordsPerSplit) {
+                        ByteBuffer begin = parseTokenString(split.getStartToken());
+                        ByteBuffer finish = parseTokenString(split.getEndToken());
+                        builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                    } else {
+                        // This work item was for a larger-than-desired split created due to a previous timeout.
+                        // Add the split back to the work queue to be split again at a smaller size.  Note that
+                        // retryOnTimeout is set to false since we've already established that growing and subdividing
+                        // it won't help.
+                        TokenRange newWorkTokenRange = new TokenRangeImpl(split.getStartToken(), split.getEndToken(), splitWork.range.getEndpoints());
+                        int newWorkDesiredSize = splitWork.desiredRecordsPerSplit / 10;
+                        splitWorkQueue.push(
+                                new ScanRangeSplitWorkItem(newWorkTokenRange, newWorkDesiredSize, false));
+                        _log.debug("Decreasing scan range split to {} for keyspace {} and range {}", newWorkDesiredSize, keyspace.getName(), newWorkTokenRange);
+                    }
+                }
+            } catch (Exception e) {
+                if (isTimeoutException(e)) {
+                    if (splitWork.retryOnTimeout) {
+                        // Try again with 10 times the desired number of records per split, up to a reasonable maximum
+                        int retryDesiredRecordsPerSplit = (int) Math.min(splitWork.desiredRecordsPerSplit * 10L, Integer.MAX_VALUE);
+                        boolean retryOnTimeout = retryDesiredRecordsPerSplit < desiredRecordsPerSplit * 1000 && retryDesiredRecordsPerSplit != Integer.MAX_VALUE;
+                        splitWorkQueue.push(new ScanRangeSplitWorkItem(splitWork.range, retryDesiredRecordsPerSplit, retryOnTimeout));
+                        _log.debug("Increasing scan range split to {} for keyspace {} and range {}", retryDesiredRecordsPerSplit, keyspace.getName(), splitWork.range);
+                    } else {
+                        // Either we've already grown the token range to the maximum size we're willing to try
+                        // or we've already succeeded at the larger split size but are still timing out at the smaller one.
+                        // Either way our best choice at this point is to return the over-sized range.  The caller will
+                        // have to adjust around this later.
+                        ByteBuffer begin = parseTokenString(splitWork.range.getStartToken());
+                        ByteBuffer finish = parseTokenString(splitWork.range.getEndToken());
+                        builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                        _log.warn("Unable to generate scan range split below {} for keyspace {} and range {}",
+                                splitWork.desiredRecordsPerSplit, keyspace.getName(), splitWork.range);
+                    }
+                } else {
+                    throw Throwables.propagate(e);
+                }
+            }
+        }
+    }
+
+    private class ScanRangeSplitWorkItem {
+        final TokenRange range;
+        final int desiredRecordsPerSplit;
+        final boolean retryOnTimeout;
+
+        public ScanRangeSplitWorkItem(TokenRange range, int desiredRecordsPerSplit, boolean retryOnTimeout) {
+            this.range = range;
+            this.desiredRecordsPerSplit = desiredRecordsPerSplit;
+            this.retryOnTimeout = retryOnTimeout;
         }
     }
 
@@ -837,7 +897,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
             @Override
             protected boolean isTimeoutException(Exception e) {
-                return Iterables.tryFind(Throwables.getCausalChain(e), Predicates.instanceOf(IsTimeoutException.class)).isPresent();
+                return AstyanaxDataReaderDAO.this.isTimeoutException(e);
             }
 
             @Override
@@ -863,6 +923,10 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         };
     }
 
+    private boolean isTimeoutException(Exception e) {
+        return Iterables.tryFind(Throwables.getCausalChain(e), Predicates.instanceOf(IsTimeoutException.class)).isPresent();
+    }
+    
     /**
      * Scans a single row for columns within the specified range, inclusive or exclusive on start based on whether
      * <code>page</code> is non-zero, and inclusive on end.
