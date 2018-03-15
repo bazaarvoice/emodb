@@ -330,12 +330,17 @@ public class LocalScanUploadMonitor extends AbstractService {
     private List<ScanRange> resplit(String placement, ScanRange resplitRange, int splitSize) {
         // Cassandra didn't do a good job splitting the first time.  Re-split the remaining range; the issue that causes
         // the poor split is rare and it should do a better job this time.
-        ScanRangeSplits splits = _dataTools.getScanRangeSplits(placement, splitSize, Optional.of(resplitRange));
         ImmutableList.Builder<ScanRange> builder = ImmutableList.builder();
-        for (ScanRangeSplits.SplitGroup splitGroup : splits.getSplitGroups()) {
-            for (ScanRangeSplits.TokenRange tokenRange : splitGroup.getTokenRanges()) {
-                builder.addAll(tokenRange.getScanRanges());
+        try {
+            ScanRangeSplits splits = _dataTools.getScanRangeSplits(placement, splitSize, Optional.of(resplitRange));
+            for (ScanRangeSplits.SplitGroup splitGroup : splits.getSplitGroups()) {
+                for (ScanRangeSplits.TokenRange tokenRange : splitGroup.getTokenRanges()) {
+                    builder.addAll(tokenRange.getScanRanges());
+                }
             }
+        } catch (Exception e) {
+            _log.warn("Generating splits for resplit failed, falling back to using entire resplit: placement={}, range={}", placement, resplitRange, e);
+            builder.add(resplitRange);
         }
         return builder.build();
     }
