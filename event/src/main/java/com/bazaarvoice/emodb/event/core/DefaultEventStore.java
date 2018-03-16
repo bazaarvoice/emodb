@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -217,7 +218,7 @@ public class DefaultEventStore implements EventStore {
                     return false;
                 }
 
-                DaoEventSink daoSink = new DaoEventSink(claims, claimTtl, hardLimit, sink);
+                DaoEventSink daoSink = new DaoEventSink(channel, claims, claimTtl, hardLimit, sink);
                 _readerDao.readNewer(channel, daoSink);
 
                 // If all events have been read, cache this fact and expire it in 1 second.
@@ -254,7 +255,7 @@ public class DefaultEventStore implements EventStore {
                 // Protect from abusive clients that use long TTLs but never ack messages.
                 int hardLimit = getClaimsAllowed(claims, Limits.MAX_CLAIMS_OUTSTANDING);
 
-                DaoEventSink daoSink = new DaoEventSink(claims, claimTtl, hardLimit, sink);
+                DaoEventSink daoSink = new DaoEventSink(channel, claims, claimTtl, hardLimit, sink);
                 _writerDao.addAll(toEventsByChannel(channel, events), daoSink);
 
                 if (isDebugLoggingEnabled(channel)) {
@@ -296,10 +297,7 @@ public class DefaultEventStore implements EventStore {
 
                 // If the claim TTL is zero then renewing these events effectively makes them available again immediately
                 if (claimTtl.getMillis() == 0) {
-                    // Mark the events as unread
-                    _readerDao.markUnread(channel, eventIdObjects);
-                    // Remove the channel from the empty cache, or no-op if it wasn't cached as empty
-                    _emptyCache.invalidate(channel);
+                    markUnread(channel, eventIdObjects);
                 }
 
                 return null;
@@ -497,6 +495,15 @@ public class DefaultEventStore implements EventStore {
         }
     }
 
+    private void markUnread(@Nullable String channel, Collection<EventId> eventIds) {
+        if (channel != null) {
+            // Mark the events as unread
+            _readerDao.markUnread(channel, eventIds);
+            // Remove the channel from the empty cache, or no-op if it wasn't cached as empty
+            _emptyCache.invalidate(channel);
+        }
+    }
+
     private int getClaimsAllowed(ClaimSet claims, int maxClaimsOutstanding) {
         return maxClaimsOutstanding - Ints.checkedCast(claims.size());
     }
@@ -558,6 +565,7 @@ public class DefaultEventStore implements EventStore {
     private class DaoEventSink implements com.bazaarvoice.emodb.event.db.EventSink {
         private final ClaimSet _claims;
         private final Duration _claimTtl;
+        private final String _pollChannel;
         private final EventSink _sink;
         private final int _hardLimit;
         private int _count;
@@ -565,10 +573,11 @@ public class DefaultEventStore implements EventStore {
         private boolean _more;
 
         DaoEventSink(int hardLimit, EventSink sink) {
-            this(null, null, hardLimit, sink);
+            this(null, null, null, hardLimit, sink);
         }
 
-        DaoEventSink(@Nullable ClaimSet claims, @Nullable Duration claimTtl, int hardLimit, EventSink sink) {
+        DaoEventSink(@Nullable String pollChannel, @Nullable ClaimSet claims, @Nullable Duration claimTtl, int hardLimit, EventSink sink) {
+            _pollChannel = pollChannel;
             _claims = claims;
             _claimTtl = claimTtl;
             _hardLimit = hardLimit;
@@ -585,6 +594,7 @@ public class DefaultEventStore implements EventStore {
                 EventSink.Status status = _sink.accept(toEventData(eventId, eventData));
                 if (status == EventSink.Status.REJECTED_STOP) {
                     unclaim(_claims, eventId, _claimTtl);
+                    markUnread(_pollChannel, Collections.singleton(eventId));
                     _more = true;
                     return false;
                 } else if (status == EventSink.Status.ACCEPTED_STOP) {

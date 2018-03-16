@@ -181,7 +181,7 @@ public class DedupQueue extends AbstractIdleService {
         // case, so rely on the DefaultEventStore "empty channel" cache to rate limit actual reads to one-per-second.
         boolean moreRead = peekOrPollReadChannel(claimTtl, sink);
         if (sink.isDone()) {
-            return moreRead;
+            return moreRead || !getQueue().isEmpty() || !isWriteChannelEmpty();
         }
 
         // Do NOT dedup events in-memory between the read channel and the other sources.  Once an event makes it to
@@ -313,6 +313,25 @@ public class DedupQueue extends AbstractIdleService {
         // Once the records are in the read channel we are safe to remove them from the write channel.
         _eventStore.delete(_writeChannel, getEventIds(events), true);
         return more ? Drained.SOME : Drained.ALL;
+    }
+
+    private boolean isWriteChannelEmpty() {
+        EventSink sink = new EventSink() {
+            @Override
+            public int remaining() {
+                return 1;
+            }
+
+            @Override
+            public Status accept(EventData event) {
+                // We're not interested in claiming any events, just need to know if any exist.  Therefore
+                // immediately reject any events.
+                return Status.REJECTED_STOP;
+            }
+        };
+
+        boolean more = _eventStore.poll(_writeChannel, Duration.millis(100), sink);
+        return !more;
     }
 
     private List<ByteBuffer> filterDuplicates(Collection<ByteBuffer> records, Set<ByteBuffer> unique) {
