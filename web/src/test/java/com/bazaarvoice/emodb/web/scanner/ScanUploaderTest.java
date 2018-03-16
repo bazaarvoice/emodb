@@ -7,6 +7,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
+import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
@@ -68,12 +69,14 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.netflix.astyanax.connectionpool.exceptions.TokenRangeOfflineException;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
@@ -108,12 +111,14 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -314,8 +319,10 @@ public class ScanUploaderTest {
         ScanStatusDAO scanStatusDAO = new InMemoryScanStatusDAO();
         // Create the instance and run the upload
         ScanUploader scanUploader = new ScanUploader(dataTools, scanWorkflow, scanStatusDAO, stashStateListener);
-        scanUploader.scanAndUpload("test1",
-                new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path"))));
+        scanUploader.scanAndUpload(
+                "test1",
+                        new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path"))))
+                .start();
         LocalScanUploadMonitor monitor = new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
                 scanWriterGenerator, stashStateListener, scanCountListener, dataTools);
         monitor.setExecutorService(mock(ScheduledExecutorService.class));
@@ -413,6 +420,115 @@ public class ScanUploaderTest {
         monitor.refreshScan("test1");
         verify(amazonS3, times(1)).putObject(argThat(putsObject("testbucket", "test/path/_SUCCESS")));
         verify(amazonS3, times(1)).putObject(argThat(putsObject("testbucket", "test/_LATEST")));
+    }
+
+    @Test
+    public void testScanUploadFromExistingScan() throws Exception {
+        MetricRegistry metricRegistry = new MetricRegistry();
+        // Use an in-memory data store but override the default splits operation to return 4 splits for the test placement
+        InMemoryDataStore dataStore = spy(new InMemoryDataStore(metricRegistry));
+        when(dataStore.getScanRangeSplits("app_global:default", 1000000, Optional.<ScanRange>absent()))
+                .thenReturn(new ScanRangeSplits(ImmutableList.of(
+                        createSimpleSplitGroup("00", "40"),
+                        createSimpleSplitGroup("40", "80"),
+                        createSimpleSplitGroup("80", "b0"),
+                        createSimpleSplitGroup("b0", "ff")
+                )));
+
+        ScanWorkflow scanWorkflow = new InMemoryScanWorkflow();
+        ScanStatusDAO scanStatusDAO = new DataStoreScanStatusDAO(dataStore, "scan-status-table", "app_global:default");
+        ScanUploader scanUploader = new ScanUploader(dataStore, scanWorkflow, scanStatusDAO, mock(StashStateListener.class));
+
+        ScanOptions scanOptions = new ScanOptions("app_global:default")
+                .setRangeScanSplitSize(1000000)
+                .addDestination(ScanDestination.discard());
+
+        String yesterday = "yesterday";
+        String today = "today";
+
+        // Create a prior scan
+        ScanStatus yesterdayStatus = scanUploader.scanAndUpload(yesterday, scanOptions).start();
+
+        // Simulate the prior scan's execution workflow
+        for (ScanRangeStatus scanRangeStatus : ImmutableList.copyOf(yesterdayStatus.getAllScanRanges())) {
+            scanStatusDAO.setScanRangeTaskQueued(yesterday, scanRangeStatus.getTaskId(), new Date());
+            scanStatusDAO.setScanRangeTaskActive(yesterday, scanRangeStatus.getTaskId(), new Date());
+
+            // For the third split simulate a need to resplit
+            if (scanRangeStatus.getScanRange().getFrom().asReadOnlyBuffer().get() != (byte) 0x80) {
+                scanStatusDAO.setScanRangeTaskComplete(yesterday, scanRangeStatus.getTaskId(), new Date());
+            } else {
+                // Mark the task as complete but needing to be resplit
+                ByteBuffer resplitStartToken = ByteBufferUtil.hexToBytes("a0");
+                ByteBuffer resplitEndToken = ByteBufferUtil.hexToBytes("b0");
+                scanStatusDAO.setScanRangeTaskPartiallyComplete(yesterday, scanRangeStatus.getTaskId(),
+                        ScanRange.create(ByteBufferUtil.hexToBytes("80"), resplitStartToken),
+                        ScanRange.create(resplitStartToken, resplitEndToken),
+                        new Date());
+                // Mark the resplit has happened with exactly one new task to cover the unscanned range
+                scanStatusDAO.resplitScanRangeTask(yesterday, scanRangeStatus.getTaskId(), ImmutableList.of(
+                        new ScanRangeStatus(99, "app_global:default", ScanRange.create(resplitStartToken, resplitEndToken),
+                                scanRangeStatus.getBatchId(), scanRangeStatus.getBlockedByBatchId(), scanRangeStatus.getConcurrencyId())));
+                // Go through the steps to execute the new task
+                scanStatusDAO.setScanRangeTaskQueued(yesterday, 99, new Date());
+                scanStatusDAO.setScanRangeTaskActive(yesterday, 99, new Date());
+                scanStatusDAO.setScanRangeTaskComplete(yesterday, 99, new Date());
+            }
+        }
+        scanStatusDAO.setCompleteTime(yesterday, new Date());
+
+        Set<ScanRange> expectedScanRanges = Sets.newHashSetWithExpectedSize(5);
+        expectedScanRanges.add(ScanRange.create(ByteBufferUtil.hexToBytes("00"), ByteBufferUtil.hexToBytes("40")));
+        expectedScanRanges.add(ScanRange.create(ByteBufferUtil.hexToBytes("40"), ByteBufferUtil.hexToBytes("80")));
+        expectedScanRanges.add(ScanRange.create(ByteBufferUtil.hexToBytes("80"), ByteBufferUtil.hexToBytes("a0")));
+        expectedScanRanges.add(ScanRange.create(ByteBufferUtil.hexToBytes("a0"), ByteBufferUtil.hexToBytes("b0")));
+        expectedScanRanges.add(ScanRange.create(ByteBufferUtil.hexToBytes("b0"), ByteBufferUtil.hexToBytes("ff")));
+
+        // Sniff test that the status is as expected
+        yesterdayStatus = scanUploader.getStatus(yesterday);
+        assertTrue(yesterdayStatus.isDone());
+        assertNotNull(yesterdayStatus.getCompleteTime());
+        assertTrue(yesterdayStatus.getPendingScanRanges().isEmpty());
+        assertTrue(yesterdayStatus.getActiveScanRanges().isEmpty());
+        assertEquals(yesterdayStatus.getCompleteScanRanges().size(), 5);
+        for (ScanRangeStatus scanRangeStatus : yesterdayStatus.getCompleteScanRanges()) {
+            assertEquals(scanRangeStatus.getPlacement(), "app_global:default");
+            assertTrue(expectedScanRanges.remove(scanRangeStatus.getScanRange()));
+        }
+
+        // Now create a new scan from the previous
+        ScanStatus todayStatus = scanUploader.scanAndUpload(today, scanOptions)
+                .usePlanFromStashId(yesterday)
+                .start();
+
+        assertTrue(todayStatus.getActiveScanRanges().isEmpty());
+        assertTrue(todayStatus.getCompleteScanRanges().isEmpty());
+        assertEquals(todayStatus.getPendingScanRanges().size(), 5);
+
+        for (ScanRangeStatus scanRangeStatus : todayStatus.getPendingScanRanges()) {
+            ScanRangeStatus yesterdayScanRangeStatus = yesterdayStatus.getCompleteScanRanges().stream()
+                    .filter(status -> status.getTaskId() == scanRangeStatus.getTaskId())
+                    .findFirst().orElseThrow(() -> new AssertionError("Matching task not found"));
+
+            assertEquals(scanRangeStatus.getTaskId(), yesterdayScanRangeStatus.getTaskId());
+            assertEquals(scanRangeStatus.getBatchId(), yesterdayScanRangeStatus.getBatchId());
+            assertEquals(scanRangeStatus.getPlacement(), yesterdayScanRangeStatus.getPlacement());
+            assertEquals(scanRangeStatus.getScanRange(), yesterdayScanRangeStatus.getScanRange());
+            assertEquals(scanRangeStatus.getBlockedByBatchId(), yesterdayScanRangeStatus.getBlockedByBatchId());
+            assertEquals(scanRangeStatus.getConcurrencyId(), yesterdayScanRangeStatus.getConcurrencyId());
+            assertNull(scanRangeStatus.getScanQueuedTime());
+            assertNull(scanRangeStatus.getScanStartTime());
+            assertNull(scanRangeStatus.getScanCompleteTime());
+            assertNull(scanRangeStatus.getResplitRangeOrNull());
+        }
+    }
+
+    private ScanRangeSplits.SplitGroup createSimpleSplitGroup(String startToken, String endToken) {
+        ByteBuffer startTokenBytes = ByteBufferUtil.hexToBytes(startToken);
+        ByteBuffer endTokenBytes = ByteBufferUtil.hexToBytes(endToken);
+        return new ScanRangeSplits.SplitGroup(ImmutableList.of(
+                new ScanRangeSplits.TokenRange(ImmutableList.of(
+                        ScanRange.create(startTokenBytes, endTokenBytes)))));
     }
 
     private PutObjectResult mockUploadS3File(String bucket, String key, byte[] contents, HashBasedTable<String, String, ByteBuffer> s3FileTable) {

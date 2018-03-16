@@ -11,9 +11,17 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -50,19 +58,50 @@ public class ScanUploader {
         _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
     }
 
-    public ScanStatus scanAndUpload(String scanId, ScanOptions options) {
-        return scanAndUpload(scanId, options, false);
+    public ScanAndUploadBuilder scanAndUpload(String scanId, ScanOptions options) {
+        return new ScanAndUploadBuilder(scanId, options);
     }
 
-    public ScanStatus scanAndUpload(String scanId, ScanOptions options, boolean dryRun) {
-        ScanPlan plan = createPlan(scanId, options);
-        ScanStatus status = plan.toScanStatus();
+    public class ScanAndUploadBuilder {
+        private final String _scanId;
+        private final ScanOptions _options;
+        private boolean _dryRun = false;
+        private String _usePlanFrom;
 
-        if (!dryRun) {
-            startScanUpload(scanId, status);
+        private ScanAndUploadBuilder(String scanId, ScanOptions options) {
+            _scanId = scanId;
+            _options = options;
         }
 
-        return status;
+        public ScanAndUploadBuilder dryRun(boolean dryRun) {
+            _dryRun = dryRun;
+            return this;
+        }
+
+        public ScanAndUploadBuilder usePlanFromStashId(String existingId) {
+            _usePlanFrom = existingId;
+            return this;
+        }
+
+        public ScanStatus start() {
+            ScanStatus status;
+            if (_usePlanFrom == null) {
+                ScanPlan plan = createPlan(_scanId, _options);
+                status = plan.toScanStatus();
+            } else {
+                ScanStatus existingStatus = _scanStatusDAO.getScanStatus(_usePlanFrom);
+                if (existingStatus == null) {
+                    throw new IllegalStateException("Cannot repeat from unknown scan: " + _usePlanFrom);
+                }
+                status = createNewScanFromExistingScan(_scanId, _options, existingStatus);
+            }
+
+            if (!_dryRun) {
+                startScanUpload(_scanId, status);
+            }
+
+            return status;
+        }
     }
 
     /**
@@ -93,6 +132,37 @@ public class ScanUploader {
         }
 
         return plan;
+    }
+
+    /**
+     * Takes an existing ScanStatus and creates a new plan from it.  This method validates that a plan existed for each
+     * placement in the existing ScanStatus but otherwise recreates the plan exactly as it ran.  This means that any
+     * ScanOptions related to generating the plan, such as {@link ScanOptions#getRangeScanSplitSize()} and
+     * {@link ScanOptions#isScanByAZ()}, will have no effect.
+     */
+    private ScanStatus createNewScanFromExistingScan(String scanId, ScanOptions scanOptions, ScanStatus existingScanStatus) {
+        List<ScanRangeStatus> pendingScanRangeStatuses = Lists.newArrayList();
+        Multimap<String, ScanRangeStatus> scanRangeStatusesByPlacement = HashMultimap.create();
+
+        for (ScanRangeStatus scanRangeStatus : existingScanStatus.getAllScanRanges()) {
+            scanRangeStatusesByPlacement.put(scanRangeStatus.getPlacement(),
+                    new ScanRangeStatus(
+                            scanRangeStatus.getTaskId(), scanRangeStatus.getPlacement(), scanRangeStatus.getScanRange(),
+                            scanRangeStatus.getBatchId(), scanRangeStatus.getBlockedByBatchId(), scanRangeStatus.getConcurrencyId()));
+        }
+
+        for (String placement : scanOptions.getPlacements()) {
+            Collection<ScanRangeStatus> scanRangeStatusesForPlacement = scanRangeStatusesByPlacement.get(placement);
+
+            if (scanRangeStatusesForPlacement.isEmpty()) {
+                throw new IllegalStateException(String.format("Previous scan \"%s\" had no plan for placement \"%s\"", scanId, placement));
+            }
+
+            pendingScanRangeStatuses.addAll(scanRangeStatusesForPlacement);
+        }
+
+        return new ScanStatus(scanId, scanOptions, false, false, new Date(), pendingScanRangeStatuses,
+                ImmutableList.of(), ImmutableList.of());
     }
 
     private void startScanUpload(String scanId, ScanStatus status) {

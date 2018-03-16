@@ -275,7 +275,7 @@ public class ScanUploadSchedulingService extends LeaderService {
 
             _log.info("Starting scheduled scan and upload to {} for time {}", destination, scheduledTime);
 
-            return _scanUploader.scanAndUpload(scanId, scanOptions);
+            return _scanUploader.scanAndUpload(scanId, scanOptions).start();
         }
 
         /**
