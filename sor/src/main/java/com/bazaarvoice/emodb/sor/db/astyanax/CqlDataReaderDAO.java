@@ -737,10 +737,9 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         Statement statement = where
                 .orderBy(ascending ? asc(tableDDL.getChangeIdColumnName()) : desc(tableDDL.getChangeIdColumnName()))
                 .limit(limit)
-                .setFetchSize(_driverConfig.getSingleRowFetchSize())
                 .setConsistencyLevel(consistency);
 
-        return placement.getKeyspace().getCqlSession().execute(statement);
+        return AdaptiveResultSet.executeAdaptiveQuery(placement.getKeyspace().getCqlSession(), statement, _driverConfig.getSingleRowFetchSize());
     }
 
     @Override
