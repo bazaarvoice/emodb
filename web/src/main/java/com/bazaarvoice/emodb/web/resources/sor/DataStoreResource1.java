@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.PurgeStatus;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
@@ -48,6 +49,7 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.BooleanParam;
+import io.dropwizard.jersey.params.DateTimeParam;
 import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
@@ -56,6 +58,8 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -121,14 +125,39 @@ public class DataStoreResource1 {
             notes = "Returns a Iterator of Table",
             response = Table.class
     )
-    public Object listTables(final @QueryParam("from") String fromKeyExclusive,
-                                      final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
-                                      final @Authenticated Subject subject) {
+    public Object listTables(final @QueryParam ("from") String fromKeyExclusive,
+                             final @QueryParam ("limit") @DefaultValue ("10") LongParam limitParam,
+                             final @Authenticated Subject subject) {
         Iterator<Table> allTables = _dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE);
         return new FilteredJsonStreamingOutput<Table>(allTables, limitParam.get()) {
             @Override
             public boolean include(Table table) {
                 return subject.hasPermission(Permissions.readSorTable(new NamedResource(table.getName())));
+            }
+        };
+    }
+
+    @GET
+    @Path ("_unpublishedevents")
+    @Timed (name = "bv.emodb.sor.DataStoreResource1.listUnpublishedDatabusEvents", absolute = true)
+    @Unbuffered
+    @ApiOperation (value = "Returns all the emo table events that are not published on the databus.",
+            notes = "Returns a Iterator of a Map.",
+            response = Table.class
+    )
+    public Object listUnpublishedDatabusEvents(final @QueryParam ("from") DateTimeParam fromInclusiveParam,
+                                            final @QueryParam ("to") DateTimeParam toExclusiveParam,
+                                            final @Authenticated Subject subject) {
+        // Default date range is past 30 days
+        DateTime fromInclusive = fromInclusiveParam != null ? fromInclusiveParam.get() : DateTime.now(DateTimeZone.UTC).minusDays(29);
+        DateTime toExclusive = toExclusiveParam != null ? toExclusiveParam.get() : DateTime.now(DateTimeZone.UTC).plusDays(1);
+        checkArgument(fromInclusive.compareTo(toExclusive) < 0, "from date must be before the to date.");
+
+        Iterator<UnpublishedDatabusEvent> allUnpublishedDatabusEvents = _dataStore.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
+        return new FilteredJsonStreamingOutput<UnpublishedDatabusEvent>(allUnpublishedDatabusEvents, Long.MAX_VALUE) {
+            @Override
+            public boolean include(UnpublishedDatabusEvent event) {
+                return subject.hasPermission(Permissions.readSorTable(new NamedResource(event.getTable())));
             }
         };
     }
@@ -233,7 +262,7 @@ public class DataStoreResource1 {
     @Path ("_table/{table}/purgestatus")
     @RequiresPermissions ("sor|purge|{table}")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.purgeTable", absolute = true)
-    public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam("id") String jobID) {
+    public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam ("id") String jobID) {
         System.out.println(jobID.toString());
         PurgeStatus purgeStatus = _dataStoreAsync.getPurgeStatus(table, jobID);
 
@@ -378,11 +407,11 @@ public class DataStoreResource1 {
     )
     @ApiImplicitParams ({@ApiImplicitParam (name = "APIKey", required = true, dataType = "string", paramType = "query")})
     public Object scan(@PathParam ("table") String table,
-                                              @QueryParam ("from") String fromKeyExclusive,
-                                              @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
-                                              @QueryParam ("includeDeletes") @DefaultValue("false") BooleanParam includeDeletes,
-                                              @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                              @QueryParam ("debug") BooleanParam debug) {
+                       @QueryParam ("from") String fromKeyExclusive,
+                       @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                       @QueryParam ("includeDeletes") @DefaultValue ("false") BooleanParam includeDeletes,
+                       @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                       @QueryParam ("debug") BooleanParam debug) {
         // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
         // create long pauses in results.
         Iterator<Map<String, Object>> unfilteredContent;
@@ -426,12 +455,12 @@ public class DataStoreResource1 {
             response = Iterator.class
     )
     public Object getSplit(@PathParam ("table") String table,
-                                                  @PathParam ("split") String split,
-                                                  @QueryParam ("from") String key,
-                                                  @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
-                                                  @QueryParam ("includeDeletes") @DefaultValue("false") BooleanParam includeDeletes,
-                                                  @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                                  @QueryParam ("debug") BooleanParam debug) {
+                           @PathParam ("split") String split,
+                           @QueryParam ("from") String key,
+                           @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                           @QueryParam ("includeDeletes") @DefaultValue ("false") BooleanParam includeDeletes,
+                           @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                           @QueryParam ("debug") BooleanParam debug) {
         // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
         // create long pauses in results.
         Iterator<Map<String, Object>> unfilteredContent;
@@ -455,9 +484,9 @@ public class DataStoreResource1 {
             notes = "Retrieves a list of content items for the specified comma-delimited coordinates.",
             response = Iterator.class
     )
-    public Iterator<Map<String, Object>> multiGet(@QueryParam("id") List<String> coordinates,
-                                                  @QueryParam("consistency") @DefaultValue("STRONG") ReadConsistencyParam consistency,
-                                                  @QueryParam("debug") BooleanParam debug,
+    public Iterator<Map<String, Object>> multiGet(@QueryParam ("id") List<String> coordinates,
+                                                  @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                                                  @QueryParam ("debug") BooleanParam debug,
                                                   final @Authenticated Subject subject) {
         List<Coordinate> coordinateList = parseCoordinates(coordinates);
         for (Coordinate coordinate : coordinateList) {

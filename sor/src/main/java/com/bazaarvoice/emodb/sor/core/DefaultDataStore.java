@@ -18,6 +18,8 @@ import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -137,7 +139,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     /**
      * Optional binding, required only if running in stash mode.
      */
-    @Inject(optional=true)
+    @Inject (optional = true)
     public void setStashDAO(StashTableDAO stashTableDao) {
         _stashTableDao = stashTableDao;
     }
@@ -174,6 +176,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         });
     }
 
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+        return _tableDao.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
+    }
+
     private DefaultTable toDefaultTable(Table table) {
         return new DefaultTable(table.getName(), table.getOptions(), table.getAttributes(), table.getAvailability());
     }
@@ -199,6 +206,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkLegalTableName(tableName);
         checkNotNull(audit, "audit");
         Table table = _tableDao.get(tableName);
+        _tableDao.writeUnpublishedDatabusEvent(tableName, UnpublishedDatabusEventType.PURGE);
         _tableDao.audit(tableName, "purge", audit);
         _dataWriterDao.purgeUnsafe(table);
     }
@@ -233,7 +241,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
-    public void setTableTemplate(String table, Map<String, ?> template, Audit audit) throws UnknownTableException {
+    public void setTableTemplate(String table, Map<String, ?> template, Audit audit)
+            throws UnknownTableException {
         checkLegalTableName(table);
         checkLegalTableAttributes(template);
         checkNotNull(audit, "audit");
@@ -295,13 +304,14 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             private final List<Key> _keys = Lists.newArrayList();
 
             @Override
-            public AnnotatedGet add(String tableName, String key) throws UnknownTableException, UnknownPlacementException {
+            public AnnotatedGet add(String tableName, String key)
+                    throws UnknownTableException, UnknownPlacementException {
                 checkLegalTableName(tableName);
                 checkNotNull(key, "key");
 
                 // The following call will throw UnknownTableException if the table doesn't currently exist.  This
                 // happens if the table was dropped prior to this call.
-                Table table =_tableDao.get(tableName);
+                Table table = _tableDao.get(tableName);
                 // It's also possible that the table exists but is not available locally.  This happens if the table
                 // once had a locally available facade but the facade was since dropped.  Check if this is the case and,
                 // if so, raise UnknownPlacementException.
@@ -374,14 +384,16 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private Expanded expand(final Record record, long fullConsistencyTimestamp, long rawConsistencyTimestamp, boolean ignoreRecent, final ReadConsistency consistency) {
         MutableIntrinsics intrinsics = MutableIntrinsics.create(record.getKey());
         return _compactor.expand(record, fullConsistencyTimestamp, rawConsistencyTimestamp, intrinsics, ignoreRecent, new Supplier<Record>() {
-                    @Override
-                    public Record get() {
-                        return _dataReaderDao.read(record.getKey(), consistency);
-                    }
-                });
+            @Override
+            public Record get() {
+                return _dataReaderDao.read(record.getKey(), consistency);
+            }
+        });
     }
 
-    /** Resolve a set of changes, returning an interface that includes info about specific change IDs. */
+    /**
+     * Resolve a set of changes, returning an interface that includes info about specific change IDs.
+     */
     private AnnotatedContent resolveAnnotated(Record record, final ReadConsistency consistency) {
         final Resolved resolved = resolve(record, consistency);
 
@@ -494,7 +506,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     private Iterator<Map<String, Object>> scan(String tableName, @Nullable String fromKeyExclusive,
-                                              LimitCounter limit, boolean includeDeletes, ReadConsistency consistency) {
+                                               LimitCounter limit, boolean includeDeletes, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkArgument(limit.remaining() > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
@@ -668,7 +680,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         });
     }
 
-    /** Facade related methods **/
+    /**
+     * Facade related methods
+     **/
     @Override
     public void createFacade(String table, FacadeOptions facadeOptions, Audit audit) {
         checkLegalTableName(table);
@@ -826,12 +840,14 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     // exclusively from this table.
                     TableSet tableSet = new TableSet() {
                         @Override
-                        public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+                        public Table getByUuid(long uuid)
+                                throws UnknownTableException, DroppedTableException {
                             return stashTokenRange.getTable();
                         }
 
                         @Override
-                        public void close() throws IOException {
+                        public void close()
+                                throws IOException {
                             // No-op
                         }
                     };
@@ -902,7 +918,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkState(_stashTableDao != null, "Cannot create stash snapshot without a StashTableDAO implementation");
         _stashTableDao.createStashTokenRangeSnapshot(stashId, placements, _stashBlackListTableCondition);
     }
-    
+
     @Override
     public void clearStashTokenRangeSnapshot(String stashId) {
         checkNotNull(stashId, "stashId");

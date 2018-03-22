@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.client;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -15,7 +16,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
-import com.google.common.collect.Sets;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -44,6 +45,11 @@ class DataStoreAuthenticatorProxy implements DataStore {
     @Override
     public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
         return _authDataStore.listTables(_apiKey, fromTableExclusive, limit);
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+        return _authDataStore.listUnpublishedDatabusEvents(_apiKey, fromInclusive, toExclusive);
     }
 
     @Override

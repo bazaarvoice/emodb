@@ -23,6 +23,8 @@ import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
@@ -44,6 +46,7 @@ import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
 import com.bazaarvoice.emodb.table.db.tableset.TableSerializer;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
@@ -66,13 +69,18 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeFieldType;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Days;
 import org.joda.time.Duration;
+import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,12 +95,17 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
@@ -116,28 +129,41 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private static final Ordering<Comparable> NULLS_LAST = Ordering.natural().nullsLast();
     private static final Random RANDOM = new SecureRandom();
 
-    /** Wait at least 10 seconds between maintenance operations to allow for clock skew between servers. */
+    /**
+     * Wait at least 10 seconds between maintenance operations to allow for clock skew between servers.
+     */
     static final Duration MIN_DELAY = Duration.standardSeconds(10);
 
-    /** The server updates its consistency timestamp value at most every 5 minutes. */
+    /**
+     * The server updates its consistency timestamp value at most every 5 minutes.
+     */
     static final Duration MIN_CONSISTENCY_DELAY = Duration.standardMinutes(5);
 
-    /** Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid. */
+    /**
+     * Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid.
+     */
     static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.standardDays(1);
 
-    /** Delay between dropping a table and initial purge of all the data in the table, may miss late writes. */
+    /**
+     * Delay between dropping a table and initial purge of all the data in the table, may miss late writes.
+     */
     static final Duration DROP_TO_PURGE_1 = Duration.standardDays(1);
 
-    /** Maximum time to wait for full consistency.  By this time, purge will find everything. */
+    /**
+     * Maximum time to wait for full consistency.  By this time, purge will find everything.
+     */
     static final Duration DROP_TO_PURGE_2 = Duration.standardDays(10);
 
-    /** Reserved key used by {@link #createTableSet()} to identify bootstrap tables. */
+    /**
+     * Reserved key used by {@link #createTableSet()} to identify bootstrap tables.
+     */
     static final String TABLE_SET_BOOTSTRAP_KEY = "~bootstrap";
 
     private TableBackingStore _backingStore;
     private final String _systemTablePlacement;
     private final String _systemTable;
     private final String _systemTableUuid;
+    private final String _systemTableUnPublishedDatabusEvents;
     private final String _selfDataCenter;
     private final int _defaultShardsLog2;
     private final BiMap<String, Long> _bootstrapTables;
@@ -152,6 +178,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final CacheHandle _tableCacheHandle;
     private final Map<String, String> _placementsUnderMove;
     private CQLStashTableDAO _stashTableDao;
+    private Clock _clock;
 
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
@@ -168,7 +195,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                             FullConsistencyTimeProvider fullConsistencyTimeProvider,
                             @TableChangesEnabled ValueStore<Boolean> tableChangesEnabled,
                             @CachingTableDAORegistry CacheRegistry cacheRegistry,
-                            @PlacementsUnderMove Map<String, String> placementsUnderMove) {
+                            @PlacementsUnderMove Map<String, String> placementsUnderMove,
+                            @Nullable Clock clock) {
         _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
         _bootstrapTables = HashBiMap.create(checkNotNull(bootstrapTables, "bootstrapTables"));
         _reservedUuids = _bootstrapTables.inverse().keySet();
@@ -183,17 +211,19 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         _tableChangesEnabled = checkNotNull(tableChangesEnabled, "tableChangesEnabled");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _clock = clock != null ? clock : Clock.systemUTC();
 
         // There are two tables used to store metadata about all the other tables.
         checkNotNull(systemTableNamespace, "systemTableNamespace");
         _systemTable = systemTableNamespace + ":table";
         _systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
+        _systemTableUnPublishedDatabusEvents = systemTableNamespace + ":table_unpublished_databus_events";
 
         // If this table DAO uses itself to store its table metadata (ie. it requires bootstrap tables) then make sure
         // the right bootstrap tables are specified.  This happens when "_dataStore" uses "this" for table metadata.
         if (!_bootstrapTables.isEmpty()) {
-            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable);
+            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable, _systemTableUnPublishedDatabusEvents);
             Set<String> diff = Sets.symmetricDifference(expectedTables, bootstrapTables.keySet());
             checkState(diff.isEmpty(), "Bootstrap tables map is missing tables or has extra tables: %s", diff);
         }
@@ -209,15 +239,16 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     /**
      * Optional binding, required only if running in stash mode.
      */
-    @Inject(optional=true)
+    @Inject (optional = true)
     public void setCQLStashTableDAO(CQLStashTableDAO stashTableDao) {
         _stashTableDao = stashTableDao;
     }
 
     @Override
-    public void start() throws Exception {
+    public void start()
+            throws Exception {
         // Ensure the basic system tables exist.  For the DataStore these will be bootstrap tables.
-        for (String table : new String[] {_systemTable, _systemTableUuid}) {
+        for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents}) {
             TableOptions options = new TableOptionsBuilder().setPlacement(_systemTablePlacement).build();
             Audit audit = new AuditBuilder().setComment("initial startup").setLocalHost().build();
             _backingStore.createTable(table, options, ImmutableMap.<String, Object>of(), audit);
@@ -225,7 +256,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop()
+            throws Exception {
         // Do nothing
     }
 
@@ -284,7 +316,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         op.getTask().run(progress);
     }
 
-    /** Returns the next maintenance operation that should be performed on the specified table. */
+    /**
+     * Returns the next maintenance operation that should be performed on the specified table.
+     */
     @Nullable
     private MaintenanceOp getNextMaintenanceOp(final TableJson json, boolean includeTask) {
         if (json.isDeleted() || json.getStorages().isEmpty()) {
@@ -306,7 +340,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         return op;
     }
 
-    /** Helper returns the next maintenance operation that should be performed on the specified table uuid/storage. */
+    /**
+     * Helper returns the next maintenance operation that should be performed on the specified table uuid/storage.
+     */
     @Nullable
     private MaintenanceOp getNextMaintenanceOp(final TableJson json, final Storage storage) {
         final StorageState from = storage.getState();
@@ -495,7 +531,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, to.name()));
     }
 
-    /** Write the delta to the system table and invalidate caches in the specified scope. */
+    /**
+     * Write the delta to the system table and invalidate caches in the specified scope.
+     */
     private void updateTableMetadata(String table, Delta delta, Audit audit, @Nullable InvalidationScope scope) {
         _backingStore.update(_systemTable, table, TimeUUIDs.newUUID(), delta, audit,
                 scope == InvalidationScope.GLOBAL ? WriteConsistency.GLOBAL : WriteConsistency.STRONG);
@@ -506,7 +544,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         }
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.create", absolute = true)
+    /* Write the delta to the unpublished databus events system table which stores all the drop, purge, attribute changes, placement moves etc information of the tables.
+     */
+    private void writEventToSystemTable(String key, Delta delta, Audit audit) {
+        _backingStore.update(_systemTableUnPublishedDatabusEvents, key, TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+    }
+
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.create", absolute = true)
     @Override
     public void create(String name, TableOptions options, Map<String, ?> attributes, Audit audit)
             throws TableExistsException {
@@ -550,7 +594,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(name, delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.createFacade", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.createFacade", absolute = true)
     @Override
     public void createFacade(String name, FacadeOptions facadeOptions, Audit audit)
             throws FacadeExistsException {
@@ -590,7 +634,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
      * Returns false if there is already a facade at the specified placement, so facade creation would be idempotent.
      */
     @Override
-    public boolean checkFacadeAllowed(String table, FacadeOptions options) throws FacadeExistsException {
+    public boolean checkFacadeAllowed(String table, FacadeOptions options)
+            throws FacadeExistsException {
         return checkFacadeAllowed(readTableJson(table, true), options.getPlacement(), null);
     }
 
@@ -624,9 +669,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         return true;
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.drop", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.drop", absolute = true)
     @Override
-    public void drop(String name, Audit audit) throws UnknownTableException {
+    public void drop(String name, Audit audit)
+            throws UnknownTableException {
         checkNotNull(name, "table");
         checkNotNull(audit, "audit");
 
@@ -645,6 +691,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         // directly instead of using get()/getInternal() to avoid validation checks so we can drop an invalid table.
         TableJson json = readTableJson(name, true);
 
+        // write about the drop operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_TABLE);
+
+        // now, update the Table Metadata
         Delta delta = json.newDropTable();
 
         Audit augmentedAudit = AuditBuilder.from(audit)
@@ -667,6 +717,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         // directly instead of using get()/getInternal() to avoid validation checks so we can drop an invalid table.
         TableJson json = readTableJson(name, true);
 
+        // write about the drop operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_FACADE);
+
         // Find the facade for the specified placement.
         Storage facadeStorage = json.getFacadeForPlacement(placement);
 
@@ -679,7 +732,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    /** Purge a dropped table or facade.  Eexecuted twice, once for fast cleanup and again much later for stragglers. */
+    /**
+     * Purge a dropped table or facade.  Executed twice, once for fast cleanup and again much later for stragglers.
+     */
     private void purgeData(TableJson json, Storage storage, int iteration, Runnable progress) {
         _log.info("Purging data for table '{}' and table uuid '{}' (facade={}, iteration={}).",
                 json.getTable(), storage.getUuidString(), storage.isFacade(), iteration);
@@ -695,7 +750,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         _dataPurgeDAO.purge(newAstyanaxStorage(storage, json.getTable()), rateLimitedProgress);
     }
 
-    /** Last step in dropping a table or facade. */
+    /**
+     * Last step in dropping a table or facade.
+     */
     private void deleteFinal(TableJson json, Storage storage) {
         // Remove the uuid and storage--we no longer need it.  Leave the uuid in _systemTableUuid so it isn't reused.
         Delta delta = json.newDeleteStorage(storage);
@@ -751,7 +808,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private TableOptions replacePlacementIfMoveInProgress(TableOptions options) {
         String placement = options.getPlacement();
         if (_placementsUnderMove.containsKey(placement)) {
-           return new TableOptionsBuilder().setFacades(options.getFacades())
+            return new TableOptionsBuilder().setFacades(options.getFacades())
                     .setPlacement(_placementsUnderMove.get(placement)).build();
         }
         return options;
@@ -870,7 +927,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    /** Cancel a move before mirror promotion has taken place. */
+    /**
+     * Cancel a move before mirror promotion has taken place.
+     */
     private void moveCancel(TableJson json, Storage src, Storage dest) {
         Delta delta = json.newMoveCancel(src);
         Audit audit = new AuditBuilder()
@@ -883,7 +942,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(json.getTable(), delta, audit, InvalidationScope.GLOBAL);
     }
 
-    /** Restart a move with an existing mirror that may or may not have once been primary. */
+    /**
+     * Restart a move with an existing mirror that may or may not have once been primary.
+     */
     private void moveRestart(TableJson json, Storage src, Storage dest) {
         Delta delta = json.newMoveRestart(src, dest);
         Audit audit = new AuditBuilder()
@@ -912,6 +973,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     private void movePromote(TableJson json, Storage mirror) {
+        // write about the move operation (metadata changed info) to another system table.
+        writeUnpublishedDatabusEvent(json.getTable(), UnpublishedDatabusEventType.MOVE_PLACEMENT);
+
         // Mark the mirror as promoted so servers will pick it as the new primary.
         Delta delta = json.newMovePromoteMirror(mirror);
         Audit audit = new AuditBuilder()
@@ -923,7 +987,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public void setAttributes(String name, Map<String, ?> attributes, Audit audit) throws UnknownTableException {
+    public void setAttributes(String name, Map<String, ?> attributes, Audit audit)
+            throws UnknownTableException {
         checkNotNull(name, "table");
         checkNotNull(attributes, "attributes");
 
@@ -931,6 +996,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
         // Throw an exception if the table doesn't exist
         TableJson json = readTableJson(name, true);
+
+        // write about the update attributes operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.UPDATE_ATTRIBUTES);
 
         // Write the new table attributes to Cassandra
         Delta delta = json.newSetAttributes(attributes);
@@ -941,7 +1009,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.audit", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.audit", absolute = true)
     @Override
     public void audit(String name, String op, Audit audit) {
         checkNotNull(name, "table");
@@ -955,7 +1023,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         updateTableMetadata(name, Deltas.noop(), augmentedAudit, null);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.list", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.list", absolute = true)
     @Override
     public Iterator<Table> list(@Nullable String fromNameExclusive, LimitCounter limit) {
         checkArgument(limit.remaining() > 0, "Limit must be >0");
@@ -989,7 +1057,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public Table get(String name) throws UnknownTableException {
+    public Table get(String name)
+            throws UnknownTableException {
         Table table = getInternal(name);
         if (table == null) {
             throw new UnknownTableException(format("Unknown table: %s", name), name);
@@ -998,7 +1067,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+    public Table getByUuid(long uuid)
+            throws UnknownTableException, DroppedTableException {
         String bootstrapTable = _bootstrapTables.inverse().get(uuid);
         if (bootstrapTable != null) {
             return loadBootstrapTable(bootstrapTable);
@@ -1369,7 +1439,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 String placementName = readStorage.getPlacement().getName();
                 if (placements.contains(placementName)) {
                     // don't add the token ranges for the table mentioned in the blackList condition.
-                    if(!isTableBlacklisted(table, blackListTableCondition)) {
+                    if (!isTableBlacklisted(table, blackListTableCondition)) {
                         _stashTableDao.addTokenRangesForTable(stashId, readStorage, tableJson);
                     }
                 }
@@ -1392,6 +1462,70 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public void clearStashTokenRangeSnapshot(String stashId) {
         checkState(_stashTableDao != null, "Call only valid in Stash mode");
         _stashTableDao.clearTokenRanges(stashId);
+    }
+
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.listUnpublishedDatabusEvents", absolute = true)
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+        checkArgument(fromInclusive != null, "fromInclusive date cannot be null");
+        checkArgument(toExclusive != null, "toExclusive date cannot be null");
+
+        LocalDate fromInclusiveUTC = fromInclusive.withZone(DateTimeZone.UTC).toLocalDate();
+        LocalDate toInclusiveDateUTC = toExclusive.withZone(DateTimeZone.UTC).toLocalDate();
+        if (toExclusive.withZone(DateTimeZone.UTC).get(DateTimeFieldType.millisOfDay()) == 0) {
+            toInclusiveDateUTC = toInclusiveDateUTC.minusDays(1);
+        }
+
+        // adding 1 to the days to make it inclusive.
+        final int inclusiveNumberOfDays = Days.daysBetween(fromInclusiveUTC, toInclusiveDateUTC).getDays() + 1;
+        if (inclusiveNumberOfDays > 31) {
+            throw new IllegalArgumentException("Specified from and to date range is greater than 30 days which is not supported. Specify a smaller range.");
+        }
+        List<LocalDate> dates = Stream.iterate(fromInclusiveUTC, d -> d.plusDays(1))
+                .limit(inclusiveNumberOfDays)
+                .collect(Collectors.toList());
+
+        List<UnpublishedDatabusEvent> allUnpublishedDatabusEvents = Lists.newArrayList();
+        // using closedOpen which is [a..b) i.e. {x | a <= x < b}
+        final Range<DateTime> requestedRange = Range.closedOpen(fromInclusive.withZone(DateTimeZone.UTC), toExclusive.withZone(DateTimeZone.UTC));
+        for (LocalDate date : dates) {
+            String dateKey = date.toString();
+            Map<String, Object> recordMap = _backingStore.get(_systemTableUnPublishedDatabusEvents, dateKey, ReadConsistency.STRONG);
+            if (recordMap != null) {
+                Object tableInfo = recordMap.get("tables");
+                if (tableInfo != null) {
+                    List<UnpublishedDatabusEvent> unpublishedDatabusEvents = JsonHelper.convert(tableInfo, new TypeReference<List<UnpublishedDatabusEvent>>() {});
+                    // filter events whose time is outside the requestedRange.
+                    unpublishedDatabusEvents.stream()
+                            .filter(unpublishedDatabusEvent -> requestedRange.contains(unpublishedDatabusEvent.getDate()))
+                            .forEach(allUnpublishedDatabusEvents::add);
+                }
+            }
+        }
+
+        return allUnpublishedDatabusEvents.iterator();
+    }
+
+    @Override
+    public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute) {
+        checkNotNull(name, "table");
+
+        ZonedDateTime dateTime = ZonedDateTime.ofInstant(_clock.instant(), ZoneOffset.UTC);
+        String date = dateTime.toLocalDate().toString();
+
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), dateTime.toString());
+        Audit augmentedAudit = new AuditBuilder()
+                .set("_unpublished-databus-event-update", attribute.toString())
+                .build();
+
+        writEventToSystemTable(date, delta, augmentedAudit);
+    }
+
+    // Delta for storing the unpublished databus events.
+    Delta newUnpublishedDatabusEventUpdate(String tableName, String updateType, String datetime) {
+        return Deltas.mapBuilder()
+                .update("tables", Deltas.setBuilder().add(ImmutableMap.of("table", tableName, "date", datetime, "event", updateType)).build())
+                .build();
     }
 
     @VisibleForTesting

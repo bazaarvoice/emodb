@@ -16,6 +16,7 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DeltaSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -35,6 +36,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.codec.binary.Base64;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -90,6 +92,23 @@ public class DataStoreClient implements AuthDataStore {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .get(new TypeReference<Iterator<Table>>(){});
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(String apiKey, @Nullable DateTime fromInclusive, @Nullable DateTime toExclusive) {
+        try {
+            URI uri = _dataStore.clone()
+                    .segment("_unpublishedevents")
+                    .queryParam("from", optional(fromInclusive))
+                    .queryParam("to", optional(toExclusive))
+                    .build();
+            return _client.resource(uri)
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .get(new TypeReference<Iterator<UnpublishedDatabusEvent>>(){});
         } catch (EmoClientException e) {
             throw convertException(e);
         }
