@@ -4,6 +4,9 @@ serviceMode: STANDARD_ALL
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
+# Where does the system store information such as table definitions?
+systemTablePlacement: app_global:sys
+
 # Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
 #metrics:
 #  reporters:
@@ -34,7 +37,6 @@ dataCenter:
   systemDataCenterServiceUri: http://emodb.ci.us-east-1.nexus.bazaarvoice.com:8080 # Load-balanced highly available base URL for the EmoDB system data center
 
 systemOfRecord:
-  systemTablePlacement: app_global:sys        # Where does the SoR store system information such as table definitions?
 
   # All valid placement strings for create table operations.
   validTablePlacements:
@@ -119,7 +121,6 @@ queueService:
 
 
 blobStore:
-  systemTablePlacement: app_global:sys                  # Where does the SoR store system information such as blob store table definitions?
 
   # All valid placement strings for create table operations.
   validTablePlacements:
@@ -149,9 +150,7 @@ blobStore:
       latencyAware: true
       partitioner: bop
 
-jobs:
-  # Placement for table which holds jobs metadata and results
-  tablePlacement: "app_global:sys"
+#jobs:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:

@@ -54,7 +54,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
 import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
 import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;
@@ -149,6 +149,8 @@ public class BlobStoreModule extends PrivateModule {
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
 
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
+
         // No bootstrap tables are required.  System tables are stored as regular SoR tables.
         bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class)
                 .toInstance(ImmutableMap.<String, Long>of());
@@ -219,12 +221,6 @@ public class BlobStoreModule extends PrivateModule {
             return Optional.of(new TableMutexManager(curator, "/lock/table-partitions"));
         }
         return Optional.absent();
-    }
-
-
-    @Provides @Singleton @SystemTablePlacement
-    String provideSystemTablePlacement(BlobStoreConfiguration configuration) {
-        return configuration.getSystemTablePlacement();
     }
 
     @Provides @Singleton @CurrentDataCenter

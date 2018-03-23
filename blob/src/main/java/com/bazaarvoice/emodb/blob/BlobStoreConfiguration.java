@@ -11,12 +11,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class BlobStoreConfiguration {
-    /**
-     * Where does the SoR store system information such as table definitions?
-     */
-    @Valid
-    @NotNull
-    private String _systemTablePlacement;
 
     @Valid
     @NotNull
@@ -42,15 +36,6 @@ public class BlobStoreConfiguration {
     @NotNull
     @JsonProperty("approvedContentTypes")
     private Set<String> _approvedContentTypes = ImmutableSet.of();
-
-    public String getSystemTablePlacement() {
-        return _systemTablePlacement;
-    }
-
-    public BlobStoreConfiguration setSystemTablePlacement(String systemTablePlacement) {
-        _systemTablePlacement = systemTablePlacement;
-        return this;
-    }
 
     public Set<String> getValidTablePlacements() {
         return _validTablePlacements;

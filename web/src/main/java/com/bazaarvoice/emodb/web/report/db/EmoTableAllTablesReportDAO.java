@@ -17,7 +17,7 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.report.AllTablesReportQuery;
 import com.bazaarvoice.emodb.web.report.ReportNotFoundException;
 import com.bazaarvoice.emodb.web.report.TableStatistics;

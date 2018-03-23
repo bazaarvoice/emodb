@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
@@ -100,7 +101,6 @@ public class BlobStoreModuleTest {
 
                 // construct the minimum necessary elements to allow a BlobStore module to be created.
                 bind(BlobStoreConfiguration.class).toInstance(new BlobStoreConfiguration()
-                        .setSystemTablePlacement("ugc_global:sys")
                         .setValidTablePlacements(ImmutableSet.of("media_global:ugc"))
                         .setCassandraClusters(ImmutableMap.of("media_global", new CassandraConfiguration()
                                 .setCluster("Test Cluster")
@@ -108,6 +108,8 @@ public class BlobStoreModuleTest {
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
                                         "media_global", new KeyspaceConfiguration())))));
+
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setSystemDataCenter("datacenter1")

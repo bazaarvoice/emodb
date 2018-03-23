@@ -4,6 +4,9 @@ serviceMode: SCANNER
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
+# Where does the system store information such as table definitions?
+systemTablePlacement: app_global:sys
+
 # Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
 #datadog:
 #  apiKey: <api-key>
@@ -34,9 +37,6 @@ dataCenter:
 
 
 systemOfRecord:
-  # Where does the SoR store system information such as table definitions?
-  systemTablePlacement: app_global:sys
-
   # How long should we retain historical deltas? To disable, use PT0S
   historyTtl: PT0S
  
@@ -97,8 +97,6 @@ databus:
 
 
 blobStore:
-  # Where does the SoR store system information such as blob store table definitions?
-  systemTablePlacement: app_global:sys
 
   # All valid placement strings for create table operations.
   validTablePlacements:
@@ -145,9 +143,7 @@ queueService:
       queue: {}
 
 
-jobs:
-  # Placement for table which holds jobs metadata and results
-  tablePlacement: "app_global:sys"
+#jobs:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 #zooKeeper:
@@ -163,7 +159,6 @@ auth:
   # IN A PRODUCTION ENVIRONMENT DO NOT INCLUDE THE UNENCRYPTED KEYS IN THIS FILE!
   adminApiKey:       "zl+p3AU4/EgT8OtR0ZmLrkL70j0SklugAzd+xxYR1Dz/rioe5aXo4yay7sKi7PSKD59h7/HumH7442nGhlR2rw"  # local_admin
   replicationApiKey: "iuOPUIfI0lyxRrNZ9j9Aa68m1yrALBbVMw8kdqb6FVhSwMgOXVsuUblLr9nL73D4xpMVEZZHZr50pCBy1gbjDg"  # local_replication
-  tablePlacement: "app_global:sys"
   anonymousRoles:
   - anonymous
 

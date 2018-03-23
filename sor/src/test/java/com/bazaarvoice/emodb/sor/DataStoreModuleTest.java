@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
@@ -106,7 +107,6 @@ public class DataStoreModuleTest {
 
                 // construct the minimum necessary elements to allow a DataStore module to be created.
                 bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
-                        .setSystemTablePlacement("app_global:sys")
                         .setHistoryTtl(Period.days(2))
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys"))
                         .setCassandraClusters(ImmutableMap.of("app_global", new CassandraConfiguration()
@@ -115,6 +115,7 @@ public class DataStoreModuleTest {
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
                                         "app_global", new KeyspaceConfiguration())))));
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()

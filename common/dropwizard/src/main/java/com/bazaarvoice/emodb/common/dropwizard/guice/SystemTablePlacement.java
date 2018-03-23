@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.table.db.astyanax;
+package com.bazaarvoice.emodb.common.dropwizard.guice;
 
 import com.google.inject.BindingAnnotation;
 

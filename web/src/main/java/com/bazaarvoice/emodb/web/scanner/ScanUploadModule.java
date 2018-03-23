@@ -24,9 +24,8 @@ import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
-import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.web.EmoConfiguration;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScheduledScanConfiguration;
@@ -76,12 +75,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
-import com.google.inject.Inject;
-import com.google.inject.PrivateModule;
-import com.google.inject.Provider;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
@@ -111,16 +105,18 @@ import static com.google.common.base.Preconditions.checkArgument;
 public class ScanUploadModule extends PrivateModule {
     private final ScannerConfiguration _config;
 
-    public ScanUploadModule(EmoConfiguration config) {
-        _config = config.getScanner().get();
+    public ScanUploadModule(ScannerConfiguration config) {
+        checkArgument(config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
+        checkArgument(config.getUploadThreadCount() > 0, "Upload thread count must be at least 1");
 
-        checkArgument(_config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
-        checkArgument(_config.getUploadThreadCount() > 0, "Upload thread count must be at least 1");
+        _config = config;
     }
 
     @Override
     protected void configure() {
         binder().requireExplicitBindings();
+
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         bind(ScanUploader.class).asEagerSingleton();
         bind(StashRequestManager.class).asEagerSingleton();
@@ -174,15 +170,15 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     @ScanStatusTablePlacement
-    protected String provideScanStatusTablePlacement(DataStoreConfiguration config) {
-        return config.getSystemTablePlacement();
+    protected String provideScanStatusTablePlacement(@SystemTablePlacement String tablePlacement) {
+        return tablePlacement;
     }
 
     @Provides
     @Singleton
     @StashRequestTablePlacement
-    protected String provideScanRequestTablePlacement(DataStoreConfiguration config) {
-        return config.getSystemTablePlacement();
+    protected String provideScanRequestTablePlacement(@SystemTablePlacement String tablePlacement) {
+        return tablePlacement;
     }
     
     @Provides

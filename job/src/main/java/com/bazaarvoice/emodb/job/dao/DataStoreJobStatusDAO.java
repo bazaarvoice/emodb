@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.job.dao;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
@@ -30,7 +31,7 @@ public class DataStoreJobStatusDAO implements JobStatusDAO {
 
     @Inject
     public DataStoreJobStatusDAO(@JobsTableName final Supplier<String> tableNameSupplier,
-                                 @JobsTablePlacement final String placement,
+                                 @SystemTablePlacement final String placement,
                                  DataStore dataStore) {
         _dataStore = dataStore;
 

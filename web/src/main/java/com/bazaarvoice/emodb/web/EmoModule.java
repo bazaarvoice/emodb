@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
+import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.DropwizardResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
@@ -81,6 +82,7 @@ import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
@@ -130,11 +132,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
-import com.google.inject.AbstractModule;
-import com.google.inject.Key;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
@@ -195,8 +193,24 @@ public class EmoModule extends AbstractModule {
 
     private class CommonModuleSetup extends AbstractModule {
 
+        private CommonModuleSetup() {
+            checkValidSystemTablePlacement();
+        }
+
+        private void checkValidSystemTablePlacement() {
+            String systemTablePlacement = _configuration.getSystemTablePlacement();
+            String systemKeyspace = systemTablePlacement.substring(0, systemTablePlacement.indexOf(':'));
+            for (CassandraConfiguration cassandraConfig : _configuration.getDataStoreConfiguration().getCassandraClusters().values()) {
+                if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
+                    return;
+                }
+            }
+            throw new ProvisionException("System Table Placement references a keyspace not defined in 'cassandraKeyspaces");
+        }
+
         @Override
         protected void configure() {
+            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             install(new SettingsModule());
             bind(Environment.class).toInstance(_environment);
             bind(HealthCheckRegistry.class).to(DropwizardHealthCheckRegistry.class).asEagerSingleton();
@@ -274,6 +288,7 @@ public class EmoModule extends AbstractModule {
     }
 
     private class DataStoreSetup extends AbstractModule  {
+
         @Override
         protected void configure() {
             bind(DataStoreConfiguration.class).toInstance(_configuration.getDataStoreConfiguration());
@@ -612,7 +627,7 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ScanUploadModule(_configuration));
+            install(new ScanUploadModule(_configuration.getScanner().get()));
         }
 
         /** Provide ZooKeeper namespaced to scanner data. */

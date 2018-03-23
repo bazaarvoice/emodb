@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -55,27 +56,7 @@ import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxKeyspaceDiscovery;
-import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.BootstrapTables;
-import com.bazaarvoice.emodb.table.db.astyanax.CQLSessionForHintsPollerMap;
-import com.bazaarvoice.emodb.table.db.astyanax.CQLStashTableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.CurrentDataCenter;
-import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
-import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
-import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceRateLimitTask;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceSchedulerManager;
-import com.bazaarvoice.emodb.table.db.astyanax.MoveTableTask;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
-import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
-import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
-import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
+import com.bazaarvoice.emodb.table.db.astyanax.*;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;
 import com.bazaarvoice.emodb.table.db.consistency.ClusterHintsPoller;
 import com.bazaarvoice.emodb.table.db.consistency.CompositeConsistencyTimeProvider;
@@ -161,6 +142,9 @@ public class DataStoreModule extends PrivateModule {
 
     @Override
     protected void configure() {
+
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
+
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
@@ -277,12 +261,6 @@ public class DataStoreModule extends PrivateModule {
         } else {
             return new DataStoreProviderProxy(localDataStoreProvider, systemDataStoreProvider);
         }
-    }
-
-    @Provides @Singleton @SystemTablePlacement
-    String provideSystemTablePlacement(DataStoreConfiguration configuration) {
-
-        return configuration.getSystemTablePlacement();
     }
 
     @Provides @Singleton @DeltaHistoryTtl
