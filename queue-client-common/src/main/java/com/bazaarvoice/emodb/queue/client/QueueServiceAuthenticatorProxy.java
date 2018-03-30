@@ -18,7 +18,7 @@ import java.util.Map;
  * Note: The {@link PartitionKey} annotations must match those from AuthQueueService.
  */
 
-class QueueServiceAuthenticatorProxy implements QueueService {
+public class QueueServiceAuthenticatorProxy implements QueueService {
 
     private final AuthQueueService _authQueueService;
     private final String _apiKey;
@@ -98,7 +98,7 @@ class QueueServiceAuthenticatorProxy implements QueueService {
         _authQueueService.acknowledge(_apiKey, queue, messageIds);
     }
 
-    AuthQueueService getProxiedInstance() {
+    public AuthQueueService getProxiedInstance() {
         return _authQueueService;
     }
 }

@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.common.jaxrs;
 
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoResource;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.client.Client;
 import java.net.URI;
@@ -17,6 +18,7 @@ public class JaxRSEmoClient implements EmoClient {
 
     public JaxRSEmoClient(Client client) {
         _client = checkNotNull(client, "client");
+        _client.register(JacksonJsonProvider.class);
     }
 
     @Override

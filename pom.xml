@@ -69,6 +69,11 @@
         <module>quality</module>
         <module>yum</module>
         <module>mapreduce</module>
+        <module>jax-rs-client/jax-rs-sor-client</module>
+        <module>jax-rs-client/jax-rs-blob-client</module>
+        <module>jax-rs-client/jax-rs-databus-client</module>
+        <module>jax-rs-client/jax-rs-queue-client</module>
+        <module>jax-rs-client/jax-rs-uac-client</module>
     </modules>
 
 </project>

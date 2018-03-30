@@ -25,7 +25,7 @@ import java.util.Map;
 /**
  * BlobStore instance that takes an {@link AuthBlobStore} and API key and proxies all calls using the API key.
  */
-class BlobStoreAuthenticatorProxy implements BlobStore {
+public class BlobStoreAuthenticatorProxy implements BlobStore {
 
     private final AuthBlobStore _authBlobStore;
     private final String _apiKey;
@@ -131,7 +131,7 @@ class BlobStoreAuthenticatorProxy implements BlobStore {
         _authBlobStore.setTableAttributes(_apiKey, table, attributes, audit);
     }
 
-    AuthBlobStore getProxiedInstance() {
+    public AuthBlobStore getProxiedInstance() {
         return _authBlobStore;
     }
 }
