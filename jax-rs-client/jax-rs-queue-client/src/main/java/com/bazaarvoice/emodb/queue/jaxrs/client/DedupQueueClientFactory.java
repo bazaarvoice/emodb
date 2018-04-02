@@ -6,7 +6,11 @@ import com.bazaarvoice.emodb.queue.client.AbstractDedupQueueClientFactory;
 import javax.ws.rs.client.Client;
 
 public class DedupQueueClientFactory extends AbstractDedupQueueClientFactory {
-    public DedupQueueClientFactory(String clusterName, Client client) {
+    private DedupQueueClientFactory(String clusterName, Client client) {
         super(clusterName, new JaxRSEmoClient(client));
+    }
+
+    public static DedupQueueClientFactory forClusterAndClient(String clusterName, Client client) {
+        return new DedupQueueClientFactory(clusterName, client);
     }
 }

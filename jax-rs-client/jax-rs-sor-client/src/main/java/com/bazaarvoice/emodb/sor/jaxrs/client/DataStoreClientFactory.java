@@ -10,4 +10,8 @@ public class DataStoreClientFactory extends AbstractDataStoreClientFactory {
     public DataStoreClientFactory(String clusterName, Client client) {
         super(clusterName, new JaxRSEmoClient(client));
     }
+
+    public static DataStoreClientFactory forClusterAndClient(String clusterName, Client client) {
+        return new DataStoreClientFactory(clusterName, client);
+    }
 }

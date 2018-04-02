@@ -26,10 +26,6 @@
             <artifactId>emodb-common-jax-rs-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--<dependency>-->
-            <!--<groupId>com.bazaarvoice.ostrich</groupId>-->
-            <!--<artifactId>ostrich-dropwizard</artifactId>-->
-        <!--</dependency>-->
     </dependencies>
 
 

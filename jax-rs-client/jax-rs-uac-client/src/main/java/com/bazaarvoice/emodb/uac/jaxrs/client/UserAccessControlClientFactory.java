@@ -13,8 +13,6 @@ import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.google.common.net.HttpHeaders;
 
-//import javax.validation.Validation;
-//import javax.validation.ValidatorFactory;
 import javax.ws.rs.client.Client;
 import java.net.URI;
 
@@ -22,8 +20,6 @@ import java.net.URI;
  * Factory constructor for creating {@link UserAccessControl} REST clients.
  */
 public class UserAccessControlClientFactory implements MultiThreadedServiceFactory<AuthUserAccessControl> {
-
-//    private static ValidatorFactory _validatorFactory = Validation.buildDefaultValidatorFactory();
 
     private final String _clusterName;
     private final EmoClient _client;

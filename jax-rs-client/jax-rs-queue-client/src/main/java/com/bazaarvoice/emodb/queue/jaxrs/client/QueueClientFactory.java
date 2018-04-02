@@ -7,7 +7,11 @@ import javax.ws.rs.client.Client;
 
 public class QueueClientFactory extends AbstractQueueClientFactory {
 
-    public QueueClientFactory(String clusterName, Client client) {
+    private QueueClientFactory(String clusterName, Client client) {
         super(clusterName, new JaxRSEmoClient(client));
+    }
+
+    public static QueueClientFactory forClusterAndClient(String clusterName, Client client) {
+        return new QueueClientFactory(clusterName, client);
     }
 }
