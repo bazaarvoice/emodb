@@ -1,5 +1,6 @@
 package test.integration.queue;
 
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
 import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.Message;
@@ -199,8 +200,11 @@ public class DedupQueueStressTest {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DedupQueueClientFactory queueFactory = DedupQueueClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(configuration.getHttpClientConfiguration(),
+                metricRegistry, DedupQueueClientFactory.getServiceName(configuration.getCluster()));
+
+        DedupQueueClientFactory queueFactory = DedupQueueClientFactory.forClusterAndEmoClient(
+                configuration.getCluster(), jerseyEmoClient);
         AuthDedupQueueService secureQueueService = ServicePoolBuilder.create(AuthDedupQueueService.class)
                 .withServiceFactory(queueFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, queueFactory.getServiceName(), metricRegistry))

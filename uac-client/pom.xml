@@ -55,24 +55,5 @@
             <artifactId>emodb-common-dropwizard-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.ostrich</groupId>
-            <artifactId>ostrich-dropwizard</artifactId>
-        </dependency>
-
-        <!-- 3rd-party dependencies -->
-        <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>javax.validation</groupId>
-            <artifactId>validation-api</artifactId>
-        </dependency>
-
     </dependencies>
 </project>

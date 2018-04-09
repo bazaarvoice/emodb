@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.hadoop.io;
 
 import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
@@ -167,7 +168,10 @@ public class HadoopDataStoreManager {
         clientConfig.setConnectionTimeout(Duration.seconds(10));
         clientConfig.setTimeout(Duration.minutes(5));
 
-        return DataStoreClientFactory.forClusterAndHttpConfiguration(cluster, clientConfig, metricRegistry);
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(clientConfig, metricRegistry,
+                DataStoreClientFactory.getServiceName(cluster));
+
+        return DataStoreClientFactory.forClusterAndEmoClient(cluster, jerseyEmoClient);
     }
 
     /**

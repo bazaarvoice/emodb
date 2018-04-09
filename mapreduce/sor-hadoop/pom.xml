@@ -29,6 +29,11 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-dropwizard-client</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
             <artifactId>ostrich-zookeeper-discovery</artifactId>
         </dependency>

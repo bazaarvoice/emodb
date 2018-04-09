@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.migrator;
 
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
@@ -122,7 +123,7 @@ public class MigratorModule extends PrivateModule {
 
         @Override
         public ScanWorkflow get() {
-            QueueClientFactory factory = QueueClientFactory.forClusterAndHttpClient(_cluster, _client);
+            QueueClientFactory factory = QueueClientFactory.forClusterAndEmoClient(_cluster, new JerseyEmoClient(_client));
 
             // Don't use the local queue service; create a client to call out to the live EmoDB application.
             AuthQueueService authService = ServicePoolBuilder.create(AuthQueueService.class)
