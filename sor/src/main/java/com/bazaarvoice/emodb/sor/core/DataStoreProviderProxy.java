@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -16,6 +17,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -46,6 +48,11 @@ public class DataStoreProviderProxy implements DataStore {
     @Override
     public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
         return _local.get().listTables(fromTableExclusive, limit);
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+        return _local.get().listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 
     @Override

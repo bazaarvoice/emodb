@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.table.db.astyanax;
 
 import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
+import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
@@ -19,11 +20,14 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.table.db.MoveType;
+import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
@@ -32,8 +36,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.fest.assertions.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Instant;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -41,10 +47,15 @@ import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
@@ -97,7 +108,8 @@ public class TableLifeCycleTest {
     public static final String TABLE6 = "my6:table";
 
     @Test
-    public void testCreate() throws Exception {
+    public void testCreate()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
 
@@ -120,7 +132,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testCreateFacade() throws Exception {
+    public void testCreateFacade()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
@@ -157,7 +170,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testDrop() throws Exception {
+    public void testDrop()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
@@ -191,7 +205,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testDropPurgeDelete() throws Exception {
+    public void testDropPurgeDelete()
+            throws Exception {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -330,7 +345,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testDropFacade() throws Exception {
+    public void testDropFacade()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
@@ -388,7 +404,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testDropFacadePurgeDelete() throws Exception {
+    public void testDropFacadePurgeDelete()
+            throws Exception {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -532,7 +549,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveStart() throws Exception {
+    public void testMoveStart()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         String srcUuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
@@ -584,9 +602,12 @@ public class TableLifeCycleTest {
         assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
     }
 
-    /** Can't move directly from us to eu since there are no data centers in common. */
+    /**
+     * Can't move directly from us to eu since there are no data centers in common.
+     */
     @Test
-    public void testMoveIncompatiblePlacement() throws Exception {
+    public void testMoveIncompatiblePlacement()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
 
@@ -599,7 +620,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveFacadeStart() throws Exception {
+    public void testMoveFacadeStart()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_EU);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
@@ -664,7 +686,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveCopyPromoteDrop() throws Exception {
+    public void testMoveCopyPromoteDrop()
+            throws Exception {
         Date fct = new Date(0);
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -956,7 +979,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveCanceledBeforePromote() throws Exception {
+    public void testMoveCanceledBeforePromote()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
@@ -1058,7 +1082,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveCanceledAfterPromote() throws Exception {
+    public void testMoveCanceledAfterPromote()
+            throws Exception {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -1171,7 +1196,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMovePlacement() throws Exception {
+    public void testMovePlacement()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         PlacementFactory placementFactory = newPlacementFactory(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
@@ -1213,8 +1239,9 @@ public class TableLifeCycleTest {
         assertTrue(movePlacement.getFacades().contains(TABLE1), format("%s facade should be included", TABLE1));
     }
 
-    @Test(expectedExceptions = IllegalStateException.class)
-    public void testMovePlacementWhileTableIsGettingMovedIntoSource() throws Exception {
+    @Test (expectedExceptions = IllegalStateException.class)
+    public void testMovePlacementWhileTableIsGettingMovedIntoSource()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         PlacementFactory placementFactory = newPlacementFactory(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
@@ -1241,7 +1268,8 @@ public class TableLifeCycleTest {
      * which tests move() then move() back except this test involves a 3rd storage.
      */
     @Test
-    public void testMoveChangedBeforePromotion() throws Exception {
+    public void testMoveChangedBeforePromotion()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
@@ -1295,9 +1323,9 @@ public class TableLifeCycleTest {
     }
 
 
-
     @Test
-    public void testIfPurge1IsSkippedUnderPlacementWideMove() throws Exception {
+    public void testIfPurge1IsSkippedUnderPlacementWideMove()
+            throws Exception {
         Purge1IsSkipped(MoveType.FULL_PLACEMENT); // PURGED_1 should be skipped. After a day is passed, it should stay at DROPPED.
         Purge1IsSkipped(MoveType.SINGLE_TABLE); // PURGED_1 should not be skipped. After a day is passed, it should move to PURGED_1.
     }
@@ -1328,7 +1356,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testCreatesAreMadeInNewPlacementIfGivenPlacementUnderMove() throws Exception{
+    public void testCreatesAreMadeInNewPlacementIfGivenPlacementUnderMove()
+            throws Exception {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -1340,7 +1369,8 @@ public class TableLifeCycleTest {
     }
 
     @Test
-    public void testMoveChangedAfterPromotion() throws Exception {
+    public void testMoveChangedAfterPromotion()
+            throws Exception {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
@@ -1592,9 +1622,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Can't move a facade directly from us to eu since there are no data centers in common. */
+    /**
+     * Can't move a facade directly from us to eu since there are no data centers in common.
+     */
     @Test
-    public void testMoveFacadeIncompatiblePlacement() throws Exception {
+    public void testMoveFacadeIncompatiblePlacement()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
 
@@ -1607,18 +1640,24 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Moving a table may cause a facade to become inaccessible. */
+    /**
+     * Moving a table may cause a facade to become inaccessible.
+     */
     @Test
-    public void testMoveOverlapsFacade() throws Exception {
+    public void testMoveOverlapsFacade()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
     }
 
-    /** Moving a facade may not cause the facade to become inaccessible */
+    /**
+     * Moving a facade may not cause the facade to become inaccessible
+     */
     @Test
-    public void testMoveFacadeOverlapsMaster() throws Exception {
+    public void testMoveFacadeOverlapsMaster()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
@@ -1631,9 +1670,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Moving a facade may not cause the choice of facade to become ambiguous in some data center. */
+    /**
+     * Moving a facade may not cause the choice of facade to become ambiguous in some data center.
+     */
     @Test
-    public void testMoveFacadeOverlapsFacade() throws Exception {
+    public void testMoveFacadeOverlapsFacade()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
@@ -1649,9 +1691,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Creating a facade checks existing against both source and destination of table moves-in-progress. */
+    /**
+     * Creating a facade checks existing against both source and destination of table moves-in-progress.
+     */
     @Test
-    public void testCreateFacadeOverlapsMove() throws Exception {
+    public void testCreateFacadeOverlapsMove()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
@@ -1672,9 +1717,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Creating a facade checks existing against both source and destination of facade moves-in-progress. */
+    /**
+     * Creating a facade checks existing against both source and destination of facade moves-in-progress.
+     */
     @Test
-    public void testCreateFacadeOverlapsMoveFacade() throws Exception {
+    public void testCreateFacadeOverlapsMoveFacade()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
@@ -1704,9 +1752,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Moving a facade checks existing against the source of facade moves-in-progress. */
+    /**
+     * Moving a facade checks existing against the source of facade moves-in-progress.
+     */
     @Test
-    public void testMoveFacadeOverlapsMoveFacadeSource() throws Exception {
+    public void testMoveFacadeOverlapsMoveFacadeSource()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_EU), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US_EU), newAudit());
@@ -1724,9 +1775,12 @@ public class TableLifeCycleTest {
         }
     }
 
-    /** Moving a facade checks existing against the destination of facade moves-in-progress. */
+    /**
+     * Moving a facade checks existing against the destination of facade moves-in-progress.
+     */
     @Test
-    public void testMoveFacadeOverlapsMoveFacadeDestination() throws Exception {
+    public void testMoveFacadeOverlapsMoveFacadeDestination()
+            throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_ZZ), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
@@ -1742,6 +1796,200 @@ public class TableLifeCycleTest {
             assertEquals(e.getTable(), TABLE);
             assertEquals(e.getPlacement(), PL_US);
         }
+    }
+
+    @Test
+    public void testListUnpublishedDatabusEvents()
+            throws Exception {
+        DateTime from = DateTime.now();
+        DateTime to = DateTime.now().plusDays(1);
+
+        final Clock clock = mock(Clock.class);
+        Instant nowInstant = from.toInstant().plus(Duration.standardMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
+        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+
+        // create a table.
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        Iterator<Table> tableIterator = tableDAO.list(null, LimitCounter.max());
+        assertTrue(tableIterator.hasNext());
+
+        // drop a table.
+        tableDAO.drop(TABLE, newAudit());
+
+        // unpublished databus events should have the dropped table.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
+        assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE));
+        assertTrue(unpublishedDatabusEvent.getEventType().equals(UnpublishedDatabusEventType.DROP_TABLE));
+        assertEquals(unpublishedDatabusEvent.getDate().getMillis(), nowInstant.getMillis());
+
+        // create a second table
+        tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        // drop the second table
+        tableDAO.drop(TABLE2, newAudit());
+
+        // unpublished databus events should now have 2 tables.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator2.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent2 = unpublishedDatabusEventsIterator2.next();
+        UnpublishedDatabusEvent unpublishedDatabusEvent3 = unpublishedDatabusEventsIterator2.next();
+        List<String> expectedTables = Lists.newArrayList(unpublishedDatabusEvent2.getTable(), unpublishedDatabusEvent3.getTable());
+        Assertions.assertThat(expectedTables).containsOnly(TABLE, TABLE2);
+
+        // recreate the second table.
+        tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        // unpublished databus events still should have 2 tables.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator3.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent4 = unpublishedDatabusEventsIterator3.next();
+        UnpublishedDatabusEvent unpublishedDatabusEvent5 = unpublishedDatabusEventsIterator3.next();
+        List<String> expectedTables2 = Lists.newArrayList(unpublishedDatabusEvent4.getTable(), unpublishedDatabusEvent5.getTable());
+        Assertions.assertThat(expectedTables2).containsOnly(TABLE, TABLE2);
+
+        // create a third table.
+        tableDAO.create(TABLE3, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        // update attributes to the table
+        tableDAO.setAttributes(TABLE3, ImmutableMap.<String, Object>of("new-key", "new-value"), newAudit());
+
+        // unpublished databus events should now have 3 tables.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator4 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator4.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent6 = unpublishedDatabusEventsIterator4.next();
+        assertTrue(unpublishedDatabusEventsIterator4.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent7 = unpublishedDatabusEventsIterator4.next();
+        assertTrue(unpublishedDatabusEventsIterator4.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent8 = unpublishedDatabusEventsIterator4.next();
+        List<String> expectedTables4 = Lists.newArrayList(unpublishedDatabusEvent6.getTable(), unpublishedDatabusEvent7.getTable(), unpublishedDatabusEvent8.getTable());
+        Assertions.assertThat(expectedTables4).containsOnly(TABLE, TABLE2, TABLE3);
+        assertTrue(unpublishedDatabusEvent6.getEventType().equals(UnpublishedDatabusEventType.DROP_TABLE));
+        assertTrue(unpublishedDatabusEvent7.getEventType().equals(UnpublishedDatabusEventType.DROP_TABLE));
+        assertTrue(unpublishedDatabusEvent8.getEventType().equals(UnpublishedDatabusEventType.UPDATE_ATTRIBUTES));
+    }
+
+    @Test
+    public void testListUnpublishedDatabusEventsWithEventBeforeSpecifiedFromDate()
+            throws Exception {
+        DateTime from = DateTime.now();
+        DateTime to = DateTime.now().plusDays(1);
+
+        final Clock clock = mock(Clock.class);
+        Instant nowInstant = from.toInstant().minus(Duration.standardMinutes(1)); // make sure the drop event is before the specified "from" time.
+        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+
+        // create a table.
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        Iterator<Table> tableIterator = tableDAO.list(null, LimitCounter.max());
+        assertTrue(tableIterator.hasNext());
+
+        // drop a table.
+        tableDAO.drop(TABLE, newAudit());
+
+        // unpublished databus events should NOT have the dropped table.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertFalse(unpublishedDatabusEventsIterator.hasNext());
+    }
+
+    @Test
+    public void testListUnpublishedDatabusEventsWithDifferentTimesOnSameDay()
+            throws Exception {
+        DateTime now = DateTime.now();
+
+        final Clock clock = mock(Clock.class);
+        Instant nowInstant = now.toInstant();
+        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+
+        DateTime from = now.minusMinutes(10);
+        DateTime to = now.plusMinutes(10);
+
+        // create a table.
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        Iterator<Table> tableIterator = tableDAO.list(null, LimitCounter.max());
+        assertTrue(tableIterator.hasNext());
+
+        // drop a table.
+        tableDAO.drop(TABLE, newAudit());
+
+        // unpublished databus events should have the dropped table.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
+        assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE));
+
+        // changing to to fall before the drop event time.
+        to = now.minusMinutes(1);
+
+        // unpublished databus events should NOT have the dropped table.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertFalse(unpublishedDatabusEventsIterator2.hasNext());
+    }
+
+    @Test
+    public void testListUnpublishedDatabusEventsWithEventsOnDifferentDays()
+            throws Exception {
+        DateTime from = DateTime.now();
+        DateTime to = DateTime.now().plusDays(1);
+
+        final Clock clock = mock(Clock.class);
+        Instant nowInstant = from.toInstant().plus(Duration.standardMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
+        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        // create a table.
+        tableDAO.create(TABLE1, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        // drop a table.
+        tableDAO.drop(TABLE1, newAudit());
+
+        // unpublished databus events should have the dropped table.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
+        assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE1));
+
+        // Now set the clock is set to 1 days in advance.
+        Instant nextDayInstant = nowInstant.plus(Duration.standardDays(1));
+        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nextDayInstant.getMillis()));
+
+        // create a second table
+        tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        // drop the second table
+        tableDAO.drop(TABLE2, newAudit());
+
+        // unpublished databus events should only have TABLE1 information as the TABLE2 DROP was registered on the next day.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        assertTrue(unpublishedDatabusEventsIterator2.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent2 = unpublishedDatabusEventsIterator2.next();
+        assertFalse(unpublishedDatabusEventsIterator2.hasNext());
+        assertTrue(unpublishedDatabusEvent2.getTable().equals(TABLE1));
+        assertEquals(unpublishedDatabusEvent2.getDate().getMillis(), nowInstant.getMillis());
+
+        // Now query for 2 days with "to" advanced by a day.
+        // unpublished databus events should have "two" records, one for each day.
+        // Each record should have one table information.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(from, to.plusDays(1));
+        assertTrue(unpublishedDatabusEventsIterator3.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent3 = unpublishedDatabusEventsIterator3.next();
+        assertTrue(unpublishedDatabusEventsIterator3.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent4 = unpublishedDatabusEventsIterator3.next();
+        List<String> expectedTables = Lists.newArrayList(unpublishedDatabusEvent3.getTable(), unpublishedDatabusEvent4.getTable());
+        List<Long> expectedDates = Lists.newArrayList(unpublishedDatabusEvent3.getDate().getMillis(), unpublishedDatabusEvent4.getDate().getMillis());
+        Assertions.assertThat(expectedTables).containsOnly(TABLE1, TABLE2);
+        assertTrue(expectedDates.contains(nowInstant.getMillis()));
+        assertTrue(expectedDates.contains(nextDayInstant.getMillis()));
     }
 
     //
@@ -1880,14 +2128,27 @@ public class TableLifeCycleTest {
         backingStore.update("__system:table", table, TimeUUIDs.newUUID(), delta, newAudit(), WriteConsistency.GLOBAL);
     }
 
-    private AstyanaxTableDAO newTableDAO(String placement) throws Exception {
+    private AstyanaxTableDAO newTableDAO(String placement)
+            throws Exception {
+        return newTableDAO(placement, null);
+    }
+
+    private AstyanaxTableDAO newTableDAO(String placement, Clock clock)
+            throws Exception {
         return newTableDAO(newBackingStore(new MetricRegistry()), placement,
-                mock(DataCopyDAO.class), mock(DataPurgeDAO.class), new Date(0));
+                mock(DataCopyDAO.class), mock(DataPurgeDAO.class), new Date(0), clock);
     }
 
     private AstyanaxTableDAO newTableDAO(TableBackingStore backingStore, String dataCenter,
                                          DataCopyDAO dataCopyDAO, DataPurgeDAO dataPurgeDAO,
                                          final Date fullConsistencyTimestamp)
+            throws Exception {
+        return newTableDAO(backingStore, dataCenter, dataCopyDAO, dataPurgeDAO, fullConsistencyTimestamp, null);
+    }
+
+    private AstyanaxTableDAO newTableDAO(TableBackingStore backingStore, String dataCenter,
+                                         DataCopyDAO dataCopyDAO, DataPurgeDAO dataPurgeDAO,
+                                         final Date fullConsistencyTimestamp, final Clock clock)
             throws Exception {
         PlacementFactory placementFactory = newPlacementFactory(dataCenter);
 
@@ -1910,7 +2171,7 @@ public class TableLifeCycleTest {
                 placementFactory, new PlacementCache(placementFactory),
                 dataCenter, mock(RateLimiterCache.class), dataCopyDAO, dataPurgeDAO,
                 fullConsistencyTimeProvider, tableChangesEnabled, cacheRegistry,
-                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ));
+                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ), clock);
         tableDAO.setBackingStore(backingStore);
         return tableDAO;
     }
@@ -1919,10 +2180,12 @@ public class TableLifeCycleTest {
         InMemoryDataStore store = new InMemoryDataStore(metricRegistry);
         store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
         store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        store.createTable("__system:table_unpublished_databus_events", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
         return store;
     }
 
-    private PlacementFactory newPlacementFactory(String dataCenter) throws Exception {
+    private PlacementFactory newPlacementFactory(String dataCenter)
+            throws Exception {
         PlacementFactory placementFactory = mock(PlacementFactory.class);
 
         DataCenter dc1 = newDataCenter(DC_US, true);
@@ -1939,7 +2202,7 @@ public class TableLifeCycleTest {
         when(placementFactory.getDataCenters(PL_ZZ)).thenReturn(ImmutableList.of(dc4));
         when(placementFactory.getDataCenters(PL_ZZ_MOVING)).thenReturn(ImmutableList.of(dc4));
 
-        for (String placement : new String[]{PL_GLOBAL, PL_US_EU, PL_EU_APAC, PL_US, PL_EU, PL_APAC, PL_ZZ, PL_ZZ_MOVING}) {
+        for (String placement : new String[] {PL_GLOBAL, PL_US_EU, PL_EU_APAC, PL_US, PL_EU, PL_APAC, PL_ZZ, PL_ZZ_MOVING}) {
             when(placementFactory.isValidPlacement(placement)).thenReturn(true);
             for (DataCenter memberDataCenter : placementFactory.getDataCenters(placement)) {
                 if (dataCenter.equals(memberDataCenter.getName())) {

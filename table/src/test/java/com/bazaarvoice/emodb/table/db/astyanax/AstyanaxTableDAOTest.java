@@ -20,6 +20,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Set;
 
@@ -106,15 +107,16 @@ public class AstyanaxTableDAOTest {
         String systemTableNamespace = "systemNamespace";
         String systemTablePlacement = "systemTablePlacement";
         String systemTable = systemTableNamespace + ":table";
+        String systemTableMetadataChanges = systemTableNamespace + ":table_unpublished_databus_events";
         String systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
         AstyanaxTableDAO tableDAO = new AstyanaxTableDAO(mock(LifeCycleRegistry.class),
                 systemTableNamespace, systemTablePlacement, 16,
-                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L),
+                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L),
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
-                ImmutableMap.<String, String>of());
+                ImmutableMap.<String, String>of(), mock(Clock.class));
 
         TableBackingStore tableBackingStore = mock(TableBackingStore.class);
         Map<String, Object> tableMap = JsonHelper.fromJson(_tableMetaData, new TypeReference<Map<String, Object>>() {});

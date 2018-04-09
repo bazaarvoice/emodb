@@ -2,9 +2,11 @@ package com.bazaarvoice.emodb.table.db.generic;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -16,6 +18,7 @@ import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -44,6 +47,17 @@ public class MutexTableDAO implements TableDAO {
     @Override
     public Iterator<Table> list(@Nullable String fromNameExclusive, LimitCounter limit) {
         return _delegate.list(fromNameExclusive, limit);
+    }
+
+    @Override
+    public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute){
+        checkNotNull(name, "table");
+        _delegate.writeUnpublishedDatabusEvent(name, attribute);
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+        return _delegate.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 
     @Override
@@ -93,7 +107,8 @@ public class MutexTableDAO implements TableDAO {
     }
 
     @Override
-    public void drop(final String name, final Audit audit) throws UnknownTableException {
+    public void drop(final String name, final Audit audit)
+            throws UnknownTableException {
         withLock(new Runnable() {
             @Override
             public void run() {
@@ -115,7 +130,8 @@ public class MutexTableDAO implements TableDAO {
 
     @Override
     public void move(final String name, final String destPlacement,
-                     final Optional<Integer> numShards, final Audit audit, final MoveType moveType) throws UnknownTableException {
+                     final Optional<Integer> numShards, final Audit audit, final MoveType moveType)
+            throws UnknownTableException {
         withLock(new Runnable() {
             @Override
             public void run() {
@@ -126,7 +142,8 @@ public class MutexTableDAO implements TableDAO {
 
     @Override
     public void moveFacade(final String name, final String sourcePlacement, final String destPlacement,
-                           final Optional<Integer> numShards, final Audit audit, final MoveType moveType) throws UnknownTableException {
+                           final Optional<Integer> numShards, final Audit audit, final MoveType moveType)
+            throws UnknownTableException {
         withLock(new Runnable() {
             @Override
             public void run() {
@@ -169,12 +186,14 @@ public class MutexTableDAO implements TableDAO {
     }
 
     @Override
-    public Table get(String name) throws UnknownTableException {
+    public Table get(String name)
+            throws UnknownTableException {
         return _delegate.get(name);
     }
 
     @Override
-    public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+    public Table getByUuid(long uuid)
+            throws UnknownTableException, DroppedTableException {
         return _delegate.getByUuid(uuid);
     }
 
@@ -192,9 +211,9 @@ public class MutexTableDAO implements TableDAO {
         if (!_mutexManager.isPresent()) {
             throw new UnsupportedOperationException(
                     "The table metadata mutex is unavailable from this data center. " +
-                    "Make sure that the `systemDataCenter` property points to the right system datacenter. " +
-                    "If this is a new data center and not the system datacenter, then try repairing the new Cassandra cluster as it may not have all " +
-                    "the system tables replicated yet.");
+                            "Make sure that the `systemDataCenter` property points to the right system datacenter. " +
+                            "If this is a new data center and not the system datacenter, then try repairing the new Cassandra cluster as it may not have all " +
+                            "the system tables replicated yet.");
         }
         _mutexManager.get().runWithLockForTable(runnable, ACQUIRE_TIMEOUT, table);
     }

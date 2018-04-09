@@ -48,7 +48,6 @@ import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.Placements;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
 import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
@@ -194,7 +193,8 @@ public class DataStoreModule extends PrivateModule {
         bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class).toInstance(ImmutableMap.of(
                 "__system_sor:table", 0x09d7f33f08984b67L,
                 "__system_sor:table_uuid", 0xab33556547b99d25L,
-                "__system_sor:data_center", 0x33f1f082cffc2c2fL));
+                "__system_sor:data_center", 0x33f1f082cffc2c2fL,
+                "__system_sor:table_unpublished_databus_events", 0x44ab556547b99dffL));
 
         // Bind all DAOs from the DAO module
         install(new DAOModule());

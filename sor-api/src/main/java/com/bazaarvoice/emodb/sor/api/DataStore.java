@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.api;
 
 import com.bazaarvoice.emodb.sor.delta.Delta;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -33,6 +34,11 @@ public interface DataStore {
      * event that the connection to the EmoDB server is lost while streaming results.
      */
     Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
+
+    /**
+     * Retrieves the list of table events that are not published on the databus.
+     */
+    Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive);
 
     /**
      * Creates a logical table in the data store.
