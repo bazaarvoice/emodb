@@ -1,17 +1,16 @@
 package com.bazaarvoice.emodb.common.stash;
 
-import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
-import com.google.common.collect.ImmutableMap;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Utility methods for Stash operations.
@@ -21,11 +20,7 @@ public class StashUtil {
     public static final DateTimeFormatter STASH_DIRECTORY_DATE_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss").withZoneUTC();
     public static final String LATEST_FILE = "_LATEST";
     public static final String SUCCESS_FILE = "_SUCCESS";
-
-    private static final Map<String, Region> REGION_BY_BUCKET = ImmutableMap.of(
-            "emodb-us-east-1", Region.getRegion(Regions.US_EAST_1),
-            "emodb-eu-west-1", Region.getRegion(Regions.EU_WEST_1));
-
+    
     /**
      * Converts characters which are valid in table names but not valid or problematic in URLs and S3 keys.
      * Since all EmoDB tables cannot have upper-case characters they make a dense substitution without
@@ -59,13 +54,17 @@ public class StashUtil {
         return table;
     }
 
-    public static Region getRegionForBucket(String bucket) {
-        Region region = REGION_BY_BUCKET.get(bucket);
-        if (region == null) {
-            // Default to us-east-1 if unknown
-            region = Region.getRegion(Regions.US_EAST_1);
+    public static Optional<String> getRegionForBucket(String bucket) {
+        if (bucket == null) {
+            return Optional.empty();
         }
-        return region;
+        if (bucket.startsWith("emodb-us-east-1")) {
+            return Optional.of(Regions.US_EAST_1.getName());
+        }
+        if (bucket.startsWith("emodb-eu-west-1")) {
+            return Optional.of(Regions.EU_WEST_1.getName());
+        }
+        return Optional.empty();
     }
 
     public static Date getStashCreationTime(String stashDirectory) {

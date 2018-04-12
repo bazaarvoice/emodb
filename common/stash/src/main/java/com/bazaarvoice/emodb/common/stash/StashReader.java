@@ -2,9 +2,10 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
@@ -17,9 +18,13 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Range;
+import com.google.common.reflect.AbstractInvocationHandler;
+import com.google.common.reflect.Reflection;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.core.Response;
 import java.io.InputStream;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
@@ -67,18 +72,81 @@ abstract public class StashReader {
         return getS3Client(stashRoot, credentialsProvider, null);
     }
 
-    protected static AmazonS3 getS3Client(URI stashRoot, AWSCredentialsProvider credentialsProvider,
-                                          @Nullable ClientConfiguration s3Config) {
+    protected static AmazonS3 getS3Client(URI stashRoot, final AWSCredentialsProvider credentialsProvider,
+                                          final @Nullable ClientConfiguration s3Config) {
+        final String bucket = stashRoot.getHost();
+
+        // If the bucket is a well-known Stash bucket then the region for the bucket is known in advance.
+        // Otherwise return a proxy which lazily looks up the bucket on the first call.
+
+        return StashUtil.getRegionForBucket(bucket)
+                .map(region -> createS3ClientForRegion(region, credentialsProvider, s3Config))
+                .orElseGet(() -> Reflection.newProxy(AmazonS3.class, new AbstractInvocationHandler() {
+                    private AmazonS3 _resolvedClient = null;
+
+                    @Override
+                    protected Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
+                        return method.invoke(resolvedClient(), args);
+                    }
+
+                    private AmazonS3 resolvedClient() {
+                        if (_resolvedClient == null) {
+                            String endPoint = determineEndpointForBucket(bucket, credentialsProvider, s3Config, stashRoot.getPath());
+                            _resolvedClient = createS3ClientForEndpoint(endPoint, credentialsProvider, s3Config);
+                        }
+                        return _resolvedClient;
+                    }
+                }));
+    }
+
+    private static AmazonS3 createS3ClientForRegion(String region, AWSCredentialsProvider credentialsProvider,
+                                                    @Nullable ClientConfiguration s3Config) {
+        return createS3ClientForEndpoint(String.format("s3.%s.amazonaws.com", region), credentialsProvider, s3Config);
+    }
+
+    private static AmazonS3 createS3ClientForEndpoint(String endPoint, AWSCredentialsProvider credentialsProvider,
+                                                      @Nullable ClientConfiguration s3Config) {
         AmazonS3 s3;
         if (s3Config == null) {
             s3 = new AmazonS3Client(credentialsProvider);
         } else {
             s3 = new AmazonS3Client(credentialsProvider, s3Config);
         }
-        // Determine the region for the bucket
-        Region region = StashUtil.getRegionForBucket(stashRoot.getHost());
-        s3.setRegion(region);
+        s3.setEndpoint(endPoint);
         return s3;
+    }
+
+    private static String determineEndpointForBucket(String bucket, AWSCredentialsProvider credentialsProvider,
+                                                     @Nullable ClientConfiguration s3Config, String rootPath) {
+
+        // Guess us-east-1.  If wrong AWS will return a redirect with the correct endpoint
+        AmazonS3 s3 = createS3ClientForRegion(Regions.US_EAST_1.getName(), credentialsProvider, s3Config);
+        if (rootPath.startsWith("/")) {
+            rootPath = rootPath.substring(1);
+        }
+        if (!rootPath.endsWith("/")) {
+            rootPath = rootPath + "/";
+        }
+
+        try {
+            // Any request will work but presumably the client has list access for stash so perform a list.
+            s3.listObjects(new ListObjectsRequest()
+                    .withBucketName(bucket)
+                    .withPrefix(rootPath)
+                    .withDelimiter("/")
+                    .withMaxKeys(1));
+
+            // If this didn't error out then the presumed us-east-1 region was correct
+            return  "s3.us-east-1.amazonaws.com";
+        } catch (AmazonS3Exception e) {
+            if (e.getStatusCode() == Response.Status.MOVED_PERMANENTLY.getStatusCode()) {
+                String endPoint = e.getAdditionalDetails().get("Endpoint");
+                // The end point is prefixed with the bucket name, so strip it
+                return endPoint.substring(bucket.length() + 1);
+            }
+
+            throw e;
+        }
     }
 
     /**
