@@ -134,7 +134,8 @@ public class EmoService extends Application<EmoConfiguration> {
         parser.addArgument("config-ddl").required(true).help("config-ddl.yaml");
 
         // Get the path to config-ddl
-        Namespace result = parser.parseArgs(args);
+        String[] first3Args = (String[]) ArrayUtils.subarray(args, 0, Math.min(args.length, 3));
+        Namespace result = parser.parseArgs(first3Args);
 
         // Remove config-ddl arg
         new EmoService(result.getString("config-ddl"), new File(result.getString("emo-config")))
