@@ -128,6 +128,16 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-dropwizard-client</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.ostrich</groupId>
+            <artifactId>ostrich-dropwizard</artifactId>
+            <version>${ostrich.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-plugins</artifactId>
             <version>${project.version}</version>
         </dependency>
