@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob.db.astyanax;
 
+import com.bazaarvoice.emodb.blob.BlobReadConsistency;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
 import com.bazaarvoice.emodb.common.api.Ttls;
@@ -99,9 +100,9 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
     private static final int DEFAULT_CHUNK_SIZE = 0x10000; // 64kb
     private static final ConsistencyLevel CONSISTENCY_STRONG = ConsistencyLevel.CL_LOCAL_QUORUM;
-    private static final ConsistencyLevel CONSISTENCY_WEAK = ConsistencyLevel.CL_LOCAL_ONE;
     private static final int MAX_SCAN_METADATA_BATCH_SIZE = 250;
 
+    private final ConsistencyLevel _readConsistency;
     private final Token.TokenFactory _tokenFactory;
     private final Meter _blobReadMeter;
     private final Meter _blobWriteMeter;
@@ -110,7 +111,8 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
     private final Meter _copyMeter;
 
     @Inject
-    public AstyanaxStorageProvider(MetricRegistry metricRegistry) {
+    public AstyanaxStorageProvider(@BlobReadConsistency ConsistencyLevel readConsistency, MetricRegistry metricRegistry) {
+        _readConsistency = checkNotNull(readConsistency, "readConsistency");
         _tokenFactory = new ByteOrderedPartitioner().getTokenFactory();
         _blobReadMeter = metricRegistry.meter(getMetricName("blob-read"));
         _blobWriteMeter = metricRegistry.meter(getMetricName("blob-write"));
@@ -161,7 +163,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
         BlobPlacement placement = (BlobPlacement) storage.getPlacement();
         CassandraKeyspace keyspace = placement.getKeyspace();
 
-        ColumnQuery<Composite> query = keyspace.prepareQuery(placement.getBlobColumnFamily(), CONSISTENCY_WEAK)
+        ColumnQuery<Composite> query = keyspace.prepareQuery(placement.getBlobColumnFamily(), _readConsistency)
                 .getKey(storage.getRowKey(blobId))
                 .getColumn(getColumn(ColumnGroup.Z, chunkId));
         OperationResult<Column<Composite>> operationResult;
@@ -224,7 +226,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
         Composite start = getColumnPrefix(ColumnGroup.A, Composite.ComponentEquality.LESS_THAN_EQUAL);
         Composite end = getColumnPrefix(ColumnGroup.B, Composite.ComponentEquality.GREATER_THAN_EQUAL);
         ColumnList<Composite> columns = execute(placement.getKeyspace()
-                .prepareQuery(placement.getBlobColumnFamily(), CONSISTENCY_WEAK)
+                .prepareQuery(placement.getBlobColumnFamily(), _readConsistency)
                 .getKey(storage.getRowKey(blobId))
                 .withColumnRange(start, end, false, Integer.MAX_VALUE));
 
@@ -520,7 +522,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
                     // Pass token strings to get exclusive start behavior, to support 'fromBlobIdExclusive'.
                     Rows<ByteBuffer, Composite> rows = execute(placement.getKeyspace()
-                            .prepareQuery(placement.getBlobColumnFamily(), CONSISTENCY_WEAK)
+                            .prepareQuery(placement.getBlobColumnFamily(), _readConsistency)
                             .getKeyRange(null, null, toTokenString(_rangeStart), toTokenString(_rangeEnd), batchSize)
                             .withColumnRange(columnRange));
 

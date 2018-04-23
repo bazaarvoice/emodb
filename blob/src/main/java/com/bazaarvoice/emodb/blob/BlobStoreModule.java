@@ -89,6 +89,7 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.name.Names;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.Duration;
@@ -356,5 +357,11 @@ public class BlobStoreModule extends PrivateModule {
             checkArgument(!moveMap.containsKey(entry.getValue()), "Chained moves are not allowed");
         }
         return moveMap;
+    }
+
+    @Provides @Singleton @BlobReadConsistency
+    ConsistencyLevel provideBlobReadConsistency(BlobStoreConfiguration configuration) {
+        // By default use local quorum
+        return Optional.fromNullable(configuration.getReadConsistency()).or(ConsistencyLevel.CL_LOCAL_QUORUM);
     }
 }

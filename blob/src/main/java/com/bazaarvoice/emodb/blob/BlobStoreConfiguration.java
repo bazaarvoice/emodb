@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.blob;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.netflix.astyanax.model.ConsistencyLevel;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
@@ -36,6 +37,11 @@ public class BlobStoreConfiguration {
     @NotNull
     @JsonProperty("approvedContentTypes")
     private Set<String> _approvedContentTypes = ImmutableSet.of();
+
+    @Valid
+    @NotNull
+    @JsonProperty("readConsistency")
+    private ConsistencyLevel _readConsistency = ConsistencyLevel.CL_LOCAL_QUORUM;
 
     public Set<String> getValidTablePlacements() {
         return _validTablePlacements;
@@ -78,6 +84,15 @@ public class BlobStoreConfiguration {
 
     public BlobStoreConfiguration setApprovedContentTypes(Set<String> approvedContentTypes) {
         _approvedContentTypes = approvedContentTypes;
+        return this;
+    }
+
+    public ConsistencyLevel getReadConsistency() {
+        return _readConsistency;
+    }
+
+    public BlobStoreConfiguration setReadConsistency(ConsistencyLevel readConsistency) {
+        _readConsistency = readConsistency;
         return this;
     }
 }
