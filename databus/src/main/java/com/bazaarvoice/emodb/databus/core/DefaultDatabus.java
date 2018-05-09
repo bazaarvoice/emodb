@@ -626,10 +626,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             approximateSize = uniqueItems.size() + deferredRawEvents.size();
         }
 
-        // Try draining the queue asynchronously there are still more events available and more than twice the number
-        // of redundant events were discarded while resolving the items found so far.
+        // Try draining the queue asynchronously if there are still more events available and more redundant events were
+        // discarded than resolved items found so far.
         // Doing this only in the poll case for now.
-        if (repeatable && eventsAvailableForNextPoll && itemsDiscarded * 2 > uniqueItems.size()) {
+        if (repeatable && eventsAvailableForNextPoll && itemsDiscarded > uniqueItems.size()) {
             drainQueueAsync(subscription);
         }
 
@@ -1092,7 +1092,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
         long totalSubscriptionDrainTime = _drainedSubscriptionsMap.getOrDefault(subscription, 0L) + stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-        // submit a new task for next batch if all the found items in this batch are redundant and there are more items available on the queue.
+        // submit a new task for next batch if any the found items in this batch are redundant and there are more items available on the queue.
         // Also right now, we are only giving MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION time for draining for a subscription for each poll. This is because there is no guarantee that the local server
         // remains as the owner of the subscription through out. The right solution here is to check if the local service still owns the subscription for each task submission.
         // But, MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION may be OK as we can easily expect subsequent polls from the clients which will trigger these tasks again.
