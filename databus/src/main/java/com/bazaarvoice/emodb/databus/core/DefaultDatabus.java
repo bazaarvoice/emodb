@@ -47,6 +47,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Ticker;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -466,7 +467,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         boolean repeatable = !isPeek && claimTtl.getMillis() > 0;
         boolean eventsAvailableForNextPoll = false;
         boolean noMaxPollTimeOut = true;
-        boolean itemsDiscarded = false;
+        int itemsDiscarded = 0;
         Meter eventMeter = isPeek ? _peekedMeter : _polledMeter;
 
         // Reading raw events from the event store is a significantly faster operation than resolving the events into
@@ -503,7 +504,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             // Resolve the raw events in batches of 10 until at least one response item is found for a maximum time of MAX_POLL_TIME.
             do {
-                boolean batchItemsDiscarded = resolvePeekOrPollEvents(subscription, rawEvents, Math.min(10, remaining),
+                int batchItemsDiscarded = resolvePeekOrPollEvents(subscription, rawEvents, Math.min(10, remaining),
                         (coord, item) -> {
                             // Check whether we've already added this piece of content to the poll result.  If so, consolidate
                             // the two together to reduce the amount of work a client must do.  Note that the previous item
@@ -518,7 +519,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                             }
                         });
                 remaining = limit - uniqueItems.size();
-                itemsDiscarded = itemsDiscarded || batchItemsDiscarded;
+                itemsDiscarded += batchItemsDiscarded;
             } while (!rawEvents.isEmpty() && remaining > 0 && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
 
             // There are more events for the next poll if either the event store explicitly said so or if, due to padding,
@@ -550,12 +551,6 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // If there are still more unresolved events claimed then unclaim them now
             if (repeatable && !rawEvents.isEmpty()) {
                 unclaim(subscription, rawEvents.values());
-            }
-
-            // Try draining the queue asynchronously if NO items were returned within the MAX_POLL_TIME.
-            // Doing this only in the poll case for now.
-            if (repeatable && itemsDiscarded && !noMaxPollTimeOut) {
-                drainQueueAsync(subscription);
             }
         } else if (rawEvents.isEmpty()) {
             // All events have been resolved
@@ -631,6 +626,13 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             approximateSize = uniqueItems.size() + deferredRawEvents.size();
         }
 
+        // Try draining the queue asynchronously there are still more events available and more than twice the number
+        // of redundant events were discarded while resolving the items found so far.
+        // Doing this only in the poll case for now.
+        if (repeatable && eventsAvailableForNextPoll && itemsDiscarded * 2 > uniqueItems.size()) {
+            drainQueueAsync(subscription);
+        }
+
         return new PollResult(events, approximateSize, eventsAvailableForNextPoll);
     }
 
@@ -647,15 +649,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
      *     <li>All events processed are removed from <code>rawEvents</code>.</li>
      * </ol>
      *
-     * Finally, this method returns true if any redundant events were found and deleted, false otherwise.
+     * Finally, this method returns the number of redundant events that were found and deleted, false otherwise.
      */
-    private boolean resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
+    private int resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
                                             ResolvedItemSink sink) {
         Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
         List<String> eventIdsToDiscard = Lists.newArrayList();
         List<String> recentUnknownEventIds = Lists.newArrayList();
         int remaining = limit;
-        boolean itemsDiscarded = false;
+        int itemsDiscarded = 0;
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
         Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
@@ -742,9 +744,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
         }
         // Ack events we never again want to see.
-        if (!eventIdsToDiscard.isEmpty()) {
+        if ((itemsDiscarded = eventIdsToDiscard.size()) != 0) {
             _eventStore.delete(subscription, eventIdsToDiscard, true);
-            itemsDiscarded = true;
         }
         // Remove all coordinates from rawEvents which were processed by this method
         for (Coordinate coord : eventOrder.keySet()) {
@@ -989,27 +990,33 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 _log.info("Starting the draining process for subscription: {}.", subscription);
                 _drainQueueAsyncMeter.mark();
                 // submit a task to drain the queue.
-                submitDrainServiceTask(subscription, MAX_ITEMS_TO_FETCH_FOR_QUEUE_DRAINING);
+                try {
+                    submitDrainServiceTask(subscription, MAX_ITEMS_TO_FETCH_FOR_QUEUE_DRAINING, null);
+                } catch (Exception e) {
+                    // Failed to submit the task.  This is unlikely, but just in case clear the draining marker
+                    _drainedSubscriptionsMap.remove(subscription);
+                }
             } else {
-                _log.info("Draining for subscription: {} was already started from a previous poll.", subscription);
+                _log.debug("Draining for subscription: {} was already started from a previous poll.", subscription);
             }
         } catch (Exception e) {
             _log.error("Encountered exception while draining the queue for subscription: {}.", subscription, e);
         }
     }
 
-    private void submitDrainServiceTask(String subscription, int itemsToFetch) {
+    private void submitDrainServiceTask(String subscription, int itemsToFetch, @Nullable Cache<String, Boolean> knownNonRedundantEvents) {
         _drainQueueTaskMeter.mark();
         _drainService.submit(new Runnable() {
             @Override
             public void run() {
-                doDrainQueue(subscription, itemsToFetch);
+                doDrainQueue(subscription, itemsToFetch,
+                        knownNonRedundantEvents != null ? knownNonRedundantEvents : CacheBuilder.newBuilder().maximumSize(1000).build());
             }
         });
     }
 
-    private void doDrainQueue(String subscription, int itemsToFetch) {
-        boolean nonRedundantItemFound = false;
+    private void doDrainQueue(String subscription, int itemsToFetch, Cache<String, Boolean> knownNonRedundantEvents) {
+        boolean anyRedundantItemFound = false;
         Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
 
         ConsolidatingEventSink sink = new ConsolidatingEventSink(itemsToFetch);
@@ -1029,14 +1036,23 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         for (Map.Entry<Coordinate, EventList> entry : rawEvents.entrySet()) {
             Coordinate coord = entry.getKey();
 
-            // Query the table/key pair.
-            try {
-                annotatedGet.add(coord.getTable(), coord.getId());
-            } catch (UnknownTableException | UnknownPlacementException e) {
-                // It's likely the table or facade was dropped since the event was queued.  Discard the events.
-                EventList list = entry.getValue();
-                for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
-                    eventIdsToDiscard.add(pair.first());
+            // If we've determined on a previous iteration that all change IDs returned for this coordinate are
+            // not redundant then skip it.
+
+            boolean anyUnverifiedEvents = entry.getValue().getEventAndChangeIds().stream()
+                    .map(Pair::first)
+                    .anyMatch(eventId -> knownNonRedundantEvents.getIfPresent(eventId) == null);
+
+            if (anyUnverifiedEvents) {
+                // Query the table/key pair.
+                try {
+                    annotatedGet.add(coord.getTable(), coord.getId());
+                } catch (UnknownTableException | UnknownPlacementException e) {
+                    // It's likely the table or facade was dropped since the event was queued.  Discard the events.
+                    EventList list = entry.getValue();
+                    for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
+                        eventIdsToDiscard.add(pair.first());
+                    }
                 }
             }
         }
@@ -1060,9 +1076,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                 // Is the change redundant?
                 if (readResult.isChangeDeltaRedundant(changeId)) {
+                    anyRedundantItemFound = true;
                     eventIdsToDiscard.add(eventId);
                 } else {
-                    nonRedundantItemFound = true;
+                    knownNonRedundantEvents.put(eventId, Boolean.TRUE);
                 }
             }
         }
@@ -1073,15 +1090,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             _eventStore.delete(subscription, eventIdsToDiscard, true);
         }
 
-        long totalSubscriptionDrainTime = _drainedSubscriptionsMap.get(subscription).longValue() + stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        long totalSubscriptionDrainTime = _drainedSubscriptionsMap.getOrDefault(subscription, 0L) + stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
         // submit a new task for next batch if all the found items in this batch are redundant and there are more items available on the queue.
         // Also right now, we are only giving MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION time for draining for a subscription for each poll. This is because there is no guarantee that the local server
         // remains as the owner of the subscription through out. The right solution here is to check if the local service still owns the subscription for each task submission.
         // But, MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION may be OK as we can easily expect subsequent polls from the clients which will trigger these tasks again.
-        if (!nonRedundantItemFound && more && totalSubscriptionDrainTime < MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION.getMillis()) {
+        if (anyRedundantItemFound && more && totalSubscriptionDrainTime < MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION.getMillis()) {
             _drainedSubscriptionsMap.replace(subscription, totalSubscriptionDrainTime);
-            submitDrainServiceTask(subscription, itemsToFetch);
+            submitDrainServiceTask(subscription, itemsToFetch, knownNonRedundantEvents);
         } else {
             _drainedSubscriptionsMap.remove(subscription);
         }
