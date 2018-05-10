@@ -48,7 +48,7 @@ import static org.joda.time.DateTimeConstants.SECONDS_PER_DAY;
 public class DatabusClient implements AuthDatabus {
 
     /** Must match the service name in the EmoService class. */
-    /*package*/ static final String BASE_SERVICE_NAME = "emodb-bus-1";
+    /*package*/ public static final String BASE_SERVICE_NAME = "emodb-bus-1";
 
     /** Must match the @Path annotation on the DatabusResource class. */
     public static final String SERVICE_PATH = "/bus/1";

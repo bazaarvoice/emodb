@@ -9,12 +9,12 @@ import java.net.URI;
 
 public class DatabusRelayClientFactory extends DatabusClientFactory {
 
-    public static DatabusRelayClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+    public static DatabusRelayClientFactory forClusterAndEmoClient(String clusterName, EmoClient client) {
         return new DatabusRelayClientFactory(clusterName, client);
     }
 
-    public DatabusRelayClientFactory(String clusterName, Client jerseyClient) {
-        super(clusterName, jerseyClient);
+    public DatabusRelayClientFactory(String clusterName, EmoClient emoClient) {
+        super(clusterName, emoClient);
     }
 
     @Override

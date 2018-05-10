@@ -29,6 +29,7 @@ import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
@@ -374,7 +375,7 @@ public class SecurityModule extends PrivateModule {
 
         // Create a client for forwarding user access control requests to the system data center
         ServiceFactory<AuthUserAccessControl> clientFactory = UserAccessControlClientFactory
-                .forClusterAndHttpClient(cluster, jerseyClient);
+                .forClusterAndEmoClient(cluster, new JerseyEmoClient(jerseyClient));
 
         URI uri = dataCenterConfiguration.getSystemDataCenterServiceUri();
         ServiceEndPoint endPoint = new ServiceEndPointBuilder()

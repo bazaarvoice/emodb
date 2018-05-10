@@ -18,7 +18,7 @@ import java.util.Map;
  * Note: The {@link PartitionKey} annotations must match those from AuthDedupQueueService.
  */
 
-class DedupQueueServiceAuthenticatorProxy implements DedupQueueService {
+public class DedupQueueServiceAuthenticatorProxy implements DedupQueueService {
 
     private final AuthDedupQueueService _authDedupQueueService;
     private final String _apiKey;
@@ -98,7 +98,7 @@ class DedupQueueServiceAuthenticatorProxy implements DedupQueueService {
         _authDedupQueueService.acknowledge(_apiKey, queue, messageIds);
     }
 
-    AuthDedupQueueService getProxiedInstance() {
+    public AuthDedupQueueService getProxiedInstance() {
         return _authDedupQueueService;
     }
 }

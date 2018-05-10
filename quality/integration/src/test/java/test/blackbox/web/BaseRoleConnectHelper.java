@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
 import com.bazaarvoice.emodb.blob.client.BlobStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.client.DatabusClient;
@@ -107,9 +108,11 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthBlobStore getBlobStoreViaOstrich () throws Exception {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, BlobStoreClientFactory.getServiceName(_config.getCluster()));
+
         BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                BlobStoreClientFactory.forClusterAndEmoClient(_config.getCluster(), jerseyEmoClient);
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -126,8 +129,11 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthBlobStore getBlobStoreViaFixedHost() throws JsonProcessingException {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, BlobStoreClientFactory.getServiceName(_config.getCluster()));
+
         BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                BlobStoreClientFactory.forClusterAndEmoClient(_config.getCluster(), jerseyEmoClient);
 
         return ServicePoolBuilder.create(AuthBlobStore.class)
                 .withHostDiscoverySource(new BlobStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -140,9 +146,12 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthDataStore getDataStoreViaOstrich () throws Exception {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, DataStoreClientFactory.getServiceName(_config.getCluster()));
+
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndEmoClient(
+                        _config.getCluster(), jerseyEmoClient);
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -159,9 +168,12 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthDataStore getDataStoreViaFixedHost () throws Exception {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, DataStoreClientFactory.getServiceName(_config.getCluster()));
+
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndEmoClient(
+                        _config.getCluster(), jerseyEmoClient);
 
         return ServicePoolBuilder.create(AuthDataStore.class)
                 .withHostDiscoverySource(new DataStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -174,9 +186,12 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthDatabus getDatabusViaOstrich () throws Exception {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, DatabusClientFactory.getServiceName(_config.getCluster()));
+
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndEmoClient(
+                        _config.getCluster(), jerseyEmoClient);
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -194,8 +209,11 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthDatabus getDatabusViaFixedHost() throws JsonProcessingException {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, DatabusClientFactory.getServiceName(_config.getCluster()));
+
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndEmoClient(_config.getCluster(), jerseyEmoClient);
 
         return ServicePoolBuilder.create(AuthDatabus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(getServiceBaseURI()))
@@ -208,9 +226,12 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthQueueService getQueueServiceViaOstrich () throws Exception {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, QueueClientFactory.getServiceName(_config.getCluster()));
+
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndEmoClient(
+                        _config.getCluster(), jerseyEmoClient);
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -227,8 +248,11 @@ public abstract class BaseRoleConnectHelper implements Closeable {
 
     protected AuthQueueService getQueueServiceViaFixedHost() throws JsonProcessingException {
 
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, QueueClientFactory.getServiceName(_config.getCluster()));
+
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndEmoClient(_config.getCluster(), jerseyEmoClient);
 
         return ServicePoolBuilder.create(AuthQueueService.class)
                 .withHostDiscoverySource(new QueueFixedHostDiscoverySource(getServiceBaseURI()))
@@ -240,10 +264,11 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     // DedupQueueService
 
     protected AuthDedupQueueService getDedupQueueServiceViaOstrich () throws Exception {
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(_config.getHttpClientConfiguration(),
+                _metricRegistry, DedupQueueClientFactory.getServiceName(_config.getCluster()));
 
         DedupQueueClientFactory clientFactory =
-                DedupQueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DedupQueueClientFactory.forClusterAndEmoClient(_config.getCluster(), jerseyEmoClient);
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();

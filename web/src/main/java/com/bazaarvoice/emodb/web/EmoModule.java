@@ -33,6 +33,7 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.DropwizardTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.IgnoreAllTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkMapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.ZkTimestampSerializer;
@@ -312,7 +313,7 @@ public class EmoModule extends AbstractModule {
         DataStore provideSystemDataStore (DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
 
             ServiceFactory<DataStore> clientFactory = DataStoreClientFactory
-                    .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)
+                    .forClusterAndEmoClient(_configuration.getCluster(), new JerseyEmoClient(jerseyClient))
                     .usingCredentials(apiKey);
 
             URI uri = config.getSystemDataCenterServiceUri();
@@ -366,7 +367,7 @@ public class EmoModule extends AbstractModule {
         BlobStore provideSystemBlobStore (DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
 
             ServiceFactory<BlobStore> clientFactory = BlobStoreClientFactory
-                    .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)
+                    .forClusterAndEmoClient(_configuration.getCluster(), new JerseyEmoClient(jerseyClient))
                     .usingCredentials(apiKey);
 
             URI uri = config.getSystemDataCenterServiceUri();
@@ -428,7 +429,7 @@ public class EmoModule extends AbstractModule {
             // We provide a "DatabusRelayClient" here instead of the standard implementation since our unique use-case
             // (forwarding requests to other nodes) requires some special handling - most notably, we disable long-polling
             // in the poll() requests we forward.
-            return DatabusRelayClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient);
+            return DatabusRelayClientFactory.forClusterAndEmoClient(_configuration.getCluster(), new JerseyEmoClient(jerseyClient));
         }
 
         @Provides @Singleton
@@ -503,7 +504,7 @@ public class EmoModule extends AbstractModule {
                                                      MetricRegistry metricRegistry, HealthCheckRegistry healthCheckRegistry) {
             MultiThreadedServiceFactory<AuthQueueService> serviceFactory = new PartitionAwareServiceFactory<>(
                     AuthQueueService.class,
-                    QueueClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient),
+                    QueueClientFactory.forClusterAndEmoClient(_configuration.getCluster(), new JerseyEmoClient(jerseyClient)),
                     new TrustedQueueService(queueService), self, healthCheckRegistry, metricRegistry);
             AuthQueueService client = ServicePoolBuilder.create(AuthQueueService.class)
                     .withHostDiscovery(new ZooKeeperHostDiscovery(curator, serviceFactory.getServiceName(), metricRegistry))
@@ -523,7 +524,7 @@ public class EmoModule extends AbstractModule {
 
         @Provides @Singleton
         MultiThreadedServiceFactory<AuthDedupQueueService> provideDedupQueueServiceFactory(Client jerseyClient) {
-            return DedupQueueClientFactory.forClusterAndHttpClient(_configuration.getCluster(), jerseyClient);
+            return DedupQueueClientFactory.forClusterAndEmoClient(_configuration.getCluster(), new JerseyEmoClient(jerseyClient));
         }
 
         @Provides @Singleton @DedupQueueHostDiscovery

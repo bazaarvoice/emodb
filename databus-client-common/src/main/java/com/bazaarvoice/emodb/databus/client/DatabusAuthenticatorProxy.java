@@ -22,7 +22,7 @@ import java.util.Iterator;
  *
  * Note: The {@link PartitionKey} annotations must match those from AuthDatabus.
  */
-class DatabusAuthenticatorProxy implements Databus {
+public class DatabusAuthenticatorProxy implements Databus {
     
     private final AuthDatabus _authDatabus;
     private final String _apiKey;
@@ -133,7 +133,7 @@ class DatabusAuthenticatorProxy implements Databus {
         _authDatabus.injectEvent(_apiKey, subscription, table, key);
     }
 
-    AuthDatabus getProxiedInstance() {
+    public AuthDatabus getProxiedInstance() {
         return _authDatabus;
     }
 }

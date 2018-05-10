@@ -1,5 +1,6 @@
 package test.integration.sor;
 
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.api.Databus;
@@ -205,8 +206,11 @@ public class SorStressTest  {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(configuration.getHttpClientConfiguration(),
+                metricRegistry, DataStoreClientFactory.getServiceName(configuration.getCluster()));
+
+        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndEmoClient(
+                configuration.getCluster(), jerseyEmoClient);
         AuthDataStore authDataStore = ServicePoolBuilder.create(AuthDataStore.class)
                 .withServiceFactory(dataStoreFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
@@ -215,8 +219,8 @@ public class SorStressTest  {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
         DataStore dataStore = DataStoreAuthenticator.proxied(authDataStore).usingCredentials(apiKey);
 
-        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndEmoClient(
+                configuration.getCluster(), jerseyEmoClient);
         AuthDatabus authDatabus = ServicePoolBuilder.create(AuthDatabus.class)
                 .withServiceFactory(databusFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, databusFactory.getServiceName(), metricRegistry))

@@ -15,6 +15,7 @@ import com.amazonaws.services.sqs.AmazonSQSClient;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
@@ -422,7 +423,7 @@ public class ScanUploadModule extends PrivateModule {
 
         @Override
         public ScanWorkflow get() {
-            QueueClientFactory factory = QueueClientFactory.forClusterAndHttpClient(_cluster, _client);
+            QueueClientFactory factory = QueueClientFactory.forClusterAndEmoClient(_cluster, new JerseyEmoClient(_client));
 
             // Don't use the local queue service; create a client to call out to the live EmoDB application.
             AuthQueueService authService = ServicePoolBuilder.create(AuthQueueService.class)

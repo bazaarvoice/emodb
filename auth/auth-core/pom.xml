@@ -42,10 +42,10 @@
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
         </dependency>
-        <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-core</artifactId>
-        </dependency>
+        <!--<dependency>-->
+            <!--<groupId>io.dropwizard</groupId>-->
+            <!--<artifactId>dropwizard-core</artifactId>-->
+        <!--</dependency>-->
 
         <!-- Test dependencies -->
         <dependency>

@@ -32,7 +32,7 @@ import java.util.UUID;
  * DataStore instance that takes an {@link AuthDataStore} and API key and proxies all calls using the API key.
  */
 
-class DataStoreAuthenticatorProxy implements DataStore {
+public class DataStoreAuthenticatorProxy implements DataStore {
     
     private final AuthDataStore _authDataStore;
     private final String _apiKey;
@@ -207,7 +207,7 @@ class DataStoreAuthenticatorProxy implements DataStore {
         return _authDataStore.getTableMetadata(_apiKey, table);
     }
 
-    AuthDataStore getProxiedInstance() {
+    public AuthDataStore getProxiedInstance() {
         return _authDataStore;
     }
 }

@@ -2,6 +2,7 @@ package test.integration.sor;
 
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
+import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
@@ -264,8 +265,11 @@ public class ScanUploadTest {
         try (CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator()) {
             curator.start();
 
-            DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                    configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+            JerseyEmoClient jerseyEmoClient = JerseyEmoClient.forHttpConfiguration(configuration.getHttpClientConfiguration(),
+                    metricRegistry, DataStoreClientFactory.getServiceName(configuration.getCluster()));
+
+            DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndEmoClient(
+                    configuration.getCluster(), jerseyEmoClient);
             dataStore = ServicePoolBuilder.create(DataStore.class)
                     .withServiceFactory(dataStoreFactory.usingCredentials(configuration.getScanner().get().getScannerApiKey().get()))
                     .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
