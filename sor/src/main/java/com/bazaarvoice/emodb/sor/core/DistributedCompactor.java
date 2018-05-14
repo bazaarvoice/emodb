@@ -14,6 +14,7 @@ import com.google.common.collect.PeekingIterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class DistributedCompactor extends AbstractCompactor implements Compactor {
 
@@ -24,12 +25,12 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         _legacyCompactor = new DefaultCompactor(archiveDeltaSizeInMemory, keepDeltaHistory, metricRegistry);
     }
 
-    public Expanded expand(Record record, long fullConsistencyTimestamp, long compactionConsistencyTimeStamp, MutableIntrinsics intrinsics,
+    public Expanded expand(Record record, long fullConsistencyTimestamp, long compactionConsistencyTimeStamp, long compactionControlTimestamp, MutableIntrinsics intrinsics,
                            boolean ignoreRecent, Supplier<Record> requeryFn) {
         // Bound the # of times we attempt to resolve race conditions--we never want to go into an infinite loop.
         for (int i = 0; i < 10; i++) {
             try {
-                return doExpand(record, fullConsistencyTimestamp, compactionConsistencyTimeStamp, intrinsics, ignoreRecent);
+                return doExpand(record, fullConsistencyTimestamp, compactionConsistencyTimeStamp, compactionControlTimestamp, intrinsics, ignoreRecent);
             } catch (RestartException e) {
                 // Raced another process w/processing compaction records and lost.  Re-query the record and try again.
                 record = requeryFn.get();
@@ -49,7 +50,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
      *
      * @throws RestartException
      */
-    protected Expanded doExpand(Record record, long fullConsistencyTimestamp, long compactionConsistencyTimeStamp, MutableIntrinsics intrinsics, boolean ignoreRecent)
+    protected Expanded doExpand(Record record, long fullConsistencyTimestamp, long compactionConsistencyTimeStamp, long compactionControlTimestamp, MutableIntrinsics intrinsics, boolean ignoreRecent)
             throws RestartException {
         List<UUID> keysToDelete = Lists.newArrayList();
         DeltasArchive deltasArchive = new DeltasArchive();
@@ -73,7 +74,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         Compaction compaction = null;
         UUID cutoffId = null;
         UUID initialCutoff = null;
-        Delta cutoffDelta= null;
+        Delta cutoffDelta = null;
         Delta initialCutoffDelta = null;
         boolean compactionChanged = false;
 
@@ -116,7 +117,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             }
 
             // Assert that the resolved compacted content is always a literal
-            assert(compaction.getCompactedDelta().isConstant()) : "Compacted delta was not a literal";
+            assert (compaction.getCompactedDelta().isConstant()) : "Compacted delta was not a literal";
 
             cutoffDelta = compaction.getCompactedDelta();
             initialCutoffDelta = compaction.getCompactedDelta();
@@ -158,6 +159,13 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             // Re-initialize the resolver with the new compaction state.
             resolver = new DefaultResolver(intrinsics, compaction);
         }
+
+        // consider compactionControlTimestamp here (one case could be that there is a stash run in progress) and not include those Ids.
+        // With this, we are halting the deletion of these deltas in this run.
+        // We could have not included these Ids at the first place in the top section, but just to be cleaner and for better separation, excluding these Ids here.
+        keysToDelete = keysToDelete.stream().filter(keyToDelete -> (TimeUUIDs.getTimeMillis(keyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
+        compactionKeysToDelete = compactionKeysToDelete.stream().filter(compactionKeyToDelete -> (TimeUUIDs.getTimeMillis(compactionKeyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
+
         // Persist the compaction, and keys-to-delete.  We must write compaction and delete synchronously to
         // be sure that eventually consistent readers don't see the result of the deletions w/o also
         // seeing the accompanying compaction.

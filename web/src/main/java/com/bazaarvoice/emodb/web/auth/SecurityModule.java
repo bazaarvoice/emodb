@@ -29,13 +29,14 @@ import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
 import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
 import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;
@@ -99,6 +100,8 @@ import java.util.stream.Collectors;
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
  * <li> @{@link SystemIdentity} String
+ * <li> @{@link CompControlApiKey} String
+ * <li> @{@link SystemIdentity} String
  * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
  * <li> {@link SubjectUserAccessControl}
@@ -140,6 +143,7 @@ public class SecurityModule extends PrivateModule {
 
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
+        expose(Key.get(String.class, CompControlApiKey.class));
         expose(Key.get(String.class, SystemIdentity.class));
         expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
@@ -175,6 +179,13 @@ public class SecurityModule extends PrivateModule {
     @ReplicationKey
     String provideReplicationKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
         return configurationKeyAsPlaintext(config.getReplicationApiKey(), encryption, "replication");
+    }
+
+    @Provides
+    @Singleton
+    @CompControlApiKey
+    String provideCompControlKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
+        return configurationKeyAsPlaintext(config.getCompControlApiKey(), encryption, "compaction-control");
     }
 
     @Provides

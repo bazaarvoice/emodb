@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.DefaultTable;
@@ -15,6 +16,7 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.Names;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
+import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -22,6 +24,7 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
@@ -100,26 +103,27 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Optional<URI> _stashRootDirectory;
     private final Condition _stashBlackListTableCondition;
     private final Timer _resolveAnnotatedEventTimer;
-
     @VisibleForTesting
     protected final Counter _archiveDeltaSize;
     private final Meter _discardedCompactions;
     private final Compactor _compactor;
+    private final CompactionControlSource _compactionControlSource;
 
     private StashTableDAO _stashTableDao;
 
     @Inject
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, EventBus eventBus, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, AuditStore auditStore,
-                            @StashRoot Optional<URI> stashRootDirectory, @StashBlackListTableCondition Condition stashBlackListTableCondition) {
+                            @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
+                            @StashBlackListTableCondition Condition stashBlackListTableCondition) {
         this(eventBus, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                auditStore, stashRootDirectory, stashBlackListTableCondition, metricRegistry);
+                auditStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
     }
 
     @VisibleForTesting
     public DefaultDataStore(EventBus eventBus, TableDAO tableDao, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, AuditStore auditStore,
-                            Optional<URI> stashRootDirectory, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
+                            Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
         _eventBus = checkNotNull(eventBus, "eventBus");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -134,6 +138,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         _discardedCompactions = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", "discarded_compactions"));
         _compactor = new DistributedCompactor(_archiveDeltaSize, _auditStore.isDeltaHistoryEnabled(), metricRegistry);
+
+        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
     }
 
     /**
@@ -378,12 +384,18 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private Expanded expand(final Record record, boolean ignoreRecent, final ReadConsistency consistency) {
         long fullConsistencyTimeStamp = _dataWriterDao.getFullConsistencyTimestamp(record.getKey().getTable());
         long rawConsistencyTimeStamp = _dataWriterDao.getRawConsistencyTimestamp(record.getKey().getTable());
-        return expand(record, fullConsistencyTimeStamp, rawConsistencyTimeStamp, ignoreRecent, consistency);
+        Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(record.getKey().getTable().getAvailability().getPlacement());
+        // we will consider the earliest timestamp found as our compactionControlTimestamp.
+        // we are also filtering out any expired timestamps. (CompactionControlMonitor should do this for us, but for now it's running every hour. So, just to fill that gap, we are filtering here.)
+        // If no timestamps are found, then taking minimum value because we want all the deltas after the compactionControlTimestamp to be deleted as per the compaction rules as usual.
+        long compactionControlTimestamp = stashTimeInfoMap.isEmpty() ?
+                Long.MIN_VALUE : stashTimeInfoMap.values().stream().filter(s -> s.getExpiredTimestamp() > System.currentTimeMillis()).map(StashRunTimeInfo::getTimestamp).min(Long::compareTo).orElse(Long.MIN_VALUE);
+        return expand(record, fullConsistencyTimeStamp, rawConsistencyTimeStamp, compactionControlTimestamp, ignoreRecent, consistency);
     }
 
-    private Expanded expand(final Record record, long fullConsistencyTimestamp, long rawConsistencyTimestamp, boolean ignoreRecent, final ReadConsistency consistency) {
+    private Expanded expand(final Record record, long fullConsistencyTimestamp, long rawConsistencyTimestamp, long compactionControlTimestamp, boolean ignoreRecent, final ReadConsistency consistency) {
         MutableIntrinsics intrinsics = MutableIntrinsics.create(record.getKey());
-        return _compactor.expand(record, fullConsistencyTimestamp, rawConsistencyTimestamp, intrinsics, ignoreRecent, new Supplier<Record>() {
+        return _compactor.expand(record, fullConsistencyTimestamp, rawConsistencyTimestamp, compactionControlTimestamp, intrinsics, ignoreRecent, new Supplier<Record>() {
             @Override
             public Record get() {
                 return _dataReaderDao.read(record.getKey(), consistency);
@@ -727,7 +739,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (ttlOverride != null) {
             // The caller can override DataWriterDAO.getFullConsistencyTimestamp() for debugging. Use with caution!
             long overriddenfullConsistencyTimestamp = System.currentTimeMillis() - ttlOverride.getMillis();
-            expanded = expand(record, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, true,
+            expanded = expand(record, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, Long.MIN_VALUE, true,
                     readConsistency);
         } else {
             expanded = expand(record, true, readConsistency);

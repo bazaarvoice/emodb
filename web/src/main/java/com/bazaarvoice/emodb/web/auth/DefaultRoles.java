@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
 
+import static com.bazaarvoice.emodb.web.auth.Permissions.ALL;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_NON_PII_TABLE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_RESOURCE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_TABLE;
@@ -131,8 +132,12 @@ public enum DefaultRoles {
     // Reserved role for replication databus traffic between data centers
     replication (
             ImmutableSet.of(sor_read),
-            Permissions.replicateDatabus());
-    
+            Permissions.replicateDatabus()),
+
+    // role for using compaction control API.
+    compaction_control (
+            Permissions.compactionControl());
+
     private Set<String> _permissions;
 
     private DefaultRoles(String... permissions) {

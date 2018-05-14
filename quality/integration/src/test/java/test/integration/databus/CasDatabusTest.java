@@ -32,7 +32,10 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreModule;
 import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
@@ -165,6 +168,9 @@ public class CasDatabusTest {
                         .toInstance(Suppliers.ofInstance(true));
 
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
+
+                bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
+                bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

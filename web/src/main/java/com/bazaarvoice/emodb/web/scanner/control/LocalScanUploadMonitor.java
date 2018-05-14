@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.control;
 
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
@@ -77,6 +79,8 @@ public class LocalScanUploadMonitor extends AbstractService {
     private final StashStateListener _stashStateListener;
     private final ScanCountListener _scanCountListener;
     private final DataTools _dataTools;
+    private final CompactionControlSource _compactionControlSource;
+    private final DataCenters _dataCenters;
     private final Set<String> _activeScans = Sets.newHashSet();
 
     private ScheduledExecutorService _service;
@@ -84,13 +88,15 @@ public class LocalScanUploadMonitor extends AbstractService {
     public LocalScanUploadMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
                                   ScanWriterGenerator scanWriterGenerator,
                                   StashStateListener stashStateListener, ScanCountListener scanCountListener,
-                                  DataTools dataTools) {
+                                  DataTools dataTools, CompactionControlSource compactionControlSource, DataCenters dataCenters) {
         _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
         _scanWriterGenerator = checkNotNull(scanWriterGenerator, "scanWriterGenerator");
         _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
         _scanCountListener = checkNotNull(scanCountListener, "scanCountListener");
         _dataTools = checkNotNull(dataTools, "dataTools");
+        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _dataCenters = checkNotNull(dataCenters, "dataCenters");
     }
 
     @VisibleForTesting
@@ -439,6 +445,13 @@ public class LocalScanUploadMonitor extends AbstractService {
             _dataTools.clearStashTokenRangeSnapshot(id);
         } catch (Exception e) {
             _log.error("Failed to clean up table set for scan {}", id, e);
+        }
+
+        try {
+            // Delete the entry of the scan start time in Zookeeper.
+            _compactionControlSource.deleteStashTime(id, _dataCenters.getSelf().getName());
+        } catch (Exception e) {
+            _log.error("Failed to delete the stash time for scan {}", id, e);
         }
     }
 

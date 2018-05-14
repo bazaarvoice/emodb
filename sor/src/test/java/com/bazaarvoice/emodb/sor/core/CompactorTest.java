@@ -99,7 +99,7 @@ public class CompactorTest {
         Counter archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DistributedCompactor", "archivedDeltaSize"));
         Expanded expanded =
                 new DistributedCompactor(archiveDeltaSize, true, metricRegistry)
-                        .expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+                        .expand(record, now, now, now, MutableIntrinsics.create(key), false, requeryFn);
 
         // Methods that return iterators may not be called more than once.
         verify(record, times(1)).passOneIterator();
@@ -143,7 +143,7 @@ public class CompactorTest {
         // This time it should not delegate to DefaultCompactor since the resulting compaction was a new compaction
         Expanded expanded3 =
                 new DistributedCompactor(archiveDeltaSize, true, metricRegistry)
-                        .expand(record3, now, now, MutableIntrinsics.create(key), false, requeryFn);
+                        .expand(record3, now, now, now, MutableIntrinsics.create(key), false, requeryFn);
 
         // Verify we never require to requery fn
         verify(record3, times(1)).passOneIterator();
@@ -214,7 +214,7 @@ public class CompactorTest {
         Counter archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DistributedCompactor", "archivedDeltaSize"));
         Expanded expanded =
                 new DistributedCompactor(archiveDeltaSize, true, metricRegistry)
-                .expand(record1, now, now, MutableIntrinsics.create(key), false, requeryFn);
+                .expand(record1, now, now, now, MutableIntrinsics.create(key), false, requeryFn);
 
         // Methods that return iterators may not be called more than once.
         verify(record1, times(1)).passOneIterator();
@@ -272,7 +272,7 @@ public class CompactorTest {
         Counter archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         boolean isDeltaHistoryEnabled = false;
         Expanded expanded = new DistributedCompactor(archiveDeltaSize, isDeltaHistoryEnabled, metricRegistry)
-                .expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+                .expand(record, now, now, now, MutableIntrinsics.create(key), false, requeryFn);
 
         // Verify that expansion produces a compaction with no delta archives
         Map<String, String> expectedContent = ImmutableMap.of("key", "value", "key2", "change");
@@ -287,7 +287,7 @@ public class CompactorTest {
         when(record2.passTwoIterator()).thenReturn(deltas2.iterator());
         isDeltaHistoryEnabled = true;
         expanded = new DistributedCompactor(archiveDeltaSize, isDeltaHistoryEnabled, metricRegistry)
-                .expand(record2, now, now, MutableIntrinsics.create(key), false, requeryFn);
+                .expand(record2, now, now, now, MutableIntrinsics.create(key), false, requeryFn);
         expectedContent = ImmutableMap.of("key", "value", "key2", "change");
         assertEquals(expanded.getResolved().getContent(), expectedContent);
         assertTrue(expanded.getPendingCompaction() != null);
@@ -350,7 +350,7 @@ public class CompactorTest {
         MetricRegistry metricRegistry = new MetricRegistry();
         Counter archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         Compactor compactor = new DistributedCompactor(archiveDeltaSize, false, metricRegistry);
-        Expanded expanded = compactor.expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+        Expanded expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
 
         // Verify that expansion produces a compaction, but does *not* delete the compaction owned deltas. That will happen in the next read
         Map<String, String> expectedContent = ImmutableMap.of("key", "value", "key2", "change");
@@ -367,7 +367,7 @@ public class CompactorTest {
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
 
-        expanded = compactor.expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+        expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // Verify that our deltas are going to be deleted now
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 3, "All 3 deltas should be up for deletion");
         assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t1, t2, t3)));
@@ -380,7 +380,7 @@ public class CompactorTest {
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
 
-        expanded = compactor.expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+        expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 2, "The 2 'resurrected' deltas are simply deleted again");
         assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t2, t3)));
         expectedContent = ImmutableMap.of("key", "value", "key2", "change");
@@ -394,7 +394,7 @@ public class CompactorTest {
         // Artificially set the FCT after t3, but before the compaction
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
-        expanded = compactor.expand(record, fctRightAfterT3, fctRightAfterT3, MutableIntrinsics.create(key), false, requeryFn);
+        expanded = compactor.expand(record, fctRightAfterT3, fctRightAfterT3, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // Even though there are deltas before the FCT, we do not compact since we have an outstanding compaction.
         assertTrue(expanded.getPendingCompaction() == null);
 
@@ -407,7 +407,7 @@ public class CompactorTest {
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
 
-        expanded = compactor.expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+        expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // The above should create a new compaction
         assertTrue(expanded.getPendingCompaction().getCompaction() != null);
         UUID toBeResurrectedCompaction = compactions.get(0).getKey();
@@ -421,7 +421,7 @@ public class CompactorTest {
         // Let's fetch the record again, and see if the existing old compaction affect anything
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
-        expanded = compactor.expand(record, now, now, MutableIntrinsics.create(key), false, requeryFn);
+        expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // The resurrected compaction should be deleted again
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().contains(toBeResurrectedCompaction));
         // No changes to the content

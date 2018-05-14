@@ -13,6 +13,7 @@ import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -31,6 +32,9 @@ public class ScanStatus {
     private final List<ScanRangeStatus> _completeScanRanges;
     private final Date _startTime;
     private Date _completeTime;
+
+    @JsonProperty("compactionControlBufferTimeInMillis")
+    private long _compactionControlBufferTimeInMillis = Duration.ofMinutes(1).toMillis();
 
     public ScanStatus(String scanId, ScanOptions options, boolean tableSnapshotCreated, boolean canceled,
                       Date startTime,
@@ -105,6 +109,20 @@ public class ScanStatus {
 
     public void setCompleteTime(Date completeTime) {
         _completeTime = completeTime;
+    }
+
+    public long getCompactionControlBufferTimeInMillis() {
+        return _compactionControlBufferTimeInMillis;
+    }
+
+    public void setCompactionControlBufferTimeInMillis(long compactionControlBufferTimeInMillis) {
+        _compactionControlBufferTimeInMillis = compactionControlBufferTimeInMillis;
+    }
+
+    @JsonIgnore
+    public Date getCompactionControlTime() {
+        // Adding compactionControlBuffer time to the start time to give us the compaction control time. (setting the time in the future takes care of the issue of there being any in-flight compactions)
+        return new Date(_startTime.getTime() + getCompactionControlBufferTimeInMillis());
     }
 
     @JsonIgnore
