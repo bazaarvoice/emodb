@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
@@ -32,15 +33,19 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyCollectionOf;
 import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 @SuppressWarnings("unchecked")
 public class DefaultFanoutTest {
@@ -54,7 +59,10 @@ public class DefaultFanoutTest {
     private String _remoteChannel;
     private Multimap<String, ByteBuffer> _eventsSinked;
     private PartitionSelector _outboundPartitionSelector;
-
+    private EventSource _eventSource;
+    private List<String> _deletedKeys;
+    private Instant _now;
+    
     @BeforeMethod
     private void setUp() {
         _eventsSinked = ArrayListMultimap.create();
@@ -68,6 +76,14 @@ public class DefaultFanoutTest {
                 return null;
             }
         };
+
+        // Event event keys are deleted we need to capture them since fanout clears and re-uses the same instance.
+        _eventSource = mock(EventSource.class);
+        _deletedKeys = Lists.newArrayList();
+        doAnswer(invocationOnMock -> {
+            _deletedKeys.addAll((List<String>) invocationOnMock.getArguments()[0]);
+            return null;
+        }).when(_eventSource).delete(anyCollectionOf(String.class));
 
         _subscriptionsSupplier = mock(Supplier.class);
         _currentDataCenter = mock(DataCenter.class);
@@ -88,11 +104,16 @@ public class DefaultFanoutTest {
         _outboundPartitionSelector = mock(PartitionSelector.class);
         when(_outboundPartitionSelector.getPartition(anyString())).thenReturn(0);
 
+        _now = Instant.ofEpochMilli(1526311145000L);
+        Clock clock = mock(Clock.class);
+        when(clock.instant()).thenAnswer(ignore -> _now);
+        when(clock.millis()).thenAnswer(ignore -> _now.toEpochMilli());
+        
         MetricRegistry metricRegistry = new MetricRegistry();
 
-        _defaultFanout = new DefaultFanout("test", "test", mock(EventSource.class), eventSink, _outboundPartitionSelector,
+        _defaultFanout = new DefaultFanout("test", "test", _eventSource, eventSink, _outboundPartitionSelector,
                 Duration.standardSeconds(1), _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
-                new FanoutLagMonitor(mock(LifeCycleRegistry.class), metricRegistry), metricRegistry, Clock.systemUTC());
+                new FanoutLagMonitor(mock(LifeCycleRegistry.class), metricRegistry), metricRegistry, clock);
     }
 
     @Test
@@ -195,14 +216,73 @@ public class DefaultFanoutTest {
                         .build());
     }
 
-    private void addTable(String tableName) {
+    @Test
+    public void testFanoutToDroppedTable() {
+        when(_dataProvider.getTable("dropped-table")).thenThrow(new UnknownTableException());
+        EventData event = newEvent("id0", "dropped-table", "key0");
+
+        // Need to set the current time to match the time of the event
+        _now = Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(UpdateRefSerializer.fromByteBuffer(event.getData().duplicate()).getChangeId()));
+        
+        // For the first 30 seconds the event should neither be fanned out nor deleted
+        for (int i=0; i <= 30; i++) {
+            _defaultFanout.copyEvents(ImmutableList.of(event));
+            assertTrue(_eventsSinked.isEmpty());
+            assertTrue(_deletedKeys.isEmpty());
+            _now = _now.plusSeconds(1);
+        }
+
+        // After 30 seconds the event should be deleted
+        _defaultFanout.copyEvents(ImmutableList.of(event));
+        assertTrue(_eventsSinked.isEmpty());
+        assertEquals(_deletedKeys, ImmutableList.of("id0"));
+    }
+
+    @Test
+    public void testFanoutToNewTableWithDelayedCacheInvalidation() {
+        when(_subscriptionsSupplier.get()).thenReturn(ImmutableList.of());
+        EventData event = newEvent("id0", "new-table", "key0");
+
+        // Need to set the current time to match the time of the event
+        _now = Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(UpdateRefSerializer.fromByteBuffer(event.getData().duplicate()).getChangeId()));
+
+        // For the first 2 seconds the new table doesn't show up in cache
+        final Table table = mockTable("new-table");
+        final Instant nowPlus2Seconds = _now.plusSeconds(2);
+        when(_dataProvider.getTable("new-table")).thenAnswer(ignore -> {
+            if (_now.isBefore(nowPlus2Seconds)) {
+                throw new UnknownTableException();
+            }
+            return table;
+        });
+
+        for (int i=0; i < 2; i++) {
+            _defaultFanout.copyEvents(ImmutableList.of(event));
+            assertTrue(_eventsSinked.isEmpty());
+            assertTrue(_deletedKeys.isEmpty());
+            _now = _now.plusSeconds(1);
+        }
+
+        // After 2 seconds the event should be fanned out and deleted
+        _defaultFanout.copyEvents(ImmutableList.of(event));
+        assertEquals(_eventsSinked, ImmutableMultimap.of(_remoteChannel, event.getData()));
+        assertEquals(_deletedKeys, ImmutableList.of("id0"));
+    }
+
+    private Table mockTable(String tableName) {
         Table table = mock(Table.class);
         when(table.getName()).thenReturn(tableName);
         when(table.getAttributes()).thenReturn(ImmutableMap.<String, Object>of());
         when(table.getOptions()).thenReturn(new TableOptionsBuilder().setPlacement("placement").build());
         // Put in another data center to force replication
         when(table.getDataCenters()).thenReturn(ImmutableList.of(_currentDataCenter, _remoteDataCenter));
+        return table;
+    }
+
+    private Table addTable(String tableName) {
+        Table table = mockTable(tableName);
         when(_dataProvider.getTable(tableName)).thenReturn(table);
+        return table;
     }
 
     private EventData newEvent(String id, String table, String key) {
