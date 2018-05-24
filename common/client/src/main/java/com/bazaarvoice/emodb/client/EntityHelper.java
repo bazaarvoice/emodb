@@ -3,8 +3,6 @@ package com.bazaarvoice.emodb.client;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Throwables;
-import com.google.common.collect.PeekingIterator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,7 +27,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, clazz);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -53,7 +51,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, reference);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -70,15 +68,13 @@ abstract public class EntityHelper {
     }
 
     private static <T> Iterator<T> streamingIterator(InputStream in, TypeReference<T> typeReference) {
-        PeekingIterator<T> iter = new JsonStreamingArrayParser<>(in, typeReference);
+        Iterator<T> iter = new JsonStreamingArrayParser<>(in, typeReference);
 
         // Fetch the first element in the result stream immediately, while still wrapped by the Ostrich retry logic.
         // If we can't get the first element then Ostrich should retry immediately.  If we fail to get subsequent
         // elements then clients must catch JsonStreamingEOFException and deal with it themselves.  They are highly
         // encouraged to use the DataStoreStreaming class which handles the restart logic automatically.
-        if (iter.hasNext()) {
-            iter.peek();
-        }
+        iter.hasNext();
 
         return iter;
     }

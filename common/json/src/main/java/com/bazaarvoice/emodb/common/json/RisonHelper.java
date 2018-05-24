@@ -7,7 +7,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.io.IOContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -45,7 +44,7 @@ public class RisonHelper {
             return O_RISON.writeValueAsString(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 

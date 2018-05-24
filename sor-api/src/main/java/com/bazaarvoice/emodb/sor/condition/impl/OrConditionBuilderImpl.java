@@ -93,10 +93,9 @@ public class OrConditionBuilderImpl implements OrConditionBuilder {
             conditions.add(Conditions.in(_values));
         }
         if (_intrinsics != null) {
-            for (Map.Entry<String, Collection<Condition>> entry :
-                    OrderedJson.ENTRY_COMPARATOR.immutableSortedCopy(_intrinsics.asMap().entrySet())) {
-                conditions.add(Conditions.intrinsic(entry.getKey(), Conditions.or(entry.getValue())));
-            }
+            _intrinsics.asMap().entrySet().stream()
+                    .sorted(OrderedJson.ENTRY_COMPARATOR)
+                    .forEach(e -> conditions.add(Conditions.intrinsic(e.getKey(), Conditions.or(e.getValue()))));
         }
         if (_conditions != null) {
             conditions.addAll(_conditions);

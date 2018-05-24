@@ -16,6 +16,12 @@
     <name>EmoDB Common API Classes</name>
 
     <dependencies>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-json</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- 3rd-party dependencies -->
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
@@ -28,6 +34,10 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-guava</artifactId>
         </dependency>
 
         <!-- Test dependencies -->

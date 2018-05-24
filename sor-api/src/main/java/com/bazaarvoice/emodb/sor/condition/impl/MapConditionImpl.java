@@ -10,6 +10,7 @@ import com.google.common.io.CharStreams;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Iterator;
 import java.util.Map;
 
 public class MapConditionImpl extends AbstractCondition implements MapCondition {
@@ -34,7 +35,8 @@ public class MapConditionImpl extends AbstractCondition implements MapCondition 
     public void appendTo(Appendable buf) throws IOException {
         buf.append("{..");
         Writer writer = CharStreams.asWriter(buf);
-        for (Map.Entry<String, Condition> entry : OrderedJson.ENTRY_COMPARATOR.immutableSortedCopy(_entries.entrySet())) {
+        for (Iterator<Map.Entry<String, Condition>> iter = _entries.entrySet().stream().sorted(OrderedJson.ENTRY_COMPARATOR).iterator(); iter.hasNext(); ) {
+            Map.Entry<String, Condition> entry = iter.next();
             buf.append(',');
             DeltaJson.write(writer, entry.getKey());
             buf.append(':');
