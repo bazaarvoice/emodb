@@ -429,6 +429,14 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         return getKey(iter.next());
     }
 
+    /*
+      Its similar to getRawKeyFromRowGroup but should be used where the rowGroup can have no rows as well.
+    */
+    private ByteBuffer getRawKeyFromRowGroupOrNull(Iterable<Row> filteredRowGroup) {
+        Iterator<Row> iter = filteredRowGroup.iterator();
+        return iter.hasNext() ? getKey(iter.next()) : null;
+    }
+
     private <T> Iterator<T> touch(Iterator<T> iter) {
         // Could return a Guava PeekingIterator after "if (iter.hasNext()) iter.peek()", but simply calling hasNext()
         // is sufficient for the iterator implementations used by this DAO class...
@@ -598,7 +606,11 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
                     }
 
                     // Convert the filteredRows into a Record object
-                    ByteBuffer rowKey = getRawKeyFromRowGroup(filteredRows);
+                    ByteBuffer rowKey = getRawKeyFromRowGroupOrNull(filteredRows);
+                    // rowKey can be null if "all" the rows of the cassandra record are after the cutoff time. In such case ignore that record and continue.
+                    if (rowKey == null) {
+                        continue;
+                    }
 
                     long tableUuid = AstyanaxStorage.getTableUuid(rowKey);
                     if (_lastTableUuid != tableUuid) {
