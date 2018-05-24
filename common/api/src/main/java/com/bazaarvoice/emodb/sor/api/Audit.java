@@ -2,18 +2,13 @@ package com.bazaarvoice.emodb.sor.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Functions;
-import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.stream.Collectors;
 
 /**
  * Metadata that is stored along with every write to help trace the source
@@ -33,7 +28,10 @@ public final class Audit {
 
     @JsonCreator
     public Audit(Map<String, ?> fields) {
-        _fields = checkNotNull(fields, "fields");
+        if (fields == null) {
+            throw new NullPointerException("Fields cannot be null");
+        }
+        _fields = fields;
     }
 
     @Nullable
@@ -59,10 +57,12 @@ public final class Audit {
     public List<String> getTags() {
         Object tags = _fields.get(TAGS);
         if (tags != null && tags instanceof Collection) {
-            return Ordering.natural().sortedCopy(FluentIterable.from((Collection<?>) tags).transform(Functions.toStringFunction())
-                    .toList());
+            return ((Collection<?>)tags).stream()
+                    .map(Object::toString)
+                    .sorted()
+                    .collect(Collectors.toList());
         }
-        return ImmutableList.of();
+        return Collections.emptyList();
     }
 
     @Nullable

@@ -1,12 +1,13 @@
 package com.bazaarvoice.emodb.sor.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 public final class FacadeOptionsBuilder {
     private String _placement;
 
     public FacadeOptionsBuilder setPlacement(String placement) {
-        _placement = checkNotNull(placement, "placement");
+        if (placement == null) {
+            throw new NullPointerException("placement");
+        }
+        _placement = placement;
         return this;
     }
 

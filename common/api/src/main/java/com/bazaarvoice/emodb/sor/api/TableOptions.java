@@ -1,20 +1,22 @@
 package com.bazaarvoice.emodb.sor.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import java.util.Collections;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Objects;
+import java.util.Optional;
 
 public final class TableOptions {
     private final String _placement;
     private final List<FacadeOptions> _facades;
 
     TableOptions(@JsonProperty("placement") String placement, @JsonProperty("facades") List<FacadeOptions> facadeOptions) {
-        _placement = checkNotNull(placement, "Table option is required: placement");
-        _facades = Objects.firstNonNull(facadeOptions, Collections.<FacadeOptions>emptyList());
+        if (placement == null) {
+            throw new NullPointerException("Table option is required: placement");
+        }
+        _placement = placement;
+        _facades = Optional.ofNullable(facadeOptions).orElse(Collections.<FacadeOptions>emptyList());
     }
 
     /**
@@ -46,13 +48,11 @@ public final class TableOptions {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_placement, _facades);
+        return Objects.hash(_placement, _facades);
     }
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
-                .add("placement", _placement)
-                .toString();
+        return String.format("%s{placement=%s}", TableOptions.class.getName(), _placement);
     }
 }

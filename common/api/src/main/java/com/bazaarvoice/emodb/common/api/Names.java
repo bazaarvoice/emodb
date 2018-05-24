@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.common.api;
 
-import com.google.common.base.CharMatcher;
+import java.util.BitSet;
 
 public abstract class Names {
 
@@ -8,19 +8,37 @@ public abstract class Names {
     private Names() {}
 
     // Exclude whitespace, control chars, non-ascii, upper-case, most punctuation.
-    private static final CharMatcher TABLE_NAME_ALLOWED =
-            CharMatcher.inRange('a', 'z')
-                    .or(CharMatcher.inRange('0', '9'))
-                    .or(CharMatcher.anyOf("-.:_"))
-                    .precomputed();
+    private static final BitSet TABLE_NAME_ALLOWED = anyOf(
+            anyCharInRange('a', 'z'),
+            anyCharInRange('0', '9'),
+            anyCharInString("-.:_"));
 
     // Exclude whitespace, control chars, non-ascii, most punctuation.
-    private static final CharMatcher ROLE_NAME_ALLOWED =
-            CharMatcher.inRange('a', 'z')
-                    .or(CharMatcher.inRange('A', 'Z'))
-                    .or(CharMatcher.inRange('0', '9'))
-                    .or(CharMatcher.anyOf("-.:_"))
-                    .precomputed();
+    private static final BitSet ROLE_NAME_ALLOWED = anyOf(
+            anyCharInRange('a', 'z'),
+            anyCharInRange('A', 'Z'),
+            anyCharInRange('0', '9'),
+            anyCharInString("-.:_"));
+
+    private static BitSet anyOf(BitSet... bitSets) {
+        BitSet combined = new BitSet();
+        for (BitSet bitSet : bitSets) {
+            combined.or(bitSet);
+        }
+        return combined;
+    }
+
+    private static BitSet anyCharInRange(char from, char to) {
+        BitSet bitSet = new BitSet();
+        bitSet.set(from, to + 1);
+        return bitSet;
+    }
+
+    private static BitSet anyCharInString(String source) {
+        BitSet bitSet = new BitSet();
+        source.chars().forEach(bitSet::set);
+        return bitSet;
+    }
 
     /**
      * Table names must be lowercase ASCII strings. between 1 and 255 characters in length.  Whitespace, ISO control
@@ -34,7 +52,7 @@ public abstract class Names {
                 table.length() > 0 && table.length() <= 255 &&
                 !(table.charAt(0) == '_' && !table.startsWith("__")) &&
                 !(table.charAt(0) == '.' && (".".equals(table) || "..".equals(table))) &&
-                TABLE_NAME_ALLOWED.matchesAllOf(table);
+                table.chars().allMatch(TABLE_NAME_ALLOWED::get);
     }
 
     /**
@@ -44,7 +62,7 @@ public abstract class Names {
     public static boolean isLegalRoleName(String role) {
         return role != null &&
                 role.length() > 0 && role.length() <= 255 &&
-                ROLE_NAME_ALLOWED.matchesAllOf(role);
+                role.chars().allMatch(ROLE_NAME_ALLOWED::get);
     }
 
     /**

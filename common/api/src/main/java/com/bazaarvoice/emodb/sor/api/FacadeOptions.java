@@ -1,15 +1,17 @@
 package com.bazaarvoice.emodb.sor.api;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Objects;
 
 public final class FacadeOptions {
     private final String _placement;
 
     public FacadeOptions(@JsonProperty ("placement") String placement) {
-        _placement = checkNotNull(placement, "Facade option is required: placement");
+        if (placement == null) {
+            throw new NullPointerException("Facade option is required: placement");
+        }
+        _placement = placement;
     }
 
     /**
@@ -28,18 +30,16 @@ public final class FacadeOptions {
             return false;
         }
         FacadeOptions that = (FacadeOptions) o;
-        return Objects.equal(_placement, that._placement);
+        return _placement.equals(that._placement);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_placement);
+        return Objects.hash(_placement);
     }
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
-                .add("placement", _placement)
-                .toString();
+        return String.format("%s{placement=%s}", FacadeOptions.class.getName(), _placement);
     }
 }

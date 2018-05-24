@@ -42,6 +42,6 @@ public class TtlsTest {
 
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void testNegativeLong() {
-        Ttls.toSeconds(Duration.ofMillis(Long.MIN_VALUE), 0, null);
+        Ttls.toSeconds(Duration.ofMillis(-86400000L), 0, null);
     }
 }
