@@ -2,12 +2,12 @@ package com.bazaarvoice.emodb.sor.api;
 
 import com.bazaarvoice.emodb.auth.proxy.Credential;
 import com.bazaarvoice.emodb.sor.delta.Delta;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +35,7 @@ public interface AuthDataStore {
     /**
      * Retrieves the list of table events that are not published on the databus.
      */
-    Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(@Credential String apiKey, DateTime fromInclusive, DateTime toExclusive);
+    Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(@Credential String apiKey, Date fromInclusive, Date toExclusive);
 
     /**
      * Creates a logical table in the data store.

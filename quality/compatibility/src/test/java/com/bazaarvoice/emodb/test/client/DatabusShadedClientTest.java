@@ -23,7 +23,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -35,6 +34,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -118,7 +118,7 @@ public class DatabusShadedClientTest extends ResourceTest {
         Databus client = DatabusAuthenticator.proxied(new DatabusClient(URI.create("/bus/1"), new DropWizard6EmoClient(client())))
                 .usingCredentials(API_KEY);
 
-        List<Event> events = client.poll("test-subscription", Duration.standardMinutes(5), 10);
+        List<Event> events = client.poll("test-subscription", Duration.ofMinutes(5), 10);
 
         assertEquals(events.size(), 10);
         for (int i=0; i < 10; i++) {
@@ -138,7 +138,7 @@ public class DatabusShadedClientTest extends ResourceTest {
         Subscription subscription = subscriptions.next();
         assertEquals(subscription.getName(), "test-subscription");
         assertEquals(subscription.getTableFilter(), Conditions.mapBuilder().contains("type", "review").build());
-        assertEquals(subscription.getEventTtl(), Duration.millis(259200000));
+        assertEquals(subscription.getEventTtl(), Duration.ofMillis(259200000));
         assertEquals(subscription.getExpiresAt(), new Date(1445270400000L));
         assertFalse(subscriptions.hasNext());
     }

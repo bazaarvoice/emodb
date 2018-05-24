@@ -15,9 +15,9 @@ import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.PermissionResolver;
-import org.joda.time.Duration;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -29,8 +29,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
 
     private final static int DEFAULT_PERMISSION_CHECK_CACHE_SIZE = 1000;
-    private final static Duration DEFAULT_PERMISSION_CHECK_CACHE_TIMEOUT = Duration.standardSeconds(2);
-    private final static Duration MAX_PERMISSION_CHECK_CACHE_TIMEOUT = Duration.standardSeconds(5);
+    private final static Duration DEFAULT_PERMISSION_CHECK_CACHE_TIMEOUT = Duration.ofSeconds(2);
+    private final static Duration MAX_PERMISSION_CHECK_CACHE_TIMEOUT = Duration.ofSeconds(5);
     private final static int DEFAULT_READ_PERMISSION_CACHE_SIZE = 200;
 
     private final InternalAuthorizer _internalAuthorizer;
@@ -78,12 +78,12 @@ public class OwnerDatabusAuthorizer implements DatabusAuthorizer {
 
         if (permissionCheckCacheSize > 0) {
             checkNotNull(permissionCheckCacheTimeout, "permissionCheckCacheTimeout");
-            checkArgument(!permissionCheckCacheTimeout.isLongerThan(MAX_PERMISSION_CHECK_CACHE_TIMEOUT),
+            checkArgument(permissionCheckCacheTimeout.compareTo(MAX_PERMISSION_CHECK_CACHE_TIMEOUT) <= 0,
                     "Permission check cache timeout is too long");
 
             _permissionCheckCache = CacheBuilder.newBuilder()
                     .maximumSize(permissionCheckCacheSize)
-                    .expireAfterWrite(permissionCheckCacheTimeout.getMillis(), TimeUnit.MILLISECONDS)
+                    .expireAfterWrite(permissionCheckCacheTimeout.toMillis(), TimeUnit.MILLISECONDS)
                     .recordStats()
                     .ticker(ClockTicker.getTicker(clock))
                     .build(new CacheLoader<OwnerTableCacheKey, Boolean>() {

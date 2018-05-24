@@ -12,12 +12,13 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.joda.time.DateTime;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
@@ -48,15 +49,15 @@ public class DataStoreScanStatusDAOTest {
         ScanRangeStatus active = new ScanRangeStatus(1, "p0",
                                 ScanRange.create(ByteBuffer.wrap(new byte[] {0x02}), ByteBuffer.wrap(new byte[] {0x03})),
                                 1, Optional.<Integer>absent(), Optional.<Integer>absent());
-        active.setScanQueuedTime(DateTime.now().minusMinutes(10).toDate());
-        active.setScanStartTime(DateTime.now().minusMinutes(5).toDate());
+        active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(10))));
+        active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(5))));
 
         ScanRangeStatus complete = new ScanRangeStatus(2, "p0",
                                 ScanRange.create(ByteBuffer.wrap(new byte[] {0x04}), ByteBuffer.wrap(new byte[] {0x05})),
                                 2, Optional.<Integer>absent(), Optional.<Integer>absent());
-        complete.setScanQueuedTime(DateTime.now().minusMinutes(30).toDate());
-        complete.setScanStartTime(DateTime.now().minusMinutes(25).toDate());
-        complete.setScanCompleteTime(DateTime.now().minusMinutes(20).toDate());
+        complete.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(30))));
+        complete.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(25))));
+        complete.setScanCompleteTime(Date.from(Instant.now().minus(Duration.ofMinutes(20))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, false, false, new Date(),
                 ImmutableList.of(pending), ImmutableList.of(active), ImmutableList.of(complete));
@@ -80,7 +81,7 @@ public class DataStoreScanStatusDAOTest {
 
         _dao.updateScanStatus(scanStatus);
 
-        Date queuedTime = DateTime.now().minusSeconds(1).toDate();
+        Date queuedTime = Date.from(Instant.now().minus(Duration.ofSeconds(1)));
         _dao.setScanRangeTaskQueued("id", 0, queuedTime);
 
         ScanStatus returned = _dao.getScanStatus("id");
@@ -104,13 +105,13 @@ public class DataStoreScanStatusDAOTest {
 
         ScanRangeStatus pending = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
                 Optional.<Integer>absent(), Optional.<Integer>absent());
-        pending.setScanQueuedTime(DateTime.now().minusMinutes(1).toDate());
+        pending.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.of(pending), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
-        Date startTime = DateTime.now().minusSeconds(1).toDate();
+        Date startTime = Date.from(Instant.now().minus(Duration.ofSeconds(1)));
         _dao.setScanRangeTaskActive("id", 0, startTime);
 
         ScanStatus returned = _dao.getScanStatus("id");
@@ -133,14 +134,14 @@ public class DataStoreScanStatusDAOTest {
 
         ScanRangeStatus active = new ScanRangeStatus(0, "p0", ScanRange.all() ,0,
                 Optional.<Integer>absent(), Optional.<Integer>absent());
-        active.setScanQueuedTime(DateTime.now().minusMinutes(2).toDate());
-        active.setScanStartTime(DateTime.now().minusMinutes(1).toDate());
+        active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(2))));
+        active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(1))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(),
                 ImmutableList.<ScanRangeStatus>of(), ImmutableList.of(active), ImmutableList.<ScanRangeStatus>of());
         _dao.updateScanStatus(scanStatus);
 
-        Date completeTime = DateTime.now().minusSeconds(1).toDate();
+        Date completeTime = Date.from(Instant.now().minusSeconds(1));
         _dao.setScanRangeTaskComplete("id", 0, completeTime);
 
         ScanStatus returned = _dao.getScanStatus("id");
@@ -302,15 +303,15 @@ public class DataStoreScanStatusDAOTest {
         ScanRangeStatus active = new ScanRangeStatus(1, "p0",
                 ScanRange.create(ByteBuffer.wrap(new byte[] {0x02}), ByteBuffer.wrap(new byte[] {0x03})),
                 1, Optional.<Integer>absent(), Optional.<Integer>absent());
-        active.setScanQueuedTime(DateTime.now().minusMinutes(10).toDate());
-        active.setScanStartTime(DateTime.now().minusMinutes(5).toDate());
+        active.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(10))));
+        active.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(5))));
 
         ScanRangeStatus complete = new ScanRangeStatus(2, "p0",
                 ScanRange.create(ByteBuffer.wrap(new byte[] {0x04}), ByteBuffer.wrap(new byte[] {0x05})),
                 2, Optional.<Integer>absent(), Optional.<Integer>absent());
-        complete.setScanQueuedTime(DateTime.now().minusMinutes(30).toDate());
-        complete.setScanStartTime(DateTime.now().minusMinutes(25).toDate());
-        complete.setScanCompleteTime(DateTime.now().minusMinutes(20).toDate());
+        complete.setScanQueuedTime(Date.from(Instant.now().minus(Duration.ofMinutes(30))));
+        complete.setScanStartTime(Date.from(Instant.now().minus(Duration.ofMinutes(25))));
+        complete.setScanCompleteTime(Date.from(Instant.now().minus(Duration.ofMinutes(20))));
 
         ScanStatus scanStatus = new ScanStatus("id", options, true, false, new Date(0),
                 ImmutableList.of(pending), ImmutableList.of(active), ImmutableList.of(complete));

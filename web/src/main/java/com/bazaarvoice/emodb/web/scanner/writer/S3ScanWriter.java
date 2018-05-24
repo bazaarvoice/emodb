@@ -22,7 +22,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -46,7 +46,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * ScanWriter implementation which uploads files to S3.
  */
 public class S3ScanWriter extends TemporaryFileScanWriter {
-    private static final Duration DEFAULT_RETRY_DELAY = Duration.standardSeconds(5);
+    private static final Duration DEFAULT_RETRY_DELAY = Duration.ofSeconds(5);
     private static final int MAX_RETRIES = 3;
 
     private static final Logger _log = LoggerFactory.getLogger(S3ScanWriter.class);
@@ -232,7 +232,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
             if (!_closed) {
                 if (_activeUpload.getAttempts() < MAX_RETRIES) {
                     try {
-                        _uploadService.schedule(this, _retryDelay.getMillis(), TimeUnit.MILLISECONDS);
+                        _uploadService.schedule(this, _retryDelay.toMillis(), TimeUnit.MILLISECONDS);
                         _log.debug("Transferring file failed, will retry: id={}, file={}, uri={}...",
                                 _taskId, _activeUpload.getFile(), _activeUpload.getUri(), t);
                         return;
@@ -319,7 +319,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
                     throw new IOException(e);
                 }
                 try {
-                    Thread.sleep(_retryDelay.getMillis());
+                    Thread.sleep(_retryDelay.toMillis());
                 } catch (InterruptedException e2) {
                     // Stop retrying and propagate the original exception
                     throw new IOException(e);

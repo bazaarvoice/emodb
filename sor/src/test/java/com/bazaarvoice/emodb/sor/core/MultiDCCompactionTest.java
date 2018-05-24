@@ -26,10 +26,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import org.joda.time.Duration;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +71,7 @@ public class MultiDCCompactionTest {
         SystemClock.tick();
 
         // This should add a new compaction record while deferring the deletes upon a subsequent compaction
-        dc1.compact(TABLE, KEY, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        dc1.compact(TABLE, KEY, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         SystemClock.tick();
         // write 3 more deltas that are replicated everywhere
@@ -88,12 +88,12 @@ public class MultiDCCompactionTest {
 
         SystemClock.tick();
         // This will *only* replicate the deletes associated with the compaction
-        dc1.compact(TABLE, KEY, Duration.millis(System.currentTimeMillis() - TimeUUIDs.getTimeMillis(cutoffchangeId)), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        dc1.compact(TABLE, KEY, Duration.ofMillis(System.currentTimeMillis() - TimeUUIDs.getTimeMillis(cutoffchangeId)), ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         // DC2 has replicated the deletes for first two deltas, and the first compaction, but didn't get the second compaction delta.
         // Now, DC2 undergoes a compaction on its own
         // This will cause data loss if the second compaction deleted the first compaction too.
-        dc2.compact(TABLE, KEY, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        dc2.compact(TABLE, KEY, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         // Let's replicate the compaction records
         allDCs.replicateCompactionDeltas();

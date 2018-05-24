@@ -18,7 +18,6 @@ import com.google.common.collect.Lists;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.joda.time.DateTime;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.SkipException;
@@ -31,6 +30,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URI;
 import java.nio.charset.Charset;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -96,7 +97,7 @@ public class StashReaderTest {
             }
         });
 
-        Date startTime = DateTime.now().minusDays(1).toDate();
+        Date startTime = Date.from(Instant.now().minus(Duration.ofDays(1)));
         String startTimeAsWrittenInSuccessFile = new ISO8601DateFormat().format(startTime);
         final String contents = format("%s\n%s\n%s", startTimeAsWrittenInSuccessFile, "2015-01-01T03:00:00Z", "scanId");
         when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/" + latest + "/_SUCCESS")))).thenAnswer(new Answer<S3Object>() {

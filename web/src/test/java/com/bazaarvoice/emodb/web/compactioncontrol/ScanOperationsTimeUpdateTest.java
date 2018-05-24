@@ -31,14 +31,14 @@ import com.google.common.base.Optional;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -69,11 +69,12 @@ public class ScanOperationsTimeUpdateTest {
         // start the scan
         ScanUploader scanUploader = new ScanUploader(getDataTools(), scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
         // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
-        scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
-        scanUploader.setScanWaitTimeInMillis(Duration.millis(5).getMillis());
+        scanUploader.setCompactionControlBufferTimeInMillis(1);
+        scanUploader.setScanWaitTimeInMillis(5);
+        scanUploader.setCompactionControlBufferTimeInMillis(1);
         scanUploader.scanAndUpload("test1", scanOptions).start();
         // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
-        Thread.sleep(Duration.standardSeconds(1).getMillis());
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 1);
         Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), true);
 
@@ -102,15 +103,15 @@ public class ScanOperationsTimeUpdateTest {
         // start the scan which will throw an exception
         ScanUploader scanUploader = new ScanUploader(getDataTools(), scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
         // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
-        scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
-        scanUploader.setScanWaitTimeInMillis(Duration.millis(5).getMillis());
+        scanUploader.setCompactionControlBufferTimeInMillis(1);
+        scanUploader.setScanWaitTimeInMillis(5);
         try {
             scanUploader.scanAndUpload("test1", scanOptions).start();
         } catch (Exception e) {
             // expected as the exception is propagated.
         }
         // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
-        Thread.sleep(Duration.standardSeconds(1).getMillis());
+        Thread.sleep(Duration.ofSeconds(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
         Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), false);
     }
@@ -176,7 +177,7 @@ public class ScanOperationsTimeUpdateTest {
                 ScanRangeSplits.builder()
                         .addScanRange("dummy", "dummy", ScanRange.all())
                         .build());
-        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(DateTime.class)))
+        when(dataTools.multiTableScan(any(MultiTableScanOptions.class), any(TableSet.class), any(LimitCounter.class), any(ReadConsistency.class), any(Instant.class)))
                 .thenReturn(createMockScanResults());
         when(dataTools.toContent(any(MultiTableScanResult.class), any(ReadConsistency.class), eq(false)))
                 .thenAnswer(new Answer<Map<String, Object>>() {

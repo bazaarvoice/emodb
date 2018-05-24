@@ -16,11 +16,11 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -39,8 +39,8 @@ import static com.google.common.base.Preconditions.checkState;
  * Queries the local data center's ZooKeeper server for the hosts that implement the specified end point.
  */
 public class LocalDataCenterEndPointProvider implements EndPointProvider, Managed {
-    private static final Duration SYNC_TIMEOUT = Duration.standardSeconds(10);
-    private static final long DELAY_TIMEOUT = Duration.standardSeconds(2).getMillis();
+    private static final Duration SYNC_TIMEOUT = Duration.ofSeconds(10);
+    private static final long DELAY_TIMEOUT = Duration.ofSeconds(2).toMillis();
 
     private final Logger _log = LoggerFactory.getLogger(LocalDataCenterEndPointProvider.class);
 

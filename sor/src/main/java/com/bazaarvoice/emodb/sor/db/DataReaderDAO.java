@@ -6,9 +6,9 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -61,6 +61,6 @@ public interface DataReaderDAO {
 
     /** Retrieves records all records across multiple tables in their natural key order (shard, table UUID, key). */
     Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
-                                                  ReadConsistency consistency, @Nullable DateTime cutoffTime);
+                                                  ReadConsistency consistency, @Nullable Instant cutoffTime);
 
 }

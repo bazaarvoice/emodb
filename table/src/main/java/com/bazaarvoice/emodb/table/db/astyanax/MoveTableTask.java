@@ -160,7 +160,7 @@ public class MoveTableTask extends Task {
 
     private void printMaintenance(String table, MaintenanceOp op, String state, PrintWriter out) {
         out.printf("[%s] %s: type=%s  dc=%s  op=%s  table=%s%n", state,
-                JsonHelper.formatTimestamp(op.getWhen().getMillis()),
+                JsonHelper.formatTimestamp(op.getWhen().toEpochMilli()),
                 op.getType(), op.getDataCenter(), op.getName(), table);
     }
 

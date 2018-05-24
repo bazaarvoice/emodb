@@ -11,8 +11,6 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +19,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -37,10 +37,10 @@ public class DatabusResourcePoller {
     public static final int DEFAULT_NUM_KEEP_ALIVE_THREADS = 4;
     public static final int DEFAULT_NUM_POLLING_THREADS = 8;
 
-    private static final Duration MAX_LONG_POLL_TIME = Duration.standardSeconds(20);
-    private static final Duration LONG_POLL_RETRY_TIME = Duration.standardSeconds(2);
-    private static final Duration LONG_POLL_SEND_REFRESH_TIME = Duration.millis(200);
-    private static final Duration KEEP_ALIVE_SAFETY_BUFFER_TIME = Duration.standardSeconds(10);
+    private static final Duration MAX_LONG_POLL_TIME = Duration.ofSeconds(20);
+    private static final Duration LONG_POLL_RETRY_TIME = Duration.ofSeconds(2);
+    private static final Duration LONG_POLL_SEND_REFRESH_TIME = Duration.ofMillis(200);
+    private static final Duration KEEP_ALIVE_SAFETY_BUFFER_TIME = Duration.ofSeconds(10);
 
     private static final String POLL_DATABUS_EMPTY_HEADER = "X-BV-Databus-Empty";
 
@@ -125,7 +125,7 @@ public class DatabusResourcePoller {
                 if (_lastRunTime > 0) {
                     // Record any delay between when we *expected* to run and when we actually ran. This should help
                     // detect overloaded thread pools which, in turn, may lead to timeouts.
-                    _pollingThreadDelayHistogram.update(System.currentTimeMillis() - _lastRunTime - LONG_POLL_RETRY_TIME.getMillis());
+                    _pollingThreadDelayHistogram.update(System.currentTimeMillis() - _lastRunTime - LONG_POLL_RETRY_TIME.toMillis());
                 }
                 if (_pollingActive) {
                     boolean pollFailed = false;
@@ -146,7 +146,7 @@ public class DatabusResourcePoller {
                     // Go ahead and output the response if we either 1.) find events to output, 2.) exceed our time
                     // limit, or 3.) received an exception during the last poll
                     if (result.getEventIterator().hasNext()
-                            || (System.currentTimeMillis() + LONG_POLL_RETRY_TIME.getMillis()) >= _longPollStopTime
+                            || (System.currentTimeMillis() + LONG_POLL_RETRY_TIME.toMillis()) >= _longPollStopTime
                             || pollFailed) {
                         // Lock the context before writing the response to ensure that the KeepAliveRunnable doesn't
                         // insert bad data into the middle of it
@@ -163,7 +163,7 @@ public class DatabusResourcePoller {
                         if (result.hasMoreEvents()) {
                             _pollingExecutorService.execute(this);
                         } else {
-                            _pollingExecutorService.schedule(this, LONG_POLL_RETRY_TIME.getMillis(), TimeUnit.MILLISECONDS);
+                            _pollingExecutorService.schedule(this, LONG_POLL_RETRY_TIME.toMillis(), TimeUnit.MILLISECONDS);
                         }
                         rescheduled = true;
                     }
@@ -189,7 +189,7 @@ public class DatabusResourcePoller {
 
         private final AsyncContext _asyncContext;
         private volatile boolean _keepAliveRequired = true;
-        private DateTime _keepAliveStopTime;
+        private Instant _keepAliveStopTime;
         private DatabusPollRunnable _databusPollRunnable;
         private long _lastRunTime = 0;
 
@@ -197,7 +197,7 @@ public class DatabusResourcePoller {
             _asyncContext = asyncContext;
             // Allow the keep-alive to run a little longer than the anticipated long-poll cutoff just to be sure that we
             // don't disconnect prematurely in cases where the poll() call takes longer than expected.
-            _keepAliveStopTime = new DateTime(longPollStopTime).plus(KEEP_ALIVE_SAFETY_BUFFER_TIME.getMillis());
+            _keepAliveStopTime = Instant.ofEpochMilli(longPollStopTime).plus(KEEP_ALIVE_SAFETY_BUFFER_TIME);
         }
 
         public void setDatabusPollRunnable(DatabusPollRunnable databusPollRunnable) {
@@ -213,7 +213,7 @@ public class DatabusResourcePoller {
             if (_lastRunTime > 0) {
                 // Record any delay between when we *expected* to run and when we actually ran. This should help
                 // detect overloaded thread pools which, in turn, may lead to timeouts.
-                _keepAliveThreadDelayHistogram.update(System.currentTimeMillis() - _lastRunTime - LONG_POLL_SEND_REFRESH_TIME.getMillis());
+                _keepAliveThreadDelayHistogram.update(System.currentTimeMillis() - _lastRunTime - LONG_POLL_SEND_REFRESH_TIME.toMillis());
             }
             // Lock the context before writing to the response to ensure that we don't insert data into it while the
             // DatabusPollRunnable is also writing
@@ -222,11 +222,11 @@ public class DatabusResourcePoller {
                 // (note that we also cancel out if a certain length of time is exceeded - normally we would rely on the
                 // DatabusPollRunnable to kill this Runnable, but this timer serves as a safety blanket in case that job
                 // quits unexpectedly)
-                if (_keepAliveRequired && _keepAliveStopTime.isAfterNow()) {
+                if (_keepAliveRequired && _keepAliveStopTime.isAfter(Instant.now())) {
                     try {
                         sendClientRefresh((HttpServletResponse) _asyncContext.getResponse());
                         _lastRunTime = System.currentTimeMillis();
-                        _keepAliveExecutorService.schedule(this, LONG_POLL_SEND_REFRESH_TIME.getMillis(), TimeUnit.MILLISECONDS);
+                        _keepAliveExecutorService.schedule(this, LONG_POLL_SEND_REFRESH_TIME.toMillis(), TimeUnit.MILLISECONDS);
                     } catch (Exception ex) {
                         _log.error("Failed to send a keep-alive message to the client");
 
@@ -269,7 +269,7 @@ public class DatabusResourcePoller {
         try {
             // Calculate when the request should internally time out (do this before our first poll() request because we
             // want that to count toward our total run-time)
-            long longPollStopTime = System.currentTimeMillis() + MAX_LONG_POLL_TIME.getMillis();
+            long longPollStopTime = System.currentTimeMillis() + MAX_LONG_POLL_TIME.toMillis();
 
             // Always issue a synchronous request at the start . . this will allow us to bypass our thread pool logic
             // altogether in cases where we might return the value immediately (see more below). There is a danger here
@@ -330,7 +330,7 @@ public class DatabusResourcePoller {
             // - Kick off two recurring jobs, one to poll for events and another to keep the connection to the client alive.
             // Note that we start the keep-alive immediately since we've already taken time above to run an initial poll()
             // request; likewise, we delay before we run another poll() so that we don't run two in immediate succession.
-            _pollingExecutorService.schedule(pollingRunnable, LONG_POLL_RETRY_TIME.getMillis(), TimeUnit.MILLISECONDS);
+            _pollingExecutorService.schedule(pollingRunnable, LONG_POLL_RETRY_TIME.toMillis(), TimeUnit.MILLISECONDS);
             _keepAliveExecutorService.schedule(keepAliveRunnable, 0, TimeUnit.MILLISECONDS);
             jobsScheduled = true;
 

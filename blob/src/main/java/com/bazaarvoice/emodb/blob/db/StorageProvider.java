@@ -2,10 +2,10 @@ package com.bazaarvoice.emodb.blob.db;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.table.db.Table;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 

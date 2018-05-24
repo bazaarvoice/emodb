@@ -29,9 +29,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;

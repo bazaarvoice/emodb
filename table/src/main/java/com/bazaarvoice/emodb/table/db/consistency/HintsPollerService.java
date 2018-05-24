@@ -9,11 +9,11 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -27,10 +27,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class HintsPollerService extends AbstractScheduledService {
     private static final Logger _log = LoggerFactory.getLogger(HintsPollerService.class);
 
-    private static final Duration POLL_INTERVAL = Duration.standardMinutes(5);
+    private static final Duration POLL_INTERVAL = Duration.ofMinutes(5);
 
     @VisibleForTesting
-    protected static final Duration CASSANDRA_RPC_TIMEOUT = Duration.standardSeconds(10);
+    protected static final Duration CASSANDRA_RPC_TIMEOUT = Duration.ofSeconds(10);
 
     private final String _clusterName;
     private final ValueStore<Long> _timestamp;
@@ -54,7 +54,7 @@ public class HintsPollerService extends AbstractScheduledService {
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -74,7 +74,7 @@ public class HintsPollerService extends AbstractScheduledService {
         //   time_no_hints_reported - 2 * rpc_timeout_in_ms (property in cassandra for rpc timeouts)
         // Where rpc_timeout_in_ms is configured to 10 seconds.
         // Ideally, we would get this value by querying Cassandra instead of hard-coding it here.
-        long timestamp = System.currentTimeMillis() - (CASSANDRA_RPC_TIMEOUT.getMillis() * 2);
+        long timestamp = System.currentTimeMillis() - (CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
 
         HintsPollerResult oldestHintsInfo = _clusterHintsPoller.getOldestHintsInfo(_cqlSession);
 
@@ -101,7 +101,7 @@ public class HintsPollerService extends AbstractScheduledService {
 
         // If there are any hints, take the oldest hint timestamp else go with the current timestamp
         if (oldestHintTimeInRing.isPresent()) {
-            timestamp = oldestHintTimeInRing.get() - (CASSANDRA_RPC_TIMEOUT.getMillis() * 2);
+            timestamp = oldestHintTimeInRing.get() - (CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
         }
 
         // Update ZooKeeper with the poll time.

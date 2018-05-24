@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.ddl;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
+import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -29,7 +30,6 @@ import org.apache.cassandra.thrift.CfDef;
 import org.apache.cassandra.thrift.KsDef;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,6 +38,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +61,7 @@ import static java.lang.String.format;
 public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfiguration> {
     private static final Logger _log = LoggerFactory.getLogger(CreateKeyspacesCommand.class);
 
-    private static final Duration LOCK_ACQUIRE_TIMEOUT = Duration.standardSeconds(5);
+    private static final Duration LOCK_ACQUIRE_TIMEOUT = Duration.ofSeconds(5);
     private static final int HR = 100;
     private static Validator _validator = Validation.buildDefaultValidatorFactory().getValidator();
 
@@ -118,7 +119,7 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
 
     public static DdlConfiguration parseDdlConfiguration(File file) throws IOException, ConfigurationException {
         // Similar to Dropwizard's ConfigurationFactory but ignores System property overrides.
-        ObjectMapper mapper = CustomJsonObjectMapperFactory.build(new YAMLFactory());
+        ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true);
         DdlConfiguration ddlConfiguration = mapper.readValue(file, DdlConfiguration.class);
 
@@ -205,14 +206,14 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
         final InterProcessMutex mutex = new InterProcessMutex(curator, mutexPath);
         try {
             // try to acquire mutex for index within flush period
-            if (mutex.acquire(LOCK_ACQUIRE_TIMEOUT.getMillis(), TimeUnit.MILLISECONDS)) {
+            if (mutex.acquire(LOCK_ACQUIRE_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)) {
                 try {
                     work.run();
                 } finally {
                     mutex.release();
                 }
             } else {
-                _log.warn("could not acquire index lock after {} millis!!", LOCK_ACQUIRE_TIMEOUT.getMillis());
+                _log.warn("could not acquire index lock after {} millis!!", LOCK_ACQUIRE_TIMEOUT.toMillis());
             }
         } catch (Exception e) {
             throw Throwables.propagate(e);

@@ -9,8 +9,8 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -26,7 +26,7 @@ public class ScanOptions {
 
     private final static int DEFAULT_MAX_CONCURRENT_SUB_RANGE_SCANS = 4;
     private final static int DEFAULT_RANGE_SCAN_SPLIT_SIZE = 1000000;
-    private final static Duration DEFAULT_MAX_RANGE_SCAN_TIME = Duration.standardMinutes(10);
+    private final static Duration DEFAULT_MAX_RANGE_SCAN_TIME = Duration.ofMinutes(10);
 
     private final Set<String> _placements;
     private final Set<ScanDestination> _destinations = Sets.newHashSet();
@@ -72,7 +72,7 @@ public class ScanOptions {
             _rangeScanSplitSize = rangeScanSplitSize;
         }
         if (maxRangeScanTime != null) {
-            _maxRangeScanTime = Duration.millis(maxRangeScanTime);
+            _maxRangeScanTime = Duration.ofMillis(maxRangeScanTime);
         }
         if (compactionEnabled != null) {
             _compactionEnabled = compactionEnabled;
@@ -131,7 +131,7 @@ public class ScanOptions {
 
     @JsonProperty("maxRangeScanTime")
     public long getMaxRangeScanTimeMs() {
-        return _maxRangeScanTime.getMillis();
+        return _maxRangeScanTime.toMillis();
     }
 
     @JsonIgnore
@@ -141,7 +141,7 @@ public class ScanOptions {
 
     public ScanOptions setMaxRangeScanTime(Duration maxRangeScanTime) {
         checkNotNull(maxRangeScanTime, "maxRangeScanTime");
-        checkArgument(maxRangeScanTime.isLongerThan(Duration.ZERO), "Duration must not be empty");
+        checkArgument(maxRangeScanTime.compareTo(Duration.ZERO) > 0, "Duration must not be empty");
         _maxRangeScanTime = maxRangeScanTime;
         return this;
     }

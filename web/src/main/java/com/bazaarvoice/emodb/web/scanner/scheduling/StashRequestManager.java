@@ -6,10 +6,11 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequestDAO;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -36,37 +37,37 @@ public class StashRequestManager {
         _clock = checkNotNull(clock, "clock");
     }
 
-    public void requestStashOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
+    public void requestStashOnOrAfter(String id, @Nullable Instant time, String requestedBy) {
         checkNotNull(id, "id");
         checkNotNull(requestedBy, "requestedBy");
 
         ScheduledDailyScanUpload scheduledScan = getAndValidateScan(id);
-        DateTime now = new DateTime(_clock.millis());
-        DateTime nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
+        Instant now = _clock.instant();
+        Instant nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
         if (nextExecutionTime.isBefore(now)) {
             throw new InvalidStashRequestException("Requested stash is in the past");
         }
 
-        String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
+        String scanId = scheduledScan.getScanIdFormat().format(nextExecutionTime.atZone(ZoneOffset.UTC));
         _stashRequestDAO.requestStash(scanId, new StashRequest(requestedBy, new Date(_clock.millis())));
     }
 
-    public void undoRequestForStashOnOrAfter(String id, @Nullable DateTime time, String requestedBy) {
+    public void undoRequestForStashOnOrAfter(String id, @Nullable Instant time, String requestedBy) {
         checkNotNull(id, "id");
         checkNotNull(requestedBy, "requestedBy");
 
         ScheduledDailyScanUpload scheduledScan = getAndValidateScan(id);
-        DateTime now = new DateTime(_clock.millis());
-        DateTime nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
+        Instant now = _clock.instant();
+        Instant nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
         if (nextExecutionTime.isBefore(now)) {
             throw new InvalidStashRequestException("Requested stash is in the past");
         }
 
-        String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
+        String scanId = scheduledScan.getScanIdFormat().format(nextExecutionTime.atZone(ZoneOffset.UTC));
         _stashRequestDAO.undoRequestStash(scanId, new StashRequest(requestedBy, new Date(_clock.millis())));
     }
 
-    public Set<StashRequest> getRequestsForStash(String id, @Nullable DateTime time) {
+    public Set<StashRequest> getRequestsForStash(String id, @Nullable Instant time) {
         checkNotNull(id, "id");
 
         ScheduledDailyScanUpload scheduledScan = _scheduledScans.get(id);
@@ -74,8 +75,8 @@ public class StashRequestManager {
             return ImmutableSet.of();
         }
 
-        DateTime nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
-        String scanId = scheduledScan.getScanIdFormat().print(nextExecutionTime);
+        Instant nextExecutionTime = scheduledScan.getNextExecutionTimeAfter(requestedTimeOrNow(time));
+        String scanId = scheduledScan.getScanIdFormat().format(nextExecutionTime.atZone(ZoneOffset.UTC));
         return _stashRequestDAO.getRequestsForStash(scanId);
     }
 
@@ -90,7 +91,7 @@ public class StashRequestManager {
         return scheduledScan;
     }
     
-    private DateTime requestedTimeOrNow(@Nullable DateTime time) {
-        return time != null ? time :  new DateTime(_clock.millis());
+    private Instant requestedTimeOrNow(@Nullable Instant time) {
+        return time != null ? time : _clock.instant();
     }
 }

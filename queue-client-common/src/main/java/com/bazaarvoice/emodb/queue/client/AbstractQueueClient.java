@@ -14,12 +14,12 @@ import com.bazaarvoice.emodb.queue.api.UnknownMoveException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.util.JSONWrappedObject;
 import com.google.common.collect.Iterables;
-import org.joda.time.Duration;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

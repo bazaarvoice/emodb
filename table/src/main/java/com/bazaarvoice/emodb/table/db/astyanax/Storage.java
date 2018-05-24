@@ -4,8 +4,8 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.google.common.base.Objects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
-import org.joda.time.DateTime;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -86,7 +86,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
     static final Attribute<String> PROMOTION_ID = Attribute.create("promotionId");
 
     /** Storage-level timestamp of when this mirror expires and should be dropped and purged. */
-    static final Attribute<DateTime> MIRROR_EXPIRES_AT = TimestampAttribute.create("mirrorExpiresAt");
+    static final Attribute<Instant> MIRROR_EXPIRES_AT = TimestampAttribute.create("mirrorExpiresAt");
 
     /** Storage-level marker to indicate the move is taking place as a placement level move. */
     static final Attribute<Boolean> IS_PLACEMENT_MOVE = Attribute.create("placementMove");
@@ -191,7 +191,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
      * Returns the most recent time that this storage transitioned to the specified state.  This does not
      * check whether the the storage is in the specified state right now.
      */
-    DateTime getTransitionedTimestamp(StorageState state) {
+    Instant getTransitionedTimestamp(StorageState state) {
         return state.getTransitionedAt(this);
     }
 
@@ -208,7 +208,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
         return destUuid != null ? find(getMirrors(), destUuid) : null;
     }
 
-    DateTime getMirrorExpiresAt() {
+    Instant getMirrorExpiresAt() {
         return get(MIRROR_EXPIRES_AT);
     }
 

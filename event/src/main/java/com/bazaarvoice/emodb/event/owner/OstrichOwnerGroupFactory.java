@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.event.owner;
 
 import com.google.common.util.concurrent.Service;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 
 /** Factory for {@link OwnerGroup} instances. */
 public interface OstrichOwnerGroupFactory {

@@ -10,12 +10,14 @@ import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -37,14 +39,14 @@ import static com.google.common.base.Preconditions.checkState;
 public class MaintenanceScheduler extends AbstractIdleService implements InvalidationListener {
     private static final Logger _log = LoggerFactory.getLogger(MaintenanceScheduler.class);
 
-    private static final Duration ACQUIRE_TIMEOUT = Duration.standardMinutes(5);
+    private static final Duration ACQUIRE_TIMEOUT = Duration.ofMinutes(5);
 
     /**
      * When maintenance fails, wait an hour before trying again.  We're generally not in a big hurry for maintenance
      * to complete and an hour is long enough that the underlying failure cause may have cleared up (eg. high load,
      * data center partition) and it's slow enough that we shouldn't spam the logs with zillions of exceptions.
      */
-    private static final Duration RETRY_DELAY = Duration.standardHours(1);
+    private static final Duration RETRY_DELAY = Duration.ofHours(1);
 
     private static final ThreadFactory _threadFactory =
             new ThreadFactoryBuilder().setNameFormat("TableMaintenance-%d").build();
@@ -138,7 +140,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
                     finishTask();
                 }
             }
-        }, Math.max(0, op.getWhen().getMillis() - System.currentTimeMillis()), TimeUnit.MILLISECONDS);
+        }, Math.max(0, Instant.now().until(op.getWhen(), ChronoUnit.MILLIS)), TimeUnit.MILLISECONDS);
         _scheduledTasks.put(table, task);
     }
 
@@ -209,7 +211,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
             thread.setName(oldThreadName);
         }
         if (reschedule) {
-            scheduleTask(table, MaintenanceOp.reschedule(op, new DateTime().plus(RETRY_DELAY)));
+            scheduleTask(table, MaintenanceOp.reschedule(op, Instant.now().plus(RETRY_DELAY)));
         }
     }
 

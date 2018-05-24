@@ -2,9 +2,9 @@ package com.bazaarvoice.emodb.event.api;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Multimap;
-import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;

@@ -21,12 +21,12 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -41,7 +41,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DefaultEventStore implements EventStore {
     private static final Logger _log = LoggerFactory.getLogger(DefaultEventStore.class);
 
-    private static final Duration DELETE_CLAIM_TTL = Duration.millis(25);
+    private static final Duration DELETE_CLAIM_TTL = Duration.ofMillis(25);
     private static final int MAX_COPY_LIMIT = 1000;
 
     // Don't log system channels--they floods the logs and drown out what's usually interesting, especially w/"__system_bus:master".
@@ -275,7 +275,7 @@ public class DefaultEventStore implements EventStore {
         checkNotNull(eventIds, "eventIds");
         checkClaimTtl(claimTtl);
 
-        if (eventIds.isEmpty() || (extendOnly && claimTtl.getMillis() == 0)) {
+        if (eventIds.isEmpty() || (extendOnly && claimTtl.isZero())) {
             return;
         }
 
@@ -296,7 +296,7 @@ public class DefaultEventStore implements EventStore {
                 claims.renewAll(toClaimIds(eventIdObjects), claimTtl, extendOnly);
 
                 // If the claim TTL is zero then renewing these events effectively makes them available again immediately
-                if (claimTtl.getMillis() == 0) {
+                if (claimTtl.isZero()) {
                     markUnread(channel, eventIdObjects);
                 }
 
@@ -484,13 +484,13 @@ public class DefaultEventStore implements EventStore {
     }
 
     private boolean claim(@Nullable ClaimSet claims, EventId eventId, Duration claimTtl) {
-        return claims == null || (claimTtl.getMillis() == 0 ?
+        return claims == null || (claimTtl.isZero() ?
                 !claims.isClaimed(eventId.array()) :
                 claims.acquire(eventId.array(), claimTtl));
     }
 
     private void unclaim(@Nullable ClaimSet claims, EventId eventId, Duration originalClaimTtl) {
-        if (claims != null && originalClaimTtl.getMillis() > 0) {
+        if (claims != null && originalClaimTtl.toMillis() > 0) {
             claims.renew(eventId.array(), Duration.ZERO, false);
         }
     }
@@ -536,8 +536,8 @@ public class DefaultEventStore implements EventStore {
     }
 
     private void checkClaimTtl(Duration claimTtl) {
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
-        checkArgument(claimTtl.getMillis() <= Limits.MAX_CLAIM_TTL.getMillis(), "ClaimTtl must be <=1 hour");
+        checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.toMillis() <= Limits.MAX_CLAIM_TTL.toMillis(), "ClaimTtl must be <=1 hour");
     }
 
     private void checkLimit(long limit, long max) {

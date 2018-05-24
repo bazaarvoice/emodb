@@ -2,10 +2,10 @@ package com.bazaarvoice.emodb.sor.client;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.PeekingIterator;
-import org.joda.time.Duration;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -69,7 +69,7 @@ public class TimeLimitedIteratorTest {
     public void testExpirationTime() {
         long start = System.currentTimeMillis();
         Iterator<Long> unlimitedIter = countForever();
-        PeekingIterator<Long> limitedIter = TimeLimitedIterator.create(unlimitedIter, Duration.millis(10), 0);
+        PeekingIterator<Long> limitedIter = TimeLimitedIterator.create(unlimitedIter, Duration.ofMillis(10), 0);
         long previous = -1;
         while (limitedIter.hasNext()) {
             long next = limitedIter.next();

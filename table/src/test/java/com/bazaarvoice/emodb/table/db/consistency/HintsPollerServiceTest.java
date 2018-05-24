@@ -39,7 +39,7 @@ public class HintsPollerServiceTest {
             e.printStackTrace();
         }
 
-        long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.getMillis() * 2);
+        long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
         assertEquals((long) hintsPollerService.getTimestamp().get(), expectedTimestamp);
     }
 
@@ -62,7 +62,7 @@ public class HintsPollerServiceTest {
             e.printStackTrace();
         }
 
-        long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.getMillis() * 2);
+        long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
         assertEquals((long) hintsPollerService.getTimestamp().get(), expectedTimestamp);
     }
 
@@ -94,7 +94,7 @@ public class HintsPollerServiceTest {
 
         ValueStore<Long> timestamp = new TestValueStore<>();
         // Since no hints were found, we should expect the hints poll time to get updated to some time later than this timestamp
-        long baseTime = System.currentTimeMillis() - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.getMillis() * 2);
+        long baseTime = System.currentTimeMillis() - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
 
         HintsPollerService hintsPollerService = new HintsPollerService("emo-cluster", timestamp, _session, clusterHintsPoller, new MetricRegistry());
         try {

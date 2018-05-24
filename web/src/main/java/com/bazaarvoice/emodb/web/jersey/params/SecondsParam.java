@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.web.jersey.params;
 
 import io.dropwizard.jersey.params.AbstractParam;
-import org.joda.time.Duration;
+
+import java.time.Duration;
 
 public class SecondsParam extends AbstractParam<Duration> {
 
@@ -16,6 +17,6 @@ public class SecondsParam extends AbstractParam<Duration> {
 
     @Override
     protected Duration parse(String input) {
-        return Duration.standardSeconds(Integer.valueOf(input));
+        return Duration.ofSeconds(Integer.valueOf(input));
     }
 }

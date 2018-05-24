@@ -3,16 +3,15 @@ package com.bazaarvoice.emodb.databus.core;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.databus.ChannelNames;
-import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +24,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SystemQueueMonitor extends AbstractScheduledService {
     private static final Logger _log = LoggerFactory.getLogger(SystemQueueMonitor.class);
 
-    private static final Duration POLL_INTERVAL = Duration.standardMinutes(1);
+    private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
 
     private final DatabusEventStore _eventStore;
     private final DataCenters _dataCenters;
@@ -48,7 +47,7 @@ public class SystemQueueMonitor extends AbstractScheduledService {
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override

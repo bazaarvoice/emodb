@@ -13,10 +13,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -322,8 +322,8 @@ class TableJson extends JsonMap {
     }
 
     Delta newNextState(String storageUuid, StorageState state, Object markerValue) {
-        if (markerValue instanceof DateTime) {
-            markerValue = TimestampAttribute.format((DateTime) markerValue);
+        if (markerValue instanceof Instant) {
+            markerValue = TimestampAttribute.format((Instant) markerValue);
         }
         // Uses conditional deltas to avoid accidentally creating/resurrecting storage objects.
         return Deltas.mapBuilder()

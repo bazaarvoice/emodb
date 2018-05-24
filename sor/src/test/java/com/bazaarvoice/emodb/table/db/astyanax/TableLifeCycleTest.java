@@ -37,9 +37,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.fest.assertions.api.Assertions;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Instant;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -49,6 +46,8 @@ import org.testng.annotations.Test;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -177,9 +176,9 @@ public class TableLifeCycleTest {
         String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
 
         // Drop the table
-        DateTime start = new DateTime();
+        Instant start = Instant.now();
         tableDAO.drop(TABLE, newAudit());
-        DateTime end = new DateTime();
+        Instant end = Instant.now();
 
         TableJson table = tableDAO.readTableJson(TABLE, false);
         assertNull(tableDAO.tableFromJson(table));
@@ -193,7 +192,7 @@ public class TableLifeCycleTest {
         assertNull(table.getMasterStorage());
         assertEquals(table.getFacades().size(), 0);
         Storage storage = checkNotNull(getStorage(table, uuid));
-        DateTime droppedAt = storage.getTransitionedTimestamp(DROPPED);
+        Instant droppedAt = storage.getTransitionedTimestamp(DROPPED);
         assertEquals(storage.getUuidString(), uuid);
         assertEquals(storage.getState(), DROPPED);
         assertEquals(storage.getRawJson(), ImmutableMap.of(
@@ -213,7 +212,7 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
         tableDAO.drop(TABLE, newAudit());
-        DateTime droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), uuid)
+        Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), uuid)
                 .getTransitionedTimestamp(DROPPED);
 
         // Before the elapsed time has passed, doing maintenance shouldn't change anything.
@@ -221,7 +220,7 @@ public class TableLifeCycleTest {
         assertNoopDataMaintenance(backingStore, DC_US, TABLE);
 
         // Do maintenance from the US.  It should do the initial purge of the data.
-        DateTime purgedAt1;
+        Instant purgedAt1;
         {
             // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
             droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_1);
@@ -237,9 +236,9 @@ public class TableLifeCycleTest {
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Did we mark the purge as having occurred?
             TableJson table = tableDAO.readTableJson(TABLE, false);
@@ -262,7 +261,7 @@ public class TableLifeCycleTest {
         assertNoopDataMaintenance(backingStore, DC_US, TABLE);
 
         // Do maintenance from the US.  It should do the final purge of the data.
-        DateTime purgedAt2;
+        Instant purgedAt2;
         {
             // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
             droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_2);
@@ -279,12 +278,12 @@ public class TableLifeCycleTest {
             } catch (FullConsistencyException e) {
                 // Expected
             }
-            fct.setTime(droppedAt.getMillis() + 1);
+            fct.setTime(droppedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             TableJson table = tableDAO.readTableJson(TABLE, false);
             Storage storage = checkNotNull(getStorage(table, uuid));
@@ -329,9 +328,9 @@ public class TableLifeCycleTest {
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
 
             // Next do metadata maintenance from the US.  It should delete the table metadata.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Is all the data gone?
             TableJson table = tableDAO.readTableJson(TABLE, false);
@@ -340,7 +339,7 @@ public class TableLifeCycleTest {
             assertNull(table.getRawJson().get("uuid"));
             assertNull(table.getRawJson().get("attributes"));
             assertNull(table.getRawJson().get("storage"));
-            assertBetween(start, new DateTime(Intrinsic.getLastUpdateAt(table.getRawJson())), end);
+            assertBetween(start, Intrinsic.getLastUpdateAt(table.getRawJson()).toInstant(), end);
         }
     }
 
@@ -357,12 +356,12 @@ public class TableLifeCycleTest {
         String euUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
 
         // Drop a facade
-        DateTime start = new DateTime();
+        Instant start = Instant.now();
         tableDAO.dropFacade(TABLE, PL_US, newAudit());
-        DateTime end = new DateTime();
+        Instant end = Instant.now();
 
         table = tableDAO.readTableJson(TABLE, false);
-        DateTime droppedAt = checkNotNull(getStorage(table, usUuid).getTransitionedTimestamp(DROPPED));
+        Instant droppedAt = checkNotNull(getStorage(table, usUuid).getTransitionedTimestamp(DROPPED));
 
         // Verify top-level attributes.
         assertEquals(table.getUuidString(), masterUuid);
@@ -415,14 +414,14 @@ public class TableLifeCycleTest {
         String masterUuid = checkNotNull(table.getUuidString());
         String facadeUuid = checkNotNull(table.getFacadeForPlacement(PL_US).getUuidString());
         tableDAO.dropFacade(TABLE, PL_US, newAudit());
-        DateTime droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), facadeUuid).getTransitionedTimestamp(DROPPED);
+        Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), facadeUuid).getTransitionedTimestamp(DROPPED);
 
         // Before the elapsed time has passed, doing maintenance shouldn't change anything.
         assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
         assertNoopDataMaintenance(backingStore, DC_US, TABLE);
 
         // Do maintenance from the US.  It should do the initial purge of the data.
-        DateTime purgedAt1;
+        Instant purgedAt1;
         {
             // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
             droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_1);
@@ -438,9 +437,9 @@ public class TableLifeCycleTest {
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Did we mark the purge as having occurred?
             table = tableDAO.readTableJson(TABLE, false);
@@ -462,7 +461,7 @@ public class TableLifeCycleTest {
         assertNoopDataMaintenance(backingStore, DC_US, TABLE);
 
         // Do maintenance from the US.  It should do the final purge of the data.
-        DateTime purgedAt2;
+        Instant purgedAt2;
         {
             // Hack the table JSON to pretend the drop occurred long enough ago that now it's time to do the purge.
             droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_2);
@@ -471,12 +470,12 @@ public class TableLifeCycleTest {
             DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
-            fct.setTime(droppedAt.getMillis() + 1);
+            fct.setTime(droppedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             table = tableDAO.readTableJson(TABLE, false);
             Storage storage = getStorage(table, facadeUuid);
@@ -527,9 +526,9 @@ public class TableLifeCycleTest {
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
 
             // Next do metadata maintenance from the US.  It should delete the facade metadata.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Verify top-level attributes.
             table = tableDAO.readTableJson(TABLE, false);
@@ -544,7 +543,7 @@ public class TableLifeCycleTest {
                     "placement", PL_APAC,
                     "shards", 16));
             assertNull(getStorage(table, facadeUuid));
-            assertBetween(start, new DateTime(Intrinsic.getLastUpdateAt(table.getRawJson())), end);
+            assertBetween(start, Intrinsic.getLastUpdateAt(table.getRawJson()).toInstant(), end);
         }
     }
 
@@ -555,9 +554,9 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         String srcUuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
 
-        DateTime start = new DateTime();
+        Instant start = Instant.now();
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
-        DateTime end = new DateTime();
+        Instant end = Instant.now();
 
         TableJson table = tableDAO.readTableJson(TABLE, true);
         AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
@@ -629,9 +628,9 @@ public class TableLifeCycleTest {
         String masterUuid = checkNotNull(table.getUuidString());
         String srcUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
 
-        DateTime start = new DateTime();
+        Instant start = Instant.now();
         tableDAO.moveFacade(TABLE, PL_EU, PL_EU, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
-        DateTime end = new DateTime();
+        Instant end = Instant.now();
 
         table = tableDAO.readTableJson(TABLE, true);
         AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
@@ -696,15 +695,15 @@ public class TableLifeCycleTest {
         TableJson table = tableDAO.readTableJson(TABLE, true);
         String srcUuid = table.getMasterStorage().getUuidString();
         String destUuid = table.getMasterStorage().getMoveTo().getUuidString();
-        DateTime mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
-        DateTime mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+        Instant mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
+        Instant mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
 
         // Before the elapsed time has passed, doing maintenance shouldn't change anything.
         assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
         assertNoopDataMaintenance(backingStore, DC_US, TABLE);
 
         // Do maintenance from the US.  It should copy the data.
-        DateTime mirrorCopiedAt;
+        Instant mirrorCopiedAt;
         {
             // Hack the table JSON to pretend the move started long enough ago that now it's time to do the copy.
             mirrorActivatedAt = mirrorActivatedAt.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
@@ -726,12 +725,12 @@ public class TableLifeCycleTest {
             } catch (FullConsistencyException e) {
                 // Expected
             }
-            fct.setTime(mirrorActivatedAt.getMillis() + 1);
+            fct.setTime(mirrorActivatedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the copy and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Did we mark the copy as having occurred?
             table = tableDAO.readTableJson(TABLE, true);
@@ -757,7 +756,7 @@ public class TableLifeCycleTest {
         }
 
         // Do maintenance from the US.  It should mark the mirror consistent.
-        DateTime mirrorConsistentAt;
+        Instant mirrorConsistentAt;
         {
             // Hack the table JSON to pretend the copy started long enough ago that now it's time to check consistency.
             mirrorCopiedAt = mirrorCopiedAt.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
@@ -779,12 +778,12 @@ public class TableLifeCycleTest {
             } catch (FullConsistencyException e) {
                 // Expected
             }
-            fct.setTime(mirrorCopiedAt.getMillis() + 1);
+            fct.setTime(mirrorCopiedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should mark the mirror consistent and nothing else.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Did we mark things as being consistent?
             table = tableDAO.readTableJson(TABLE, true);
@@ -806,15 +805,15 @@ public class TableLifeCycleTest {
 
         // Do maintenance from the US.  It should promote the mirror and flip the primary & mirror relationship.
         UUID promotionId;
-        DateTime primaryAt;
+        Instant primaryAt;
         {
             // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
             mirrorConsistentAt = mirrorConsistentAt.minus(AstyanaxTableDAO.MIN_DELAY);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", destUuid), mirrorConsistentAt);
 
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             table = tableDAO.readTableJson(TABLE, true);
 
@@ -849,7 +848,7 @@ public class TableLifeCycleTest {
                     .put("shards", 16)
                     .put("moveTo", destUuid) // The old moveTo attribute are ignored since this is a mirror, but kept to facilitate debugging.
                     .build());
-            assertBetween(start, new DateTime(TimeUUIDs.getDate(promotionId)), end);
+            assertBetween(start, TimeUUIDs.getDate(promotionId).toInstant(), end);
             assertBetween(start, primaryAt, end);
 
             // Verify that read/write mirroring is going to the right place.
@@ -864,15 +863,15 @@ public class TableLifeCycleTest {
         }
 
         // Do maintenance from the US.  It should set the expiration timestamp on the old primary.
-        DateTime mirrorExpiresAt;
+        Instant mirrorExpiresAt;
         {
             // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
             primaryAt = primaryAt.minus(AstyanaxTableDAO.MIN_DELAY);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.primaryAt", destUuid), primaryAt);
 
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             table = tableDAO.readTableJson(TABLE, true);
 
@@ -920,15 +919,15 @@ public class TableLifeCycleTest {
         }
 
         // Do maintenance when the mirror expires.  It should drop the src table uuid.
-        DateTime mirrorExpiredAt, droppedAt;
+        Instant mirrorExpiredAt, droppedAt;
         {
             // Hack the table JSON to pretend the move copy finished long enough ago that now it's time to do the flip.
             mirrorExpiresAt = mirrorExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid), mirrorExpiresAt);
 
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             table = tableDAO.readTableJson(TABLE, true);
             AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
@@ -987,8 +986,8 @@ public class TableLifeCycleTest {
         TableJson table = tableDAO.readTableJson(TABLE, true);
         String srcUuid = checkNotNull(table.getUuidString());
         String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
-        DateTime mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
-        DateTime mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+        Instant mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
+        Instant mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
 
         {
             // Cancel the move by executing a new move that takes us back to the original settings.
@@ -1028,19 +1027,19 @@ public class TableLifeCycleTest {
             assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid());
 
             // Verify that the next step in the move was scheduled as expected.
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
             assertMaintenance(maintenanceOp, "Move:expire-mirror", MaintenanceType.METADATA, "<system>");
             assertBetween(start, maintenanceOp.getWhen(), end);
         }
 
         // Do maintenance and make sure the abandoned mirror gets dropped
-        DateTime mirrorExpiredAt, droppedAt;
+        Instant mirrorExpiredAt, droppedAt;
         {
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             table = tableDAO.readTableJson(TABLE, true);
             AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
@@ -1100,11 +1099,11 @@ public class TableLifeCycleTest {
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
 
         // Here lies the test!! Cancel the move by executing a new move that takes us back to the original settings.
-        DateTime mirrorConsistentAt;
+        Instant mirrorConsistentAt;
         {
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.move(TABLE, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Verify top-level attributes.
             table = tableDAO.readTableJson(TABLE, true);
@@ -1144,14 +1143,14 @@ public class TableLifeCycleTest {
         }
 
         // We need one step of maintenance for the move to actually take effect.
-        DateTime primaryAt;
+        Instant primaryAt;
         {
             mirrorConsistentAt = mirrorConsistentAt.minus(AstyanaxTableDAO.MIN_DELAY);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", srcUuid), mirrorConsistentAt);
 
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Verify top-level attributes.
             table = tableDAO.readTableJson(TABLE, true);
@@ -1174,10 +1173,10 @@ public class TableLifeCycleTest {
                     .put("promotionId", promotionId.toString())
                     .put("primaryAt", formatTimestamp(primaryAt))
                     .build());
-            assertBetween(start, new DateTime(TimeUUIDs.getDate(promotionId)), end);
+            assertBetween(start, TimeUUIDs.getDate(promotionId).toInstant(), end);
             assertBetween(start, primaryAt, end);
 
-            DateTime mirrorDemotedAt = dest.getTransitionedTimestamp(MIRROR_DEMOTED);
+            Instant mirrorDemotedAt = dest.getTransitionedTimestamp(MIRROR_DEMOTED);
             assertEquals(dest.getState(), MIRROR_DEMOTED);
             assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
                     .put("placement", PL_GLOBAL)
@@ -1278,9 +1277,9 @@ public class TableLifeCycleTest {
         String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
 
         // Execute a new move that supersedes the old move.
-        DateTime start = new DateTime();
+        Instant start = Instant.now();
         tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
-        DateTime end = new DateTime();
+        Instant end = Instant.now();
 
         table = tableDAO.readTableJson(TABLE, true);
 
@@ -1387,7 +1386,7 @@ public class TableLifeCycleTest {
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
 
         // Here lies the test!! Cancel the move by executing a new move that takes us to a 3rd set of settings.
-        DateTime srcExpiresAt;
+        Instant srcExpiresAt;
         String newDestUuid;
         {
             // Schedule a new move.
@@ -1446,7 +1445,7 @@ public class TableLifeCycleTest {
             assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid(), newDest.getUuid());
         }
 
-        DateTime destExpiresAt;
+        Instant destExpiresAt;
         {
             // Hack the table JSON to get to the state where second promotion has occurred.
             advanceActivatedToPromoted(newDestUuid, tableDAO, backingStore, fct);
@@ -1510,9 +1509,9 @@ public class TableLifeCycleTest {
             srcExpiresAt = srcExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid), srcExpiresAt);
 
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Verify storage-level attributes.
             table = tableDAO.readTableJson(TABLE, true);
@@ -1523,8 +1522,8 @@ public class TableLifeCycleTest {
             Storage src = checkNotNull(getStorage(table, srcUuid));
             Storage dest = checkNotNull(getStorage(table, destUuid));
             Storage newDest = checkNotNull(getStorage(table, newDestUuid));
-            DateTime mirrorExpiredAt = src.getTransitionedTimestamp(MIRROR_EXPIRED);
-            DateTime droppedAt = src.getTransitionedTimestamp(DROPPED);
+            Instant mirrorExpiredAt = src.getTransitionedTimestamp(MIRROR_EXPIRED);
+            Instant droppedAt = src.getTransitionedTimestamp(DROPPED);
             assertEquals(src.getState(), DROPPED);
             assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
                     .put("placement", PL_US)
@@ -1543,16 +1542,16 @@ public class TableLifeCycleTest {
 
         {
             // Hack the table JSON to get to the state where the original source is deleted, original dest expires.
-            DateTime purgedAt = new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            Instant purgedAt = Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
             destExpiresAt = destExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", srcUuid), purgedAt);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", destUuid), destExpiresAt);
 
             // Perform maintenance twice.  One will delete the original source, the other will drop the original dest. (Order is unspecified.)
-            DateTime start = new DateTime();
+            Instant start = Instant.now();
             tableDAO.performMetadataMaintenance(TABLE);
             tableDAO.performMetadataMaintenance(TABLE);
-            DateTime end = new DateTime();
+            Instant end = Instant.now();
 
             // Verify storage-level attributes.
             table = tableDAO.readTableJson(TABLE, true);
@@ -1565,8 +1564,8 @@ public class TableLifeCycleTest {
 
             assertNull(src);
 
-            DateTime mirrorExpiredAt = dest.getTransitionedTimestamp(MIRROR_EXPIRED);
-            DateTime droppedAt = dest.getTransitionedTimestamp(DROPPED);
+            Instant mirrorExpiredAt = dest.getTransitionedTimestamp(MIRROR_EXPIRED);
+            Instant droppedAt = dest.getTransitionedTimestamp(DROPPED);
             assertEquals(dest.getState(), DROPPED);
             assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
                     .put("placement", PL_GLOBAL)
@@ -1591,7 +1590,7 @@ public class TableLifeCycleTest {
 
         {
             // Hack the table JSON to get to the state where the original dest is deleted.
-            DateTime purgedAt = new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+            Instant purgedAt = Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
             patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", destUuid), purgedAt);
 
             // Perform metadata maintenance to delete the original dest.
@@ -1801,12 +1800,12 @@ public class TableLifeCycleTest {
     @Test
     public void testListUnpublishedDatabusEvents()
             throws Exception {
-        DateTime from = DateTime.now();
-        DateTime to = DateTime.now().plusDays(1);
+        Instant from = Instant.now();
+        Instant to = Instant.now().plus(Duration.ofDays(1));
 
         final Clock clock = mock(Clock.class);
-        Instant nowInstant = from.toInstant().plus(Duration.standardMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
-        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        Instant nowInstant = from.plus(Duration.ofMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
+        when(clock.instant()).thenReturn(nowInstant);
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
 
         // create a table.
@@ -1819,12 +1818,12 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE, newAudit());
 
         // unpublished databus events should have the dropped table.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
         assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE));
         assertTrue(unpublishedDatabusEvent.getEventType().equals(UnpublishedDatabusEventType.DROP_TABLE));
-        assertEquals(unpublishedDatabusEvent.getDate().getMillis(), nowInstant.getMillis());
+        assertEquals(unpublishedDatabusEvent.getDate(), Date.from(nowInstant));
 
         // create a second table
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
@@ -1833,7 +1832,7 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE2, newAudit());
 
         // unpublished databus events should now have 2 tables.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator2.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent2 = unpublishedDatabusEventsIterator2.next();
         UnpublishedDatabusEvent unpublishedDatabusEvent3 = unpublishedDatabusEventsIterator2.next();
@@ -1844,7 +1843,7 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
 
         // unpublished databus events still should have 2 tables.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator3.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent4 = unpublishedDatabusEventsIterator3.next();
         UnpublishedDatabusEvent unpublishedDatabusEvent5 = unpublishedDatabusEventsIterator3.next();
@@ -1858,7 +1857,7 @@ public class TableLifeCycleTest {
         tableDAO.setAttributes(TABLE3, ImmutableMap.<String, Object>of("new-key", "new-value"), newAudit());
 
         // unpublished databus events should now have 3 tables.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator4 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator4 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator4.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent6 = unpublishedDatabusEventsIterator4.next();
         assertTrue(unpublishedDatabusEventsIterator4.hasNext());
@@ -1875,12 +1874,12 @@ public class TableLifeCycleTest {
     @Test
     public void testListUnpublishedDatabusEventsWithEventBeforeSpecifiedFromDate()
             throws Exception {
-        DateTime from = DateTime.now();
-        DateTime to = DateTime.now().plusDays(1);
+        Instant from = Instant.now();
+        Instant to = Instant.now().plus(Duration.ofDays(1));
 
         final Clock clock = mock(Clock.class);
-        Instant nowInstant = from.toInstant().minus(Duration.standardMinutes(1)); // make sure the drop event is before the specified "from" time.
-        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        Instant nowInstant = from.minus(Duration.ofMinutes(1)); // make sure the drop event is before the specified "from" time.
+        when(clock.instant()).thenReturn(nowInstant);
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
 
         // create a table.
@@ -1893,22 +1892,21 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE, newAudit());
 
         // unpublished databus events should NOT have the dropped table.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertFalse(unpublishedDatabusEventsIterator.hasNext());
     }
 
     @Test
     public void testListUnpublishedDatabusEventsWithDifferentTimesOnSameDay()
             throws Exception {
-        DateTime now = DateTime.now();
+        Instant now = Instant.now();
 
         final Clock clock = mock(Clock.class);
-        Instant nowInstant = now.toInstant();
-        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        when(clock.instant()).thenReturn(now);
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
 
-        DateTime from = now.minusMinutes(10);
-        DateTime to = now.plusMinutes(10);
+        Instant from = now.minus(Duration.ofMinutes(10));
+        Instant to = now.plus(Duration.ofMinutes(10));
 
         // create a table.
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
@@ -1920,28 +1918,28 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE, newAudit());
 
         // unpublished databus events should have the dropped table.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
         assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE));
 
         // changing to to fall before the drop event time.
-        to = now.minusMinutes(1);
+        to = now.minus(Duration.ofMinutes(1));
 
         // unpublished databus events should NOT have the dropped table.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertFalse(unpublishedDatabusEventsIterator2.hasNext());
     }
 
     @Test
     public void testListUnpublishedDatabusEventsWithEventsOnDifferentDays()
             throws Exception {
-        DateTime from = DateTime.now();
-        DateTime to = DateTime.now().plusDays(1);
+        Instant from = Instant.now();
+        Instant to = Instant.now().plus(Duration.ofDays(1));
 
         final Clock clock = mock(Clock.class);
-        Instant nowInstant = from.toInstant().plus(Duration.standardMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
-        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nowInstant.getMillis()));
+        Instant nowInstant = from.plus(Duration.ofMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
+        when(clock.instant()).thenReturn(nowInstant);
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
@@ -1954,14 +1952,14 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE1, newAudit());
 
         // unpublished databus events should have the dropped table.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
         assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE1));
 
         // Now set the clock is set to 1 days in advance.
-        Instant nextDayInstant = nowInstant.plus(Duration.standardDays(1));
-        when(clock.instant()).thenReturn(java.time.Instant.ofEpochMilli(nextDayInstant.getMillis()));
+        Instant nextDayInstant = nowInstant.plus(Duration.ofDays(1));
+        when(clock.instant()).thenReturn(nextDayInstant);
 
         // create a second table
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
@@ -1970,26 +1968,26 @@ public class TableLifeCycleTest {
         tableDAO.drop(TABLE2, newAudit());
 
         // unpublished databus events should only have TABLE1 information as the TABLE2 DROP was registered on the next day.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(from, to);
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator2 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
         assertTrue(unpublishedDatabusEventsIterator2.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent2 = unpublishedDatabusEventsIterator2.next();
         assertFalse(unpublishedDatabusEventsIterator2.hasNext());
         assertTrue(unpublishedDatabusEvent2.getTable().equals(TABLE1));
-        assertEquals(unpublishedDatabusEvent2.getDate().getMillis(), nowInstant.getMillis());
+        assertEquals(unpublishedDatabusEvent2.getDate(), Date.from(nowInstant));
 
         // Now query for 2 days with "to" advanced by a day.
         // unpublished databus events should have "two" records, one for each day.
         // Each record should have one table information.
-        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(from, to.plusDays(1));
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to.plus(Duration.ofDays(1))));
         assertTrue(unpublishedDatabusEventsIterator3.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent3 = unpublishedDatabusEventsIterator3.next();
         assertTrue(unpublishedDatabusEventsIterator3.hasNext());
         UnpublishedDatabusEvent unpublishedDatabusEvent4 = unpublishedDatabusEventsIterator3.next();
         List<String> expectedTables = Lists.newArrayList(unpublishedDatabusEvent3.getTable(), unpublishedDatabusEvent4.getTable());
-        List<Long> expectedDates = Lists.newArrayList(unpublishedDatabusEvent3.getDate().getMillis(), unpublishedDatabusEvent4.getDate().getMillis());
+        List<Long> expectedDates = Lists.newArrayList(unpublishedDatabusEvent3.getDate().getTime(), unpublishedDatabusEvent4.getDate().getTime());
         Assertions.assertThat(expectedTables).containsOnly(TABLE1, TABLE2);
-        assertTrue(expectedDates.contains(nowInstant.getMillis()));
-        assertTrue(expectedDates.contains(nextDayInstant.getMillis()));
+        assertTrue(expectedDates.contains(nowInstant.toEpochMilli()));
+        assertTrue(expectedDates.contains(nextDayInstant.toEpochMilli()));
     }
 
     //
@@ -2002,21 +2000,21 @@ public class TableLifeCycleTest {
         // MIRROR_ACTIVATED -> MIRROR_COPIED
         assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_ACTIVATED);
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorActivatedAt", destUuid),
-                new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+                Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
         fct.setTime(System.currentTimeMillis() + 1);
         tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
 
         // MIRROR_COPIED -> MIRROR_CONSISTENT
         assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_COPIED);
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorCopiedAt", destUuid),
-                new DateTime().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+                Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
         fct.setTime(System.currentTimeMillis() + 1);
         tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
 
         // MIRROR_CONSISTENT -> PRIMARY
         assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), destUuid).getState(), MIRROR_CONSISTENT);
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", destUuid),
-                new DateTime().minus(AstyanaxTableDAO.MIN_DELAY));
+                Instant.now().minus(AstyanaxTableDAO.MIN_DELAY));
         tableDAO.performMetadataMaintenance(TABLE);
 
         // Make sure the promote happened.
@@ -2024,7 +2022,7 @@ public class TableLifeCycleTest {
 
         // MIRROR_DEMOTED -> MIRROR_EXPIRING (for the old primary)
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.primaryAt", destUuid),
-                new DateTime().minus(AstyanaxTableDAO.MIN_DELAY));
+                Instant.now().minus(AstyanaxTableDAO.MIN_DELAY));
         tableDAO.performMetadataMaintenance(TABLE);
 
         // Check that all is in the expected final state.
@@ -2038,13 +2036,13 @@ public class TableLifeCycleTest {
 
         // MIRROR_EXPIRING -> DROPPED (for the old primary)
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid),
-                new DateTime().minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE));
+                Instant.now().minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE));
         tableDAO.performMetadataMaintenance(TABLE);
 
         // DROPPED -> PURGED_1/PURGED_2 (for the old primary)
         assertEquals(getStorage(tableDAO.readTableJson(TABLE, true), srcUuid).getState(), DROPPED);
         patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.droppedAt", srcUuid),
-                new DateTime().minus(AstyanaxTableDAO.DROP_TO_PURGE_1));
+                Instant.now().minus(AstyanaxTableDAO.DROP_TO_PURGE_1));
         tableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
     }
 
@@ -2080,13 +2078,13 @@ public class TableLifeCycleTest {
         verifyNoMoreInteractions(euDataCopyDAO, euDataPurgeDAO);
     }
 
-    private void assertBetween(DateTime start, DateTime actual, DateTime end) {
+    private void assertBetween(Instant start, Instant actual, Instant end) {
         assertBetween(start, actual, end, Duration.ZERO);
     }
 
-    private void assertBetween(DateTime start, DateTime actual, DateTime end, Duration offset) {
-        assertTrue(actual.compareTo(start.plus(offset)) >= 0, JsonHelper.formatTimestamp(actual.getMillis()));
-        assertTrue(actual.compareTo(end.plus(offset)) <= 0, JsonHelper.formatTimestamp(actual.getMillis()));
+    private void assertBetween(Instant start, Instant actual, Instant end, Duration offset) {
+        assertTrue(actual.compareTo(start.plus(offset)) >= 0, JsonHelper.formatTimestamp(actual.toEpochMilli()));
+        assertTrue(actual.compareTo(end.plus(offset)) <= 0, JsonHelper.formatTimestamp(actual.toEpochMilli()));
     }
 
     private void assertStorageUuids(Collection<AstyanaxStorage> storages, long... uuids) {
@@ -2120,7 +2118,7 @@ public class TableLifeCycleTest {
         return new AuditBuilder().build();
     }
 
-    private void patchTableJsonTimestamp(TableBackingStore backingStore, String table, String dotPath, DateTime when) {
+    private void patchTableJsonTimestamp(TableBackingStore backingStore, String table, String dotPath, Instant when) {
         Delta delta = Deltas.literal(formatTimestamp(when));
         for (String key : Lists.reverse(Arrays.asList(dotPath.split("\\.")))) {
             delta = Deltas.mapBuilder().update(key, delta).build();
@@ -2235,7 +2233,7 @@ public class TableLifeCycleTest {
         return null;
     }
 
-    private String formatTimestamp(DateTime timestamp) {
+    private String formatTimestamp(Instant timestamp) {
         return JsonMap.TimestampAttribute.format(checkNotNull(timestamp));
     }
 }

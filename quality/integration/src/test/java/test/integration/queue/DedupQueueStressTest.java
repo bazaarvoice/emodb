@@ -18,12 +18,12 @@ import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.logging.LoggingFactory;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
 import java.io.File;
+import java.time.Duration;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
@@ -128,7 +128,7 @@ public class DedupQueueStressTest {
     }
 
     private boolean read(String queue, int n) {
-        List<Message> messages = _queueService.poll(queue, Duration.standardSeconds(30), n);
+        List<Message> messages = _queueService.poll(queue, Duration.ofSeconds(30), n);
         int count = messages.size();
         if (count == 0) {
             _numIdle.incrementAndGet();

@@ -1,9 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import org.joda.time.Duration;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Date;
 
 /**

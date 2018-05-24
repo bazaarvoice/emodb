@@ -23,13 +23,13 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.inject.Inject;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -45,9 +45,9 @@ import static java.lang.String.format;
  * This class assumes that create/drop operations are protected/wrapped by {@link MutexTableDAO}.
  */
 public class CachingTableDAO implements TableDAO {
-    public static final Duration CACHE_DURATION = Duration.standardMinutes(10);
     // If a table is unknown cache that for a much shorter time to minimize the effect of invalidation delays
-    public static final Duration UNKNOWN_TABLE_RELOAD_DURATION = Duration.standardSeconds(2);
+    public static final Duration UNKNOWN_TABLE_RELOAD_DURATION = Duration.ofSeconds(2);
+    public static final Duration CACHE_DURATION = Duration.ofMinutes(10);
 
     private final TableDAO _delegate;
     private final LoadingCache<String, TableCacheEntry> _tableCache;
@@ -63,7 +63,7 @@ public class CachingTableDAO implements TableDAO {
         // The table cache maps table names to AstyanaxTable objects.
         _tableCache = CacheBuilder.newBuilder()
                 .ticker(ClockTicker.getTicker(clock))
-                .expireAfterWrite(CACHE_DURATION.getMillis(), TimeUnit.MILLISECONDS)
+                .expireAfterWrite(CACHE_DURATION.toMillis(), TimeUnit.MILLISECONDS)
                 .recordStats()
                 .build(new CacheLoader<String, TableCacheEntry>() {
                     @Override
@@ -72,7 +72,7 @@ public class CachingTableDAO implements TableDAO {
                         try {
                             return new TableCacheEntry(_delegate.get(name));
                         } catch (UnknownTableException e) {
-                            return new TableCacheEntry(_clock.instant().plusMillis(UNKNOWN_TABLE_RELOAD_DURATION.getMillis()));
+                            return new TableCacheEntry(_clock.instant().plusMillis(UNKNOWN_TABLE_RELOAD_DURATION.toMillis()));
                         }
                     }
                 });
@@ -92,7 +92,7 @@ public class CachingTableDAO implements TableDAO {
     }
 
     @Override
-    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
         return _delegate.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 

@@ -46,7 +46,6 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.utils.ZKPaths;
 import org.eclipse.jetty.http.HttpStatus;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -61,6 +60,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -189,7 +190,7 @@ public class AdHocThrottleTest extends ResourceTest {
         // Throttle requests to table1's size to 1 concurrent request, but leave table2 unlimited.
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", "/sor/1/_table/table1/size"),
-                AdHocThrottle.create(1, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(1, Instant.now().plus(Duration.ofDays(1))));
 
         // Wait until we've verified that the map store has been updated
         for (int i=0; i < 100; i++) {
@@ -303,7 +304,7 @@ public class AdHocThrottleTest extends ResourceTest {
         // Now set the throttle to only 3 concurrent requests
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", "/sor/1/_table/table-name/size"),
-                AdHocThrottle.create(3, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(3, Instant.now().plus(Duration.ofDays(1))));
 
         // Wait until we've verified that the map store has been updated
         for (int i=0; i < 100; i++) {
@@ -396,7 +397,7 @@ public class AdHocThrottleTest extends ResourceTest {
         // Throttle the endpoint to accept no connections
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", path),
-                AdHocThrottle.create(0, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(0, Instant.now().plus(Duration.ofDays(1))));
 
 
         // Wait until we've verified that the map store has been updated

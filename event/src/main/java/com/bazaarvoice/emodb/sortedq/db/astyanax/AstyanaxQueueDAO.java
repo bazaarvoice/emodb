@@ -27,10 +27,10 @@ import com.netflix.astyanax.serializers.ByteBufferSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -166,7 +166,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
 
             @Override
             public UpdateRequest writeSegment(UUID segment, String internalState) {
-                Duration manifestTtl = Duration.standardDays(31);
+                Duration manifestTtl = Duration.ofDays(31);
                 _mutation.withRow(CF_DEDUP_MD, queue)
                         .putColumn(segment, internalState, Ttls.toSeconds(manifestTtl, 1, null));
                 return this;

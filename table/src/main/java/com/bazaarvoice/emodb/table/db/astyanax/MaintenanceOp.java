@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
 import com.google.common.base.Objects;
-import org.joda.time.DateTime;
+
+import java.time.Instant;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -10,24 +11,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 class MaintenanceOp implements Comparable<MaintenanceOp> {
     private final String _name;
-    private final DateTime _when;
+    private final Instant _when;
     private final MaintenanceType _type;
     private final String _dataCenter;
     private MaintenanceTask _task;
 
-    static MaintenanceOp forMetadata(String name, DateTime when, MaintenanceTask task) {
+    static MaintenanceOp forMetadata(String name, Instant when, MaintenanceTask task) {
         return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", checkNotNull(task, "task"));
     }
 
-    static MaintenanceOp forData(String name, DateTime when, String dataCenter, MaintenanceTask task) {
+    static MaintenanceOp forData(String name, Instant when, String dataCenter, MaintenanceTask task) {
         return new MaintenanceOp(name, when, MaintenanceType.DATA, Objects.firstNonNull(dataCenter, "<n/a>"), checkNotNull(task, "task"));
     }
 
-    static MaintenanceOp reschedule(MaintenanceOp op, DateTime when) {
+    static MaintenanceOp reschedule(MaintenanceOp op, Instant when) {
         return new MaintenanceOp(op.getName(), when, op.getType(), op.getDataCenter(), op.getTask());
     }
 
-    private MaintenanceOp(String name, DateTime when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
+    private MaintenanceOp(String name, Instant when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
         _name = checkNotNull(name, "name");
         _when = checkNotNull(when, "when");
         _type = checkNotNull(type, "type");
@@ -40,7 +41,7 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     }
 
     /** Returns the earliest time this maintenance should occur. */
-    DateTime getWhen() {
+    Instant getWhen() {
         return _when;
     }
 

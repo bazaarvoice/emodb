@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
@@ -44,7 +45,6 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.ServiceRegistry;
@@ -67,8 +67,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -77,6 +75,7 @@ import org.testng.annotations.Test;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -131,7 +130,7 @@ public class CasDataStoreTest {
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Period.days(2)));
+                        .setHistoryTtl(Duration.ofDays(2)));
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
@@ -371,7 +370,7 @@ public class CasDataStoreTest {
         Callable<Boolean> task = new Callable<Boolean>() {
             @Override
             public Boolean call() {
-                _store.compact(TABLE, key4, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+                _store.compact(TABLE, key4, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
                 return Boolean.TRUE;
             }
         };
@@ -390,7 +389,7 @@ public class CasDataStoreTest {
         // They get deleted when their corresponding compaction is also behind FCT.
         assertEquals(_store.get(TABLE, key4, ReadConsistency.STRONG), contentExpected);
         // This last non-concurrent compaction, should clear all deltas and leave the record with one compaction
-        _store.compact(TABLE, key4, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        _store.compact(TABLE, key4, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         assertEquals(getDeltas(_store.getTimeline(TABLE, key4, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
         assertEquals(getCompactions(_store.getTimeline(TABLE, key4, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
         assertEquals(_store.get(TABLE, key4, ReadConsistency.STRONG), contentExpected);

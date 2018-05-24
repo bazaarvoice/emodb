@@ -9,18 +9,19 @@ import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.core.DatabusFactory;
@@ -41,7 +42,6 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.HostDiscovery;
@@ -64,7 +64,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Period;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -73,6 +72,7 @@ import org.testng.annotations.Test;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 
 import static org.mockito.Mockito.atLeastOnce;
@@ -118,7 +118,7 @@ public class CasDatabusTest {
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Period.days(2)));
+                        .setHistoryTtl(Duration.ofDays(2)));
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 

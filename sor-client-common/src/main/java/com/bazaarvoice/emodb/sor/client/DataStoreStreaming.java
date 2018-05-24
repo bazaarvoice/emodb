@@ -9,9 +9,9 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.google.common.collect.ImmutableSet;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -161,7 +161,7 @@ public abstract class DataStoreStreaming {
         // unnecessary, but the TimeLimitedIterator is still relevant for clients that don't use DataStoreStreaming.
         // For now, hard-code initial/min/max/goal values.
         Iterator<List<Update>> batchIter =
-                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.millis(500L));
+                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.ofMillis(500L));
         while (batchIter.hasNext()) {
             // Ostrich will retry each batch as necessary
             dataStore.updateAll(batchIter.next(), tags);
@@ -191,7 +191,7 @@ public abstract class DataStoreStreaming {
         // unnecessary, but the TimeLimitedIterator is still relevant for clients that don't use DataStoreStreaming.
         // For now, hard-code initial/min/max/goal values.
         Iterator<List<Update>> batchIter =
-                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.millis(500L));
+                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.ofMillis(500L));
         while (batchIter.hasNext()) {
             // Ostrich will retry each batch as necessary
             dataStore.updateAllForFacade(batchIter.next(), tags);

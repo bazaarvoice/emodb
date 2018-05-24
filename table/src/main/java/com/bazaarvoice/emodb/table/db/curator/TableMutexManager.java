@@ -5,7 +5,8 @@ import com.google.common.base.Charsets;
 import com.google.common.hash.Hashing;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.Duration;
+
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

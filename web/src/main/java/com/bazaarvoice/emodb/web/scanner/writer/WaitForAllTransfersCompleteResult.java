@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 import java.util.Map;
 
 /**
- * Simple object for the results of {@link TemporaryFileScanWriter#waitForAllTransfersComplete(org.joda.time.Duration)}.
+ * Simple object for the results of {@link TemporaryFileScanWriter#waitForAllTransfersComplete(java.time.Duration)}.
  */
 public class WaitForAllTransfersCompleteResult {
     private final Map<TransferKey, TransferStatus> _statusMap;

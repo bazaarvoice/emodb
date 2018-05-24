@@ -15,13 +15,14 @@ import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import org.joda.time.DateTime;
 import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -113,18 +114,18 @@ public class AstyanaxEventReaderDAOTest {
     public void testSlabFilterSince() {
         // Test that SlabFilter returns the correct slabs to read if we are only interested in
         // events after a certain time
-        DateTime now = DateTime.now();
+        Instant now = Instant.now();
         final MetricRegistry metricRegistry = new MetricRegistry();
         TimeUUIDSerializer serializer = TimeUUIDSerializer.get();
-        UUID slabId1 = TimeUUIDs.uuidForTimestamp(now.minusHours(6).toDate());
-        UUID slabId2 = TimeUUIDs.uuidForTimestamp(now.minusHours(5).toDate());
-        UUID slabId3 = TimeUUIDs.uuidForTimestamp(now.minusHours(4).toDate());
-        UUID slabId4 = TimeUUIDs.uuidForTimestamp(now.minusHours(3).toDate());
-        UUID slabId5 = TimeUUIDs.uuidForTimestamp(now.minusHours(1).toDate());
+        UUID slabId1 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(6)).toEpochMilli());
+        UUID slabId2 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(5)).toEpochMilli());
+        UUID slabId3 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(4)).toEpochMilli());
+        UUID slabId4 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(3)).toEpochMilli());
+        UUID slabId5 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(2)).toEpochMilli());
 
         List<UUID> orderedSlabIds = Lists.newArrayList(slabId1, slabId2, slabId3, slabId4, slabId5);
         // We are only interested in slabs that *may* contain events on or after 'since' date
-        Date since = now.minusHours(2).toDate();
+        Date since = Date.from(now.minus(Duration.ofHours(2)));
         AstyanaxEventReaderDAO eventReaderDAO = new AstyanaxEventReaderDAO(
                 mock(CassandraKeyspace.class), mock(ManifestPersister.class), "metricsGroup", mock(ExecutorService.class), metricRegistry);
         SlabFilter slabFilterSince = eventReaderDAO.getSlabFilterSince(since, "testchannel");

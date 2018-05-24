@@ -29,7 +29,6 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import org.apache.commons.codec.binary.Hex;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -39,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;

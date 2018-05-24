@@ -14,9 +14,9 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 
 /**

@@ -25,18 +25,18 @@ import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class DefaultFanoutManager implements FanoutManager {
-    private static final Duration SAME_DC_SLEEP_WHEN_IDLE = Duration.millis(100);
-    private static final Duration REMOTE_DC_SLEEP_WHEN_IDLE = Duration.standardSeconds(1);
+    private static final Duration SAME_DC_SLEEP_WHEN_IDLE = Duration.ofMillis(100);
+    private static final Duration REMOTE_DC_SLEEP_WHEN_IDLE = Duration.ofSeconds(1);
 
     private final EventStore _eventStore;
     private final SubscriptionDAO _subscriptionDao;

@@ -11,12 +11,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -58,7 +58,7 @@ public class CanaryTest {
         _canary = new Canary(clusterInfo, condition, _databus, rateLimitedLogFactory, new MetricRegistry(), service);
 
         verify(_databus).subscribe("__system_bus:canary-cluster", Conditions.alwaysTrue(),
-                Duration.standardDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
+                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
 
         _canary.startAsync();
 
@@ -85,12 +85,12 @@ public class CanaryTest {
 
     @Test
     public void testIterationWithNoEvents() throws Exception {
-        when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
+        when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
                 .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 
-        verify(_databus).poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50);
+        verify(_databus).poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50);
     }
 
     @Test
@@ -102,12 +102,12 @@ public class CanaryTest {
             events.add(new Event(eventId, ImmutableMap.of(), ImmutableList.of()));
             eventIds.add(eventId);
         }
-        when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
+        when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
                 .thenReturn(new PollResult(events.iterator(), events.size(), false));
 
         _iterationRunnable.run();
 
-        verify(_databus).poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50);
+        verify(_databus).poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50);
         verify(_databus).acknowledge("__system_bus:canary-cluster", eventIds);
     }
 
@@ -129,14 +129,14 @@ public class CanaryTest {
             }
         }
 
-        when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
+        when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
                 .thenReturn(new PollResult(events.get(0).iterator(), events.get(0).size(), true))
                 .thenReturn(new PollResult(events.get(1).iterator(), events.get(1).size(), true))
                 .thenReturn(new PollResult(events.get(2).iterator(), events.get(2).size(), false));
 
         _iterationRunnable.run();
 
-        verify(_databus, times(3)).poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50);
+        verify(_databus, times(3)).poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50);
         for (List<String> batchEventIds : eventIds) {
             verify(_databus).acknowledge("__system_bus:canary-cluster", batchEventIds);
         }
@@ -144,13 +144,13 @@ public class CanaryTest {
 
     @Test
     public void testIterationWithDiscardedEvents() throws Exception {
-        when(_databus.poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50))
+        when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
                 .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
                 .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
                 .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 
-        verify(_databus, times(3)).poll("__system_bus:canary-cluster", Duration.standardSeconds(30), 50);
+        verify(_databus, times(3)).poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50);
     }
 }

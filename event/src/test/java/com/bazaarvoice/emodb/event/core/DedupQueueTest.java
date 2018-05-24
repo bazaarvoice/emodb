@@ -12,13 +12,13 @@ import com.bazaarvoice.emodb.sortedq.core.PersistentSortedQueue;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
-import org.joda.time.Duration;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -40,7 +40,7 @@ public class DedupQueueTest {
         q.startAndWait();
 
         // The first poll checks the read channel, find it empty, checks the write channel.
-        q.poll(Duration.standardSeconds(30), new SimpleEventSink(10));
+        q.poll(Duration.ofSeconds(30), new SimpleEventSink(10));
         verify(readerDao).readNewer(eq("read"), Matchers.<EventSink>any());
         verify(readerDao).readNewer(eq("write"), Matchers.<EventSink>any());
         verifyNoMoreInteractions(readerDao);
@@ -48,7 +48,7 @@ public class DedupQueueTest {
         reset(readerDao);
 
         // Subsequent polls w/in a short window skips the poll operations.
-        q.poll(Duration.standardSeconds(30), new SimpleEventSink(10));
+        q.poll(Duration.ofSeconds(30), new SimpleEventSink(10));
         verifyNoMoreInteractions(readerDao);
     }
 

@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -29,7 +30,6 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
@@ -50,11 +50,11 @@ import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.utils.EnsurePath;
-import org.joda.time.Period;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
+import java.time.Duration;
 
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isA;
@@ -110,7 +110,7 @@ public class DataStoreModuleTest {
 
                 // construct the minimum necessary elements to allow a DataStore module to be created.
                 bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
-                        .setHistoryTtl(Period.days(2))
+                        .setHistoryTtl(Duration.ofDays(2))
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys"))
                         .setCassandraClusters(ImmutableMap.of("app_global", new CassandraConfiguration()
                                 .setCluster("Test Cluster")

@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.common.json.deferred;
 
+import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import io.dropwizard.jackson.Jackson;
 import org.testng.annotations.Test;
 
 import java.util.Collection;
@@ -178,7 +178,7 @@ public class LazyJsonMapTest {
         map.put("k2", "v22");
         map.put("k3", "v3");
 
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
+        ObjectMapper objectMapper = CustomJsonObjectMapperFactory.build();
         objectMapper.registerModule(new LazyJsonModule());
 
         // Write to JSON, then read back
@@ -199,7 +199,7 @@ public class LazyJsonMapTest {
         map.size();
         assertTrue(map.isDeserialized());
 
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
+        ObjectMapper objectMapper = CustomJsonObjectMapperFactory.build();
         objectMapper.registerModule(new LazyJsonModule());
 
         // Write to JSON, then read back

@@ -9,9 +9,9 @@ import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -41,7 +41,7 @@ public interface DataTools {
     /**
      * For performing a raw scan across multiple tables. If cut off time is provided, then NO Changes after that time will be included.
      */
-    Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime);
+    Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable Instant cutoffTime);
 
     /**
      * Resolve a scan record into a single JSON literal object + metadata.  If allowAsyncCompaction is true then it may
@@ -54,13 +54,13 @@ public interface DataTools {
 
     /**
      * Create a snapshot of all tables excluding the ones listed in the {@link StashBlackListTableCondition} in the provided placements and their token ranges for Stash.  Must be called
-     * prior to {@link #stashMultiTableScan(String, String, ScanRange, LimitCounter, ReadConsistency, DateTime)} 
+     * prior to {@link #stashMultiTableScan(String, String, ScanRange, LimitCounter, ReadConsistency, Instant)}
      * otherwise that call will return no results.
      */
     void createStashTokenRangeSnapshot(String stashId, Set<String> placements);
 
     /**
-     * Similar to {@link #multiTableScan(MultiTableScanOptions, TableSet, LimitCounter, ReadConsistency, DateTime)} with
+     * Similar to {@link #multiTableScan(MultiTableScanOptions, TableSet, LimitCounter, ReadConsistency, Instant)} with
      * the following differences:
      *
      * <li>
@@ -73,7 +73,7 @@ public interface DataTools {
      *     any token ranges containing tombstones from deleted tables are never queried.
      * </li>
      */
-    Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime);
+    Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit, ReadConsistency consistency, @Nullable Instant cutoffTime);
 
     /**
      * Clears a stash token range snapshot previously created using {@link #createStashTokenRangeSnapshot(String, Set)}.

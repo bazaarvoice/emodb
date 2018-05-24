@@ -29,12 +29,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
@@ -69,7 +69,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class LocalScanUploadMonitor extends AbstractService {
 
     // No scan can run for more than 1 day
-    private static final Duration OVERRUN_SCAN_TIME = Duration.standardDays(1);
+    private static final Duration OVERRUN_SCAN_TIME = Duration.ofDays(1);
 
     private final Logger _log = LoggerFactory.getLogger(LocalScanUploadMonitor.class);
 
@@ -183,7 +183,7 @@ public class LocalScanUploadMonitor extends AbstractService {
 
         try {
             completeRangeScansByScanId = Multimaps.index(
-                    _scanWorkflow.claimCompleteScanRanges(Duration.standardMinutes(5)),
+                    _scanWorkflow.claimCompleteScanRanges(Duration.ofMinutes(5)),
                     new Function<ScanRangeComplete, String>() {
                             @Override
                             public String apply(ScanRangeComplete completion) {
@@ -477,12 +477,12 @@ public class LocalScanUploadMonitor extends AbstractService {
     private void scheduleOverrunCheck(ScanStatus status) {
         final String scanId = status.getScanId();
 
-        DateTime now = DateTime.now();
-        DateTime overrunTime = new DateTime(status.getStartTime()).plus(OVERRUN_SCAN_TIME);
+        Instant now = Instant.now();
+        Instant overrunTime = status.getStartTime().toInstant().plus(OVERRUN_SCAN_TIME);
 
         long delay = 0;
         if (now.isBefore(overrunTime)) {
-            delay = new Duration(now, overrunTime).getMillis();
+            delay = Duration.between(now, overrunTime).toMillis();
         }
 
         _service.schedule(

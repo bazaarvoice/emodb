@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.event.db.astyanax;
 
-import org.joda.time.Duration;
+import java.time.Duration;
 
 interface Constants {
 
@@ -11,10 +11,10 @@ interface Constants {
     static final int OPEN_SLAB_MARKER = Integer.MAX_VALUE;
 
     /** A server is expected to update a slab at least this often or else close it. */
-    static final Duration OPEN_SLAB_MARKER_TTL = Duration.standardMinutes(20);
+    static final Duration OPEN_SLAB_MARKER_TTL = Duration.ofMinutes(20);
 
     /** Don't keep slabs open for too long.  Rotate them periodically. */
-    static final Duration SLAB_ROTATE_TTL = Duration.standardDays(1);
+    static final Duration SLAB_ROTATE_TTL = Duration.ofDays(1);
 
     /** Cap the size of updates. */
     static final int MUTATION_MAX_ROWS = 10;

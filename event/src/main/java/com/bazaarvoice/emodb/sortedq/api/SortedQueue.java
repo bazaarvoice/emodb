@@ -1,9 +1,8 @@
 package com.bazaarvoice.emodb.sortedq.api;
 
-import org.joda.time.Duration;
-
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 

@@ -38,12 +38,12 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.*;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
@@ -553,7 +553,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
 
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
-                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable Instant cutoffTime) {
         if (!_useCqlForScans.get()) {
             return _astyanaxReaderDAO.multiTableScan(query, tables, limit, consistency, cutoffTime);
         }
@@ -580,7 +580,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     private Iterable<MultiTableScanResult> scanMultiTableRows(
             final TableSet tables, final DeltaPlacement placement, final ByteBufferRange rowRange,
             final LimitCounter limit, final boolean includeDroppedTables, final boolean includeMirrorTables,
-            final ReadConsistency consistency, final DateTime cutoffTime) {
+            final ReadConsistency consistency, final Instant cutoffTime) {
 
         // Avoiding pinning multiple decoded rows into memory at once.
         return () -> limit.limit(new AbstractIterator<MultiTableScanResult>() {
@@ -899,11 +899,11 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     }
 
     @VisibleForTesting
-    public static Iterable<Row> getFilteredRows(Iterable<Row> rows, DateTime cutoffTime) {
+    public static Iterable<Row> getFilteredRows(Iterable<Row> rows, Instant cutoffTime) {
         if (cutoffTime == null) {
             return rows;
         }
-        return () -> Iterators.filter(rows.iterator(), row -> (TimeUUIDs.getTimeMillis(row.getUUID(CHANGE_ID_RESULT_SET_COLUMN)) < cutoffTime.getMillis()));
+        return () -> Iterators.filter(rows.iterator(), row -> (TimeUUIDs.getTimeMillis(row.getUUID(CHANGE_ID_RESULT_SET_COLUMN)) < cutoffTime.toEpochMilli()));
     }
 
     // The following methods rely on using the Cassandra thrift call <code>describe_splits_ex()</code> to split

@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner.control;
 
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import org.joda.time.Duration;
+import java.time.Duration;
 
 import java.util.Collection;
 import java.util.List;

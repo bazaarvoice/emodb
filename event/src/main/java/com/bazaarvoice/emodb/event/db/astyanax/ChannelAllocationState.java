@@ -37,7 +37,7 @@ public class ChannelAllocationState {
 
         _slab = slab;
         _slabConsumed = 0;
-        _slabExpiresAt = System.currentTimeMillis() + Constants.SLAB_ROTATE_TTL.getMillis();
+        _slabExpiresAt = System.currentTimeMillis() + Constants.SLAB_ROTATE_TTL.toMillis();
     }
 
     /** Detaches a slab from the channel and returns it to the caller to dispose of. */

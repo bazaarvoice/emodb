@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.History;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 

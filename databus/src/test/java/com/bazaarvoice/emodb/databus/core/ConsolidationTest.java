@@ -26,11 +26,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.eventbus.EventBus;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collections;
@@ -70,7 +70,7 @@ public class ConsolidationTest {
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 1);
         List<Event> events = ImmutableList.copyOf(result.getEventIterator());
 
         Event first = events.get(0);
@@ -101,7 +101,7 @@ public class ConsolidationTest {
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 1);
         List<Event> events = ImmutableList.copyOf(result.getEventIterator());
 
         Event first = events.get(0);
@@ -134,7 +134,7 @@ public class ConsolidationTest {
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 1);
         List<Event> events = ImmutableList.copyOf(result.getEventIterator());
 
         Event first = events.get(0);
@@ -178,7 +178,7 @@ public class ConsolidationTest {
         Map<String, Object> content = entity("table", "key", ImmutableMap.of("rating", "5"));
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 1);
         List<Event> events = ImmutableList.copyOf(result.getEventIterator());
 
         Event first = events.get(0);
@@ -236,7 +236,7 @@ public class ConsolidationTest {
         DefaultDatabus databus = newDatabus(eventStore, new TestDataProvider().add(content), clock);
 
         // Use a limit of 2 to force multiple calls to the event store.
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 2);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 2);
         List<Event> events = ImmutableList.copyOf(result.getEventIterator());
 
         Event first = events.get(0);
@@ -277,7 +277,7 @@ public class ConsolidationTest {
         when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(true);
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(annotatedContent));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 2);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 2);
         assertFalse(result.getEventIterator().hasNext());
         assertFalse(result.hasMoreEvents());
 
@@ -315,7 +315,7 @@ public class ConsolidationTest {
         when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(true);
         OwnerAwareDatabus databus = newDatabus(eventStore, new TestDataProvider().add(annotatedContent));
 
-        PollResult result = databus.poll("id", "test-subscription", Duration.standardSeconds(30), 1);
+        PollResult result = databus.poll("id", "test-subscription", Duration.ofSeconds(30), 1);
         assertFalse(result.getEventIterator().hasNext());
         assertFalse(result.hasMoreEvents());
 

@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.databus.api;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 

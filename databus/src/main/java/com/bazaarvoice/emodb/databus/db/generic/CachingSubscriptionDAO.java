@@ -25,11 +25,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;

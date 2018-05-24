@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
@@ -41,7 +42,6 @@ import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.ServiceRegistry;
@@ -64,8 +64,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -79,6 +77,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -132,7 +131,7 @@ public class CasBlobStoreTest {
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Period.days(2)));
+                        .setHistoryTtl(Duration.ofDays(2)));
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
@@ -221,7 +220,7 @@ public class CasBlobStoreTest {
         verifyNotExists(blobId);
 
         // put some data and verify it, roughly 8MB
-        verifyPutAndGet(blobId, randomBytes(0x812345), ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover"), Duration.standardHours(1));
+        verifyPutAndGet(blobId, randomBytes(0x812345), ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover"), Duration.ofHours(1));
 
         // overwrite it with a smaller blob, different data.  this isn't recommended because it will likely leave orphaned rows, but the blobstore doesn't prevent it.
         verifyPutAndGet(blobId, randomBytes(0x4321), ImmutableMap.of("encoding", "image/png", "name", "mycat2.png"), null);

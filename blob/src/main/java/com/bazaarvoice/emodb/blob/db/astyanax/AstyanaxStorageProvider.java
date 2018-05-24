@@ -43,10 +43,10 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import org.apache.cassandra.dht.Token;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
