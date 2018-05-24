@@ -76,12 +76,6 @@ import com.google.common.io.CharStreams;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeFieldType;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Days;
-import org.joda.time.Duration;
-import org.joda.time.LocalDate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,9 +91,14 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoField;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -133,27 +132,27 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     /**
      * Wait at least 10 seconds between maintenance operations to allow for clock skew between servers.
      */
-    static final Duration MIN_DELAY = Duration.standardSeconds(10);
+    static final Duration MIN_DELAY = Duration.ofSeconds(10);
 
     /**
      * The server updates its consistency timestamp value at most every 5 minutes.
      */
-    static final Duration MIN_CONSISTENCY_DELAY = Duration.standardMinutes(5);
+    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofMinutes(5);
 
     /**
      * Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid.
      */
-    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.standardDays(1);
+    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofDays(1);
 
     /**
      * Delay between dropping a table and initial purge of all the data in the table, may miss late writes.
      */
-    static final Duration DROP_TO_PURGE_1 = Duration.standardDays(1);
+    static final Duration DROP_TO_PURGE_1 = Duration.ofDays(1);
 
     /**
      * Maximum time to wait for full consistency.  By this time, purge will find everything.
      */
-    static final Duration DROP_TO_PURGE_2 = Duration.standardDays(10);
+    static final Duration DROP_TO_PURGE_2 = Duration.ofDays(10);
 
     /**
      * Reserved key used by {@link #createTableSet()} to identify bootstrap tables.
@@ -295,7 +294,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public void performMetadataMaintenance(String table) {
         TableJson json = readTableJson(table, false);
         MaintenanceOp op = getNextMaintenanceOp(json, true);
-        if (op == null || op.getWhen().isAfterNow() || op.getType() != MaintenanceType.METADATA) {
+        if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.METADATA) {
             return;  // Nothing to do
         }
 
@@ -308,7 +307,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public void performDataMaintenance(String table, Runnable progress) {
         TableJson json = readTableJson(table, false);
         MaintenanceOp op = getNextMaintenanceOp(json, true);
-        if (op == null || op.getWhen().isAfterNow() || op.getType() != MaintenanceType.DATA ||
+        if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.DATA ||
                 !_selfDataCenter.equals(op.getDataCenter())) {
             return;  // Nothing to do
         }
@@ -353,7 +352,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
             case MIRROR_CREATED: {  // Initial mirror create/activate failed, retry the operation.
                 from.getTransitionedAt(storage);
-                DateTime when = new DateTime();  // Retry immediately.
+                Instant when = _clock.instant();  // Retry immediately.
                 return MaintenanceOp.forMetadata("Move:create-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -370,8 +369,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             }
 
             case MIRROR_ACTIVATED: {
-                final DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                final Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement(), storage.getPrimary().getPlacement());
                 return MaintenanceOp.forData("Move:copy-data", when, dataCenter, new MaintenanceTask() {
                     @Override
@@ -388,8 +387,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             }
 
             case MIRROR_COPIED: {
-                final DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                final Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement(), storage.getPrimary().getPlacement());
                 return MaintenanceOp.forData("Move:data-consistent", when, dataCenter, new MaintenanceTask() {
                     @Override
@@ -405,8 +404,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
             case MIRROR_CONSISTENT:
             case PROMOTED: {  // If PROMOTED then previous promote was attempted but failed, retry the operation.
-                DateTime transitionedAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
-                DateTime when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : new DateTime();
+                Instant transitionedAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
+                Instant when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:promote-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -421,8 +420,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             }
 
             case MIRROR_DEMOTED: {
-                DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : new DateTime();
+                Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:set-expiration", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -430,7 +429,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                         // has been demoted to a mirror, and by separating the steps we round trip through Cassandra and verify that
                         // the promotion worked as expected.
 
-                        DateTime expiresAt = new DateTime().plus(MOVE_DEMOTE_TO_EXPIRE);
+                        Instant expiresAt = _clock.instant().plus(MOVE_DEMOTE_TO_EXPIRE);
 
                         // The next step occurs in the same data center so no need to write/flush globally.
                         stateTransition(json, storage, from, MIRROR_EXPIRING, expiresAt, InvalidationScope.DATA_CENTER);
@@ -440,8 +439,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
             case MIRROR_EXPIRING:
             case MIRROR_EXPIRED: {  // If MIRROR_EXPIRED then previous expire was attempted but failed, retry the operation.
-                DateTime mirrorExpiresAt = storage.getMirrorExpiresAt();
-                DateTime when = mirrorExpiresAt != null ? mirrorExpiresAt : new DateTime();
+                Instant mirrorExpiresAt = storage.getMirrorExpiresAt();
+                Instant when = mirrorExpiresAt != null ? mirrorExpiresAt : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:expire-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -461,10 +460,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 // Skip PURGE_1 and go straight to PURGE_2 if enough time has elapsed,
                 // or if we are moving the entire placement, skip the PURGED_1 step to move as quickly as possible
                 // and not
-                final DateTime droppedAt = storage.getTransitionedTimestamp(DROPPED);
-                DateTime when1 = droppedAt.plus(DROP_TO_PURGE_1);
-                DateTime when2 = droppedAt.plus(DROP_TO_PURGE_2);
-                final int iteration = !storage.isPlacementMove() && (from == DROPPED && when2.isAfterNow()) ? 1 : 2;
+                final Instant droppedAt = storage.getTransitionedTimestamp(DROPPED);
+                Instant when1 = droppedAt.plus(DROP_TO_PURGE_1);
+                Instant when2 = droppedAt.plus(DROP_TO_PURGE_2);
+                final int iteration = !storage.isPlacementMove() && (from == DROPPED && when2.isAfter(_clock.instant())) ? 1 : 2;
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement());
                 return MaintenanceOp.forData("Drop:purge-" + iteration, iteration == 1 ? when1 : when2, dataCenter, new MaintenanceTask() {
                     @Override
@@ -486,8 +485,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             }
 
             case PURGED_2: {
-                DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 return MaintenanceOp.forMetadata("Drop:delete", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable progress) {
@@ -503,16 +502,16 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     private void stateTransition(TableJson json, Storage storage, StorageState from, StorageState to,
                                  InvalidationScope scope) {
-        stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, new DateTime(), scope);
+        stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, _clock.instant(), scope);
     }
 
     private void stateTransition(TableJson json, Storage storage, StorageState from, StorageState to,
-                                 DateTime markerValue, InvalidationScope scope) {
+                                 Instant markerValue, InvalidationScope scope) {
         stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, markerValue, scope);
     }
 
     private void stateTransition(TableJson json, String storageUuid, String storagePlacement,
-                                 StorageState from, StorageState to, DateTime markerValue,
+                                 StorageState from, StorageState to, Instant markerValue,
                                  InvalidationScope scope) {
         _log.info("State transition for table '{}' and storage '{}' from={} to={}.",
                 json.getTable(), storageUuid, from, to);
@@ -903,7 +902,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
         // No exceptions?  That means every data center knows about the new mirror.
 
-        stateTransition(json, destUuid, destPlacement, MIRROR_CREATED, MIRROR_ACTIVATED, new DateTime(), InvalidationScope.GLOBAL);
+        stateTransition(json, destUuid, destPlacement, MIRROR_CREATED, MIRROR_ACTIVATED, _clock.instant(), InvalidationScope.GLOBAL);
     }
 
     private boolean matches(Storage storage, String placement, int shardsLog2) {
@@ -1330,10 +1329,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         return placement;
     }
 
-    private void checkPlacementConsistent(String placement, DateTime since) {
+    private void checkPlacementConsistent(String placement, Instant since) {
         CassandraKeyspace keyspace = _placementCache.get(placement).getKeyspace();
         long lastConsistentAt = _fullConsistencyTimeProvider.getMaxTimeStamp(keyspace.getClusterName());
-        if (lastConsistentAt <= since.getMillis()) {
+        if (lastConsistentAt <= since.toEpochMilli()) {
             throw new FullConsistencyException(placement);
         }
     }
@@ -1467,28 +1466,28 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     @Timed (name = "bv.emodb.table.AstyanaxTableDAO.listUnpublishedDatabusEvents", absolute = true)
     @Override
-    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
         checkArgument(fromInclusive != null, "fromInclusive date cannot be null");
         checkArgument(toExclusive != null, "toExclusive date cannot be null");
 
-        LocalDate fromInclusiveUTC = fromInclusive.withZone(DateTimeZone.UTC).toLocalDate();
-        LocalDate toInclusiveDateUTC = toExclusive.withZone(DateTimeZone.UTC).toLocalDate();
-        if (toExclusive.withZone(DateTimeZone.UTC).get(DateTimeFieldType.millisOfDay()) == 0) {
+        ZonedDateTime fromInclusiveUTC = fromInclusive.toInstant().atZone(ZoneOffset.UTC).with(ChronoField.MILLI_OF_DAY, 0);
+        ZonedDateTime toInclusiveDateUTC = toExclusive.toInstant().atZone(ZoneOffset.UTC).with(ChronoField.MILLI_OF_DAY, 0);
+        if (toExclusive.toInstant().equals(toInclusiveDateUTC.toInstant())) {
             toInclusiveDateUTC = toInclusiveDateUTC.minusDays(1);
         }
 
         // adding 1 to the days to make it inclusive.
-        final int inclusiveNumberOfDays = Days.daysBetween(fromInclusiveUTC, toInclusiveDateUTC).getDays() + 1;
+        final int inclusiveNumberOfDays = (int) Duration.between(fromInclusiveUTC, toInclusiveDateUTC).toDays() + 1;
         if (inclusiveNumberOfDays > 31) {
             throw new IllegalArgumentException("Specified from and to date range is greater than 30 days which is not supported. Specify a smaller range.");
         }
-        List<LocalDate> dates = Stream.iterate(fromInclusiveUTC, d -> d.plusDays(1))
+        List<LocalDate> dates = Stream.iterate(fromInclusiveUTC.toLocalDate(), d -> d.plusDays(1))
                 .limit(inclusiveNumberOfDays)
                 .collect(Collectors.toList());
 
         List<UnpublishedDatabusEvent> allUnpublishedDatabusEvents = Lists.newArrayList();
         // using closedOpen which is [a..b) i.e. {x | a <= x < b}
-        final Range<DateTime> requestedRange = Range.closedOpen(fromInclusive.withZone(DateTimeZone.UTC), toExclusive.withZone(DateTimeZone.UTC));
+        final Range<Long> requestedRange = Range.closedOpen(fromInclusive.getTime(), toExclusive.getTime());
         for (LocalDate date : dates) {
             String dateKey = date.toString();
             Map<String, Object> recordMap = _backingStore.get(_systemTableUnPublishedDatabusEvents, dateKey, ReadConsistency.STRONG);
@@ -1498,7 +1497,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                     List<UnpublishedDatabusEvent> unpublishedDatabusEvents = JsonHelper.convert(tableInfo, new TypeReference<List<UnpublishedDatabusEvent>>() {});
                     // filter events whose time is outside the requestedRange.
                     unpublishedDatabusEvents.stream()
-                            .filter(unpublishedDatabusEvent -> requestedRange.contains(unpublishedDatabusEvent.getDate()))
+                            .filter(unpublishedDatabusEvent -> requestedRange.contains(unpublishedDatabusEvent.getDate().getTime()))
                             .forEach(allUnpublishedDatabusEvents::add);
                 }
             }

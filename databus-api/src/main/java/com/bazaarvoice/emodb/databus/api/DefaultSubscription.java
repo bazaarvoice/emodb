@@ -1,30 +1,33 @@
 package com.bazaarvoice.emodb.databus.api;
 
-import com.bazaarvoice.emodb.common.json.serde.TimestampDurationSerializer;
 import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import org.joda.time.Duration;
 import com.google.common.base.Objects;
+
+import java.time.Duration;
 import java.util.Date;
 
 public final class DefaultSubscription implements Subscription {
     private final String _name;
     private final Condition _tableFilter;
-    @JsonProperty("eventTtl")
-    @JsonSerialize(using = TimestampDurationSerializer.class)
     private final Date _expiresAt;
-
     private final Duration _eventTtl;
 
-    public DefaultSubscription(@JsonProperty("name") String name,
-                               @JsonProperty("tableFilter") Condition tableFilter,
-                               @JsonProperty("expiresAt") Date expiresAt,
-                               @JsonProperty("eventTtl") Duration eventTtl) {
+    public DefaultSubscription(String name, Condition tableFilter, Date expiresAt, Duration eventTtl) {
         _name = name;
         _tableFilter = tableFilter;
         _expiresAt = expiresAt;
         _eventTtl = eventTtl;
+    }
+
+    @JsonCreator
+    private DefaultSubscription(@JsonProperty("name") String name,
+                                @JsonProperty("tableFilter") Condition tableFilter,
+                                @JsonProperty("expiresAt") Date expiresAt,
+                                @JsonProperty("eventTtl") long eventTtlMillis) {
+        this(name, tableFilter, expiresAt, Duration.ofMillis(eventTtlMillis));
     }
 
     @Override
@@ -42,9 +45,15 @@ public final class DefaultSubscription implements Subscription {
         return _expiresAt;
     }
 
+    @JsonIgnore
     @Override
     public Duration getEventTtl() {
         return _eventTtl;
+    }
+
+    @JsonProperty("eventTtl")
+    private long getEventTtlMillis() {
+        return _eventTtl.toMillis();
     }
 
     @Override

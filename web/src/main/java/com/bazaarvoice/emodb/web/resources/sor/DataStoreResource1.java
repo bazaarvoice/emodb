@@ -31,9 +31,9 @@ import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.jersey.FilteredJsonStreamingOutput;
+import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
-import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.compactioncontrol.CompactionControlResource1;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
@@ -51,7 +51,6 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.BooleanParam;
-import io.dropwizard.jersey.params.DateTimeParam;
 import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
@@ -60,9 +59,6 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,6 +82,8 @@ import javax.ws.rs.core.UriInfo;
 import java.io.InputStream;
 import java.io.Reader;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -154,15 +152,16 @@ public class DataStoreResource1 {
             notes = "Returns a Iterator of a Map.",
             response = Table.class
     )
-    public Object listUnpublishedDatabusEvents(final @QueryParam ("from") DateTimeParam fromInclusiveParam,
-                                            final @QueryParam ("to") DateTimeParam toExclusiveParam,
+    public Object listUnpublishedDatabusEvents(final @QueryParam ("from") InstantParam fromInclusiveParam,
+                                            final @QueryParam ("to") InstantParam toExclusiveParam,
                                             final @Authenticated Subject subject) {
         // Default date range is past 30 days
-        DateTime fromInclusive = fromInclusiveParam != null ? fromInclusiveParam.get() : DateTime.now(DateTimeZone.UTC).minusDays(29);
-        DateTime toExclusive = toExclusiveParam != null ? toExclusiveParam.get() : DateTime.now(DateTimeZone.UTC).plusDays(1);
+        Instant fromInclusive = fromInclusiveParam != null ? fromInclusiveParam.get() : Instant.now().minus(Duration.ofDays(29));
+        Instant toExclusive = toExclusiveParam != null ? toExclusiveParam.get() : Instant.now().plus(Duration.ofDays(1));
         checkArgument(fromInclusive.compareTo(toExclusive) < 0, "from date must be before the to date.");
 
-        Iterator<UnpublishedDatabusEvent> allUnpublishedDatabusEvents = _dataStore.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
+        Iterator<UnpublishedDatabusEvent> allUnpublishedDatabusEvents =
+                _dataStore.listUnpublishedDatabusEvents(Date.from(fromInclusive), Date.from(toExclusive));
         return new FilteredJsonStreamingOutput<UnpublishedDatabusEvent>(allUnpublishedDatabusEvents, Long.MAX_VALUE) {
             @Override
             public boolean include(UnpublishedDatabusEvent event) {
@@ -937,11 +936,11 @@ public class DataStoreResource1 {
         } else {
             // Timestamps have a granularity of a millisecond so adjust upper endpoints to be
             // the last valid time UUID for the millisecond.
-            Date date = new TimestampParam(string).get();
+            Instant date = new InstantParam(string).get();
             if (rangeUpperEnd) {
-                return TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(date.getTime() + 1));
+                return TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(date.toEpochMilli() + 1));
             } else {
-                return TimeUUIDs.uuidForTimestamp(date);
+                return TimeUUIDs.uuidForTimeMillis(date.toEpochMilli());
             }
         }
     }

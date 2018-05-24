@@ -16,7 +16,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 
-import javax.ws.rs.core.Response;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -142,7 +141,7 @@ public class StandardStashReader extends StashReader {
             // a memory overrun restrict the file contents fetched to a reasonably high limit.
             s3Object = _s3.getObject(new GetObjectRequest(bucket, path).withRange(0, 2048));
         } catch (AmazonS3Exception e) {
-            if (e.getStatusCode() == Response.Status.NOT_FOUND.getStatusCode()) {
+            if (e.getStatusCode() == 404) {
                 throw new StashNotAvailableException();
             }
             throw e;
@@ -177,9 +176,9 @@ public class StandardStashReader extends StashReader {
         try (S3Object s3Object = _s3.getObject(_bucket, String.format("%s/%s/%s", _rootPath, stashDirectory, StashUtil.SUCCESS_FILE))) {
             _lockedLatest = String.format("%s/%s", _rootPath, stashDirectory);
         } catch (AmazonS3Exception e) {
-            if (e.getStatusCode() == Response.Status.NOT_FOUND.getStatusCode() ||
+            if (e.getStatusCode() == 404 ||
                     // The following conditions indicate the file has already been moved to Glacier
-                    (e.getStatusCode() == Response.Status.FORBIDDEN.getStatusCode() && "InvalidObjectState".equals(e.getErrorCode()))) {
+                    (e.getStatusCode() == 403 && "InvalidObjectState".equals(e.getErrorCode()))) {
                 throw new StashNotAvailableException();
             }
             throw e;

@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.scanner.resource;
 
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
@@ -12,11 +13,8 @@ import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import io.dropwizard.jersey.params.DateTimeParam;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.joda.time.DateTime;
-import org.joda.time.format.ISOPeriodFormat;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -32,6 +30,8 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
@@ -92,7 +92,7 @@ public class StashResource1 {
                 .setMaxConcurrentSubRangeScans(maxConcurrency)
                 .setCompactionEnabled(compactionEnabled)
                 .setRangeScanSplitSize(rangeScanSplitSize)
-                .setMaxRangeScanTime(ISOPeriodFormat.standard().parsePeriod(maxRangeScanTime).toStandardDuration());
+                .setMaxRangeScanTime(Duration.parse(maxRangeScanTime));
 
         return _scanUploader.scanAndUpload(id, options)
                 .dryRun(dryRun)
@@ -148,9 +148,9 @@ public class StashResource1 {
     @PUT
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public SuccessResponse requestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+    public SuccessResponse requestStash(@PathParam("id") String id, @QueryParam("date") InstantParam timeParam,
                                         @Authenticated Subject subject) {
-        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final Instant time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
         _stashRequestManager.requestStashOnOrAfter(id, time, requestedBy);
         return SuccessResponse.instance();
@@ -159,10 +159,10 @@ public class StashResource1 {
     @GET
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public Date getStashRequest(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+    public Date getStashRequest(@PathParam("id") String id, @QueryParam("date") InstantParam timeParam,
                                 @Authenticated Subject subject) {
 
-        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final Instant time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
         return _stashRequestManager.getRequestsForStash(id, time).stream()
                 .filter(request -> request.getRequestedBy().equals(requestedBy))
@@ -175,10 +175,10 @@ public class StashResource1 {
     @DELETE
     @Path("request/{id}")
     @RequiresPermissions("stash|request|{id}")
-    public SuccessResponse undoRequestStash(@PathParam("id") String id, @QueryParam("date") DateTimeParam timeParam,
+    public SuccessResponse undoRequestStash(@PathParam("id") String id, @QueryParam("date") InstantParam timeParam,
                                             @Authenticated Subject subject) {
 
-        final DateTime time = timeParam != null ? timeParam.get() : null;
+        final Instant time = timeParam != null ? timeParam.get() : null;
         final String requestedBy = subject.getId();
         _stashRequestManager.undoRequestForStashOnOrAfter(id, time, requestedBy);
         return SuccessResponse.instance();

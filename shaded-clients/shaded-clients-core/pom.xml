@@ -65,10 +65,6 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-        </dependency>
     </dependencies>
 
     <build>
@@ -222,7 +218,6 @@
                                     <exclude>javax.activation:*</exclude>
                                     <exclude>javax.jms:*</exclude>
                                     <exclude>javax.mail:*</exclude>
-                                    <exclude>joda-time:*</exclude>
                                     <exclude>junit:*</exclude>
                                 </excludes>
                             </artifactSet>

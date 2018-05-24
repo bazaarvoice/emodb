@@ -87,10 +87,6 @@
                                     <pattern>org.eclipse.jetty</pattern>
                                     <shadedPattern>shaded.org.eclipse.jetty</shadedPattern>
                                 </relocation>
-                                <relocation>
-                                    <pattern>org.joda</pattern>
-                                    <shadedPattern>shaded.org.joda</shadedPattern>
-                                </relocation>
                             </relocations>
                         </configuration>
                     </execution>

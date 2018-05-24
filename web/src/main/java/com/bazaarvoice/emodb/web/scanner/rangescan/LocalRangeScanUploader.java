@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
@@ -41,17 +40,14 @@ import com.google.common.primitives.UnsignedLongs;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-import org.joda.time.Period;
-import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -80,9 +76,9 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     private final static int PIPELINE_THREAD_COUNT = 5;
     private final static int PIPELINE_BATCH_SIZE = 2500;
     // Interval for checking whether all transfers are complete and logging the result
-    private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL = Duration.standardSeconds(30);
+    private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_CHECK_INTERVAL = Duration.ofSeconds(30);
     // Interval after which the task will fail if there has been no progress on any active transfers
-    private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT = Duration.standardMinutes(5);
+    private final static Duration WAIT_FOR_ALL_TRANSFERS_COMPLETE_TIMEOUT = Duration.ofMinutes(5);
     // Stop scanning and resplit if we receive three times the number of rows expected in a single task.
     private final static float RESPLIT_FACTOR = 3;
 
@@ -202,12 +198,12 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         _batchServices.add(batchService);
 
         _log.info("Scanning placement {}: {}", placement, scanRange);
-        final long startTime = System.currentTimeMillis();
+        final Instant startTime = Instant.now();
 
         // Enforce a time limit on how long can be spent retrieving results
         RangeScanTimeout timeout = new RangeScanTimeout(taskId);
         Future<?> timeoutFuture =
-                _timeoutService.schedule(timeout, options.getMaxRangeScanTime().getMillis(), TimeUnit.MILLISECONDS);
+                _timeoutService.schedule(timeout, options.getMaxRangeScanTime().toMillis(), TimeUnit.MILLISECONDS);
 
         RangeScanHungCheck rangeScanHungCheck = null;
 
@@ -222,7 +218,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
             // Create a callback to stop processing if this thread appears hung
             rangeScanHungCheck = new RangeScanHungCheck(taskId, Thread.currentThread(), batchThreads);
-            _timeoutService.schedule(rangeScanHungCheck, options.getMaxRangeScanTime().plus(Duration.standardMinutes(5)).getMillis(), TimeUnit.MILLISECONDS);
+            _timeoutService.schedule(rangeScanHungCheck, options.getMaxRangeScanTime().plus(Duration.ofMinutes(5)).toMillis(), TimeUnit.MILLISECONDS);
             
             // Start threads for concurrently processing batch results
             for (int t = 0; t < _threadCount; t++) {
@@ -268,12 +264,11 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
             // check if there is a stash cut off time.
             Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(placement);
-            DateTime cutoffTime = null;
-            if (stashTimeInfoMap.size() > 0) {
-                cutoffTime = new DateTime(stashTimeInfoMap.entrySet().stream()
-                        .min((entry1, entry2) -> entry1.getValue().getTimestamp() > entry2.getValue().getTimestamp() ? 1 : -1)
-                        .get().getValue().getTimestamp());
-            }
+            Instant cutoffTime = stashTimeInfoMap.values().stream()
+                    .map(StashRunTimeInfo::getTimestamp)
+                    .min(Long::compareTo)
+                    .map(Instant::ofEpochMilli)
+                    .orElse(null);
 
             Iterator<MultiTableScanResult> allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
                     LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
@@ -340,7 +335,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             }
 
             _log.info("Scanning placement complete for task id={}, {}: {} ({})", taskId, placement, scanRange,
-                    PeriodFormat.getDefault().print(Duration.millis(System.currentTimeMillis() - startTime).toPeriod()));
+                    Duration.between(startTime, Instant.now()));
 
             return RangeScanUploaderResult.success();
         } catch (Throwable t) {
@@ -400,9 +395,9 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
     private void waitForAllTransfersComplete(int taskId, ScanRange scanRange, ScanWriter scanWriter)
             throws IOException, InterruptedException {
         _log.debug("Waiting for all transfers complete: id={}, range={}...", taskId, scanRange);
-        DateTime startWaitTime = DateTime.now();
-        DateTime lastCheckTime = null;
-        DateTime startNoProgressTime = null;
+        Instant startWaitTime = Instant.now();
+        Instant lastCheckTime = null;
+        Instant startNoProgressTime = null;
         Map<TransferKey, TransferStatus> lastStatusMap = null;
 
         _waitingForAllTransfersComplete.inc();
@@ -413,7 +408,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     return;
                 }
 
-                DateTime now = DateTime.now();
+                Instant now = Instant.now();
 
                 // Get the transfer status for all active transfers
                 Map<TransferKey, TransferStatus> currentStatusMap = result.getActiveTransferStatusMap();
@@ -434,20 +429,19 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
                     if (progressMade) {
                         _log.info("Task {} has {} active transfers after {}", taskId, currentStatusMap.size(),
-                                PeriodFormat.getDefault().print(new Interval(startWaitTime, now).toPeriod()));
+                                Duration.between(startWaitTime, now));
                         startNoProgressTime = null;
                     } else {
                         if (startNoProgressTime == null) {
                             startNoProgressTime = lastCheckTime;
                         }
-                        Period noProgressPeriod = new Interval(startNoProgressTime, now).toPeriod();
+                        Duration noProgressDuration = Duration.between(startNoProgressTime, now);
                         _log.info("Task {} has made no progress on {} active transfers in {}",
-                                taskId, currentStatusMap.size(), PeriodFormat.getDefault().print(noProgressPeriod));
+                                taskId, currentStatusMap.size(), noProgressDuration);
 
                         // If we've gone beyond the timeout for all transfers making no progress then raise an exception
-                        if (noProgressPeriod.toStandardDuration().isLongerThan(_waitForAllTransfersCompleteTimeout)) {
-                            throw new IOException("All transfers made no progress in " +
-                                    PeriodFormat.getDefault().print(_waitForAllTransfersCompleteTimeout.toPeriod()) +
+                        if (noProgressDuration.compareTo(_waitForAllTransfersCompleteTimeout) > 0) {
+                            throw new IOException("All transfers made no progress in " + noProgressDuration +
                                     " for task id=" + taskId);
                         }
                     }

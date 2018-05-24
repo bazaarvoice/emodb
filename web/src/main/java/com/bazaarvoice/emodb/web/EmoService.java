@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamResourceFi
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
-import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -24,6 +23,7 @@ import com.bazaarvoice.emodb.queue.client.DedupQueueServiceAuthenticator;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
 import com.bazaarvoice.emodb.web.cli.AllTablesReportCommand;
@@ -31,7 +31,6 @@ import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
 import com.bazaarvoice.emodb.web.cli.RegisterCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
-import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
@@ -64,10 +63,13 @@ import com.bazaarvoice.emodb.web.throttling.BlackListedIpFilter;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
+import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import com.google.common.io.Closeables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -158,9 +160,7 @@ public class EmoService extends Application<EmoConfiguration> {
         bootstrap.addCommand(new PurgeDatabusEventsCommand());
         bootstrap.addCommand(new AllTablesReportCommand());
         bootstrap.addCommand(new EncryptConfigurationApiKeyCommand());
-        // Write Date objects using ISO8601 strings instead of numeric milliseconds-since-1970.
-        bootstrap.getObjectMapper().setDateFormat(new ISO8601DateFormat());
-        bootstrap.getObjectMapper().registerModule(new LazyJsonModule());
+        EmoServiceObjectMapperFactory.configure(bootstrap.getObjectMapper());
 
         bootstrap.getMetricRegistry().register("jvm.gc.totals", new EmoGarbageCollectorMetricSet());
     }
@@ -470,7 +470,7 @@ public class EmoService extends Application<EmoConfiguration> {
     private EmoConfiguration loadConfigFile(File configFile)
             throws IOException, ConfigurationException {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        ObjectMapper mapper = CustomJsonObjectMapperFactory.build(new YAMLFactory());
+        ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
         ConfigurationFactory<EmoConfiguration> configurationFactory = new ConfigurationFactory(EmoConfiguration.class, validator, mapper, "dw");
         return configurationFactory.build(configFile);
     }
