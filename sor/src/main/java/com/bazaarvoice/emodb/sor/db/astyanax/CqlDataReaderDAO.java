@@ -8,7 +8,16 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
+import com.bazaarvoice.emodb.sor.db.MigratorReaderDAO;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.db.cql.CachingRowGroupIterator;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
@@ -37,7 +46,18 @@ import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.*;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
@@ -50,7 +70,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Spliterators;
+import java.util.UUID;
 import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
@@ -422,6 +448,14 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         return getKey(iter.next());
     }
 
+    /*
+      Its similar to getRawKeyFromRowGroup but should be used where the rowGroup can have no rows as well.
+     */
+    private ByteBuffer getRawKeyFromRowGroupOrNull(Iterable<Row> filteredRowGroup) {
+        Iterator<Row> iter = filteredRowGroup.iterator();
+        return iter.hasNext() ? getKey(iter.next()) : null;
+    }
+
     private <T> Iterator<T> touch(Iterator<T> iter) {
         // Could return a Guava PeekingIterator after "if (iter.hasNext()) iter.peek()", but simply calling hasNext()
         // is sufficient for the iterator implementations used by this DAO class...
@@ -591,7 +625,11 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
                     }
 
                     // Convert the filteredRows into a Record object
-                    ByteBuffer rowKey = getRawKeyFromRowGroup(filteredRows);
+                    ByteBuffer rowKey = getRawKeyFromRowGroupOrNull(filteredRows);
+                    // rowKey can be null if "all" the rows of the cassandra record are after the cutoff time. In such case ignore that record and continue.
+                    if (rowKey == null) {
+                        continue;
+                    }
 
                     long tableUuid = AstyanaxStorage.getTableUuid(rowKey);
                     if (_lastTableUuid != tableUuid) {
