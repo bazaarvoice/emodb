@@ -21,6 +21,11 @@
             <groupId>com.bazaarvoice.jackson</groupId>
             <artifactId>rison</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-common-streaming</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
