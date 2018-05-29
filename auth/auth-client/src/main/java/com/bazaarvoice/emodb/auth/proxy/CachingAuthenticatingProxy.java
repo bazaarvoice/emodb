@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.auth.proxy;
 
 import com.bazaarvoice.emodb.auth.InvalidCredentialException;
-import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Base class for creating an AuthenticatingProxy which caches instances by credentials.
@@ -16,23 +16,19 @@ abstract public class CachingAuthenticatingProxy<U, C> implements Authenticating
 
     private final static int DEFAULT_CACHE_SIZE = 10;
 
-    private final LoadingCache<C, U> _cachedInstances;
+    private final Map<C, ProxyEntry> _cachedInstances;
+    private final int _cacheSize;
 
     public CachingAuthenticatingProxy() {
         this(DEFAULT_CACHE_SIZE);
     }
 
     public CachingAuthenticatingProxy(int cacheSize) {
-        checkArgument(cacheSize > 0, "Cache size must be positive");
-
-        _cachedInstances = CacheBuilder.newBuilder()
-                .maximumSize(cacheSize)
-                .build(new CacheLoader<C, U>() {
-                    @Override
-                    public U load(C credentials) throws Exception {
-                        return createInstanceWithCredentials(credentials);
-                    }
-                });
+        if (cacheSize <= 0) {
+            throw new IllegalArgumentException("Cache size must be positive");
+        }
+        _cachedInstances = new HashMap<>();
+        _cacheSize = cacheSize;
     }
 
     @Override
@@ -40,9 +36,27 @@ abstract public class CachingAuthenticatingProxy<U, C> implements Authenticating
         if (credentials == null) {
             throw new InvalidCredentialException("Credentials cannot be null");
         }
-        // Validate the credentials here and not in createInstanceWithCredentials(), otherwise the exception
-        // will be wrapped by the LoadingCache.
-        return _cachedInstances.getUnchecked(validateCredentials(credentials));
+        // Validate the credentials here and not in createInstanceWithCredentials() to ensure validation occurs
+        C validatedCredentials = validateCredentials(credentials);
+
+        ProxyEntry proxyEntry = _cachedInstances.get(validatedCredentials);
+        if (proxyEntry == null) {
+            synchronized (_cachedInstances) {
+                proxyEntry = _cachedInstances.get(validatedCredentials);
+                if (proxyEntry == null) {
+                    if (_cachedInstances.size() == _cacheSize) {
+                        // Remove the least-recently used
+                        _cachedInstances.entrySet().stream()
+                                .min(Comparator.comparing(e -> e.getValue()._lastAccess))
+                                .map(Map.Entry::getKey)
+                                .ifPresent(_cachedInstances::remove);
+                    }
+                    proxyEntry = new ProxyEntry(createInstanceWithCredentials(validatedCredentials));
+                    _cachedInstances.put(validatedCredentials, proxyEntry);
+                }
+            }
+        }
+        return proxyEntry.getProxy();
     }
 
     /**
@@ -53,4 +67,19 @@ abstract public class CachingAuthenticatingProxy<U, C> implements Authenticating
         throws InvalidCredentialException;
 
     abstract protected U createInstanceWithCredentials(C credentials);
+
+    private class ProxyEntry {
+        U _proxy;
+        Instant _lastAccess;
+
+        ProxyEntry(U proxy) {
+            _proxy = proxy;
+            _lastAccess = Instant.now();
+        }
+
+        U getProxy() {
+            _lastAccess = Instant.now();
+            return _proxy;
+        }
+    }
 }
