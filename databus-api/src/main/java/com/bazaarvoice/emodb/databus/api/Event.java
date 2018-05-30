@@ -3,14 +3,13 @@ package com.bazaarvoice.emodb.databus.api;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class Event {
 
@@ -21,10 +20,10 @@ public class Event {
     public Event(@JsonProperty("eventKey") String eventKey,
                  @JsonProperty("content") Map<String, ?> content,
                  @JsonProperty("tags") List<List<String>> tags) {
-        _eventKey = checkNotNull(eventKey, "eventKey");
-        _content = checkNotNull(content, "content");
+        _eventKey = requireNonNull(eventKey, "eventKey");
+        _content = requireNonNull(content, "content");
         // Permit nulls; older version of the API omit tags from the response
-        _tags = Objects.firstNonNull(tags, ImmutableList.<List<String>>of());
+        _tags = Optional.ofNullable(tags).orElse(Collections.emptyList());
     }
 
     @JsonView(EventViews.ContentOnly.class)
@@ -76,10 +75,9 @@ public class Event {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
-                .add("eventKey", _eventKey)
-                .add("content", _content)
-                .add("tags", _tags)
-                .toString();
+        return getClass().getSimpleName() + "[" +
+                "eventKey=" +  _eventKey + "," +
+                "content=" + _content + "," +
+                "tags=" + _tags + "]";
     }
 }

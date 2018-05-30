@@ -20,7 +20,7 @@ public abstract class Names {
             anyCharInRange('0', '9'),
             anyCharInString("-.:_"));
 
-    private static BitSet anyOf(BitSet... bitSets) {
+    public static BitSet anyOf(BitSet... bitSets) {
         BitSet combined = new BitSet();
         for (BitSet bitSet : bitSets) {
             combined.or(bitSet);
@@ -28,13 +28,13 @@ public abstract class Names {
         return combined;
     }
 
-    private static BitSet anyCharInRange(char from, char to) {
+    public static BitSet anyCharInRange(char from, char to) {
         BitSet bitSet = new BitSet();
         bitSet.set(from, to + 1);
         return bitSet;
     }
 
-    private static BitSet anyCharInString(String source) {
+    public static BitSet anyCharInString(String source) {
         BitSet bitSet = new BitSet();
         source.chars().forEach(bitSet::set);
         return bitSet;

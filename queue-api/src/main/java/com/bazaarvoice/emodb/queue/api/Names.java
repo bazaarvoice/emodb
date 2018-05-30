@@ -1,6 +1,10 @@
 package com.bazaarvoice.emodb.queue.api;
 
-import com.google.common.base.CharMatcher;
+import java.util.BitSet;
+
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInRange;
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInString;
+import static com.bazaarvoice.emodb.common.api.Names.anyOf;
 
 public abstract class Names {
 
@@ -8,11 +12,10 @@ public abstract class Names {
     private Names() {}
 
     // Exclude whitespace, control chars, non-ascii, upper-case, most punctuation.
-    private static final CharMatcher QUEUE_NAME_ALLOWED =
-            CharMatcher.inRange('a', 'z')
-                    .or(CharMatcher.inRange('0', '9'))
-                    .or(CharMatcher.anyOf("-.:@_"))
-                    .precomputed();
+    private static final BitSet QUEUE_NAME_ALLOWED = anyOf(
+            anyCharInRange('a', 'z'),
+            anyCharInRange('0', '9'),
+            anyCharInString("-.:@_"));
 
     /**
      * Queue names must be lowercase ASCII strings. between 1 and 255 characters in length.  Whitespace, ISO control
@@ -25,6 +28,6 @@ public abstract class Names {
                 queue.length() > 0 && queue.length() <= 255 &&
                 !(queue.charAt(0) == '_' && !queue.startsWith("__")) &&
                 !(queue.charAt(0) == '.' && (".".equals(queue) || "..".equals(queue))) &&
-                QUEUE_NAME_ALLOWED.matchesAllOf(queue);
+                queue.chars().allMatch(QUEUE_NAME_ALLOWED::get);
     }
 }
