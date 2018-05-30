@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.google.common.io.InputSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -14,6 +13,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Authenticating interface to {@link BlobStore}.  This method should exactly mirror BlobStore except with added
@@ -102,7 +102,7 @@ public interface AuthBlobStore {
     Blob get(@Credential String apiKey, String table, String blobId, @Nullable RangeSpecification rangeSpec)
             throws BlobNotFoundException, RangeNotSatisfiableException;
 
-    void put(@Credential String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl)
+    void put(@Credential String apiKey, String table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException;
 
     void delete(@Credential String apiKey, String table, String blobId);

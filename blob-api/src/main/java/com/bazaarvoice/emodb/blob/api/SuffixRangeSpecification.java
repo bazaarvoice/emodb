@@ -1,9 +1,5 @@
 package com.bazaarvoice.emodb.blob.api;
 
-import com.google.common.primitives.Longs;
-
-import static com.google.common.base.Preconditions.checkArgument;
-
 /**
  * Range specification for the last {@code N} bytes in a blob.
  */
@@ -12,7 +8,9 @@ class SuffixRangeSpecification implements RangeSpecification {
 
     public SuffixRangeSpecification(long length) {
         // For some reason HTTP spec says a suffix len of 0 is valid.  But it's always unsatisfiable.
-        checkArgument(length >= 0, "Suffix length must be >= 0");
+        if (length < 0) {
+            throw new IllegalArgumentException("Suffix length must be >= 0");
+        }
         _length = length;
     }
 
@@ -31,7 +29,7 @@ class SuffixRangeSpecification implements RangeSpecification {
 
     @Override
     public int hashCode() {
-        return Longs.hashCode(_length);
+        return Long.hashCode(_length);
     }
 
     @Override

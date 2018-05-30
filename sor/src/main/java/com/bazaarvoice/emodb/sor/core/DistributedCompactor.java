@@ -162,7 +162,7 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
 
         // consider compactionControlTimestamp here (one case could be that there is a stash run in progress) and not include those Ids.
         // With this, we are halting the deletion of these deltas in this run.
-        // We could have not included these Ids at the first place in the top section, but just to be cleaner and for better separation, excluding these Ids here.
+        // We could have not included these Ids at the first place in the top section, but just to be cleaner and for better separation, anyCharExcept these Ids here.
         keysToDelete = keysToDelete.stream().filter(keyToDelete -> (TimeUUIDs.getTimeMillis(keyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
         compactionKeysToDelete = compactionKeysToDelete.stream().filter(compactionKeyToDelete -> (TimeUUIDs.getTimeMillis(compactionKeyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
 

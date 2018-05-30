@@ -40,7 +40,7 @@ public final class Compaction {
 
     /**
      * UUID of the most recent consistent delta which changed the resolved object deleted by compaction.  Any delta
-     * between this and the cutoff resolve to the same content, excluding intrinsics such as version and signature.
+     * between this and the cutoff resolve to the same content, anyCharExcept intrinsics such as version and signature.
      */
      private final UUID _lastContentMutation;
 

@@ -77,7 +77,7 @@ public class Permissions {
                             Conditions.intrinsic(Intrinsic.PLACEMENT, Conditions.like("*:sys")))));
 
     /**
-     * NON_SYSTEM_TABLE along with excluding PII table/placements.
+     * NON_SYSTEM_TABLE along with anyCharExcept PII table/placements.
      */
     public final static ConditionResource NON_SYSTEM_NON_PII_TABLE = new ConditionResource(
             Conditions.not(

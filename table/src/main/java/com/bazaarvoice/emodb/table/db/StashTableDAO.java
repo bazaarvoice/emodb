@@ -10,7 +10,7 @@ import java.util.Set;
 public interface StashTableDAO {
 
     /**
-     * Create a snapshot of all tables excluding the ones listed in the blackListTableCondition in the provided placements and their token ranges for Stash.
+     * Create a snapshot of all tables anyCharExcept the ones listed in the blackListTableCondition in the provided placements and their token ranges for Stash.
      */
     void createStashTokenRangeSnapshot(String stashId, Set<String> placements, Condition blackListTableCondition);
 

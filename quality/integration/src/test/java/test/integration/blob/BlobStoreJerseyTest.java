@@ -66,6 +66,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest.AUTHENTICATION_HEADER;
 import static org.junit.Assert.assertArrayEquals;
@@ -680,17 +681,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testPut() throws IOException {
-        InputSupplier<InputStream> in = new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                return new ByteArrayInputStream("blob-content".getBytes());
-            }
-        };
+        Supplier<InputStream> in = () -> new ByteArrayInputStream("blob-content".getBytes());
         Map<String, String> attributes = ImmutableMap.of("key", "value");
         blobClient().put("table-name", "blob-id", in, attributes, Duration.ofDays(30));
 
         //noinspection unchecked
-        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes), eq(Duration.ofDays(30)));
+        verify(_server).put(eq("table-name"), eq("blob-id"), isA(Supplier.class), eq(attributes), eq(Duration.ofDays(30)));
         verifyNoMoreInteractions(_server);
     }
 

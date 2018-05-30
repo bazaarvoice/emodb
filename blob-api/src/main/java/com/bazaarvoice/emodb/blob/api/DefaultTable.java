@@ -3,12 +3,12 @@ package com.bazaarvoice.emodb.blob.api;
 import com.bazaarvoice.emodb.sor.api.TableAvailability;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class DefaultTable implements Table {
     private final String _name;
@@ -20,9 +20,9 @@ public final class DefaultTable implements Table {
                         @JsonProperty("options") TableOptions options,
                         @JsonProperty("attributes") Map<String, String> attributes,
                         @JsonProperty("availability") @Nullable TableAvailability availability) {
-        _name = checkNotNull(name, "name");
-        _options = checkNotNull(options, "options");
-        _attributes = checkNotNull(attributes, "attributes");
+        _name = requireNonNull(name, "name");
+        _options = requireNonNull(options, "options");
+        _attributes = requireNonNull(attributes, "attributes");
         _availability = availability;
     }
 
@@ -58,12 +58,12 @@ public final class DefaultTable implements Table {
         return _name.equals(that._name) &&
                 _options.equals(that._options) &&
                 _attributes.equals(that._attributes) &&
-                Objects.equal(_availability, _availability);
+                Objects.equals(_availability, _availability);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_name, _options, _attributes, _availability);
+        return Objects.hash(_name, _options, _attributes, _availability);
     }
 
     @Override

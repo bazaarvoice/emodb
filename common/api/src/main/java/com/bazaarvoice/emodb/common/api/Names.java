@@ -40,6 +40,11 @@ public abstract class Names {
         return bitSet;
     }
 
+    public static BitSet anyCharExcept(BitSet bitSet, BitSet exclude) {
+        bitSet.andNot(exclude);
+        return bitSet;
+    }
+
     /**
      * Table names must be lowercase ASCII strings. between 1 and 255 characters in length.  Whitespace, ISO control
      * characters and certain punctuation characters that aren't generally allowed in file names or in elasticsearch
