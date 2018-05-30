@@ -1,13 +1,11 @@
 package com.bazaarvoice.emodb.sor.delta.deser;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.UnmodifiableIterator;
+import com.bazaarvoice.emodb.streaming.AbstractSpliterator;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.util.NoSuchElementException;
 
-class DeltaStreamSplitter extends UnmodifiableIterator<String> {
+class DeltaStreamSplitter extends AbstractSpliterator<String> {
 
     private final Reader _in;
     private final boolean _array;
@@ -29,7 +27,7 @@ class DeltaStreamSplitter extends UnmodifiableIterator<String> {
                 setFirstCharOfNextValue(ch);
             }
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -40,16 +38,15 @@ class DeltaStreamSplitter extends UnmodifiableIterator<String> {
         _firstCharOfNextValue = ch;
     }
 
-    @Override
     public boolean hasNext() {
         int ch = _firstCharOfNextValue;
         return ch != -1 && ch != ']';
     }
 
     @Override
-    public String next() {
+    protected String computeNext() {
         if (!hasNext()) {
-            throw new NoSuchElementException();
+            return endOfStream();
         }
         try {
             StringBuilder buf = new StringBuilder();
@@ -95,10 +92,10 @@ class DeltaStreamSplitter extends UnmodifiableIterator<String> {
             setFirstCharOfNextValue(ch);
             return buf.toString();
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
-
+    
     /**
      * Get the next char in the stream, skipping whitespace.
      * @return  A character, or -1 if there are no more characters.

@@ -4,26 +4,26 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.SetDeltaBuilder;
-import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 public class SetDeltaBuilderImpl implements SetDeltaBuilder {
 
     private boolean _removeRest;
-    private final Set<Literal> _addedValues = Sets.newHashSet();
-    private final Set<Literal> _removedValues = Sets.newHashSet();
+    private final Set<Literal> _addedValues = new HashSet<>();
+    private final Set<Literal> _removedValues = new HashSet<>();
     private boolean _deleteIfEmpty;
 
     @Override
     public SetDeltaBuilder remove(@Nullable Object value) {
         Literal literal = value instanceof Literal ? (Literal) value : Deltas.literal(value);
-        checkArgument(!_addedValues.contains(literal) && _removedValues.add(literal),
-                "Multiple operations against the same value are not allowed: %s", value);
+        if (_addedValues.contains(literal) || !_removedValues.add(literal)) {
+            throw new IllegalArgumentException(String.format(
+                    "Multiple operations against the same value are not allowed: %s", value));
+        }
         return this;
     }
 
@@ -43,8 +43,10 @@ public class SetDeltaBuilderImpl implements SetDeltaBuilder {
     @Override
     public SetDeltaBuilder add(@Nullable Object value) {
         Literal literal = value instanceof Literal ? (Literal) value : Deltas.literal(value);
-        checkArgument(!_removedValues.contains(literal) && _addedValues.add(literal),
-                "Multiple operations against the same value are not allowed: %s", value);
+        if (_removedValues.contains(literal) || !_addedValues.add(literal)) {
+            throw new IllegalArgumentException(String.format(
+                    "Multiple operations against the same value are not allowed: %s", value));
+        }
         return this;
     }
 

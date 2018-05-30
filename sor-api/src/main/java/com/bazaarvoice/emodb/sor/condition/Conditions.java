@@ -13,11 +13,11 @@ import com.bazaarvoice.emodb.sor.condition.impl.NotConditionImpl;
 import com.bazaarvoice.emodb.sor.condition.impl.OrConditionBuilderImpl;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaParser;
 import com.bazaarvoice.emodb.sor.delta.impl.ContainsConditionImpl;
-import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public abstract class Conditions {
@@ -52,7 +52,7 @@ public abstract class Conditions {
         } else if (json.size() == 1) {
             return equal(json.iterator().next());
         }
-        Set<Object> set = Sets.newLinkedHashSet(json);
+        Set<Object> set = new LinkedHashSet<>(json);
         if (set.size() == 1) {
             return equal(set.iterator().next());
         } else {
@@ -160,7 +160,7 @@ public abstract class Conditions {
             // Every possible value satisfies the condition containing an empty subset
             return alwaysTrue();
         }
-        Set<Object> values = Sets.newLinkedHashSet(json);
+        Set<Object> values = new LinkedHashSet<>(json);
         return new ContainsConditionImpl(values, containment);
     }
 

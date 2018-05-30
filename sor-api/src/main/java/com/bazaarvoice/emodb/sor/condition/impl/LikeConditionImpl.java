@@ -5,30 +5,29 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Joiner;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.io.CharStreams;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.Writer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 abstract public class LikeConditionImpl extends AbstractCondition implements LikeCondition {
 
     private final String _condition;
 
     public static LikeConditionImpl create(Object value) {
-        checkArgument(value instanceof String, "Like expression only supports strings");
+        if (!(value instanceof String)) {
+            throw new IllegalArgumentException("Like expression only supports strings");
+        }
         return create(value.toString());
     }
 
     public static LikeConditionImpl create(final String condition) {
-        checkNotNull(condition, "Like expression cannot be null");
+        requireNonNull(condition, "Like expression cannot be null");
 
         // Optimize for the most common case where an expression contains a single wildcard.
         int firstWildcard = -1;
@@ -57,7 +56,7 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
                         firstWildcard = i;
                     } else {
                         if (remainingWildcards == null) {
-                            remainingWildcards = Lists.newArrayListWithCapacity(3);
+                            remainingWildcards = new ArrayList<>(3);
                         }
                         remainingWildcards.add(i);
                     }
@@ -113,7 +112,7 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         // the empty string will match the beginning of all input strings.  The same logic applies if the
         // expression ends with a wildcard.
 
-        List<String> substrings = Lists.newArrayListWithCapacity(remainingWildcards.size() + 2);
+        List<String> substrings = new ArrayList<>(remainingWildcards.size() + 2);
         substrings.add(unescaped.substring(0, firstWildcard));
         for (int nextWildcard : remainingWildcards) {
             substrings.add(unescaped.substring(firstWildcard+1, nextWildcard));
@@ -135,11 +134,9 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
 
     @Override
     public void appendTo(Appendable buf) throws IOException {
-        // Use a writer so the re can be correctly converted to json using DeltaJson.
-        Writer out = CharStreams.asWriter(buf);
-        out.write("like(");
-        DeltaJson.write(out, _condition);
-        out.write(")");
+        buf.append("like(");
+        DeltaJson.append(buf, _condition);
+        buf.append(")");
     }
 
     @Override
@@ -417,7 +414,7 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
             int length = substrings.size();
             _prefix = substrings.get(0);
             _suffix = substrings.get(length-1);
-            _innerSubstrings = ImmutableList.copyOf(substrings.subList(1, length-1));
+            _innerSubstrings = Collections.unmodifiableList(new ArrayList<>(substrings.subList(1, length-1)));
 
             int minLength = 0;
             for (String substring : substrings) {
@@ -461,7 +458,7 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
         @Override
         protected String substituteWildcardsWith(String substitute) {
             return _prefix + substitute +
-                    Joiner.on(substitute).join(_innerSubstrings) +
+                    _innerSubstrings.stream().collect(Collectors.joining(substitute)) +
                     substitute + _suffix;
         }
     }

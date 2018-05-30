@@ -19,18 +19,16 @@ import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
-import com.google.common.base.Objects;
-import com.google.common.collect.Sets;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
 
@@ -51,7 +49,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
 
     @Override
     public Boolean visit(EqualCondition condition, @Nullable Object json) {
-        return Objects.equal(condition.getValue(), json);
+        return Objects.equals(condition.getValue(), json);
     }
 
     @Override
@@ -65,7 +63,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
     }
 
     private Object getIntrinsicValue(String name) {
-        Intrinsics intrinsics = checkNotNull(_intrinsics, "May not reference intrinsic values from this context.");
+        Intrinsics intrinsics = requireNonNull(_intrinsics, "May not reference intrinsic values from this context.");
         if (Intrinsic.ID.equals(name)) {
             return intrinsics.getId();
         } else if (Intrinsic.TABLE.equals(name)) {
@@ -130,9 +128,9 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
             Number nLeft = (Number) json;
             Number nRight = (Number) value;
             if (promoteToDouble(nLeft) || promoteToDouble(nRight)) {
-                return matchesComparison(comparison, Doubles.compare(nLeft.doubleValue(), nRight.doubleValue()));
+                return matchesComparison(comparison, Double.compare(nLeft.doubleValue(), nRight.doubleValue()));
             } else {
-                return matchesComparison(comparison, Longs.compare(nLeft.longValue(), nRight.longValue()));
+                return matchesComparison(comparison, Long.compare(nLeft.longValue(), nRight.longValue()));
             }
         }
         if (json instanceof String && value instanceof String) {
@@ -182,7 +180,7 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
         // If we're going to traverse the values more than once then convert it into a set
         // Skip if it is already a Set type
         if (!isSetType && (values.size() > 1 || conditionValues.size() > 1)) {
-            values = Sets.newHashSet(values);
+            values = new HashSet<>(values);
         }
 
         boolean isAny = containment == ContainsCondition.Containment.ANY;

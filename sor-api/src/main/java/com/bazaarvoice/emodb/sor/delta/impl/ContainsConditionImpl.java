@@ -3,30 +3,30 @@ package com.bazaarvoice.emodb.sor.delta.impl;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Sets;
+import com.bazaarvoice.emodb.sor.condition.impl.AbstractCondition;
+import com.bazaarvoice.emodb.streaming.AppendableJoiner;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
-public class ContainsConditionImpl implements ContainsCondition {
+public class ContainsConditionImpl extends AbstractCondition implements ContainsCondition {
 
     private final Set<Object> _values;
     private final Containment _containment;
 
     public ContainsConditionImpl(Object value) {
-        _values = Sets.newLinkedHashSet();
+        _values = new LinkedHashSet<>();
         _values.add(value);
         _containment = Containment.ALL;
     }
 
     public ContainsConditionImpl(Set<Object> values, Containment containment) {
-        _values = checkNotNull(values, "values");
+        _values = requireNonNull(values, "values");
         // If there is only a single value with "contains any" then "contains all" is implied
         if (values.size() == 1 &&  containment == Containment.ANY) {
             _containment = Containment.ALL;
@@ -52,7 +52,7 @@ public class ContainsConditionImpl implements ContainsCondition {
 
     @Override
     public boolean isSubsetOf(ContainsCondition condition) {
-        checkNotNull(condition, "condition");
+        requireNonNull(condition, "condition");
 
         Set<Object> lValues = getValues();
         Set<Object> rValues = condition.getValues();
@@ -63,7 +63,7 @@ public class ContainsConditionImpl implements ContainsCondition {
                     case ONLY:  // containsOnly("car", "truck").isSubsetOf(containsOnly("car", "truck"))
                         return lValues.equals(rValues);
                     case ANY:   // containsOnly("car", "truck").isSubsetOf(containsAny("car", "truck", "boat"))
-                        return !Sets.intersection(lValues, rValues).isEmpty();
+                        return lValues.stream().anyMatch(rValues::contains);
                     case ALL:   // containsOnly("car", "truck").isSubsetOf(containsAll("car", "truck", "boat"))
                         return rValues.containsAll(lValues);
                 }
@@ -81,7 +81,7 @@ public class ContainsConditionImpl implements ContainsCondition {
             case ALL:
                 switch (condition.getContainment()) {
                     case ANY:   // containsAll("car", "truck").isSubsetOf(containsAny("car", "truck", "boat"))
-                        return !Sets.intersection(lValues, rValues).isEmpty();
+                        return lValues.stream().anyMatch(rValues::contains);
                     case ALL:   // containsAll("car", "truck", "boat").isSubsetOf(containsAll("car", "truck"))
                         return lValues.containsAll(rValues);
                 }
@@ -107,7 +107,7 @@ public class ContainsConditionImpl implements ContainsCondition {
         } else {
             buf.append("contains").append(_containment.getSuffix()).append("(");
         }
-        Joiner.on(',').appendTo(buf, OrderedJson.orderedStrings(_values));
+        OrderedJson.orderedStrings(_values).stream().collect(AppendableJoiner.joining(buf, ","));
         buf.append(")");
     }
 
@@ -128,18 +128,6 @@ public class ContainsConditionImpl implements ContainsCondition {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_values, _containment);
-    }
-
-    @Override
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
-        try {
-            appendTo(builder);
-        } catch (IOException e) {
-            // Should never happen
-            throw Throwables.propagate(e);
-        }
-        return builder.toString();
+        return Objects.hash(_values, _containment);
     }
 }

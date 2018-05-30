@@ -16,17 +16,16 @@ import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
-import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
-import com.google.common.base.Objects;
-import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Condition visitor to return the inverse of a condition.  If possible this returns an inverse, <code>i</code>,
@@ -43,7 +42,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
 
     @Nullable
     public static Condition getInverseOf(Condition condition) {
-        return checkNotNull(condition, "condition").visit(new InverseEvaluator(), null);
+        return requireNonNull(condition, "condition").visit(new InverseEvaluator(), null);
     }
 
     @Nullable
@@ -69,7 +68,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
                 return Conditions.isDefined();
 
             default:
-                List<Condition> inverseConditions = Lists.newArrayList();
+                List<Condition> inverseConditions = new ArrayList<>();
                 for (State state : State.values()) {
                     if (state != condition.getState() && state != State.DEFINED) {
                         inverseConditions.add(Conditions.is(state));
@@ -150,7 +149,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         // Use DeMorgan's law.  In this case allow "not(sub-condition)" for any sub-conditions which do not have an
         // inverse, leaving future operations to handle if necessary.
         List<Condition> inverseConditions = conditions.stream()
-                .map(condition -> Objects.firstNonNull(condition.visit(this, null), Conditions.not(condition)))
+                .map(condition -> Optional.ofNullable(condition.visit(this, null)).orElse(Conditions.not(condition)))
                 .collect(Collectors.toList());
 
         if (fromAnd) {
@@ -165,10 +164,10 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         // A map condition is basically an AND of all provided key conditions.  So the inverse is an OR or
         // of the same with each key condition inverted.  As with the AND operation allow "not(sub-condition)"
         // when a sub-condition has no inverse.
-        List<Condition> conditions = Lists.newArrayListWithCapacity(condition.getEntries().size());
+        List<Condition> conditions = new ArrayList<>(condition.getEntries().size());
         for (Map.Entry<String, Condition> entry : condition.getEntries().entrySet()) {
             Condition keyCond = entry.getValue();
-            Condition inverted = Objects.firstNonNull(keyCond.visit(this, null), Conditions.not(keyCond));
+            Condition inverted = Optional.ofNullable(keyCond.visit(this, null)).orElse(Conditions.not(keyCond));
             conditions.add(Conditions.mapBuilder().matches(entry.getKey(), inverted).build());
         }
 

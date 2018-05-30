@@ -1,11 +1,9 @@
 package com.bazaarvoice.emodb.sor.api;
 
-import com.google.common.collect.ImmutableMap;
-
+import java.util.HashMap;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An EmoDB coordinate consisting of the pair of a table name and a string identifier.
@@ -29,19 +27,25 @@ public final class Coordinate {
      * Parses a string in the format "&lt;table>/&lt;id>".  This is the inverse of {@link #toString()}.
      */
     public static Coordinate parse(String string) {
-        checkNotNull(string, "string");
+        requireNonNull(string, "string");
         int delim = string.indexOf('/');
-        checkArgument(delim != -1, "Invalid coordinate format.");
+        if (delim == -1) {
+            throw new IllegalArgumentException("Invalid coordinate format.");
+        }
         String table = string.substring(0, delim);
         String id = string.substring(delim + 1);
-        checkArgument(com.bazaarvoice.emodb.common.api.Names.isLegalTableName(table), "Invalid coordinate format: invalid table name");
-        checkArgument(!id.isEmpty(), "Invalid coordinate format: missing identifier");
+        if (!com.bazaarvoice.emodb.common.api.Names.isLegalTableName(table)) {
+            throw new IllegalArgumentException("Invalid coordinate format: invalid table name");
+        }
+        if (id.isEmpty()) {
+            throw new IllegalArgumentException("Invalid coordinate format: missing identifier");
+        }
         return new Coordinate(table, id);
     }
 
     private Coordinate(String table, String id) {
-        _table = checkNotNull(table, "table");
-        _id = checkNotNull(id, "id");
+        _table = requireNonNull(table, "table");
+        _id = requireNonNull(id, "id");
     }
 
     public String getTable() {
@@ -56,9 +60,10 @@ public final class Coordinate {
      * Returns a Json map with two entries, one for "~table" and one for "~id", similar to all System of Record objects.
      */
     public Map<String, Object> asJson() {
-        return ImmutableMap.<String, Object>of(
-                Intrinsic.TABLE, _table,
-                Intrinsic.ID, _id);
+        Map<String, Object> map = new HashMap<>();
+        map.put(Intrinsic.TABLE, _table);
+        map.put(Intrinsic.ID, _id);
+        return map;
     }
 
     @Override

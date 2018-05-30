@@ -3,16 +3,14 @@ package com.bazaarvoice.emodb.sor.condition.impl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.MapConditionBuilder;
-import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 public class MapConditionBuilderImpl implements MapConditionBuilder {
 
-    private final Map<String, Condition> _entries = Maps.newHashMap();
+    private final Map<String, Condition> _entries = new HashMap<>();
 
     @Override
     public MapConditionBuilder containsKey(String key) {
@@ -35,7 +33,10 @@ public class MapConditionBuilderImpl implements MapConditionBuilder {
     @Override
     public MapConditionBuilder matches(String key, Condition condition) {
         Condition previous = _entries.put(key, condition);
-        checkArgument(previous == null, "Multiple operations against the same key are not allowed: %s", key);
+        if (previous != null) {
+            throw new IllegalArgumentException(String.format(
+                    "Multiple operations against the same key are not allowed: %s", key));
+        }
         return this;
     }
 

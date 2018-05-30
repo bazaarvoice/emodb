@@ -3,19 +3,20 @@ package com.bazaarvoice.emodb.sor.condition.impl;
 import com.bazaarvoice.emodb.sor.condition.AndCondition;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
+import com.bazaarvoice.emodb.streaming.AppendableJoiner;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class AndConditionImpl extends AbstractCondition implements AndCondition {
 
     private final Collection<Condition> _conditions;
 
     public AndConditionImpl(Collection<Condition> conditions) {
-        _conditions = checkNotNull(conditions, "conditions");
+        _conditions = requireNonNull(conditions, "conditions");
     }
 
     @Override
@@ -30,14 +31,7 @@ public class AndConditionImpl extends AbstractCondition implements AndCondition 
 
     @Override
     public void appendTo(Appendable buf) throws IOException {
-        buf.append("and(");
-        String sep = "";
-        for (Condition condition : _conditions) {
-            buf.append(sep);
-            condition.appendTo(buf);
-            sep = ",";
-        }
-        buf.append(")");
+        _conditions.stream().collect(AppendableJoiner.joining(buf, ",", "and(", ")", (app, cond) -> cond.appendTo(app)));
     }
 
     @Override

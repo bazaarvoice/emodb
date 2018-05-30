@@ -13,20 +13,17 @@ import com.bazaarvoice.emodb.sor.delta.NoopDelta;
 import com.bazaarvoice.emodb.sor.delta.SetDelta;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.function.Predicate;
 
 public class MapDeltaBuilderImpl implements MapDeltaBuilder {
 
     private boolean _removeRest;
-    private final Map<String, Delta> _entries = Maps.newHashMap();
+    private final Map<String, Delta> _entries = new HashMap<>();
     private boolean _deleteIfEmpty;
 
     @Override
@@ -80,7 +77,10 @@ public class MapDeltaBuilderImpl implements MapDeltaBuilder {
 
     @Override
     public MapDeltaBuilder update(String key, Delta delta) {
-        checkArgument(!_entries.containsKey(key), "Multiple operations against the same key are not allowed: %s", key);
+        if(_entries.containsKey(key)) {
+            throw new IllegalArgumentException(String.format(
+                    "Multiple operations against the same key are not allowed: %s", key));
+        }
         _entries.put(key, delta);
         return this;
     }
@@ -142,7 +142,7 @@ public class MapDeltaBuilderImpl implements MapDeltaBuilder {
     public Delta build() {
         // an add can no-op only if it evaluates to a delete operation.  if we're guaranteed that
         // at least one add doesn't delete, no point in deleting if empty.
-        if (_deleteIfEmpty && !_entries.isEmpty() && Iterables.any(_entries.values(), NeverDeletePredicate.INSTANCE)) {
+        if (_deleteIfEmpty && !_entries.isEmpty() && _entries.values().stream().anyMatch(NeverDeletePredicate.INSTANCE)) {
             _deleteIfEmpty = false;
         }
         Delta delta = new MapDeltaImpl(_removeRest, _entries, _deleteIfEmpty);
@@ -165,7 +165,7 @@ public class MapDeltaBuilderImpl implements MapDeltaBuilder {
         private static final NeverDeletePredicate INSTANCE = new NeverDeletePredicate();
 
         @Override
-        public boolean apply(Delta delta) {
+        public boolean test(Delta delta) {
             return delta.visit(this, null);
         }
 

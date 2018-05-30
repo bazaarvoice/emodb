@@ -1,12 +1,9 @@
 package com.bazaarvoice.emodb.sor.api.report;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Ordering;
-
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Math.floor;
 
 abstract public class Statistics<T extends Comparable<T>> {
@@ -18,14 +15,22 @@ abstract public class Statistics<T extends Comparable<T>> {
 
     protected Statistics(T min, T max, T mean, double stdev, List<T> sample) {
         if (min == null) {
-            checkArgument(max == null && mean == null && (sample == null || sample.isEmpty()),
-                    "Empty statistics must contain all null or empty values");
+            if (max != null || mean != null || (sample != null && !sample.isEmpty())) {
+                throw new IllegalArgumentException("Empty statistics must contain all null or empty values");
+            }
         } else {
-            checkArgument(max != null && mean != null && sample != null && !sample.isEmpty(),
-                    "Non-empty statistics must be fully initialized");
-            checkArgument(min.compareTo(max) <= 0, "Min cannot be greater than max");
-            checkArgument(min.compareTo(mean) <= 0, "Min cannot be greater than mean");
-            checkArgument(mean.compareTo(max) <=0, "Mean cannot be greater than max");
+            if (max == null || mean == null || sample == null || sample.isEmpty()) {
+                throw new IllegalArgumentException("Non-empty statistics must be fully initialized");
+            }
+            if (min.compareTo(max) > 0) {
+                throw new IllegalArgumentException("Min cannot be greater than max");
+            }
+            if (min.compareTo(mean) > 0) {
+                throw new IllegalArgumentException("Min cannot be greater than mean");
+            }
+            if (mean.compareTo(max) > 0) {
+                throw new IllegalArgumentException("Mean cannot be greater than max");
+            }
         }
 
         _min = min;
@@ -33,14 +38,11 @@ abstract public class Statistics<T extends Comparable<T>> {
         _mean = mean;
         _stdev = stdev;
 
-        // The sample must be sorted.  If the sample is already sorted then store it as is, otherwise make a copy
-        // and sort it.
+        // The sample must be sorted.
         if (sample == null) {
-            _sample = ImmutableList.of();
-        } else if (Ordering.natural().isOrdered(sample)) {
-            _sample = Collections.unmodifiableList(sample);
+            _sample = Collections.emptyList();
         } else {
-            _sample = Ordering.natural().immutableSortedCopy(sample);
+            _sample = Collections.unmodifiableList(sample.stream().sorted().collect(Collectors.toList()));
         }
     }
 

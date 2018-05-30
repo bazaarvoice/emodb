@@ -6,15 +6,15 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Date;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * All changes for a point-in-time, including a content delta, delta history, audit information, compaction information.
@@ -41,12 +41,12 @@ public final class Change {
            @JsonProperty("compaction") @Nullable Compaction compaction,
            @JsonProperty("history") @Nullable History history,
            @JsonProperty("tags") @Nullable Set<String> tags) {
-        _id = checkNotNull(id, "changeId");
+        _id = requireNonNull(id, "changeId");
         _delta = delta;
         _audit = audit;
         _compaction = compaction;
         _history = history;
-        _tags = Objects.firstNonNull(tags, ImmutableSet.<String>of());
+        _tags = Optional.ofNullable(tags).orElse(Collections.emptySet());
     }
 
     // Add a human-readable timestamp for debugging.  This gets serialized into the JSON

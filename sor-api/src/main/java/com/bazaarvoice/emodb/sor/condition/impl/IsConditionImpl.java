@@ -7,14 +7,14 @@ import com.bazaarvoice.emodb.sor.condition.State;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class IsConditionImpl extends AbstractCondition implements IsCondition {
 
     private final State _state;
 
     public IsConditionImpl(State state) {
-        _state = checkNotNull(state);
+        _state = requireNonNull(state);
     }
 
     @Override

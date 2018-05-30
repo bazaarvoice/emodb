@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class TableReportMetadata {
     private final String _id;
@@ -22,11 +22,11 @@ public class TableReportMetadata {
                                @JsonProperty("endTime") @Nullable Date endTime,
                                @JsonProperty("success") @Nullable Boolean success,
                                @JsonProperty("placements") List<String> placements) {
-        _id = checkNotNull(id, "id");
-        _startTime = checkNotNull(startTime, "startTime");
+        _id = requireNonNull(id, "id");
+        _startTime = requireNonNull(startTime, "startTime");
         _endTime = endTime;
         _success = success;
-        _placements = checkNotNull(placements, "placements");
+        _placements = requireNonNull(placements, "placements");
     }
 
     public String getId() {
