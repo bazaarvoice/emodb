@@ -2,15 +2,16 @@ package com.bazaarvoice.emodb.table.db.generic;
 
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -26,6 +27,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -43,27 +46,33 @@ import static java.lang.String.format;
  */
 public class CachingTableDAO implements TableDAO {
     public static final Duration CACHE_DURATION = Duration.standardMinutes(10);
+    // If a table is unknown cache that for a much shorter time to minimize the effect of invalidation delays
+    public static final Duration UNKNOWN_TABLE_RELOAD_DURATION = Duration.standardSeconds(2);
 
     private final TableDAO _delegate;
-    private final LoadingCache<String, Optional<Table>> _tableCache;
+    private final LoadingCache<String, TableCacheEntry> _tableCache;
+    private final Clock _clock;
 
     @Inject
     public CachingTableDAO(@CachingTableDAODelegate TableDAO delegate,
-                           @CachingTableDAORegistry CacheRegistry cacheRegistry) {
+                           @CachingTableDAORegistry CacheRegistry cacheRegistry,
+                           Clock clock) {
         _delegate = checkNotNull(delegate, "delegate");
+        _clock = checkNotNull(clock, "clock");
 
         // The table cache maps table names to AstyanaxTable objects.
         _tableCache = CacheBuilder.newBuilder()
+                .ticker(ClockTicker.getTicker(clock))
                 .expireAfterWrite(CACHE_DURATION.getMillis(), TimeUnit.MILLISECONDS)
                 .recordStats()
-                .build(new CacheLoader<String, Optional<Table>>() {
+                .build(new CacheLoader<String, TableCacheEntry>() {
                     @Override
-                    public Optional<Table> load(String name)
+                    public TableCacheEntry load(String name)
                             throws Exception {
                         try {
-                            return Optional.of(_delegate.get(name));
+                            return new TableCacheEntry(_delegate.get(name));
                         } catch (UnknownTableException e) {
-                            return Optional.absent();
+                            return new TableCacheEntry(_clock.instant().plusMillis(UNKNOWN_TABLE_RELOAD_DURATION.getMillis()));
                         }
                     }
                 });
@@ -157,9 +166,21 @@ public class CachingTableDAO implements TableDAO {
         _delegate.audit(name, op, audit);
     }
 
+    @Nullable
+    private Table getTableFromCache(String name) {
+        TableCacheEntry entry = _tableCache.getUnchecked(name);
+        // If the table wasn't found and it is after the unknown table expiration time invalidate the cache and
+        // load it again.
+        if (entry.table == null && _clock.instant().isAfter(entry.unknownTableReloadTime)) {
+            _tableCache.invalidate(name);
+            entry = _tableCache.getUnchecked(name);
+        }
+        return entry.table;
+    }
+
     @Override
     public boolean exists(String name) {
-        return _tableCache.getUnchecked(name).isPresent();
+        return getTableFromCache(name) != null;
     }
 
     @Override
@@ -170,11 +191,11 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public Table get(String name)
             throws UnknownTableException {
-        Optional<Table> table = _tableCache.getUnchecked(name);
-        if (!table.isPresent()) {
+        Table table = getTableFromCache(name);
+        if (table == null) {
             throw new UnknownTableException(format("Unknown table: %s", name), name);
         }
-        return table.get();
+        return table;
     }
 
     @Override
@@ -192,5 +213,20 @@ public class CachingTableDAO implements TableDAO {
     @Override
     public TableSet createTableSet() {
         return _delegate.createTableSet();
+    }
+
+    private class TableCacheEntry {
+        final Table table;
+        final Instant unknownTableReloadTime;
+
+        TableCacheEntry(Table table) {
+            this.table = table;
+            unknownTableReloadTime = Instant.MAX;
+        }
+
+        TableCacheEntry(Instant unknownTableReloadTime) {
+            this.unknownTableReloadTime = unknownTableReloadTime;
+            table = null;
+        }
     }
 }

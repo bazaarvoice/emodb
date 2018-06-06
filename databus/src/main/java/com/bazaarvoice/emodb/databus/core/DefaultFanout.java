@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
-import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -28,6 +27,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
@@ -209,16 +209,24 @@ public class DefaultFanout extends AbstractScheduledService {
                         int numOutboundReplicationEvents = 0;
                         try (Timer.Context ignored1 = _fanoutTimer.time()) {
                             for (EventData rawEvent : rawEventPartition) {
-                                eventKeys.add(rawEvent.getId());
-
                                 ByteBuffer eventData = rawEvent.getData();
 
                                 SubscriptionEvaluator.MatchEventData matchEventData;
                                 try (Timer.Context ignored2 = _fetchMatchEventDataTimer.time()) {
                                     matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
-                                } catch (UnknownTableException e) {
+                                } catch (OrphanedEventException e) {
+                                    // There's a 2 second window where a race condition exists such that a newly created
+                                    // table may exist but due to caching the table may be cached as unknown.  To allow
+                                    // plenty of room for error wait until over 30 seconds after the event was written
+                                    // before dropping the event.  After this the event must be orphaned because
+                                    // the associated table was dropped.
+                                    if (e.getEventTime().until(_clock.instant(), ChronoUnit.SECONDS) > 30) {
+                                        eventKeys.add(rawEvent.getId());
+                                    }
                                     continue;
                                 }
+
+                                eventKeys.add(rawEvent.getId());
 
                                 // Copy to subscriptions in the current data center.
                                 Timer.Context matchTime = _matchSubscriptionsTimer.time();

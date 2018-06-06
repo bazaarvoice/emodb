@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
@@ -48,7 +49,7 @@ public class SubscriptionEvaluator {
         MatchEventData matchEventData;
         try {
             matchEventData = getMatchEventData(eventData);
-        } catch (UnknownTableException e) {
+        } catch (OrphanedEventException e) {
             return false;
         }
 
@@ -74,9 +75,13 @@ public class SubscriptionEvaluator {
         }
     }
 
-    public MatchEventData getMatchEventData(ByteBuffer eventData) throws UnknownTableException {
+    public MatchEventData getMatchEventData(ByteBuffer eventData) throws OrphanedEventException {
         UpdateRef ref = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
-        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getKey(), ref.getTags(), ref.getChangeId());
+        try {
+            return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getKey(), ref.getTags(), ref.getChangeId());
+        } catch (UnknownTableException e) {
+            throw new OrphanedEventException(ref.getTable(), Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(ref.getChangeId())));
+        }
     }
 
     private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
