@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.sor.compactioncontrol;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
-import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -28,12 +28,12 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     private static final Logger _log = LoggerFactory.getLogger(DefaultCompactionControlSource.class);
 
     private final MapStore<StashRunTimeInfo> _stashStartTimestampInfo;
-    private final Counter _compactionControlTimeCounter;
 
     @Inject
     public DefaultCompactionControlSource(@StashRunTimeMapStore final MapStore<StashRunTimeInfo> stashStartTimestampInfo, final MetricRegistry metricRegistry) {
         _stashStartTimestampInfo = checkNotNull(stashStartTimestampInfo, "stashStartTimestampInfo");
-        _compactionControlTimeCounter = checkNotNull(metricRegistry, "metricRegistry").counter(MetricRegistry.name("bv.emodb.scan", "CompactionControlSource", "time-count"));
+        checkNotNull(metricRegistry, "metricRegistry").register(MetricRegistry.name("bv.emodb.scan", "CompactionControlSource", "map-size"),
+                (Gauge<Integer>) () -> _stashStartTimestampInfo.keySet().size());
     }
 
     @Override
@@ -45,7 +45,6 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
 
         try {
             _stashStartTimestampInfo.set(zkKey(id, dataCenter), new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
-            _compactionControlTimeCounter.inc();
         } catch (Exception e) {
             _log.error("Failed to update stash timestamp info for id: {}, datacenter: {}", id, dataCenter, e);
             throw Throwables.propagate(e);
@@ -59,7 +58,6 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
 
         try {
             _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
-            _compactionControlTimeCounter.dec();
         } catch (Exception e) {
             _log.error("Failed to delete stash timestamp info for id: {}, datacenter: {}", id, dataCenter, e);
             throw Throwables.propagate(e);
