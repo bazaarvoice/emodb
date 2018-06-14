@@ -36,9 +36,9 @@ public class InMemoryHistoryStore implements HistoryStore {
     }
 
     @Override
-    public void putDeltaHistory(String table, String rowId, List<History> histories) {
+    public void putDeltaHistory(String table, String rowId, List<History> deltaHistories) {
         // Protection against immutable lists passed into the method
-        List<History> audits = Lists.newArrayList(histories);
+        List<History> audits = Lists.newArrayList(deltaHistories);
         List<History> historyList = _historyStore.putIfAbsent(getKey(table, rowId), audits);
         if (historyList != null) { // already had some deltas
             historyList.addAll(audits);
