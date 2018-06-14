@@ -62,11 +62,11 @@ public class PausableDataWriterDAO implements DataWriterDAO {
     }
 
     @Override
-    public void storeCompactedDeltas(final Table tbl, final String key, final List<History> audits, final WriteConsistency consistency) {
+    public void storeCompactedDeltas(final Table tbl, final String key, final List<History> histories, final WriteConsistency consistency) {
         write(new Runnable() {
             @Override
             public void run() {
-                _delegate.storeCompactedDeltas(tbl, key, audits, consistency);
+                _delegate.storeCompactedDeltas(tbl, key, histories, consistency);
             }
         });
     }

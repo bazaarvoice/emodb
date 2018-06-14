@@ -5,8 +5,8 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
@@ -60,11 +59,11 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final Meter _blockedRowsMigratedMeter;
     private final PlacementCache _placementCache;
 
-    private final AuditStore _auditStore;
+    private final HistoryStore _historyStore;
 
     @Inject
     public CqlDataWriterDAO(@CqlWriterDAODelegate DataWriterDAO delegate,
-                            PlacementCache placementCache, AuditStore auditStore,
+                            PlacementCache placementCache, HistoryStore historyStore,
                             ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                             DAOUtils daoUtils, @PrefixLength int deltaPrefixLength,
                             @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
@@ -72,7 +71,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
 
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
-        _auditStore = checkNotNull(auditStore, "auditStore");
+        _historyStore = checkNotNull(historyStore, "historyStore");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _placementCache = placementCache;
         _migratorMeter = metricRegistry.meter(getMetricName("migratedRows"));
@@ -205,14 +204,14 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
 
         // the old statement should be removed in the next version
         ResultSetFuture legacyTableFuture = null;
-        ResultSetFuture auditBatchFuture = null;
+        ResultSetFuture historyBatchFuture = null;
 
         if (historyList != null && !historyList.isEmpty()) {
-            BatchStatement auditBatchStatement = new BatchStatement();
-            AuditBatchPersister auditBatchPersister = CqlAuditBatchPersister.build(auditBatchStatement,
-                    placement.getDeltaHistoryTableDDL(), _changeEncoder, _auditStore, consistencyLevel);
-            _auditStore.putDeltaAudits(rowKey, historyList, auditBatchPersister);
-            auditBatchFuture = session.executeAsync(auditBatchStatement);
+            BatchStatement historyBatchStatement = new BatchStatement();
+            HistoryBatchPersister historyBatchPersister = CqlHistoryBatchPersister.build(historyBatchStatement,
+                    placement.getDeltaHistoryTableDDL(), _changeEncoder, _historyStore, consistencyLevel);
+            _historyStore.putDeltaHistory(rowKey, historyList, historyBatchPersister);
+            historyBatchFuture = session.executeAsync(historyBatchStatement);
         }
 
         // delete the old deltas & compaction records
@@ -236,14 +235,14 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             legacyTableFuture.getUninterruptibly();
         }
 
-        if (auditBatchFuture != null) {
-            auditBatchFuture.getUninterruptibly();
+        if (historyBatchFuture != null) {
+            historyBatchFuture.getUninterruptibly();
         }
     }
 
     @Override
-    public void storeCompactedDeltas(Table tbl, String key, List<History> audits, WriteConsistency consistency) {
-        _astyanaxWriterDAO.storeCompactedDeltas(tbl, key, audits, consistency);
+    public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
+        _astyanaxWriterDAO.storeCompactedDeltas(tbl, key, histories, consistency);
     }
 
     @Override

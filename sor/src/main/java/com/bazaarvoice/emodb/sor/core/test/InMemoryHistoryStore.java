@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.sor.core.test;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -17,16 +17,16 @@ import java.util.concurrent.ConcurrentMap;
 
 import static java.lang.String.format;
 
-public class InMemoryAuditStore implements AuditStore {
-    private final ConcurrentMap<String, List<History>> _auditStore = Maps.newConcurrentMap();
+public class InMemoryHistoryStore implements HistoryStore {
+    private final ConcurrentMap<String, List<History>> _historyStore = Maps.newConcurrentMap();
 
     @Override
-    public Iterator<Change> getDeltaAudits(String table, String rowId) {
+    public Iterator<Change> getDeltaHistories(String table, String rowId) {
         String key = getKey(table, rowId);
-        if (!_auditStore.containsKey(key)) {
+        if (!_historyStore.containsKey(key)) {
             return Iterators.emptyIterator();
         }
-        return Lists.transform(_auditStore.get(key), new Function<History, Change>() {
+        return Lists.transform(_historyStore.get(key), new Function<History, Change>() {
             @Override
             public Change apply(History input) {
                 return new ChangeBuilder(input.getChangeId())
@@ -36,19 +36,19 @@ public class InMemoryAuditStore implements AuditStore {
     }
 
     @Override
-    public void putDeltaAudits(String table, String rowId, List<History> deltaAudits) {
+    public void putDeltaHistory(String table, String rowId, List<History> deltaHistories) {
         // Protection against immutable lists passed into the method
-        List<History> audits = Lists.newArrayList(deltaAudits);
-        List<History> historyList = _auditStore.putIfAbsent(getKey(table, rowId), audits);
+        List<History> audits = Lists.newArrayList(deltaHistories);
+        List<History> historyList = _historyStore.putIfAbsent(getKey(table, rowId), audits);
         if (historyList != null) { // already had some deltas
             historyList.addAll(audits);
-            _auditStore.put(getKey(table, rowId), historyList);
+            _historyStore.put(getKey(table, rowId), historyList);
         }
     }
 
     @Override
-    public void putDeltaAudits(Object rowId, List<History> deltaAudits, AuditBatchPersister auditBatchPersister) {
-        throw new UnsupportedOperationException("Batch persistor is not supported for in-memory AuditStore");
+    public void putDeltaHistory(Object rowId, List<History> deltaAudits, HistoryBatchPersister historyBatchPersister) {
+        throw new UnsupportedOperationException("Batch persistor is not supported for in-memory HistoryStore");
     }
 
     @Override

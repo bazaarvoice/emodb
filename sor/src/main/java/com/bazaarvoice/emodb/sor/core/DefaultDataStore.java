@@ -100,7 +100,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final DataWriterDAO _dataWriterDao;
     private final SlowQueryLog _slowQueryLog;
     private final ExecutorService _compactionExecutor;
-    private final AuditStore _auditStore;
+    private final HistoryStore _historyStore;
     private final Optional<URI> _stashRootDirectory;
     private final Condition _stashBlackListTableCondition;
     private final Timer _resolveAnnotatedEventTimer;
@@ -114,16 +114,16 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Inject
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, EventBus eventBus, TableDAO tableDao,
-                            DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, AuditStore auditStore,
+                            DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition) {
         this(eventBus, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                auditStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
+                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
     }
 
     @VisibleForTesting
     public DefaultDataStore(EventBus eventBus, TableDAO tableDao, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
-                            SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, AuditStore auditStore,
+                            SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
         _eventBus = checkNotNull(eventBus, "eventBus");
         _tableDao = checkNotNull(tableDao, "tableDao");
@@ -131,14 +131,14 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _dataWriterDao = checkNotNull(dataWriterDao, "dataWriterDao");
         _slowQueryLog = checkNotNull(slowQueryLog, "slowQueryLog");
         _compactionExecutor = checkNotNull(compactionExecutor, "compactionExecutor");
-        _auditStore = checkNotNull(auditStore, "auditStore");
+        _historyStore = checkNotNull(historyStore, "historyStore");
         _stashRootDirectory = checkNotNull(stashRootDirectory, "stashRootDirectory");
         _stashBlackListTableCondition = checkNotNull(stashBlackListTableCondition, "stashBlackListTableCondition");
         _resolveAnnotatedEventTimer = metricRegistry.timer(getMetricName("resolve_event"));
 
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
         _discardedCompactions = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", "discarded_compactions"));
-        _compactor = new DistributedCompactor(_archiveDeltaSize, _auditStore.isDeltaHistoryEnabled(), metricRegistry);
+        _compactor = new DistributedCompactor(_archiveDeltaSize, _historyStore.isDeltaHistoryEnabled(), metricRegistry);
 
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
     }
@@ -794,7 +794,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private List<History> getDeltaHistory(Table table, String key, PendingCompaction pendingCompaction) {
         // Check if delta history is disabled by setting the TTL to zero or deltaArchives are empty
-        if (Duration.ZERO.equals(_auditStore.getHistoryTtl()) || pendingCompaction.getDeltasToArchive().isEmpty()) {
+        if (Duration.ZERO.equals(_historyStore.getHistoryTtl()) || pendingCompaction.getDeltasToArchive().isEmpty()) {
             return Lists.newArrayList();
         }
         MutableIntrinsics intrinsics = MutableIntrinsics.create(new Key(table, key));

@@ -28,18 +28,8 @@ import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
-import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
-import com.bazaarvoice.emodb.sor.core.DataTools;
-import com.bazaarvoice.emodb.sor.core.DefaultAuditStore;
-import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
-import com.bazaarvoice.emodb.sor.core.DefaultMigratorTools;
-import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
-import com.bazaarvoice.emodb.sor.core.LocalDataStore;
-import com.bazaarvoice.emodb.sor.core.MigratorTools;
-import com.bazaarvoice.emodb.sor.core.StashRoot;
-import com.bazaarvoice.emodb.sor.core.SystemDataStore;
+import com.bazaarvoice.emodb.sor.core.*;
+import com.bazaarvoice.emodb.sor.core.DefaultHistoryStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
@@ -200,7 +190,7 @@ public class DataStoreModule extends PrivateModule {
         // Bind all DAOs from the DAO module
         install(new DAOModule());
 
-        bind(AuditStore.class).to(DefaultAuditStore.class).asEagerSingleton();
+        bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
         
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume

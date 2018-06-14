@@ -479,7 +479,7 @@ public class CompactorTest {
 
                 // Add delta histories
                 if (historyList != null && !historyList.isEmpty()) {
-                    super._auditStore.putDeltaAudits(table.getName(), key, historyList);
+                    super._historyStore.putDeltaHistory(table.getName(), key, historyList);
                 }
             }
         };

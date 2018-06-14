@@ -28,7 +28,7 @@ public class InMemoryDataStore extends DefaultDataStore {
 
     public InMemoryDataStore(EventBus eventBus, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
         super(eventBus, new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
     }
 }
