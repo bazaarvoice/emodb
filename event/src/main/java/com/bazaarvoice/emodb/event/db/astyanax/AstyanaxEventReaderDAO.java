@@ -317,7 +317,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
             if (firstSlab) {
                 if (oldestSlab == null) {
-                    cacheOldestSlabForChannel(channel, slabId);
+                    cacheOldestSlabForChannel(channel, TimeUUIDSerializer.get().fromByteBuffer(slabId));
                 }
                 firstSlab = false;
             }
@@ -344,17 +344,20 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         }
 
         if (firstSlab && oldestSlab == null) {
-            // Channel was completely empty.  Cache a TimeUUID which will only read at most 1 minute of tombstones
-            // until the cache expires 10 seconds later.
-            cacheOldestSlabForChannel(channel, TimeUUIDSerializer.get().toByteBuffer(
-                    TimeUUIDs.uuidForTimeMillis(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(1))));
+            // Channel was completely empty.  Cache a TimeUUID for the current time.  This will cause future calls
+            // to read at most 1 minute of tombstones until the cache expires 10 seconds later.
+            cacheOldestSlabForChannel(channel, TimeUUIDs.newUUID());
         }
     }
 
-    private void cacheOldestSlabForChannel(String channel, ByteBuffer slabId) {
+    private void cacheOldestSlabForChannel(String channel, UUID slabId) {
         // Functionally the same as ConcurrentMap.computeIfAbsent(...)
         try {
-            _oldestSlab.get(channel, () -> slabId);
+            // Subtract 1 minute from the slab ID to allow for a reasonable window of out-of-order writes while
+            // constraining the number of tombstones read to 1 minute's worth of rows.
+            _oldestSlab.get(channel, () ->
+                    TimeUUIDSerializer.get().toByteBuffer(
+                            TimeUUIDs.uuidForTimeMillis(TimeUUIDs.getTimeMillis(slabId) - TimeUnit.MINUTES.toMillis(1))));
         } catch (ExecutionException e) {
             // Won't happen, the "execution" just returns a constant.
         }
