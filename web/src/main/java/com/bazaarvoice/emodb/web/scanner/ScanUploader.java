@@ -51,6 +51,7 @@ public class ScanUploader {
     private static final Logger _log = LoggerFactory.getLogger(ScanUploader.class);
 
     private long _compactionControlBufferTimeInMillis = Duration.ofMinutes(1).toMillis();
+    private long _scanWaitTimeInMillis = Duration.ofMinutes(5).toMillis();
 
     private final DataTools _dataTools;
     private final ScanWorkflow _scanWorkflow;
@@ -73,6 +74,11 @@ public class ScanUploader {
     @VisibleForTesting
     public void setCompactionControlBufferTimeInMillis(long compactionControlBufferTimeInMillis) {
         _compactionControlBufferTimeInMillis = compactionControlBufferTimeInMillis;
+    }
+
+    @VisibleForTesting
+    public void setScanWaitTimeInMillis(long scanWaitTimeInMillis) {
+        _scanWaitTimeInMillis = scanWaitTimeInMillis;
     }
 
     public ScanAndUploadBuilder scanAndUpload(String scanId, ScanOptions options) {
@@ -204,8 +210,8 @@ public class ScanUploader {
             boolean scanCreated = false;
 
             try {
-                // We would like to wait 1 minute here to continue to scan to make sure scan don't miss any deltas that are written before the compaction control time.
-                Thread.sleep(_compactionControlBufferTimeInMillis);
+                // We would like to wait for 5 minutes here to continue to scan to make sure scan don't miss any deltas that are written before the compaction control time.
+                Thread.sleep(_scanWaitTimeInMillis);
 
                 // Create the scan
                 _scanStatusDAO.updateScanStatus(status);
