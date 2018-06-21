@@ -329,6 +329,7 @@ public class ScanUploaderTest {
         ScanUploader scanUploader = new ScanUploader(dataTools, scanWorkflow, scanStatusDAO, stashStateListener, compactionControlSource, dataCenters);
         // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
         scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
+        scanUploader.setScanWaitTimeInMillis(Duration.millis(5).getMillis());
         scanUploader.scanAndUpload("test1",
                 new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path")))).start();
         // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
@@ -451,6 +452,7 @@ public class ScanUploaderTest {
         ScanUploader scanUploader = new ScanUploader(dataStore, scanWorkflow, scanStatusDAO, mock(StashStateListener.class), new InMemoryCompactionControlSource(), dataCenters);
         // the default in code is 1 minute for compaction control buffer time, but we don't want to wait that long in the test, so set to a smaller value.
         scanUploader.setCompactionControlBufferTimeInMillis(Duration.millis(1).getMillis());
+        scanUploader.setScanWaitTimeInMillis(Duration.millis(5).getMillis());
 
         ScanOptions scanOptions = new ScanOptions("app_global:default")
                 .setRangeScanSplitSize(1000000)
