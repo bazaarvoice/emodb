@@ -1,7 +1,8 @@
 #!/bin/bash
 
-CONFIG_FILE="config-local.yaml"
-DDL_FILE="config-ddl-local.yaml"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+CONFIG_FILE="${DIR}/config-local.yaml"
+DDL_FILE="${DIR}/config-ddl-local.yaml"
 
 function print_usage_and_exit {
     cat <<EOF
@@ -50,11 +51,11 @@ if [[ $# -gt 0 ]]; then
                 print_usage_and_exit
                 ;;
             --ddl-file)
-                DDL_FILE="${2}"
+                DDL_FILE="${PWD}/${2}"
                 shift 2
                 ;;
             --config-file)
-                CONFIG_FILE="${2}"
+                CONFIG_FILE="${PWD}/${2}"
                 shift 2
                 ;;
             *)
@@ -64,5 +65,4 @@ if [[ $# -gt 0 ]]; then
     done
 fi
 
-
-mvn verify -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}"
+mvn verify -f ${DIR}/pom.xml -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}"
