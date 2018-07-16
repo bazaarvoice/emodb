@@ -123,7 +123,7 @@ public abstract class JsonHelper {
 
     /** Formats the specified timestamp as an ISO 8601 string with milliseconds and UTC timezone. */
     public static String formatTimestamp(@Nullable Date date) {
-        return (date != null) ? ISO8601Utils.format(date, true) : null;
+        return (date != null) ? date.toInstant().toString() : null;
     }
 
     /** Formats the specified timestamp as an ISO 8601 string with milliseconds and UTC timezone. */
