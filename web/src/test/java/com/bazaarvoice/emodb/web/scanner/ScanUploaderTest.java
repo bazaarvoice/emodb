@@ -87,7 +87,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -851,7 +850,7 @@ public class ScanUploaderTest {
         scanStatusDAO.updateScanStatus(
                 new ScanStatus("closedOld", options, true, false, Date.from(Instant.now().minus(Duration.ofDays(2))),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(),
-                        Date.from(Instant.now().minus(Duration.ofDays(1)).minus(23, ChronoUnit.HOURS))));
+                        Date.from(Instant.now().minus(Duration.ofDays(1)).minus(Duration.ofHours(23)))));
         scanStatusDAO.updateScanStatus(
                 new ScanStatus("openNotOverrun", options, true, false, Date.from(Instant.now().minus(Duration.ofDays(1)).plus(Duration.ofMinutes(1))),
                         ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of(status), ImmutableList.<ScanRangeStatus>of(),

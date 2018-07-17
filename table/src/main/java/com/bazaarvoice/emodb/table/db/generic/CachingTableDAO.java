@@ -72,7 +72,7 @@ public class CachingTableDAO implements TableDAO {
                         try {
                             return new TableCacheEntry(_delegate.get(name));
                         } catch (UnknownTableException e) {
-                            return new TableCacheEntry(_clock.instant().plusMillis(UNKNOWN_TABLE_RELOAD_DURATION.toMillis()));
+                            return new TableCacheEntry(_clock.instant().plus(UNKNOWN_TABLE_RELOAD_DURATION));
                         }
                     }
                 });
