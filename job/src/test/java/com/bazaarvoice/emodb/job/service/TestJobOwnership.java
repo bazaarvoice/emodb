@@ -21,13 +21,13 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
@@ -114,11 +114,11 @@ public class TestJobOwnership {
         _jobHandlerRegistry2 = new DefaultJobHandlerRegistry();
         _service1 = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry1, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
 
         _service2 = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry2, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
     }
 
     @AfterMethod

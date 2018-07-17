@@ -15,6 +15,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Supplier;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractService;
@@ -22,23 +23,17 @@ import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-import org.joda.time.Period;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
-import static java.lang.String.format;
 
 /**
  * Service ensures that each scheduled scan is started at the configured time daily.  Leadership election is used to
@@ -49,7 +44,7 @@ public class ScanUploadSchedulingService extends LeaderService {
     private static final String SERVICE_NAME = "scan-upload-scheduler";
     private static final String LEADER_DIR = "/leader/scheduler";
 
-    private static final Period SCAN_PENDING_PERIOD = Period.minutes(45);
+    private static final Duration SCAN_PENDING_PERIOD = Duration.ofMinutes(45);
 
     @Inject
     public ScanUploadSchedulingService(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
@@ -161,39 +156,39 @@ public class ScanUploadSchedulingService extends LeaderService {
         private void scheduleScan(final ScheduledDailyScanUpload scanUpload) {
             // Schedule the first iteration for this scan
 
-            DateTime now = now();
-            final DateTime nextExecTime = scanUpload.getNextExecutionTimeAfter(now);
+            Instant now = _clock.instant();
+            final Instant nextExecTime = scanUpload.getNextExecutionTimeAfter(now);
             scheduleNextScanExecution(scanUpload, now, nextExecTime);
 
             // Schedule the pending scan count to increment 45 minutes before the scan begins.
 
-            DateTime pendingExecTime = nextExecTime.minus(SCAN_PENDING_PERIOD);
+            Instant pendingExecTime = nextExecTime.minus(SCAN_PENDING_PERIOD);
             if (pendingExecTime.isBefore(now)) {
                 // We're already within the pending exec time.  Mark that the scan is pending and schedule the
                 // first iteration for the next day.
                 maybeAddPendingScan(scanUpload, nextExecTime);
-                pendingExecTime = pendingExecTime.plusDays(1);
+                pendingExecTime = pendingExecTime.plus(Duration.ofDays(1));
             }
 
             _service.scheduleAtFixedRate(
-                    () -> maybeAddPendingScan(scanUpload, scanUpload.getNextExecutionTimeAfter(now())),
-                    new Duration(now, pendingExecTime).getMillis(),
-                    Duration.standardDays(1).getMillis(),
+                    () -> maybeAddPendingScan(scanUpload, scanUpload.getNextExecutionTimeAfter(_clock.instant())),
+                    Duration.between(now, pendingExecTime).toMillis(),
+                    Duration.ofDays(1).toMillis(),
                     TimeUnit.MILLISECONDS);
         }
 
-        private void maybeAddPendingScan(final ScheduledDailyScanUpload scanUpload, final DateTime nextExecutionTime) {
+        private void maybeAddPendingScan(final ScheduledDailyScanUpload scanUpload, final Instant nextExecutionTime) {
             if (scanUpload.isRequestRequired() && _stashRequestManager.getRequestsForStash(scanUpload.getId(), nextExecutionTime).isEmpty()) {
                 // This scan runs only by request and there are currently no requests for this scan.  However, that
                 // could change between now and the next execution time.  Schedule to re-check in 30 seconds.
-                if (now().isBefore(nextExecutionTime.minusMinutes(1))) {
+                if (_clock.instant().isBefore(nextExecutionTime.minus(Duration.ofMinutes(1)))) {
                     _service.schedule(() -> maybeAddPendingScan(scanUpload, nextExecutionTime), 30, TimeUnit.SECONDS);
                 }
                 return;
             }
 
             // Last chance to make sure the scan is still pending
-            if (now().isBefore(nextExecutionTime) && _pendingScans.add(scanUpload)) {
+            if (_clock.instant().isBefore(nextExecutionTime) && _pendingScans.add(scanUpload)) {
                 notifyPendingScanCountChanged();
             }
         }
@@ -201,8 +196,8 @@ public class ScanUploadSchedulingService extends LeaderService {
         /**
          * Schedules the scan and upload to execute at the given time, then daily at the same time afterward indefinitely.
          */
-        private void scheduleNextScanExecution(final ScheduledDailyScanUpload scanUpload, DateTime now, final DateTime nextExecTime) {
-            Duration delay = new Duration(now, nextExecTime);
+        private void scheduleNextScanExecution(final ScheduledDailyScanUpload scanUpload, Instant now, final Instant nextExecTime) {
+            Duration delay = Duration.between(now, nextExecTime);
 
             // We deliberately chain scheduled scans instead of scheduling at a fixed rate to allow for
             // each iteration to explicitly contain the expected execution time.
@@ -222,13 +217,13 @@ public class ScanUploadSchedulingService extends LeaderService {
                             }
 
                             // Schedule the next run
-                            scheduleNextScanExecution(scanUpload, now(), nextExecTime.plusDays(1));
+                            scheduleNextScanExecution(scanUpload, _clock.instant(), nextExecTime.plus(Duration.ofDays(1)));
                         }
                     },
-                    delay.getMillis(), TimeUnit.MILLISECONDS);
+                    delay.toMillis(), TimeUnit.MILLISECONDS);
 
             _log.info("Scan and upload to {} scheduled to execute at {} ({} from now)",
-                    scanUpload.getRootDestination(), nextExecTime, delay.toPeriod().toString(PeriodFormat.getDefault()));
+                    scanUpload.getRootDestination(), nextExecTime, delay);
         }
 
         /**
@@ -237,18 +232,18 @@ public class ScanUploadSchedulingService extends LeaderService {
          * the scheduled time has already started.
          */
         @VisibleForTesting
-        synchronized ScanStatus startScheduledScan(ScheduledDailyScanUpload scheduledScan, DateTime scheduledTime)
+        synchronized ScanStatus startScheduledScan(ScheduledDailyScanUpload scheduledScan, Instant scheduledTime)
                 throws RepeatScanException, ScanExecutionTimeException {
             // Verify that the scan either doesn't require requests or has at least one request
             if (scheduledScan.isRequestRequired() && _stashRequestManager.getRequestsForStash(scheduledScan.getId(), scheduledTime).isEmpty()) {
                 _log.info("Scan {} did not receive any requests and will not be executed for {}",
-                        scheduledScan.getId(), DateTimeFormat.mediumDateTime().print(scheduledTime));
+                        scheduledScan.getId(), scheduledTime);
                 return null;
             }
 
             // Name the scan ID and directory for when the scan was scheduled
-            String scanId = scheduledScan.getScanIdFormat().print(scheduledTime);
-            String directory = scheduledScan.getDirectoryFormat().print(scheduledTime);
+            String scanId = scheduledScan.getScanIdFormat().format(scheduledTime);
+            String directory = scheduledScan.getDirectoryFormat().format(scheduledTime);
 
             ScanDestination destination = scheduledScan.getRootDestination().getDestinationWithSubpath(directory);
 
@@ -258,10 +253,10 @@ public class ScanUploadSchedulingService extends LeaderService {
             }
 
             // Allow the scan to start up to 30 seconds early or 10 minutes late
-            DateTime now = now();
-            Interval acceptableInterval = new Interval(scheduledTime.minusSeconds(30), scheduledTime.plusMinutes(10));
+            Instant now = _clock.instant();
+            Range<Instant> acceptableInterval = Range.closed(scheduledTime.minusSeconds(30), scheduledTime.plus(Duration.ofMinutes(10)));
             if (!acceptableInterval.contains(now)) {
-                throw new ScanExecutionTimeException(format(
+                throw new ScanExecutionTimeException(String.format(
                         "Scheduled scan to %s is not running at the expected time: expected = %s, actual = %s",
                         destination, scheduledTime, now));
             }
@@ -284,12 +279,12 @@ public class ScanUploadSchedulingService extends LeaderService {
          * a scheduled scan to be completely missed, just possibly delayed.
          */
         private void checkForMissedScans() {
-            DateTime now = now();
+            Instant now = _clock.instant();
             for (ScheduledDailyScanUpload scheduledScan : _scheduledScans) {
                 // Try to start the scan if it's within 10 minutes after the scan should have started
-                DateTime startCheckInterval = now.minusMinutes(10);
-                Interval missedInterval = new Interval(startCheckInterval, now);
-                DateTime scheduledTime = scheduledScan.getNextExecutionTimeAfter(startCheckInterval);
+                Instant startCheckInterval = now.minus(Duration.ofMinutes(10));
+                Range<Instant> missedInterval = Range.closed(startCheckInterval, now);
+                Instant scheduledTime = scheduledScan.getNextExecutionTimeAfter(startCheckInterval);
 
                 if (missedInterval.contains(scheduledTime)) {
                     _log.info("Attempting to start potentially missed scan for time {}", scheduledTime);
@@ -309,10 +304,6 @@ public class ScanUploadSchedulingService extends LeaderService {
 
         private void notifyPendingScanCountChanged() {
             _scanCountListener.pendingScanCountChanged(_pendingScans.size());
-        }
-
-        private DateTime now() {
-            return new DateTime(_clock.millis());
         }
     }
 

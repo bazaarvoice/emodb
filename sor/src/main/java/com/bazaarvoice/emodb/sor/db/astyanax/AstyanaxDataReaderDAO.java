@@ -79,12 +79,12 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.EndpointDetails;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.thrift.transport.TTransportException;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
@@ -659,7 +659,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
      */
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
-                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable Instant cutoffTime) {
         checkNotNull(query, "query");
         String placementName = checkNotNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
@@ -1050,7 +1050,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
     private Iterator<MultiTableScanResult> scanMultiTableRows(
             final TableSet tables, final DeltaPlacement placement, final ByteBufferRange rowRange,
             final LimitCounter limit, final boolean includeDroppedTables, final boolean includeMirrorTables,
-            final int largeRowThreshold, final ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+            final int largeRowThreshold, final ReadConsistency consistency, @Nullable final Instant cutoffTime) {
 
         // Avoiding pinning multiple decoded rows into memory at once.
         return limit.limit(new AbstractIterator<MultiTableScanResult>() {
@@ -1138,7 +1138,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         });
     }
 
-    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<UUID> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<UUID> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final Instant cutoffTime) {
         Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(columns.iterator(), cutoffTime));
         Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(columns.iterator(), cutoffTime));
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(columns.iterator(), cutoffTime));
@@ -1268,10 +1268,10 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
     }
 
     @VisibleForTesting
-    public static Iterator<Column<UUID>> getFilteredColumnIter(Iterator<Column<UUID>> columnIter, @Nullable DateTime cutoffTime) {
+    public static Iterator<Column<UUID>> getFilteredColumnIter(Iterator<Column<UUID>> columnIter, @Nullable Instant cutoffTime) {
         if (cutoffTime == null) {
             return columnIter;
         }
-        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getUUIDValue()) < cutoffTime.getMillis()));
+        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getUUIDValue()) < cutoffTime.toEpochMilli()));
     }
 }

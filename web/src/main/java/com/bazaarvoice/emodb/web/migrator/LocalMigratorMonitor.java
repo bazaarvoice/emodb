@@ -11,16 +11,31 @@ import com.bazaarvoice.emodb.web.scanner.control.ScanWorkflow;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.google.common.base.Optional;
-import com.google.common.collect.*;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +44,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class LocalMigratorMonitor extends AbstractService {
 
-    private static final Duration OVERRUN_MIGRATION_TIME = Duration.standardDays(1);
+    private static final Duration OVERRUN_MIGRATION_TIME = Duration.ofDays(1);
 
 
     private final Logger _log = LoggerFactory.getLogger(LocalMigratorMonitor.class);
@@ -119,7 +134,7 @@ public class LocalMigratorMonitor extends AbstractService {
 
         try {
             completeRangeMigrationsBy = Multimaps.index(
-                    _workflow.claimCompleteScanRanges(Duration.standardMinutes(5)),
+                    _workflow.claimCompleteScanRanges(Duration.ofMinutes(5)),
                     completion -> completion.getScanId());
         } catch (Exception e) {
             _log.error("Failed to claim complete migration ranges", e);
@@ -354,12 +369,12 @@ public class LocalMigratorMonitor extends AbstractService {
     private void scheduleOverrunCheck(ScanStatus status) {
         final String migratorId = status.getScanId();
 
-        DateTime now = DateTime.now();
-        DateTime overrunTime = new DateTime(status.getStartTime()).plus(OVERRUN_MIGRATION_TIME);
+        Instant now = Instant.now();
+        Instant overrunTime = status.getStartTime().toInstant().plus(OVERRUN_MIGRATION_TIME);
 
         long delay = 0;
         if (now.isBefore(overrunTime)) {
-            delay = new Duration(now, overrunTime).getMillis();
+            delay = Duration.between(now, overrunTime).toMillis();
         }
 
         _service.schedule(() -> {

@@ -22,7 +22,6 @@ import com.google.common.reflect.AbstractInvocationHandler;
 import com.google.common.reflect.Reflection;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.core.Response;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
@@ -139,7 +138,7 @@ abstract public class StashReader {
             // If this didn't error out then the presumed us-east-1 region was correct
             return  "s3.us-east-1.amazonaws.com";
         } catch (AmazonS3Exception e) {
-            if (e.getStatusCode() == Response.Status.MOVED_PERMANENTLY.getStatusCode()) {
+            if (e.getStatusCode() == 301 /* MOVED_PERMANENTLY */) {
                 String endPoint = e.getAdditionalDetails().get("Endpoint");
                 // The end point is prefixed with the bucket name, so strip it
                 return endPoint.substring(bucket.length() + 1);

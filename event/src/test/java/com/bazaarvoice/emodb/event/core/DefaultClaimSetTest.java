@@ -2,10 +2,10 @@ package com.bazaarvoice.emodb.event.core;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -16,7 +16,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 public class DefaultClaimSetTest {
-    private static final Duration TTL = Duration.standardHours(1);
+    private static final Duration TTL = Duration.ofHours(1);
 
     @Test
     public void testClaim() {
@@ -78,7 +78,7 @@ public class DefaultClaimSetTest {
         for (int i = 0; i < 50; i++) {
             byte[] claim = newClaim(i);
             long ttlMillis = ttlGranularityMillis * (1 + random.nextInt(5));
-            assertTrue(claimSet.acquire(claim, Duration.millis(ttlMillis)));
+            assertTrue(claimSet.acquire(claim, Duration.ofMillis(ttlMillis)));
 
             assertTrue(claimSet.isClaimed(claim));
             assertEquals(claimSet.size(), i + 1);
@@ -120,16 +120,16 @@ public class DefaultClaimSetTest {
         ClaimSet claimSet = new DefaultClaimSet();
         int reps = 100000;  // This has to be big enough to make O(n) behavior apparent, if any
         for (int i = 0; i < reps; i++) {
-            assertTrue(claimSet.acquire(newClaim(i), Duration.millis(i)));
+            assertTrue(claimSet.acquire(newClaim(i), Duration.ofMillis(i)));
         }
         for (int i = 0; i < reps; i++) {
-            claimSet.renew(newClaim(i), Duration.millis(i + 1), true);
+            claimSet.renew(newClaim(i), Duration.ofMillis(i + 1), true);
         }
         for (int i = 0; i < reps; i++) {
             claimSet.renew(newClaim(i), Duration.ZERO, false);
         }
         for (int i = 0; i < reps; i++) {
-            claimSet.acquire(newClaim(i), Duration.millis(i));
+            claimSet.acquire(newClaim(i), Duration.ofMillis(i));
         }
         claimSet.pump();
 

@@ -39,11 +39,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Collection;
@@ -91,23 +91,23 @@ public class DefaultDatabusTest {
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
                 1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
-        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.standardDays(7),
-                Duration.standardDays(7));
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
+                Duration.ofDays(7));
         // Skip databus events tagged with "re-etl"
         Condition skipIgnoreTags = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
         Condition expectedConditionToSkipIgnore = Conditions.and(originalCondition, skipIgnoreTags);
         verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", expectedConditionToSkipIgnore,
-                Duration.standardDays(7), Duration.standardDays(7));
+                Duration.ofDays(7), Duration.ofDays(7));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
 
         // reset mocked subscription DAO so it doesn't carry information about old interactions
         reset(mockSubscriptionDao);
         // Test condition is unchanged if includeDefaultJoinFilter is set to false
-        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.standardDays(7),
-                Duration.standardDays(7), false);
-        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.standardDays(7),
-                Duration.standardDays(7));
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
+                Duration.ofDays(7), false);
+        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.ofDays(7),
+                Duration.ofDays(7));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
     }
@@ -256,7 +256,7 @@ public class DefaultDatabusTest {
         final Set<String> expectedIds = Sets.newHashSet();
         
         DatabusEventStore eventStore = mock(DatabusEventStore.class);
-        when(eventStore.poll(eq("subscription"), eq(Duration.standardMinutes(1)), any(EventSink.class)))
+        when(eventStore.poll(eq("subscription"), eq(Duration.ofMinutes(1)), any(EventSink.class)))
                 .thenAnswer(invocationOnMock -> {
                     EventSink sink = (EventSink) invocationOnMock.getArguments()[2];
                     // Return 40 updates for records from 40 unique tables
@@ -270,7 +270,7 @@ public class DefaultDatabusTest {
         SubscriptionDAO subscriptionDAO = mock(SubscriptionDAO.class);
         when(subscriptionDAO.getSubscription("subscription")).thenReturn(
                 new DefaultOwnedSubscription("subscription", Conditions.alwaysTrue(), new Date(1489090060000L),
-                        Duration.standardSeconds(30), "owner"));
+                        Duration.ofSeconds(30), "owner"));
 
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
 
@@ -286,7 +286,7 @@ public class DefaultDatabusTest {
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), clock);
 
-        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 500);
+        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 500);
         assertFalse(pollResult.hasMoreEvents());
 
         Iterator<Event> events = pollResult.getEventIterator();
@@ -315,7 +315,7 @@ public class DefaultDatabusTest {
         final Set<String> expectedUnclaimIds = Sets.newHashSet();
 
         DatabusEventStore eventStore = mock(DatabusEventStore.class);
-        when(eventStore.poll(eq("subscription"), eq(Duration.standardMinutes(1)), any(EventSink.class)))
+        when(eventStore.poll(eq("subscription"), eq(Duration.ofMinutes(1)), any(EventSink.class)))
                 .thenAnswer(invocationOnMock -> {
                     // For the first poll, return 10 events which will all be redundant
                     EventSink sink = (EventSink) invocationOnMock.getArguments()[2];
@@ -346,7 +346,7 @@ public class DefaultDatabusTest {
         SubscriptionDAO subscriptionDAO = mock(SubscriptionDAO.class);
         when(subscriptionDAO.getSubscription("subscription")).thenReturn(
                 new DefaultOwnedSubscription("subscription", Conditions.alwaysTrue(), new Date(1489090060000L),
-                        Duration.standardSeconds(30), "owner"));
+                        Duration.ofSeconds(30), "owner"));
 
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         Clock clock = Clock.fixed(Instant.now(), ZoneId.systemDefault());
@@ -357,7 +357,7 @@ public class DefaultDatabusTest {
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), clock);
 
-        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.standardMinutes(1), 10);
+        PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 10);
         // Because of padding all events were read from the event store.  However, since the padded events will be
         // unclaimed the result should return that there are more events.
         assertTrue(pollResult.hasMoreEvents());

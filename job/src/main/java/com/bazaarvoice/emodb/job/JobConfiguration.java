@@ -1,17 +1,15 @@
 package com.bazaarvoice.emodb.job;
 
-import org.joda.time.Duration;
-
-import javax.validation.constraints.NotNull;
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class JobConfiguration {
 
     private final static int DEFAULT_CONCURRENCY_LEVEL = 2;
-    private final static Duration DEFAULT_QUEUE_REFRESH_TIME = Duration.standardSeconds(10);
+    private final static Duration DEFAULT_QUEUE_REFRESH_TIME = Duration.ofSeconds(10);
     private final static int DEFAULT_QUEUE_PEEK_LIMIT = 100;
-    private final static Duration DEFAULT_NOT_OWNER_RETRY_DELAY = Duration.standardMinutes(5);
+    private final static Duration DEFAULT_NOT_OWNER_RETRY_DELAY = Duration.ofMinutes(5);
 
     // Number of jobs that can be run concurrently (job thread pool size)
     private int _concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;

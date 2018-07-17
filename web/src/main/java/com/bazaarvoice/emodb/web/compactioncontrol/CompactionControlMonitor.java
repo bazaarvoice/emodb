@@ -7,11 +7,11 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -25,7 +25,7 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     private static final Logger _log = LoggerFactory.getLogger(CompactionControlMonitor.class);
 
     @VisibleForTesting
-    protected static final Duration POLL_INTERVAL = Duration.standardMinutes(5);
+    protected static final Duration POLL_INTERVAL = Duration.ofMinutes(5);
 
     private final CompactionControlSource _compactionControlSource;
     private final Clock _clock;
@@ -39,7 +39,7 @@ public class CompactionControlMonitor extends AbstractScheduledService {
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override

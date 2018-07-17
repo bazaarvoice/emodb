@@ -63,15 +63,16 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -183,7 +184,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
-    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
         return _tableDao.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 
@@ -738,7 +739,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         Expanded expanded;
         if (ttlOverride != null) {
             // The caller can override DataWriterDAO.getFullConsistencyTimestamp() for debugging. Use with caution!
-            long overriddenfullConsistencyTimestamp = System.currentTimeMillis() - ttlOverride.getMillis();
+            long overriddenfullConsistencyTimestamp = System.currentTimeMillis() - ttlOverride.toMillis();
             expanded = expand(record, overriddenfullConsistencyTimestamp, overriddenfullConsistencyTimestamp, Long.MIN_VALUE, true,
                     readConsistency);
         } else {
@@ -821,7 +822,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     }
 
     @Override
-    public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+    public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit, ReadConsistency consistency, @Nullable Instant cutoffTime) {
         checkNotNull(query, "query");
         checkNotNull(tables, "tables");
         checkNotNull(limit, "limit");
@@ -831,7 +832,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     @Override
     public Iterator<MultiTableScanResult> stashMultiTableScan(String stashId, String placement, ScanRange scanRange, LimitCounter limit,
-                                                              ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+                                                              ReadConsistency consistency, @Nullable Instant cutoffTime) {
         checkNotNull(stashId, "stashId");
         checkNotNull(placement, "placement");
         checkNotNull(scanRange, "scanRange");

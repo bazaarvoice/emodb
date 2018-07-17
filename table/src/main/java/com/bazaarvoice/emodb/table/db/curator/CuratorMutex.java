@@ -4,8 +4,8 @@ import com.bazaarvoice.emodb.table.db.Mutex;
 import com.google.common.base.Throwables;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -36,7 +36,7 @@ public class CuratorMutex implements Mutex {
     private InterProcessMutex acquire(Duration acquireTimeout) {
         InterProcessMutex mutex = new InterProcessMutex(_curatorFramework, _path);
         try {
-            if (!mutex.acquire(acquireTimeout.getMillis(), TimeUnit.MILLISECONDS)) {
+            if (!mutex.acquire(acquireTimeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 throw new TimeoutException();
             }
         } catch (Exception e) {

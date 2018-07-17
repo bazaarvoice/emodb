@@ -9,11 +9,11 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMultimap;
 import io.dropwizard.servlets.tasks.Task;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.time.Duration;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -84,7 +84,7 @@ abstract class ConsistencyControlTask<T> extends Task {
 
         if (changed) {
             // Wait briefly for round trip through ZooKeeper.
-            if (!Sync.synchronousSync(_curator, Duration.standardSeconds(1))) {
+            if (!Sync.synchronousSync(_curator, Duration.ofSeconds(1))) {
                 out.println("WARNING: Timed out after one second waiting for updates to round trip through ZooKeeper.");
             }
             Thread.sleep(50);  // Wait a little bit longer for NodeCache listeners to fire.

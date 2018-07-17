@@ -9,8 +9,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -53,7 +53,7 @@ public class InMemoryAuditStore implements AuditStore {
 
     @Override
     public Duration getHistoryTtl() {
-        return Duration.standardDays(365); // No ttl for in-memory
+        return Duration.ofDays(365); // No ttl for in-memory
     }
 
     @Override

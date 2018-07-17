@@ -4,10 +4,11 @@ import com.amazonaws.regions.Regions;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
+import java.time.Instant;
 import java.text.ParseException;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
@@ -17,7 +18,7 @@ import java.util.Optional;
  */
 public class StashUtil {
 
-    public static final DateTimeFormatter STASH_DIRECTORY_DATE_FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm-ss").withZoneUTC();
+    public static final DateTimeFormatter STASH_DIRECTORY_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss").withZone(ZoneOffset.UTC);
     public static final String LATEST_FILE = "_LATEST";
     public static final String SUCCESS_FILE = "_SUCCESS";
     
@@ -68,7 +69,8 @@ public class StashUtil {
     }
 
     public static Date getStashCreationTime(String stashDirectory) {
-        return STASH_DIRECTORY_DATE_FORMAT.parseDateTime(stashDirectory).toDate();
+        Instant stashCreationTime = Instant.from(STASH_DIRECTORY_DATE_FORMAT.parse(stashDirectory));
+        return Date.from(stashCreationTime);
     }
 
     public static Date getStashCreationTimeStamp(String stashStartTime) throws ParseException {
@@ -76,6 +78,6 @@ public class StashUtil {
     }
 
     public static String getStashDirectoryForCreationTime(Date creationTime) {
-        return STASH_DIRECTORY_DATE_FORMAT.print(creationTime.getTime());
+        return STASH_DIRECTORY_DATE_FORMAT.format(creationTime.toInstant());
     }
 }

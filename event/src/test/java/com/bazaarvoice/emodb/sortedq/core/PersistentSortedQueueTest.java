@@ -17,10 +17,10 @@ import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.UnsignedInteger;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -566,7 +566,7 @@ public class PersistentSortedQueueTest {
                         // Sleep for longer than the configured timeout, ensuring that consume isn't called again.
                         sleep(300);
                     }
-                }, Long.MAX_VALUE, Duration.millis(250));
+                }, Long.MAX_VALUE, Duration.ofMillis(250));
                 return null;
             }
         });
@@ -582,7 +582,7 @@ public class PersistentSortedQueueTest {
                     public void consume(List<ByteBuffer> records) {
                         fail();
                     }
-                }, Long.MAX_VALUE, Duration.millis(50));
+                }, Long.MAX_VALUE, Duration.ofMillis(50));
                 return null;
             }
         });

@@ -18,13 +18,14 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.hamcrest.Description;
-import org.joda.time.DateTime;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -103,7 +104,7 @@ public class ClusterHintsPollerTest {
         ResultSet hintsQueryNode1 = mock(ResultSet.class);
         Row mockOldestHintIdOnNode1 = mock(Row.class);
         // Oldest hint on the first node is 2 minutes ago
-        long oldestHintOnNode1 = DateTime.now().minusMinutes(2).getMillis();
+        long oldestHintOnNode1 = Instant.now().minus(Duration.ofMinutes(2)).toEpochMilli();
         when(mockOldestHintIdOnNode1.getUUID("hint_id")).thenReturn(TimeUUIDs.uuidForTimeMillis(oldestHintOnNode1));
         when(hintsQueryNode1.one()).thenReturn(mockOldestHintIdOnNode1);
 
@@ -113,7 +114,7 @@ public class ClusterHintsPollerTest {
         ResultSet hintsQueryNode2 = mock(ResultSet.class);
         Row mockOldestHintIdOnNode2 = mock(Row.class);
         // Oldest hint on the first node is 3 minutes ago
-        long oldestHintOnNode2 = DateTime.now().minusMinutes(3).getMillis();
+        long oldestHintOnNode2 = Instant.now().minus(Duration.ofMinutes(3)).toEpochMilli();
         when(mockOldestHintIdOnNode2.getUUID("hint_id")).thenReturn(TimeUUIDs.uuidForTimeMillis(oldestHintOnNode2));
         when(hintsQueryNode2.one()).thenReturn(mockOldestHintIdOnNode2);
 
@@ -238,7 +239,7 @@ public class ClusterHintsPollerTest {
         ResultSet hintsQueryNode2 = mock(ResultSet.class);
         Row mockOldestHintIdOnNode2 = mock(Row.class);
         // Oldest hint on the first node is 3 minutes ago
-        long oldestHintOnNode2 = DateTime.now().minusMinutes(3).getMillis();
+        long oldestHintOnNode2 = Instant.now().minus(Duration.ofMinutes(3)).toEpochMilli();
         when(mockOldestHintIdOnNode2.getUUID("hint_id")).thenReturn(TimeUUIDs.uuidForTimeMillis(oldestHintOnNode2));
         // We will explicitly return null here. This simulates where we first query for target Ids and find some, but by
         // the time we query for the oldest hint id for those target ids, we don't find any as they are already gone.

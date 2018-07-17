@@ -7,8 +7,9 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
+
+import java.time.Duration;
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -28,8 +29,8 @@ public class FullConsistencyTest {
         // Testing hardcoded range so we always start compaction with at least a minute lag
         // and never leave rows uncompacted for more than 10 days
 
-        Duration hardcodedMax = Duration.standardDays(10);
-        Duration hardcodedMin = Duration.standardMinutes(1);
+        Duration hardcodedMax = Duration.ofDays(10);
+        Duration hardcodedMin = Duration.ofMinutes(1);
         // Manually set the lag to 5 seconds
         long minLag = 5000L;
         long currentTimestamp = System.currentTimeMillis();
@@ -44,27 +45,27 @@ public class FullConsistencyTest {
 
         // Since we manually set a lag of 5 seconds, verify that we still get back at least 1 minute lag
         assertTrue(compositeConsistencyTimeProvider.getMaxTimeStamp(anyString()) <=
-                System.currentTimeMillis() - hardcodedMin.getMillis(), "Minimum compaction lag is less than 1 minute");
+                System.currentTimeMillis() - hardcodedMin.toMillis(), "Minimum compaction lag is less than 1 minute");
 
         // Make the fullconsistency time stamp to return 11 days
         when(hintsConsistencyTimeProvider.getMaxTimeStamp(anyString())).thenReturn(currentTimestamp
-                - Duration.standardDays(11).getMillis());
+                - Duration.ofDays(11).toMillis());
 
         // Since we manually set a consistency timestamp of 11 days, verify that we still get back at most 10 days lag
-        assertTrue(System.currentTimeMillis() - hardcodedMax.getMillis() <=
+        assertTrue(System.currentTimeMillis() - hardcodedMax.toMillis() <=
                 compositeConsistencyTimeProvider.getMaxTimeStamp(anyString()), "Maximum compaction lag is more than 10 days");
 
         // Test values within the hardcoded range
         // The minimum timestamp between the full consistency and lag is used for compaction
 
-        minLag = Duration.standardMinutes(5).getMillis();
-        long fct = currentTimestamp - Duration.standardMinutes(6).getMillis();
+        minLag = Duration.ofMinutes(5).toMillis();
+        long fct = currentTimestamp - Duration.ofMinutes(6).toMillis();
         when(minLagConsistencyTimeProvider.getMaxTimeStamp(anyString())).thenReturn(currentTimestamp - minLag);
         when(hintsConsistencyTimeProvider.getMaxTimeStamp(anyString())).thenReturn(fct);
         assertEquals(fct,
                 compositeConsistencyTimeProvider.getMaxTimeStamp(anyString()), "Incorrect compaction timestamp is returned");
 
-        fct = currentTimestamp - Duration.standardMinutes(3).getMillis();
+        fct = currentTimestamp - Duration.ofMinutes(3).toMillis();
         when(hintsConsistencyTimeProvider.getMaxTimeStamp(anyString())).thenReturn(fct);
         assertTrue(compositeConsistencyTimeProvider.getMaxTimeStamp(anyString()) < fct, "Minimum lag is violated");
         assertEquals(currentTimestamp - minLag, compositeConsistencyTimeProvider.getMaxTimeStamp(anyString()));

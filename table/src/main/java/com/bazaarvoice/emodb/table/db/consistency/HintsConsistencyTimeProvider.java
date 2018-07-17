@@ -4,8 +4,8 @@ import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -14,7 +14,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Implementation of {@link FullConsistencyTimeProvider} that sets the maximum full consistency timestamp
  */
 public class HintsConsistencyTimeProvider implements FullConsistencyTimeProvider {
-    public static final Duration DEFAULT_LAG = Duration.standardDays(1);
+    public static final Duration DEFAULT_LAG = Duration.ofDays(1);
 
     private final Map<String, ValueStore<Long>> _timestampCache;
 
@@ -31,6 +31,6 @@ public class HintsConsistencyTimeProvider implements FullConsistencyTimeProvider
     }
 
     public static long getDefaultTimestamp() {
-        return System.currentTimeMillis() - DEFAULT_LAG.getMillis();
+        return System.currentTimeMillis() - DEFAULT_LAG.toMillis();
     }
 }

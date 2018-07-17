@@ -62,9 +62,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
-import org.joda.time.Duration;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -76,6 +73,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -897,11 +896,11 @@ public class DataStoreJerseyTest extends ResourceTest {
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, false, 10, ReadConsistency.STRONG))
                 .thenReturn(Iterators.<Change>emptyIterator());
 
-        DateTimeFormatter format = ISODateTimeFormat.dateTime().withZoneUTC();
+        DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")
                 .segment("table-name", "row-key", "timeline")
-                .queryParam("start", format.print(start.getTime()))
-                .queryParam("end", format.print(end.getTime()))
+                .queryParam("start", format.format(start.toInstant()))
+                .queryParam("end", format.format(end.toInstant()))
                 .queryParam("reversed", "false")
                 .build();
         _resourceTestRule.client().resource(uri)
@@ -924,11 +923,11 @@ public class DataStoreJerseyTest extends ResourceTest {
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, true, 10, ReadConsistency.STRONG))
                 .thenReturn(Iterators.<Change>emptyIterator());
 
-        DateTimeFormatter format = ISODateTimeFormat.dateTime().withZoneUTC();
+        DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")
                 .segment("table-name", "row-key", "timeline")
-                .queryParam("start", format.print(start.getTime()))
-                .queryParam("end", format.print(end.getTime()))
+                .queryParam("start", format.format(start.toInstant()))
+                .queryParam("end", format.format(end.toInstant()))
                 .build();
         _resourceTestRule.client().resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -1203,9 +1202,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testCompact() {
-        sorClient(APIKEY_TABLE).compact("table-name", "row-key", Duration.standardDays(1), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        sorClient(APIKEY_TABLE).compact("table-name", "row-key", Duration.ofDays(1), ReadConsistency.STRONG, WriteConsistency.STRONG);
 
-        verify(_server).compact("table-name", "row-key", Duration.standardDays(1), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        verify(_server).compact("table-name", "row-key", Duration.ofDays(1), ReadConsistency.STRONG, WriteConsistency.STRONG);
         verifyNoMoreInteractions(_server);
     }
 

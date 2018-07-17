@@ -27,10 +27,10 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -171,7 +171,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public List<Message> poll(String queue, Duration claimTtl, int limit) {
         checkLegalQueueName(queue);
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
 
         return toMessages(_eventStore.poll(queue, claimTtl, limit));
@@ -181,7 +181,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void renew(String queue, Collection<String> messageIds, Duration claimTtl) {
         checkLegalQueueName(queue);
         checkNotNull(messageIds, "messageIds");
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
 
         _eventStore.renew(queue, messageIds, claimTtl, true);
     }

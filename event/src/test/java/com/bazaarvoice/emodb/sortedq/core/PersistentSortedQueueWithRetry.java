@@ -5,10 +5,10 @@ import com.bazaarvoice.emodb.sortedq.api.SortedQueue;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Throwables;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;

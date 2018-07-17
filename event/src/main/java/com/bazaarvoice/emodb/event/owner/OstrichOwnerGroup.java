@@ -22,11 +22,11 @@ import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Service;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +75,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         // Build a cache of name -> leader service, used to track which objects this server is responsible for.
         CacheBuilder<Object, Object> cacheBuilder = CacheBuilder.newBuilder();
         if (_expireWhenInactive) {
-            cacheBuilder.expireAfterAccess(expireWhenInactive.getMillis(), TimeUnit.MILLISECONDS);
+            cacheBuilder.expireAfterAccess(expireWhenInactive.toMillis(), TimeUnit.MILLISECONDS);
         }
         cacheBuilder.removalListener(new RemovalListener<String, Optional<LeaderService>>() {
             @Override
@@ -115,7 +115,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
     @Nullable
     @Override
     public T startIfOwner(String name, Duration waitDuration) {
-        long timeoutAt = System.currentTimeMillis() + waitDuration.getMillis();
+        long timeoutAt = System.currentTimeMillis() + waitDuration.toMillis();
         LeaderService leaderService = _leaderMap.getUnchecked(name).orNull();
         if (leaderService == null || !awaitRunning(leaderService, timeoutAt)) {
             return null;

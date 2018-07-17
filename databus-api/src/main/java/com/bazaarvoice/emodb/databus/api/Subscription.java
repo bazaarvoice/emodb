@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.databus.api;
 
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Date;
 
 @JsonDeserialize(as = DefaultSubscription.class)

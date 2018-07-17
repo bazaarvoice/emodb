@@ -8,10 +8,10 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -22,7 +22,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class FanoutLagMonitor extends AbstractScheduledService {
 
-    private static final Duration LAG_UPDATE_INTERVAL = Duration.standardSeconds(10);
+    private static final Duration LAG_UPDATE_INTERVAL = Duration.ofSeconds(10);
 
     private final Logger _log = LoggerFactory.getLogger(FanoutLagMonitor.class);
 
@@ -41,7 +41,7 @@ public class FanoutLagMonitor extends AbstractScheduledService {
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedDelaySchedule(0, LAG_UPDATE_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+        return Scheduler.newFixedDelaySchedule(0, LAG_UPDATE_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override

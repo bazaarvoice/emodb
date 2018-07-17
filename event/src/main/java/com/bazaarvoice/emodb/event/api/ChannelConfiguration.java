@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.event.api;
 
-import org.joda.time.Duration;
+import java.time.Duration;
 
 public interface ChannelConfiguration {
 

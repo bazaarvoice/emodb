@@ -31,9 +31,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.RateLimiter;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -182,7 +182,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
-                                                         ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+                                                         ReadConsistency consistency, @Nullable Instant cutoffTime) {
         // TODO:  Create a simulation for this method
         return Iterators.emptyIterator();
     }

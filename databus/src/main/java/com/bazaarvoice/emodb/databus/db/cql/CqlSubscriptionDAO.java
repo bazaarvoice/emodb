@@ -15,9 +15,9 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.TableMetadata;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Date;
 import java.util.Map;
 import java.util.stream.StreamSupport;
@@ -54,7 +54,7 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
                                    Duration subscriptionTtl, Duration eventTtl) {
         Map<String, Object> json = ImmutableMap.<String, Object>builder()
                 .put("filter", tableFilter.toString())
-                .put("expiresAt", _clock.millis() + subscriptionTtl.getMillis())
+                .put("expiresAt", _clock.millis() + subscriptionTtl.toMillis())
                 .put("eventTtl", Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE))
                 .put("ownerId", ownerId)
                 .build();
@@ -116,7 +116,7 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
         Map<?, ?> json = JsonHelper.fromJson(row.getString(1), Map.class);
         Condition tableFilter = Conditions.fromString((String) checkNotNull(json.get("filter"), "filter"));
         Date expiresAt = new Date(((Number) checkNotNull(json.get("expiresAt"), "expiresAt")).longValue());
-        Duration eventTtl = Duration.standardSeconds(((Number) checkNotNull(json.get("eventTtl"), "eventTtl")).intValue());
+        Duration eventTtl = Duration.ofSeconds(((Number) checkNotNull(json.get("eventTtl"), "eventTtl")).intValue());
         // TODO:  Once API keys are fully integrated enforce non-null
         String ownerId = (String) json.get("ownerId");
         return new DefaultOwnedSubscription(name, tableFilter, expiresAt, eventTtl, ownerId);

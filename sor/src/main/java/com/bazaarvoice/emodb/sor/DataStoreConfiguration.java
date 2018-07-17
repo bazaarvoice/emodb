@@ -5,12 +5,11 @@ import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
-import io.dropwizard.validation.ValidationMethod;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,7 +18,7 @@ public class DataStoreConfiguration {
     @Valid
     @NotNull
     @JsonProperty("historyTtl")
-    private Period _historyTtl;
+    private Duration _historyTtl;
 
     @Valid
     @NotNull
@@ -130,11 +129,11 @@ public class DataStoreConfiguration {
     /**
      * How long should we retain historical deltas?
      */
-    public Period getHistoryTtl() {
+    public Duration getHistoryTtl() {
         return _historyTtl;
     }
 
-    public DataStoreConfiguration setHistoryTtl(Period historyTtl) {
+    public DataStoreConfiguration setHistoryTtl(Duration historyTtl) {
         _historyTtl = historyTtl;
         return this;
     }

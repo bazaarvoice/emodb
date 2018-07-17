@@ -12,9 +12,11 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTable;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.testng.annotations.Test;
+
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Date;
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -39,7 +41,7 @@ public class SubscriptionEvaluatorTest {
         // Condition is only based on tags - the events should not contain any "ignore" tags
         Condition skipIgnoreEvents = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("ignore")).build());
         OwnedSubscription skipIgnoreSubscription = new DefaultOwnedSubscription("test-tags", skipIgnoreEvents,
-                DateTime.now().withDurationAdded(Duration.standardDays(1), 1).toDate(), Duration.standardHours(1), "id");
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
         assertFalse(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
         // The following databus event should match, as it doesn't have "ignore" tag
         UpdateRef updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
@@ -50,7 +52,7 @@ public class SubscriptionEvaluatorTest {
         // Subscription that explicitly asks for "ignore" events
         Condition getIgnoreEvents = Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("ignore")).build();
         OwnedSubscription getIgnoreSubscription = new DefaultOwnedSubscription("test-tags", getIgnoreEvents,
-                DateTime.now().withDurationAdded(Duration.standardDays(1), 1).toDate(), Duration.standardHours(1), "id");
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
         assertTrue(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
         // The following databus event should *not* match, as it doesn't have "ignore" tag
         updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
@@ -70,7 +72,7 @@ public class SubscriptionEvaluatorTest {
 
         // No condition, even alwaysTrue(), matches when the authorizer doesn't have permission
         OwnedSubscription allSubscription = new DefaultOwnedSubscription("all", Conditions.alwaysTrue(),
-                DateTime.now().withDurationAdded(Duration.standardDays(1), 1).toDate(), Duration.standardHours(1), "id");
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
         assertFalse(subscriptionEvaluator.matches(allSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
     }
 }

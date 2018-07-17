@@ -11,12 +11,12 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
@@ -61,7 +61,7 @@ public class IpBlacklistControlTask extends Task {
     public void execute(ImmutableMultimap<String, String> parameters, PrintWriter out) throws Exception {
         boolean changed = false;
         // Default duration
-        Duration expiryDuration = Duration.standardHours(24);
+        Duration expiryDuration = Duration.ofHours(24);
 
         // Find if user specified a duration override
         for (String durationString : parameters.get(Action.duration.toString())) {
@@ -99,7 +99,7 @@ public class IpBlacklistControlTask extends Task {
 
         if (changed) {
             // Wait briefly for round trip through ZooKeeper.
-            if (!Sync.synchronousSync(_curator, Duration.standardSeconds(1))) {
+            if (!Sync.synchronousSync(_curator, Duration.ofSeconds(1))) {
                 out.println("WARNING: Timed out after one second waiting for updates to round trip through ZooKeeper.");
             }
             Thread.sleep(50);  // Wait a little bit longer for NodeDiscovery listeners to fire.
@@ -114,7 +114,7 @@ public class IpBlacklistControlTask extends Task {
     private void updateAction(Action action, String ip, Duration duration)
             throws Exception {
         if (action == Action.add) {
-            _mapStore.set(ip, DateTime.now().plus(duration).getMillis());
+            _mapStore.set(ip, Instant.now().plus(duration).toEpochMilli());
             _log.info("ip added to the black list: {}", ip);
         }
         if (action == Action.remove || action == Action.clear) {

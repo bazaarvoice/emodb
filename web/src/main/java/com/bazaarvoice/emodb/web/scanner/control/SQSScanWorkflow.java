@@ -22,8 +22,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -95,7 +95,7 @@ public class SQSScanWorkflow implements ScanWorkflow {
     }
 
     private int toSeconds(Duration duration) {
-        int seconds = (int) duration.getStandardSeconds();
+        int seconds = (int) duration.getSeconds();
         checkArgument(seconds > 0, "TTL must be at least one second");
         return seconds;
     }

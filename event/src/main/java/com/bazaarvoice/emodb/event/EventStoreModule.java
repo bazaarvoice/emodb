@@ -47,9 +47,9 @@ import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.matcher.Matchers;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

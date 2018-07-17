@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.migrator;
 
-
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.web.migrator.migratorstatus.MigratorStatusDAO;
@@ -18,23 +17,27 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class DistributedMigratorRangeMonitor implements Managed {
     // TTL for the initially claiming items off the workflow queue
-    private static final Duration QUEUE_CLAIM_TTL = Duration.standardMinutes(2);
+    private static final Duration QUEUE_CLAIM_TTL = Duration.ofMinutes(2);
     // TTL for renewing workflow queue items once they have started
-    private static final Duration QUEUE_RENEW_TTL = Duration.standardMinutes(4);
+    private static final Duration QUEUE_RENEW_TTL = Duration.ofMinutes(4);
     // Time after which a claimed task should be unclaimed if it has not started
-    private static final Duration CLAIM_START_TIMEOUT = QUEUE_CLAIM_TTL.minus(Duration.standardSeconds(15));
+    private static final Duration CLAIM_START_TIMEOUT = QUEUE_CLAIM_TTL.minus(Duration.ofSeconds(15));
     private final Logger _log = LoggerFactory.getLogger(DistributedMigratorRangeMonitor.class);
     private final ScanWorkflow _workflow;
     private final MigratorStatusDAO _statusDAO;
@@ -167,7 +170,7 @@ public class DistributedMigratorRangeMonitor implements Managed {
                                     validateClaimedTaskHasStarted(claimedTask);
                                 }
                             },
-                            CLAIM_START_TIMEOUT.getMillis(), TimeUnit.MILLISECONDS);
+                            CLAIM_START_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 }
             }
 

@@ -4,8 +4,8 @@ import com.bazaarvoice.emodb.databus.api.DefaultSubscription;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.annotation.JsonValue;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Date;
 
 /**

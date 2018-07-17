@@ -26,7 +26,8 @@ import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
+
+import java.time.Duration;
 
 import static java.lang.String.format;
 

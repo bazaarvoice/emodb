@@ -14,12 +14,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
-import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
@@ -68,7 +67,7 @@ public class LocalRangeMigrator {
             Iterator<MigrationScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
 
 
-            while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().getMillis() && results.hasNext()) {
+            while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().toMillis() && results.hasNext()) {
 
                 // Only call get() on the supplier once in order to ensure consistency in the next two statements
                 int currentWriteRate = writeRate.get();
@@ -91,7 +90,7 @@ public class LocalRangeMigrator {
             }
 
             _log.info("Migrating placement complete for task id={}, {}: {} ({})", taskId, placement, range,
-                    PeriodFormat.getDefault().print(Duration.millis(System.currentTimeMillis() - startTime).toPeriod()));
+                    Duration.ofMillis(System.currentTimeMillis() - startTime));
 
             return RangeScanUploaderResult.success();
 

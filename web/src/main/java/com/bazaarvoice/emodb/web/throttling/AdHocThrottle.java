@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.web.throttling;
 
 import com.google.common.base.Objects;
-import org.joda.time.DateTime;
+
+import java.time.Instant;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -16,20 +17,20 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class AdHocThrottle {
     // Singleton instance which represents no throttling
-    private final static AdHocThrottle UNLIMITED = new AdHocThrottle(Integer.MAX_VALUE, DateTime.now().plusYears(1000));
+    private final static AdHocThrottle UNLIMITED = new AdHocThrottle(Integer.MAX_VALUE, Instant.MAX);
 
     private final int _limit;
-    private final DateTime _expiration;
+    private final Instant _expiration;
 
-    private AdHocThrottle(int limit, DateTime expiration) {
+    private AdHocThrottle(int limit, Instant expiration) {
         checkArgument(limit >= 0, "limit cannot be negative");
         _limit = limit;
         _expiration = checkNotNull(expiration, "expiration");
     }
 
-    public static AdHocThrottle create(int limit, DateTime expiration) {
+    public static AdHocThrottle create(int limit, Instant expiration) {
         // If the throttle is unlimited or already expired then return the unlimited throttle.
-        if (limit == Integer.MAX_VALUE || checkNotNull(expiration, "expiration").isBeforeNow()) {
+        if (limit == Integer.MAX_VALUE || checkNotNull(expiration, "expiration").isBefore(Instant.now())) {
             return unlimitedInstance();
         }
         return new AdHocThrottle(limit, expiration);
@@ -43,7 +44,7 @@ public class AdHocThrottle {
         return _limit;
     }
 
-    public DateTime getExpiration() {
+    public Instant getExpiration() {
         return _expiration;
     }
 

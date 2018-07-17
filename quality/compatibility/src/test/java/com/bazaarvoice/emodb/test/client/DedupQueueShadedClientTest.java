@@ -24,7 +24,6 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -39,6 +38,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -160,7 +160,7 @@ public class DedupQueueShadedClientTest extends ResourceTest {
         DedupQueueService client = DedupQueueServiceAuthenticator.proxied(new DedupQueueClient(URI.create("/dedupq/1"), new DropWizard6EmoClient(client())))
                 .usingCredentials(API_KEY);
 
-        List<Message> messages = client.poll("test-queue", Duration.standardMinutes(5), 10);
+        List<Message> messages = client.poll("test-queue", Duration.ofMinutes(5), 10);
 
         assertEquals(messages.size(), 5);
         assertEquals(messages.get(0).getId(), "0");

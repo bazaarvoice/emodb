@@ -4,7 +4,8 @@ import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.DateTime;
+
+import java.util.Date;
 
 /**
  * POJO class for representing unpublished databus events.
@@ -13,11 +14,11 @@ import org.joda.time.DateTime;
 public class UnpublishedDatabusEvent {
 
     private final String _table;
-    private final DateTime _date;
+    private final Date _date;
     private final UnpublishedDatabusEventType _eventType;
 
     @JsonCreator
-    public UnpublishedDatabusEvent(@JsonProperty ("table") String table, @JsonProperty ("date") DateTime date, @JsonProperty ("event") UnpublishedDatabusEventType eventType) {
+    public UnpublishedDatabusEvent(@JsonProperty ("table") String table, @JsonProperty ("date") Date date, @JsonProperty ("event") UnpublishedDatabusEventType eventType) {
         _table = table;
         _date = date;
         _eventType = eventType;
@@ -27,7 +28,7 @@ public class UnpublishedDatabusEvent {
         return _table;
     }
 
-    public DateTime getDate() {
+    public Date getDate() {
         return _date;
     }
 

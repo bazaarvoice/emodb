@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.codahale.metrics.annotation.Timed;
@@ -20,14 +21,12 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import io.dropwizard.jersey.params.BooleanParam;
-import io.dropwizard.jersey.params.DateTimeParam;
 import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,6 +44,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -279,14 +279,14 @@ public class DatabusResource1 {
             response = Map.class
     )
     public Map<String, Object> replay(@PathParam ("subscription") String subscription,
-                                      @QueryParam ("since") DateTimeParam sinceParam,
+                                      @QueryParam ("since") InstantParam sinceParam,
                                       @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(subscription), "subscription is required");
-        Date since = (sinceParam == null) ? null : sinceParam.get().toDate();
+        Instant since = (sinceParam == null) ? null : sinceParam.get();
         // Make sure since is within Replay TTL
-        checkArgument(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
+        checkArgument(since == null || since.plus(DatabusChannelConfiguration.REPLAY_TTL).isAfter(Instant.now()),
                 "Since timestamp is outside the replay TTL. Use null 'since' if you want to replay all events.");
-        String id = _databus.replayAsyncSince(subject, subscription, since);
+        String id = _databus.replayAsyncSince(subject, subscription, since != null ? Date.from(since) : null);
         return ImmutableMap.<String, Object>of("id", id);
     }
 

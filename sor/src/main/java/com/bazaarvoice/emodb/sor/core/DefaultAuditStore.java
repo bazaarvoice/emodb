@@ -9,9 +9,8 @@ import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 
@@ -26,11 +25,11 @@ public class DefaultAuditStore implements AuditStore {
 
     @Inject
     public DefaultAuditStore(TableDAO tableDAO, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
-                             @DeltaHistoryTtl Period historyTtl){
+                             @DeltaHistoryTtl Duration historyTtl){
         _tableDao = checkNotNull(tableDAO, "tableDAO");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
         _dataWriterDao = checkNotNull(dataWriterDao, "dataWriterDao");
-        _historyTtl = checkNotNull(historyTtl, "historyTtl").toStandardDuration();
+        _historyTtl = checkNotNull(historyTtl, "historyTtl");
     }
 
     @Override

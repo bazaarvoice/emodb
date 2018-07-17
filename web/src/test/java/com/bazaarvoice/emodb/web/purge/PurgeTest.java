@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.purge;
 
-
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
@@ -33,11 +32,12 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -82,7 +82,7 @@ public class PurgeTest {
 
         _service = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
 
         _store = new InMemoryDataStore(new MetricRegistry());
         _dataStoreResource = new DataStoreResource1(_store, new DefaultDataStoreAsync(_store, _service, _jobHandlerRegistry), mock(CompactionControlSource.class));

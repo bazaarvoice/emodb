@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.web.scanner.scheduling;
 
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -14,7 +14,7 @@ import java.util.List;
  */
 public class ScheduledDailyScanUpload {
 
-    private static final DateTimeFormatter TIME_OF_DAY_FORMAT = DateTimeFormat.forPattern("HH:mmZ").withZoneUTC();
+    private static final DateTimeFormatter TIME_OF_DAY_FORMAT = DateTimeFormatter.ofPattern("HH:mmX").withZone(ZoneOffset.UTC);
 
     private final String _id;
     private final String _timeOfDay;
@@ -93,17 +93,15 @@ public class ScheduledDailyScanUpload {
     /**
      * Gets the first execution time for the given scan and upload which is at or after "now".
      */
-    public DateTime getNextExecutionTimeAfter(DateTime now) {
-        DateTime timeOfDay = TIME_OF_DAY_FORMAT.parseDateTime(getTimeOfDay()).withZone(DateTimeZone.UTC);
+    public Instant getNextExecutionTimeAfter(Instant now) {
+        LocalTime timeOfDay = LocalTime.from(TIME_OF_DAY_FORMAT.parse(getTimeOfDay()));
 
         // The time of the next run is based on the time past midnight UTC relative to the current time
-        DateTime nextExecTime = now.withZone(DateTimeZone.UTC)
-                .withTimeAtStartOfDay()
-                .plusMinutes(timeOfDay.getMinuteOfDay());
+        Instant nextExecTime = now.atZone(ZoneOffset.UTC).with(timeOfDay).toInstant();
 
         // If the first execution would have been for earlier today move to the next execution.
         while (nextExecTime.isBefore(now)) {
-            nextExecTime = nextExecTime.plusDays(1);
+            nextExecTime = nextExecTime.plus(Duration.ofDays(1));
         }
 
         return nextExecTime;

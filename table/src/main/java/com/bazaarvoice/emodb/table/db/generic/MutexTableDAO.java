@@ -2,14 +2,14 @@ package com.bazaarvoice.emodb.table.db.generic;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.FacadeExistsException;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
-import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -18,11 +18,11 @@ import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -33,7 +33,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * system.
  */
 public class MutexTableDAO implements TableDAO {
-    public static final Duration ACQUIRE_TIMEOUT = Duration.standardSeconds(5);
+    public static final Duration ACQUIRE_TIMEOUT = Duration.ofSeconds(5);
 
     private final TableDAO _delegate;
     private final Optional<TableMutexManager> _mutexManager;
@@ -56,7 +56,7 @@ public class MutexTableDAO implements TableDAO {
     }
 
     @Override
-    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(DateTime fromInclusive, DateTime toExclusive) {
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
         return _delegate.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 

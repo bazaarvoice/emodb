@@ -11,7 +11,15 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AbstractBatchReader;
-import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -72,10 +80,10 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.EndpointDetails;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.thrift.transport.TTransportException;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -602,7 +610,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
      */
     @Override
     public Iterator<MultiTableScanResult> multiTableScan(final MultiTableScanOptions query, final TableSet tables,
-                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable DateTime cutoffTime) {
+                                                         final LimitCounter limit, final ReadConsistency consistency, @Nullable Instant cutoffTime) {
         checkNotNull(query, "query");
         String placementName = checkNotNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
@@ -1026,7 +1034,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
     private Iterator<MultiTableScanResult> scanMultiTableRows(
             final TableSet tables, final DeltaPlacement placement, final ByteBufferRange rowRange,
             final LimitCounter limit, final boolean includeDroppedTables, final boolean includeMirrorTables,
-            final int largeRowThreshold, final ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+            final int largeRowThreshold, final ReadConsistency consistency, @Nullable final Instant cutoffTime) {
 
         // Avoiding pinning multiple decoded rows into memory at once.
         return limit.limit(new AbstractIterator<MultiTableScanResult>() {
@@ -1114,7 +1122,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
         });
     }
 
-    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final DateTime cutoffTime) {
+    private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<DeltaKey> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final Instant cutoffTime) {
 
         Iterator<Column<DeltaKey>> changeIter = getFilteredColumnIter(columns.iterator(), cutoffTime);
         Iterator<Column<DeltaKey>> compactionIter = getFilteredColumnIter(columns.iterator(), cutoffTime);
@@ -1247,10 +1255,10 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
     }
 
     @VisibleForTesting
-    public static Iterator<Column<DeltaKey>> getFilteredColumnIter(Iterator<Column<DeltaKey>> columnIter, @Nullable DateTime cutoffTime) {
+    public static Iterator<Column<DeltaKey>> getFilteredColumnIter(Iterator<Column<DeltaKey>> columnIter, @Nullable Instant cutoffTime) {
         if (cutoffTime == null) {
             return columnIter;
         }
-        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getName().getChangeId()) < cutoffTime.getMillis()));
+        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getName().getChangeId()) < cutoffTime.toEpochMilli()));
     }
 }

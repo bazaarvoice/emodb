@@ -5,8 +5,8 @@ import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 
@@ -17,10 +17,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class CompositeConsistencyTimeProvider implements FullConsistencyTimeProvider {
     /** Hard-coded mininum lag that may not be exceeded. */
-    private static final Duration FIXED_MINIMUM_LAG = Duration.standardMinutes(1);
+    private static final Duration FIXED_MINIMUM_LAG = Duration.ofMinutes(1);
 
     /** Hard-coded maximum lag that may not be exceeded. */
-    private static final Duration FIXED_MAXIMUM_LAG = Duration.standardDays(10);
+    private static final Duration FIXED_MAXIMUM_LAG = Duration.ofDays(10);
 
     private final List<FullConsistencyTimeProvider> _providers;
 
@@ -61,8 +61,8 @@ public class CompositeConsistencyTimeProvider implements FullConsistencyTimeProv
         }
 
         // Enforce hard-coded minimum and maximum lag values.
-        maxTimestamp = Math.max(maxTimestamp, now - FIXED_MAXIMUM_LAG.getMillis());
-        maxTimestamp = Math.min(maxTimestamp, now - FIXED_MINIMUM_LAG.getMillis());
+        maxTimestamp = Math.max(maxTimestamp, now - FIXED_MAXIMUM_LAG.toMillis());
+        maxTimestamp = Math.min(maxTimestamp, now - FIXED_MINIMUM_LAG.toMillis());
 
         return maxTimestamp;
     }

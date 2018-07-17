@@ -5,10 +5,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.commons.io.output.TeeOutputStream;
-import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;

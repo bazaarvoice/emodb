@@ -35,7 +35,6 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -46,6 +45,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -86,7 +86,7 @@ public class BlobStoreClient implements AuthBlobStore {
      * Delay after which streaming connections are automatically closed if the caller doesn't begin reading the stream.
      * The caller can still read the contents after this time elapses but will incur a new round-trip request/response.
      */
-    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.standardSeconds(2);
+    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(2);
 
     private final EmoClient _client;
     private final UriBuilder _blobStore;
@@ -363,7 +363,7 @@ public class BlobStoreClient implements AuthBlobStore {
                         }
                     }
                 },
-                BLOB_CONNECTION_CLOSED_TIMEOUT.getMillis(), TimeUnit.MILLISECONDS);
+                BLOB_CONNECTION_CLOSED_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         return new DefaultBlob(response.getMetadata(), response.getRange(), streamSupplier(request, response));
     }
 

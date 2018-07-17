@@ -39,7 +39,7 @@ public class DefaultSlabAllocator implements SlabAllocator {
                 // chance writers are still writing, we could lose events.  So we only close slabs once (a) they're
                 // full or (b) they haven't been accessed in a while.  We don't close slabs at shutdown because it's
                 // hard to be completely sure all writers have quiesced.
-                .expireAfterAccess(Constants.OPEN_SLAB_MARKER_TTL.getMillis() / 2, TimeUnit.MILLISECONDS)
+                .expireAfterAccess(Constants.OPEN_SLAB_MARKER_TTL.toMillis() / 2, TimeUnit.MILLISECONDS)
                 .removalListener(new RemovalListener<String, ChannelAllocationState>() {
                     @Override
                     public void onRemoval(RemovalNotification<String, ChannelAllocationState> notification) {

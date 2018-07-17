@@ -16,11 +16,11 @@ import com.google.common.base.Suppliers;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;

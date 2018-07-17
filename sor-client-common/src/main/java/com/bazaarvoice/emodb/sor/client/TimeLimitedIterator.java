@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.sor.client;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.PeekingIterator;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -25,7 +25,7 @@ class TimeLimitedIterator<T> extends AbstractIterator<T> implements PeekingItera
 
     private TimeLimitedIterator(Iterator<T> iterator, Duration duration, long minimum) {
         _iterator = checkNotNull(iterator, "iterator");
-        _expireAt = System.currentTimeMillis() + duration.getMillis();
+        _expireAt = System.currentTimeMillis() + duration.toMillis();
         checkArgument(minimum >= 0, "Minimum must be >= 0");
         _minimum = minimum;
     }

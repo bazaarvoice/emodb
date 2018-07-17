@@ -90,11 +90,11 @@ import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -270,13 +270,13 @@ public class ScanUploadModule extends PrivateModule {
             checkArgument(scheduledScanConfig.getMaxRangeConcurrency().isPresent(), "Max range concurrency not set");
             checkArgument(scheduledScanConfig.getScanByAZ().isPresent(), "Scan by availability zone is not set");
             checkArgument(scheduledScanConfig.getRangeScanSplitSize() > 0, "Max range scan split size must be > 0");
-            checkArgument(scheduledScanConfig.getMaxRangeScanTime().toStandardDuration().isLongerThan(Duration.ZERO), "Duration must be longer than zero");
+            checkArgument(scheduledScanConfig.getMaxRangeScanTime().compareTo(Duration.ZERO) > 0, "Duration must be longer than zero");
 
             ScanDestination destination = ScanDestination.to(dataStore.getStashRoot());
-            DateTimeFormatter scanIdFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanId().get()).withZoneUTC();
+            DateTimeFormatter scanIdFormatter = DateTimeFormatter.ofPattern(scheduledScanConfig.getScanId().get()).withZone(ZoneOffset.UTC);
             DateTimeFormatter dateFormatter;
             if (scheduledScanConfig.getScanDirectory().isPresent()) {
-                dateFormatter = DateTimeFormat.forPattern(scheduledScanConfig.getScanDirectory().get()).withZoneUTC();
+                dateFormatter = DateTimeFormatter.ofPattern(scheduledScanConfig.getScanDirectory().get()).withZone(ZoneOffset.UTC);
             } else {
                 dateFormatter = StashUtil.STASH_DIRECTORY_DATE_FORMAT;
             }
@@ -292,7 +292,7 @@ public class ScanUploadModule extends PrivateModule {
                     scheduledScanConfig.getScanByAZ().get(),
                     scheduledScanConfig.isRequestRequired(),
                     scheduledScanConfig.getRangeScanSplitSize(),
-                    scheduledScanConfig.getMaxRangeScanTime().toStandardDuration()));
+                    scheduledScanConfig.getMaxRangeScanTime()));
         }
 
         return scheduledScanUploads.build();

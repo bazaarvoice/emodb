@@ -7,9 +7,9 @@ import com.datastax.driver.core.Row;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.netflix.astyanax.model.Column;
-import org.joda.time.DateTime;
 import org.testng.annotations.Test;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.UUID;
@@ -45,16 +45,16 @@ public class MultiScanCutoffTimeTest {
         Iterable<Row> filteredRows = CqlDataReaderDAO.getFilteredRows(rows, null);
         assertEquals(Iterables.size(filteredRows), 5);
 
-        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, new DateTime(nowInTimeMillis - 1000));
+        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, Instant.ofEpochMilli(nowInTimeMillis - 1000));
         assertEquals(Iterables.size(filteredRows), 0);
 
-        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, new DateTime(nowInTimeMillis + 12000));
+        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, Instant.ofEpochMilli(nowInTimeMillis + 12000));
         assertEquals(Iterables.size(filteredRows), 3);
         assertEquals(Iterables.get(filteredRows, 0).getString(2), "a");
         assertEquals(Iterables.get(filteredRows, 1).getString(2), "b");
         assertEquals(Iterables.get(filteredRows, 2).getString(2), "c");
 
-        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, new DateTime(nowInTimeMillis + 21000));
+        filteredRows = CqlDataReaderDAO.getFilteredRows(rows, Instant.ofEpochMilli(nowInTimeMillis + 21000));
         assertEquals(Iterables.size(filteredRows), 5);
     }
 
@@ -82,13 +82,13 @@ public class MultiScanCutoffTimeTest {
         Iterator<Column<UUID>> filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), null);
         assertEquals(Iterators.size(filteredColumnIter), 5);
 
-        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), new DateTime(nowInTimeMillis - 1000));
+        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), Instant.ofEpochMilli(nowInTimeMillis - 1000));
         assertEquals(Iterators.size(filteredColumnIter), 0);
 
-        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), new DateTime(nowInTimeMillis + 12000));
+        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), Instant.ofEpochMilli(nowInTimeMillis + 12000));
         assertEquals(Iterators.size(filteredColumnIter), 3);
 
-        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), new DateTime(nowInTimeMillis + 21000));
+        filteredColumnIter = AstyanaxDataReaderDAO.getFilteredColumnIter(columns.iterator(), Instant.ofEpochMilli(nowInTimeMillis + 21000));
         assertEquals(Iterators.size(filteredColumnIter), 5);
     }
 

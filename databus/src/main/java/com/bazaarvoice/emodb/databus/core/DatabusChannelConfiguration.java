@@ -5,14 +5,15 @@ import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
+
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class DatabusChannelConfiguration implements ChannelConfiguration {
-    private static final Duration FANOUT_TTL = Duration.standardDays(365);  // Basically forever
-    public static final Duration CANARY_TTL = Duration.standardDays(365);  // Basically forever
-    public static final Duration REPLAY_TTL = Duration.standardHours(50); // 2 days + 2 hours
+    private static final Duration FANOUT_TTL = Duration.ofDays(365);  // Basically forever
+    public static final Duration CANARY_TTL = Duration.ofDays(365);  // Basically forever
+    public static final Duration REPLAY_TTL = Duration.ofHours(50); // 2 days + 2 hours
 
     private final SubscriptionDAO _subscriptionDao;
 
@@ -44,6 +45,6 @@ public class DatabusChannelConfiguration implements ChannelConfiguration {
             return subscription.getEventTtl();
         }
 
-        return Duration.standardSeconds(1);  // If the subscription has expired, expire events quickly.
+        return Duration.ofSeconds(1);  // If the subscription has expired, expire events quickly.
     }
 }

@@ -15,7 +15,6 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.joda.time.Duration;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
@@ -25,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.URI;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -102,14 +102,14 @@ public class S3ScanWriterTest {
         when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
 
         S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
-        scanWriter.setRetryDelay(Duration.millis(10));
+        scanWriter.setRetryDelay(Duration.ofMillis(10));
 
         try {
             ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
             shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
             shardWriter.closeAndTransferAysnc(Optional.of(1));
 
-            scanWriter.waitForAllTransfersComplete(Duration.standardSeconds(10));
+            scanWriter.waitForAllTransfersComplete(Duration.ofSeconds(10));
             fail("No transfer exception thrown");
         } catch (IOException e) {
             assertTrue(e.getCause() instanceof AmazonClientException);
@@ -214,7 +214,7 @@ public class S3ScanWriterTest {
 
     private void verifyAllTransfersComplete(ScanWriter scanWriter, ScheduledExecutorService uploadService)
             throws Exception {
-        assertTrue(scanWriter.waitForAllTransfersComplete(Duration.standardSeconds(10)).isComplete(), "All transfers did not complete");
+        assertTrue(scanWriter.waitForAllTransfersComplete(Duration.ofSeconds(10)).isComplete(), "All transfers did not complete");
 
         // Give 10 seconds for all threads to be complete
         int activeCount = Integer.MAX_VALUE;

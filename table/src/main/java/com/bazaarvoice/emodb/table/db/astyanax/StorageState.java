@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
-import org.joda.time.DateTime;
+import java.time.Instant;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.JsonMap.Attribute;
 import static com.bazaarvoice.emodb.table.db.astyanax.JsonMap.TimestampAttribute;
@@ -111,7 +111,7 @@ enum StorageState {
     /** No longer primary, but it's possible not all servers know about the switch yet. */
     MIRROR_DEMOTED(/*no transition attributes--it's the primary that changes*/) {
         @Override
-        DateTime getTransitionedAt(Storage storage) {
+        Instant getTransitionedAt(Storage storage) {
             return storage.getPrimary().getTransitionedTimestamp(PRIMARY);  // Might be null since 'primaryAt' isn't always present.
         }
     },
@@ -133,7 +133,7 @@ enum StorageState {
     ;
 
     private final Attribute<?> _transitionMarker;
-    private final Attribute<DateTime> _transitionTimestamp;
+    private final Attribute<Instant> _transitionTimestamp;
 
     StorageState() {
         _transitionMarker = _transitionTimestamp = null;
@@ -156,7 +156,7 @@ enum StorageState {
         return checkNotNull(_transitionMarker, name()).containsKey(storage.getRawJson());
     }
 
-    DateTime getTransitionedAt(Storage storage) {
+    Instant getTransitionedAt(Storage storage) {
         return checkNotNull(_transitionTimestamp, name()).get(storage.getRawJson());
     }
 

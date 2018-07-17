@@ -21,11 +21,11 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
@@ -64,7 +64,7 @@ public class TestDefaultJobService {
 
         _service = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
     }
 
     @AfterMethod

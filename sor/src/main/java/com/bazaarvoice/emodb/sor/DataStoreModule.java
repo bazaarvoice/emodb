@@ -93,11 +93,10 @@ import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -266,7 +265,7 @@ public class DataStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton @DeltaHistoryTtl
-    Period provideDeltaHistoryTtl(DataStoreConfiguration configuration) {
+    Duration provideDeltaHistoryTtl(DataStoreConfiguration configuration) {
         return configuration.getHistoryTtl();
     }
 
