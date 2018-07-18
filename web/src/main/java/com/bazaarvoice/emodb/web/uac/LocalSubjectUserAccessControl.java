@@ -49,10 +49,7 @@ import org.apache.shiro.authz.permission.InvalidPermissionStringException;
 import org.apache.shiro.authz.permission.PermissionResolver;
 
 import java.security.SecureRandom;
-import java.util.Iterator;
-import java.util.Random;
-import java.util.Set;
-import java.util.Spliterators;
+import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -312,7 +309,14 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
     @Override
     public CreateEmoApiKeyResponse createApiKey(Subject subject, CreateEmoApiKeyRequest request) {
         verifyPermission(subject, Permissions.createApiKey());
-        String exactKey = request.getCustomRequestParameters().get("key").stream().findFirst().orElse(null);
+        String exactKey = null;
+        Collection<String> keyList = request.getCustomRequestParameters().get("key");
+        if (keyList != null) {
+            Iterator<String> keyIterator = keyList.iterator();
+            if (keyIterator.hasNext()) {
+                exactKey = keyIterator.next();
+            }
+        }
 
         if (exactKey != null) {
             // Typically the system creates a random API key for the caller, so the caller has no a-priori knowledge of what
@@ -473,7 +477,14 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         verifyPermission(subject, Permissions.updateApiKey());
 
         String id = request.getId();
-        String key = request.getCustomRequestParameters().get("key").stream().findFirst().orElse(null);
+        String key = null;
+        Collection<String> keyList = request.getCustomRequestParameters().get("key");
+        if (keyList != null) {
+            Iterator<String> keyIterator = keyList.iterator();
+            if (keyIterator.hasNext()) {
+                key = keyIterator.next();
+            }
+        }
 
         if (key != null) {
             // As with create, verify the caller has permission to migrate to an exact key and that the key is valid

@@ -3,13 +3,12 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * API key object for an Emo user.  Each API key has two identifiers:  The private key used for authentication and
@@ -25,14 +24,14 @@ public class EmoApiKey {
     private final Date _issued;
     private String _owner;
     private String _description;
-    private Set<EmoRoleKey> _roles = ImmutableSet.of();
+    private Set<EmoRoleKey> _roles = Collections.emptySet();
 
     @JsonCreator
     public EmoApiKey(@JsonProperty("id") String id, @JsonProperty("maskedKey") String maskedKey,
                      @JsonProperty("issued") Date issued) {
-        _id = checkNotNull(id, "id");
-        _maskedKey = checkNotNull(maskedKey, "maskedKey");
-        _issued = checkNotNull(issued, "issued");
+        _id = requireNonNull(id, "id");
+        _maskedKey = requireNonNull(maskedKey, "maskedKey");
+        _issued = requireNonNull(issued, "issued");
     }
 
     public String getId() {
@@ -71,17 +70,17 @@ public class EmoApiKey {
     }
 
     public EmoApiKey setRoles(Set<EmoRoleKey> roles) {
-        _roles = checkNotNull(roles, "roles");
+        _roles = requireNonNull(roles, "roles");
         return this;
     }
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(EmoApiKey.class)
-                .add("id", getId())
-                .add("owner", getOwner())
-                .add("description", getDescription())
-                .add("roles", getRoles())
-                .toString();
+        return "EmoApiKey{" +
+                "_id='" + _id + '\'' +
+                ", _owner='" + _owner + '\'' +
+                ", _description='" + _description + '\'' +
+                ", _roles=" + _roles +
+                '}';
     }
 }

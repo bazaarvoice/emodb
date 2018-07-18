@@ -8,14 +8,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Request object for updating an existing role.  The request can update the role's name, description, permissions
@@ -34,8 +33,8 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     private boolean _namePresent;
     private String _description;
     private boolean _descriptionPresent;
-    private Set<String> _grantedPermissions = Sets.newHashSet();
-    private Set<String> _revokedPermissions = Sets.newHashSet();
+    private Set<String> _grantedPermissions = new HashSet<>();
+    private Set<String> _revokedPermissions = new HashSet<>();
     private boolean _revokeOtherPermissions;
 
     @JsonCreator
@@ -52,7 +51,7 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoRoleRequest setRoleKey(EmoRoleKey roleKey) {
-        _roleKey = checkNotNull(roleKey, "roleKey");
+        _roleKey = requireNonNull(roleKey, "roleKey");
         return this;
     }
 
@@ -90,7 +89,7 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public Set<String> getGrantedPermissions() {
-        return ImmutableSet.copyOf(_grantedPermissions);
+        return Collections.unmodifiableSet(new HashSet<>(_grantedPermissions));
     }
 
     @JsonProperty("grantPermissions")
@@ -100,14 +99,15 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoRoleRequest grantPermissions(Set<String> grantedPermissions) {
-        checkArgument(Sets.intersection(grantedPermissions, _revokedPermissions).isEmpty(),
-                "Cannot both grant and revoke the same permission");
+        if (grantedPermissions.stream().anyMatch(_revokedPermissions::contains)) {
+            throw new IllegalArgumentException("Cannot both grant and revoke the same permission");
+        }
         _grantedPermissions.addAll(grantedPermissions);
         return this;
     }
 
     public Set<String> getRevokedPermissions() {
-        return ImmutableSet.copyOf(_revokedPermissions);
+        return Collections.unmodifiableSet(new HashSet<>(_revokedPermissions));
     }
 
     @JsonProperty("revokePermissions")
@@ -117,8 +117,9 @@ public class UpdateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoRoleRequest revokePermissions(Set<String> revokedPermissions) {
-        checkArgument(Sets.intersection(revokedPermissions, _grantedPermissions).isEmpty(),
-                "Cannot both grant and revoke the same permission");
+        if (revokedPermissions.stream().anyMatch(_grantedPermissions::contains)) {
+            throw new IllegalArgumentException("Cannot both grant and revoke the same permission");
+        }
         _revokedPermissions.addAll(revokedPermissions);
         return this;
     }

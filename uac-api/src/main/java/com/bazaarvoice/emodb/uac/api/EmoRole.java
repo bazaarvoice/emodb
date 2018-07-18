@@ -4,12 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
 
+import java.util.Collections;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Role object for an Emo role.  Each role is uniquely identified by a {@link EmoRoleKey}.  Although it is useful
@@ -21,17 +22,17 @@ public class EmoRole {
     private final EmoRoleKey _id;
     private String _name;
     private String _description;
-    private Set<String> _permissions = ImmutableSet.of();
+    private Set<String> _permissions = Collections.emptySet();
 
     @JsonCreator
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
-                Objects.firstNonNull(group, EmoRoleKey.NO_GROUP),
-                checkNotNull(id, "id")));
+                Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
+                requireNonNull(id, "id")));
     }
 
     public EmoRole(EmoRoleKey id) {
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
     }
 
     @JsonProperty("group")
@@ -76,19 +77,13 @@ public class EmoRole {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof EmoRole)) {
-            return false;
-        }
-
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         EmoRole emoRole = (EmoRole) o;
-
-        return _id.equals(emoRole.getId()) &&
-                Objects.equal(_name, emoRole.getName()) &&
-                Objects.equal(_description, emoRole.getDescription()) &&
-                _permissions.equals(emoRole.getPermissions());
+        return Objects.equals(_id, emoRole.getId()) &&
+                Objects.equals(_name, emoRole.getName()) &&
+                Objects.equals(_description, emoRole.getDescription()) &&
+                Objects.equals(_permissions, emoRole.getPermissions());
     }
 
     @Override
@@ -98,12 +93,11 @@ public class EmoRole {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(getClass())
-                .add("id", getId())
-                .add("name", getName())
-                .add("description", getDescription())
-                .add("permissions", getPermissions())
-                .toString();
-
+        return "EmoRole{" +
+                "id=" + _id +
+                ", name='" + _name + '\'' +
+                ", description='" + _description + '\'' +
+                ", permissions=" + _permissions +
+                '}';
     }
 }
