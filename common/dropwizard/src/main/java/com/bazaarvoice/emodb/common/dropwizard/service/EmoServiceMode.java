@@ -112,6 +112,7 @@ public enum EmoServiceMode {
             Aspect.dataStore_module,
             Aspect.blobStore_module, // needed for permission resolver
             Aspect.delta_migrator,
+            Aspect.compaction_control,
             Aspect.security,
             Aspect.full_consistency
     );
