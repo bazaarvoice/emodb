@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
@@ -172,10 +171,7 @@ public class LocalMigratorMonitor extends AbstractService {
         }
 
         // Update the set of active migrations
-        if (_activeMigrations.add(id)) {
-            // Schedule a callback to cancel the migration if it goes overrun
-            scheduleOverrunCheck(status);
-        }
+        _activeMigrations.add(id);
 
         // Before evaluating available tasks check whether any completed tasks didn't migrate their entire ranges
         // and require the addition of new tasks.
@@ -355,8 +351,6 @@ public class LocalMigratorMonitor extends AbstractService {
                 if (!status.isDone()) {
                     // Record that the migration is active
                     _activeMigrations.add(status.getScanId());
-                    // Schedule a callback to cancel the migration if it goes overrun
-                    scheduleOverrunCheck(status);
                 }
             }
         } catch (Exception e) {
@@ -364,28 +358,5 @@ public class LocalMigratorMonitor extends AbstractService {
             // migration range within several minutes anyway.
             _log.warn("Failed to initialize active migration count", e);
         }
-    }
-
-    private void scheduleOverrunCheck(ScanStatus status) {
-        final String migratorId = status.getScanId();
-
-        Instant now = Instant.now();
-        Instant overrunTime = status.getStartTime().toInstant().plus(OVERRUN_MIGRATION_TIME);
-
-        long delay = 0;
-        if (now.isBefore(overrunTime)) {
-            delay = Duration.between(now, overrunTime).toMillis();
-        }
-
-        _service.schedule(() -> {
-                    ScanStatus migratorStatus = _statusDAO.getMigratorStatus(migratorId);
-                    if (!migratorStatus.isDone()) {
-                        _log.warn("Overrun migration detected, canceling migration: {}", migratorId);
-                        _statusDAO.setCanceled(migratorId);
-                        _workflow.scanStatusUpdated(migratorId);
-
-                    }
-                },
-                delay, TimeUnit.MILLISECONDS);
     }
 }
