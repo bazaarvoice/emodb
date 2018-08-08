@@ -43,9 +43,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class LocalMigratorMonitor extends AbstractService {
 
-    private static final Duration OVERRUN_MIGRATION_TIME = Duration.ofDays(1);
-
-
     private final Logger _log = LoggerFactory.getLogger(LocalMigratorMonitor.class);
 
 
