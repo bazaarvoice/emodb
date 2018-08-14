@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner.scheduling;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
@@ -20,11 +21,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.net.URI;
-import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
@@ -47,6 +44,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.fail;
 
 public class ScanUploadSchedulingServiceTest {
@@ -78,6 +76,23 @@ public class ScanUploadSchedulingServiceTest {
         }
 
         return dateRequests;
+    }
+
+    @Test
+    public void testGetNextExecutionTime() {
+        ScheduledDailyScanUpload dailyScanUpload =
+                new ScheduledDailyScanUpload("daily", "18:00-06:00", DateTimeFormatter.ofPattern("'daily'-yyyy-MM-dd-HH-mm-ss").withZone(ZoneOffset.UTC),
+                        ScanDestination.discard(), StashUtil.STASH_DIRECTORY_DATE_FORMAT,
+                        ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.ofMinutes(10));
+        Instant tomorrowAtMidnightUTC = ZonedDateTime.from(new Date().toInstant().atZone(ZoneOffset.UTC))
+                .plusDays(1)
+                .withHour(0)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0)
+                .toInstant();
+
+        assertEquals(dailyScanUpload.getNextExecutionTimeAfter(Instant.now()), tomorrowAtMidnightUTC);
     }
 
     @Test(dataProvider = "every10minutes")
