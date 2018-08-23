@@ -19,7 +19,7 @@ public interface HistoryStore {
     /**
      * Puts delta histories in the histories store.
      */
-    void putDeltaHistory(String table, String rowId, List<History> deltaHistories);
+    void putDeltaHistory(String table, String rowId, List<History> histories);
 
     /**
      * Puts delta histories in the history store while accepting a {@link HistoryBatchPersister}.
