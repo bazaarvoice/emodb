@@ -39,9 +39,9 @@ public class DefaultHistoryStore implements HistoryStore {
     }
 
     @Override
-    public void putDeltaHistory(String table, String rowId, List<History> deltaHistories) {
+    public void putDeltaHistory(String table, String rowId, List<History> histories) {
         // Take the performance improvement over saving delta history. It's ok if we lose delta history.
-        _dataWriterDao.storeCompactedDeltas(_tableDao.get(table), rowId, deltaHistories, WriteConsistency.NON_DURABLE);
+        _dataWriterDao.storeCompactedDeltas(_tableDao.get(table), rowId, histories, WriteConsistency.NON_DURABLE);
     }
 
     @Override
