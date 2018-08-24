@@ -1,5 +1,12 @@
 package com.bazaarvoice.emodb.sor;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
@@ -26,6 +33,9 @@ import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
+import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
+import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.*;
@@ -71,6 +81,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.google.common.io.Files;
 import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
@@ -80,9 +91,12 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
+import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
+import javax.ws.rs.core.UriBuilder;
+import java.io.File;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -190,7 +204,7 @@ public class DataStoreModule extends PrivateModule {
         install(new DAOModule());
 
         bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
-        
+
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
@@ -399,6 +413,42 @@ public class DataStoreModule extends PrivateModule {
         return configuration.getStashBlackListTableCondition()
                 .transform(Conditions::fromString)
                 .or(Conditions.alwaysFalse());
+    }
+
+    @Provides @Singleton
+    AuditWriter provideAuditWriter(DataStoreConfiguration configuration, Clock clock,
+                                   LifeCycleRegistry lifeCycleRegistry, Environment environment) {
+        AuditWriterConfiguration auditLogConfig = configuration.getAuditWriterConfiguration();
+
+        AWSCredentialsProvider credentialsProvider;
+        if (auditLogConfig.getS3AccessKey() != null && auditLogConfig.getS3SecretKey() != null) {
+            credentialsProvider = new StaticCredentialsProvider(
+                    new BasicAWSCredentials(auditLogConfig.getS3AccessKey(), auditLogConfig.getS3SecretKey()));
+        } else {
+            credentialsProvider = new DefaultAWSCredentialsProviderChain();
+        }
+        AmazonS3 amazonS3 = new AmazonS3Client(credentialsProvider)
+                .withRegion(Regions.fromName(auditLogConfig.getLogBucketRegion()));
+
+        if (auditLogConfig.getS3Endpoint() != null) {
+            amazonS3.setEndpoint(auditLogConfig.getS3Endpoint());
+        }
+
+        String stagingDirName = auditLogConfig.getStagingDir();
+        File stagingDir;
+        if (stagingDirName != null) {
+            stagingDir = new File(stagingDirName);
+        } else {
+            stagingDir = Files.createTempDir();
+        }
+
+        Duration maxBatchTime = Duration.ofMillis(auditLogConfig.getMaxBatchTime().getMillis());
+        AthenaAuditWriter athenaAuditWriter = new AthenaAuditWriter(amazonS3, auditLogConfig.getLogBucket(),
+                auditLogConfig.getLogPath(), auditLogConfig.getMaxFileSize(), maxBatchTime, stagingDir,
+                auditLogConfig.getLogFilePrefix(), environment.getObjectMapper(), clock, lifeCycleRegistry);
+
+        athenaAuditWriter.setFileTransfersEnabled(auditLogConfig.isFileTransfersEnabled());
+        return athenaAuditWriter;
     }
 
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {

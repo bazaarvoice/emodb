@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.sor.api.DeltaSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
@@ -17,6 +18,7 @@ import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDelta;
+import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
@@ -86,6 +88,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final Meter _updateMeter;
     private final Meter _oversizeUpdateMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
+    private final AuditWriter _auditWriter;
     private final DAOUtils _daoUtils;
     private final int _deltaBlockSize;
     private final String _deltaPrefix;
@@ -106,7 +109,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, HistoryStore historyStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                 DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
+                                 AuditWriter auditWriter, DAOUtils daoUtils, @BlockSize int deltaBlockSize,
+                                 @PrefixLength int deltaPrefixLength,
                                  @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable,
                                  @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
 
@@ -118,6 +122,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
         _historyStore = checkNotNull(historyStore, "historyStore");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _auditWriter = checkNotNull(auditWriter, "auditWriter");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
         _daoUtils = daoUtils;
@@ -249,11 +254,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             ByteBuffer encodedBlockDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(_deltaPrefix)).toString());
             ByteBuffer encodedDelta = encodedBlockDelta.duplicate();
             encodedDelta.position(encodedDelta.position() + _deltaPrefixLength);
-            ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
+//            ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
 
             int deltaSize = _writeToLegacyDeltaTable ? encodedDelta.remaining(): 0;
             int blockDeltaSize = _writeToBlockedDeltaTable ? encodedBlockDelta.remaining() : 0;
-            int auditSize = encodedAudit.remaining();
+//            int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
 
@@ -262,20 +267,20 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 _oversizeUpdateMeter.mark();
                 throw new DeltaSizeLimitException("Delta exceeds size limit of " + MAX_DELTA_SIZE + ": " + deltaSize, deltaSize);
             }
-            if (auditSize > MAX_AUDIT_SIZE) {
-                _oversizeUpdateMeter.mark();
-                throw new AuditSizeLimitException("Audit exceeds size limit of " + MAX_AUDIT_SIZE + ": " + auditSize, auditSize);
-            }
+//            if (auditSize > MAX_AUDIT_SIZE) {
+//                _oversizeUpdateMeter.mark();
+//                throw new AuditSizeLimitException("Audit exceeds size limit of " + MAX_AUDIT_SIZE + ": " + auditSize, auditSize);
+//            }
 
             // Perform a quick validation that the size of the mutation batch as a whole won't exceed the thrift threshold.
             // This validation is inexact and overly-conservative but it is cheap and fast.
-            if (!mutation.isEmpty() && approxMutationSize + deltaSize + blockDeltaSize + auditSize > MAX_DELTA_SIZE + MAX_AUDIT_SIZE) {
+            if (!mutation.isEmpty() && approxMutationSize + deltaSize + blockDeltaSize > MAX_DELTA_SIZE) {
                 // Adding the next row may exceed the Thrift threshold.  Check definitively now.  This is fairly expensive
                 // which is why we don't do it unless the cheap check above passes.
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
+//                potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
                 if (_writeToLegacyDeltaTable) {
                     //this will be removed in the next version
@@ -295,8 +300,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
-            approxMutationSize += auditSize;
+//            mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
+//            approxMutationSize += auditSize;
 
             // this will be removed in the next version
             if (_writeToLegacyDeltaTable) {
@@ -304,7 +309,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 approxMutationSize += deltaSize;
             }
 
-            if (deltaSize + blockDeltaSize + auditSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
+            if (deltaSize + blockDeltaSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
                 execute(mutation, "update large record in old table in placement %s", placement.getName());
                 approxMutationSize = 0;
             }
@@ -314,7 +319,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 approxMutationSize += blockDeltaSize;
             }
             updateCount += 1;
+            _auditWriter.persist(update.getTable().getName(), update.getKey(), augmentedAudit, TimeUUIDs.getTimeMillis(changeId));
         }
+
         execute(mutation, "batch update %d records in placement %s", updateCount, placement.getName());
 
         _updateMeter.mark(updates.size());

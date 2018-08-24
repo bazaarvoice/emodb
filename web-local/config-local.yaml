@@ -105,7 +105,9 @@ systemOfRecord:
     tooManyDeltasThreshold: 20
     console:
       type: console
-
+  auditWriter:
+    logBucket: bv-emodb-local-audit
+    logPath: localAudit
 
 databus:
   longPollPollingThreadCount: 0
