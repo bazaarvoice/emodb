@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.resources.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.google.common.base.Strings;
 import io.dropwizard.jersey.params.LongParam;
@@ -75,7 +76,7 @@ public class CompactionControlResource1 {
     @GET
     @Path ("/stash-time")
     @RequiresPermissions ("system|comp_control")
-    public Map<String, StashRunTimeInfo> getStashTimesForPlacement(@QueryParam ("placement") String placement) {
+    public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(@QueryParam ("placement") String placement) {
         return Strings.isNullOrEmpty(placement) ? _compactionControlSource.getAllStashTimes() : _compactionControlSource.getStashTimesForPlacement(placement);
     }
 }

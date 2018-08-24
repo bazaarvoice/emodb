@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
@@ -263,7 +264,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             Batch batch = new Batch(context, partCountForFirstShard);
 
             // check if there is a stash cut off time.
-            Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(placement);
+            Map<StashTimeKey, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(placement);
             Instant cutoffTime = stashTimeInfoMap.values().stream()
                     .map(StashRunTimeInfo::getTimestamp)
                     .min(Long::compareTo)
