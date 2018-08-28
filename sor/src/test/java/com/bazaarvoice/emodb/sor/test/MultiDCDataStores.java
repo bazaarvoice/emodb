@@ -4,9 +4,9 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
-import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.table.db.TableDAO;
@@ -29,7 +29,7 @@ public class MultiDCDataStores {
     private final DataStore[] _stores;
     private final InMemoryDataReaderDAO[] _inMemoryDaos;
     private final ReplicatingDataWriterDAO[] _replDaos;
-    private final AuditStore[] _auditStores;
+    private final HistoryStore[] _historyStores;
     private final InMemoryTableDAO _tableDao;
 
     public MultiDCDataStores(int numDCs, MetricRegistry metricRegistry) {
@@ -54,24 +54,24 @@ public class MultiDCDataStores {
                 }
             }
         }
-        _auditStores = new AuditStore[numDCs];
+        _historyStores = new HistoryStore[numDCs];
         _stores = new DataStore[numDCs];
         for (int i = 0; i < numDCs; i++) {
-            _auditStores[i] = new InMemoryAuditStore();
+            _historyStores[i] = new InMemoryHistoryStore();
             if (asyncCompacter) {
                 _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new EventBus(), _tableDao,
-                        _inMemoryDaos[i].setAuditStore(_auditStores[i]), _replDaos[i], new NullSlowQueryLog(), _auditStores[i],
+                        _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
                         Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse());
             } else {
-                _stores[i] = new DefaultDataStore(new EventBus(), _tableDao, _inMemoryDaos[i].setAuditStore(_auditStores[i]),
-                        _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _auditStores[i],
+                _stores[i] = new DefaultDataStore(new EventBus(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
+                        _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _historyStores[i],
                         Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
             }
         }
     }
 
-    public AuditStore auditStore(int index) {
-        return _auditStores[index];
+    public HistoryStore historyStore(int index) {
+        return _historyStores[index];
     }
 
     public TableDAO tableDao() {

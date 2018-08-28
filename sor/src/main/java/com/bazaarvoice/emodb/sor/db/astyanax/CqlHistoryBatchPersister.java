@@ -3,34 +3,33 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.sor.api.History;
-import com.bazaarvoice.emodb.sor.core.AuditBatchPersister;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.datastax.driver.core.BatchStatement;
 import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
 
-public class CqlAuditBatchPersister implements AuditBatchPersister{
+public class CqlHistoryBatchPersister implements HistoryBatchPersister {
 
     private BatchStatement _batchStatement;
     private TableDDL _tableDDL;
     private ConsistencyLevel _consistencyLevel;
 
     private ChangeEncoder _changeEncoder;
-    private AuditStore _auditStore;
+    private HistoryStore _historyStore;
 
-    private CqlAuditBatchPersister(BatchStatement batchStatement, TableDDL tableDDL,
-                                   ChangeEncoder changeEncoder, AuditStore auditStore,
-                                   ConsistencyLevel consistencyLevel) {
+    private CqlHistoryBatchPersister(BatchStatement batchStatement, TableDDL tableDDL,
+                                     ChangeEncoder changeEncoder, HistoryStore historyStore,
+                                     ConsistencyLevel consistencyLevel) {
         _batchStatement = checkNotNull(batchStatement);
         _tableDDL = checkNotNull(tableDDL);
         _changeEncoder = checkNotNull(changeEncoder);
-        _auditStore = checkNotNull(auditStore);
+        _historyStore = checkNotNull(historyStore);
         _consistencyLevel = consistencyLevel;
     }
 
@@ -43,15 +42,15 @@ public class CqlAuditBatchPersister implements AuditBatchPersister{
                         .value(_tableDDL.getRowKeyColumnName(), rowKey)
                         .value(_tableDDL.getChangeIdColumnName(), history.getChangeId())
                         .value(_tableDDL.getValueColumnName(), _changeEncoder.encodeHistory(history))
-                        .using(ttl(Ttls.toSeconds(_auditStore.getHistoryTtl(), 1, null)))
+                        .using(ttl(Ttls.toSeconds(_historyStore.getHistoryTtl(), 1, null)))
                         .setConsistencyLevel(_consistencyLevel));
             }
         }
     }
 
-    public static CqlAuditBatchPersister build(BatchStatement batchStatement, TableDDL tableDDL,
-                                               ChangeEncoder changeEncoder, AuditStore auditStore,
-                                               ConsistencyLevel consistencyLevel) {
-        return new CqlAuditBatchPersister(batchStatement, tableDDL, changeEncoder, auditStore, consistencyLevel);
+    public static CqlHistoryBatchPersister build(BatchStatement batchStatement, TableDDL tableDDL,
+                                                 ChangeEncoder changeEncoder, HistoryStore historyStore,
+                                                 ConsistencyLevel consistencyLevel) {
+        return new CqlHistoryBatchPersister(batchStatement, tableDDL, changeEncoder, historyStore, consistencyLevel);
     }
 }

@@ -10,8 +10,8 @@ import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
-import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -58,10 +58,10 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     private int _fullConsistencyDelayMillis = Integer.MAX_VALUE;
     private Long _fullConsistencyTimestamp;
     private int _columnBatchSize = 50;
-    public AuditStore _auditStore;
+    public HistoryStore _historyStore;
 
     public InMemoryDataReaderDAO() {
-        _auditStore = new InMemoryAuditStore();
+        _historyStore = new InMemoryHistoryStore();
     }
 
     public InMemoryDataReaderDAO setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
@@ -70,8 +70,8 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
         return this;
     }
 
-    public InMemoryDataReaderDAO setAuditStore(AuditStore auditStore) {
-        _auditStore = checkNotNull(auditStore);
+    public InMemoryDataReaderDAO setHistoryStore(HistoryStore historyStore) {
+        _historyStore = checkNotNull(historyStore);
         return this;
     }
 
@@ -279,7 +279,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
         // Add delta histories
         if (historyList != null && !historyList.isEmpty()) {
-            _auditStore.putDeltaAudits(table.getName(), key, historyList);
+            _historyStore.putDeltaHistory(table.getName(), key, historyList);
         }
     }
 
@@ -317,7 +317,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
         // Add delta histories
         if (historyList != null && !historyList.isEmpty()) {
-            _auditStore.putDeltaAudits(table.getName(), key, historyList);
+            _historyStore.putDeltaHistory(table.getName(), key, historyList);
         }
 
     }
@@ -333,7 +333,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public void storeCompactedDeltas(Table tbl, String key, List<History> audits, WriteConsistency consistency) {
+    public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
 
     }
 

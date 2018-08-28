@@ -77,10 +77,10 @@ public class ReplicatingDataWriterDAO implements DataWriterDAO {
     }
 
     @Override
-    public void storeCompactedDeltas(Table tbl, String key, List<History> audits, WriteConsistency consistency) {
-        _local.storeCompactedDeltas(tbl, key, audits, consistency);
+    public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
+        _local.storeCompactedDeltas(tbl, key, histories, consistency);
         for (DataWriterDAO remote : _remotes) {
-            remote.storeCompactedDeltas(tbl, key, audits, consistency);
+            remote.storeCompactedDeltas(tbl, key, histories, consistency);
         }
     }
 

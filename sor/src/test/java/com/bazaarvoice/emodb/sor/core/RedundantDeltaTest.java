@@ -16,7 +16,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.test.DiscardingExecutorService;
-import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
@@ -61,7 +61,7 @@ public class RedundantDeltaTest {
     public void testRedundantDeltas() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -117,7 +117,7 @@ public class RedundantDeltaTest {
     public void testRedundancyWithTags() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -197,7 +197,7 @@ public class RedundantDeltaTest {
     public void testTagsForNestedMapDeltas() {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -216,7 +216,7 @@ public class RedundantDeltaTest {
     public void testRedundancyWithCompactionAndUnchangedTag() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -292,7 +292,7 @@ public class RedundantDeltaTest {
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -363,7 +363,7 @@ public class RedundantDeltaTest {
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
         DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
-                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryAuditStore(),
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();

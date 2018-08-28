@@ -87,9 +87,9 @@ public class DeltaHistoryTest {
         // Version 5
         dc1.update(TABLE, KEY, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"newcode\":\"s\"}"), newAudit("moderate"), WriteConsistency.STRONG);
 
-        // Compare the above with the delta audits and make sure they display the correct story
+        // Compare the above with the delta histories and make sure they display the correct story
 
-        Iterator<Change> deltaHistory = allDCs.auditStore(0).getDeltaAudits(TABLE, KEY);
+        Iterator<Change> deltaHistory = allDCs.historyStore(0).getDeltaHistories(TABLE, KEY);
 
         final Iterator<Change> liveChanges = dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG);
         Iterator<Change> allChangesEver = getChangeIterator(deltaHistory, liveChanges);
@@ -157,7 +157,7 @@ public class DeltaHistoryTest {
         dc1.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         // Verify that we have the same number of historical deltas as before
-        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.auditStore(0).getDeltaAudits(TABLE, KEY),
+        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.historyStore(0).getDeltaHistories(TABLE, KEY),
                 Integer.MAX_VALUE);
 
         assertEquals(countOfAuditedDeltas, countOfDeltasAfterHugeDelta,
@@ -210,7 +210,7 @@ public class DeltaHistoryTest {
         // Now make sure that there are no audited deltas since the overall content would be 10MB or more
         // Compaction will occur, but due to transport size limit, it should not save the history
         dc1.compact(TABLE, KEY2, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
-        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.auditStore(0).getDeltaAudits(TABLE, KEY2), Integer.MAX_VALUE);
+        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.historyStore(0).getDeltaHistories(TABLE, KEY2), Integer.MAX_VALUE);
 
         // Since we know that our first delta was 1 MB, the next 10 deltas each will have the content size of at least 1 MB
         // for a total of 10 MB. This is because we keep a "snapshot" of row with each delta archive.

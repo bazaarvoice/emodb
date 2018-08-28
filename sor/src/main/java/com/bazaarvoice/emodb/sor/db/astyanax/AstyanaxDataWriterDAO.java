@@ -10,7 +10,7 @@ import com.bazaarvoice.emodb.sor.api.DeltaSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
@@ -99,11 +99,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     // We use this for efficiency reasons, the only use case right now is to delete "compaction-owned" deltas, once we
     //  know that compaction is within FCT.
     private final HintsConsistencyTimeProvider _rawConsistencyTimeProvider;
-    private final AuditStore _auditStore;
+    private final HistoryStore _historyStore;
 
     @Inject
     public AstyanaxDataWriterDAO(@AstyanaxWriterDAODelegate DataWriterDAO delegate, AstyanaxKeyScanner keyScanner,
-                                 FullConsistencyTimeProvider fullConsistencyTimeProvider, AuditStore auditStore,
+                                 FullConsistencyTimeProvider fullConsistencyTimeProvider, HistoryStore historyStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
@@ -116,7 +116,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _keyScanner = checkNotNull(keyScanner, "keyScanner");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _rawConsistencyTimeProvider = checkNotNull(rawConsistencyTimeProvider, "rawConsistencyTimeProvider");
-        _auditStore = checkNotNull(auditStore, "auditStore");
+        _historyStore = checkNotNull(historyStore, "historyStore");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
@@ -338,10 +338,10 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
     @Timed (name = "bv.emodb.sorAstyanaxDataWriterDAO.storeCompactedDeltas", absolute = true)
     @Override
-    public void storeCompactedDeltas(Table tbl, String key, List<History> audits, WriteConsistency consistency) {
+    public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
         checkNotNull(tbl, "table");
         checkNotNull(key, "key");
-        checkNotNull(audits, "audits");
+        checkNotNull(histories, "audits");
         checkNotNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
@@ -354,13 +354,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             MutationBatch mutation = keyspace.prepareMutationBatch(SorConsistencies.toAstyanax(consistency));
             ColumnListMutation<UUID> rowMutation = mutation.withRow(placement.getDeltaHistoryColumnFamily(), rowKey);
 
-            for (History history : audits) {
+            for (History history : histories) {
                 rowMutation.putColumn(history.getChangeId(),
                         _changeEncoder.encodeHistory(history),
-                        Ttls.toSeconds(_auditStore.getHistoryTtl(), 1, null));
+                        Ttls.toSeconds(_historyStore.getHistoryTtl(), 1, null));
             }
             execute(mutation, "store %d compacted deltas for placement %s, table %s, key %s",
-                    audits.size(), placement.getName(), table.getName(), key);
+                    histories.size(), placement.getName(), table.getName(), key);
         }
     }
 
