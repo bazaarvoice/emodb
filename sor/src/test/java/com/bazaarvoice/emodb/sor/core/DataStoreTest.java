@@ -164,18 +164,6 @@ public class DataStoreTest {
         Set<String> expectedTablesPlacements = Sets.newHashSet("app_global:default", "ugc_global:ugc", "app_global:sys", "catalog_global:cat");
         assertTrue(store.getTablePlacements().containsAll(expectedTablesPlacements));
         assertTrue(expectedTablesPlacements.containsAll(store.getTablePlacements()));
-
-        // verify the timeline for key1
-        Iterator<Change> timeline = store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG);
-        System.out.println(new ObjectMapper().writeValueAsString(timeline));
-
-//        assertEquals(timeline.size(), 3);
-//        assertEquals(timeline.get(0).getComment(), "submit");
-//        assertEquals(timeline.get(0).getTags(), ImmutableList.of());
-//        assertEquals(timeline.get(1).getComment(), "begin moderation");
-//        assertEquals(timeline.get(1).getTags(), ImmutableList.of());
-//        assertEquals(timeline.get(2).getComment(), "finish moderation");
-//        assertEquals(timeline.get(2).getTags(), ImmutableList.of("tag1", "tag2"));
     }
 
     @Test
