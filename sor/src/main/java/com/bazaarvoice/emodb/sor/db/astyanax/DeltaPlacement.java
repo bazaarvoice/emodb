@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
-import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.datastax.driver.core.TableMetadata;
 import com.netflix.astyanax.model.ColumnFamily;
@@ -19,34 +18,29 @@ class DeltaPlacement implements Placement {
     private final CassandraKeyspace _keyspace;
     private final ColumnFamily<ByteBuffer, UUID> _deltaColumnFamily;
     private final ColumnFamily<ByteBuffer, DeltaKey> _blockedDeltaColumnFamily;
-    private final ColumnFamily<ByteBuffer, UUID> _auditColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _deltaHistoryColumnFamily;
     private final TableDDL _deltaTableDDL;
     private final BlockedDeltaTableDDL _blockedDeltaTableDDL;
-    private final TableDDL _auditTableDDL;
     private final TableDDL _deltaHistoryTableDDL;
 
     DeltaPlacement(String name,
                    CassandraKeyspace keyspace,
                    ColumnFamily<ByteBuffer, UUID> deltaColumnFamily,
                    ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaColumnFamily,
-                   ColumnFamily<ByteBuffer, UUID> auditColumnFamily,
                    ColumnFamily<ByteBuffer, UUID> deltaHistoryColumnFamily) {
         _name = checkNotNull(name, "name");
         _keyspace = checkNotNull(keyspace, "keyspace");
         _deltaColumnFamily = checkNotNull(deltaColumnFamily, "deltaColumnFamily");
         _blockedDeltaColumnFamily = checkNotNull(blockedDeltaColumnFamily, "blockedDeltaColumnFamily");
-        _auditColumnFamily = checkNotNull(auditColumnFamily, "auditColumnFamily");
         _deltaHistoryColumnFamily = checkNotNull(deltaHistoryColumnFamily, "deltaHistoryColumnFamily");
 
         _deltaTableDDL = createTableDDL(_deltaColumnFamily.getName());
         _blockedDeltaTableDDL = createBlockedDeltaTableDDL(blockedDeltaColumnFamily.getName());
-        _auditTableDDL = createTableDDL(_auditColumnFamily.getName());
         _deltaHistoryTableDDL = createTableDDL(_deltaHistoryColumnFamily.getName());
     }
 
     /**
-     * All three placement tables -- delta, audit, and delta history -- follow the same DDL.
+     * Both placement tables -- delta, and delta history -- follow the same DDL.
      */
     private TableDDL createTableDDL(String tableName) {
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
@@ -81,10 +75,6 @@ class DeltaPlacement implements Placement {
         return _deltaColumnFamily;
     }
 
-    ColumnFamily<ByteBuffer, UUID> getAuditColumnFamily() {
-        return _auditColumnFamily;
-    }
-
     ColumnFamily<ByteBuffer, UUID> getDeltaHistoryColumnFamily() {
         return _deltaHistoryColumnFamily;
     }
@@ -95,10 +85,6 @@ class DeltaPlacement implements Placement {
 
     TableDDL getDeltaTableDDL() {
         return _deltaTableDDL;
-    }
-
-    TableDDL getAuditTableDDL() {
-        return _auditTableDDL;
     }
 
     TableDDL getDeltaHistoryTableDDL() {

@@ -47,12 +47,15 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
+import io.dropwizard.jackson.Jackson;
+import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.utils.EnsurePath;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import javax.validation.Validation;
 import java.time.Clock;
 import java.time.Duration;
 
@@ -147,7 +150,9 @@ public class DataStoreModuleTest {
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
-
+                bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
+                        Validation.buildDefaultValidatorFactory().getValidator(),
+                        new MetricRegistry(), ClassLoader.getSystemClassLoader()));
                 install(new DataStoreModule(serviceMode));
             }
         });

@@ -35,6 +35,7 @@ import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
+import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -419,6 +420,10 @@ public class DataStoreModule extends PrivateModule {
     AuditWriter provideAuditWriter(DataStoreConfiguration configuration, Clock clock,
                                    LifeCycleRegistry lifeCycleRegistry, Environment environment) {
         AuditWriterConfiguration auditLogConfig = configuration.getAuditWriterConfiguration();
+
+        if(auditLogConfig == null) {
+            return new DiscardingAuditWriter();
+        }
 
         AWSCredentialsProvider credentialsProvider;
         if (auditLogConfig.getS3AccessKey() != null && auditLogConfig.getS3SecretKey() != null) {

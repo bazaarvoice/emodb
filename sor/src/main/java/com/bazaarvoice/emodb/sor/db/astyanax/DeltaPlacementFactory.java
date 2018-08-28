@@ -96,11 +96,10 @@ public class DeltaPlacementFactory extends AbstractPlacementFactory implements P
         // In the future, we should either phase out the DDL config or change the implementation here to conform to it.
         ColumnFamily<ByteBuffer, UUID> deltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaCf = getColumnFamily(keyspaceDef, cfPrefix, "delta_v2", placement, deltaKeySerializer);
-        ColumnFamily<ByteBuffer, UUID> auditCf = getColumnFamily(keyspaceDef, cfPrefix, "audit", placement, TimeUUIDSerializer.get());
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = getColumnFamily(keyspaceDef, cfPrefix, "history", placement, TimeUUIDSerializer.get());
 
         // Calculate the data centers on demand since they may change in a live system.
-        return new DeltaPlacement(placement, keyspace, deltaCf, blockedDeltaCf, auditCf, deltaHistoryCf);
+        return new DeltaPlacement(placement, keyspace, deltaCf, blockedDeltaCf, deltaHistoryCf);
     }
 
     @Override

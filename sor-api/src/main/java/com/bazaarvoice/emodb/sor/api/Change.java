@@ -21,14 +21,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonPropertyOrder({"timestamp", "id", "delta", "audit", "compaction", "history"})
+@JsonPropertyOrder({"timestamp", "id", "delta", "compaction", "history"})
 public final class Change {
 
     private final UUID _id;
     @Nullable
     private final Delta _delta;
-    @Nullable
-    private final Audit _audit;
     @Nullable
     private final Compaction _compaction;
     @Nullable
@@ -37,13 +35,11 @@ public final class Change {
 
     Change(@JsonProperty("id") UUID id,
            @JsonProperty("delta") @Nullable Delta delta,
-           @JsonProperty("audit") @Nullable Audit audit,
            @JsonProperty("compaction") @Nullable Compaction compaction,
            @JsonProperty("history") @Nullable History history,
            @JsonProperty("tags") @Nullable Set<String> tags) {
         _id = checkNotNull(id, "changeId");
         _delta = delta;
-        _audit = audit;
         _compaction = compaction;
         _history = history;
         _tags = Objects.firstNonNull(tags, ImmutableSet.<String>of());
@@ -61,11 +57,6 @@ public final class Change {
     @Nullable
     public Delta getDelta() {
         return _delta;
-    }
-
-    @Nullable
-    public Audit getAudit() {
-        return _audit;
     }
 
     @Nullable

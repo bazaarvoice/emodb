@@ -76,7 +76,6 @@ public class DataStoreConfiguration {
     private Optional<String> _stashBlackListTableCondition = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty("auditWriter")
     private AuditWriterConfiguration _auditWriterConfiguration;
 
@@ -95,6 +94,10 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setValidTablePlacements(Set<String> validTablePlacements) {
         _validTablePlacements = validTablePlacements;
         return this;
+    }
+
+    public void setAuditWriterConfiguration(AuditWriterConfiguration auditWriterConfiguration) {
+        _auditWriterConfiguration = auditWriterConfiguration;
     }
 
     public int getMinimumSplitsPerTable() {

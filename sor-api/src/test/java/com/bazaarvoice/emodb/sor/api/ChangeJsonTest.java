@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.testng.annotations.Test;
 
@@ -20,14 +21,15 @@ import static org.testng.Assert.assertEquals;
  */
 public class ChangeJsonTest {
 
+    private static ObjectMapper _mapper = new ObjectMapper();
+
     @Test
     public void testChangeJson() throws IOException {
         UUID changeId = TimeUUIDs.newUUID();
         Delta delta = Deltas.literal(ImmutableMap.of("name", "Bob", "state", "SUBMITTED"));
-        Audit audit = new AuditBuilder().setProgram("CMS").setHost("prod-c1-cms1").setComment("initial submission").build();
         History history = new History(changeId,
                 ImmutableMap.<String, Object>of("name", "Bob", "state", "SUBMITTED"), delta);
-        Change expected = new ChangeBuilder(changeId).with(delta).with(audit).with(history).build();
+        Change expected = new ChangeBuilder(changeId).with(delta).with(history).build();
 
         SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
         dateFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -37,7 +39,6 @@ public class ChangeJsonTest {
                 "\"timestamp\":\"" + dateFmt.format(TimeUUIDs.getDate(changeId)) + "\"," +
                 "\"id\":\"" + changeId + "\"," +
                 "\"delta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\"," +
-                "\"audit\":{\"program\":\"CMS\",\"host\":\"prod-c1-cms1\",\"comment\":\"initial submission\"}," +
                 "\"history\":{\"changeId\":\"" + changeId + "\",\"delta\":\"{\\\"name\\\":\\\"Bob\\\",\\\"state\\\":\\\"SUBMITTED\\\"}\",\"content\":{\"name\":\"Bob\",\"state\":\"SUBMITTED\"}}," +
                 "\"tags\":[]}");
 
@@ -99,7 +100,6 @@ public class ChangeJsonTest {
     }
 
     private Map<String, Object> toMap(Change change) {
-        Audit audit = change.getAudit();
-        return (audit != null) ? audit.getAll() : null;
+        return _mapper.convertValue(change, Map.class);
     }
 }

@@ -162,7 +162,7 @@ public class MultiDCVersionTest {
         dao1.setFullConsistencyTimestamp(SystemClock.tick());
         dc1.get(TABLE, KEY, ReadConsistency.STRONG);
         // Verify the deltas are deleted this time around
-        assertNull(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).get(changeId3));
+        assertNull(Maps.filterEntries(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)), entry -> entry.getValue().getHistory() == null).get(changeId3));
         // Verify there is only one compaction record
         compactionMap1 =
                 getCompactionsWithId(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));

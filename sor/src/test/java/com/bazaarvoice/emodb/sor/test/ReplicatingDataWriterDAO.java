@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.DeltaUpdate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.ImmutableList;
@@ -59,8 +59,8 @@ public class ReplicatingDataWriterDAO implements DataWriterDAO {
     }
 
     @Override
-    public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
-        ImmutableList<RecordUpdate> list = ImmutableList.copyOf(updates);
+    public void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener) {
+        ImmutableList<DeltaUpdate> list = ImmutableList.copyOf(updates);
         _local.updateAll(list.iterator(), listener);
         for (DataWriterDAO remote : _remotes) {
             remote.updateAll(list.iterator(), noop());

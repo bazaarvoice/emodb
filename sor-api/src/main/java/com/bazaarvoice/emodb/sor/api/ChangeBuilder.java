@@ -13,7 +13,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 public final class ChangeBuilder {
     private final UUID _changeId;
     private Delta _delta;
-    private Audit _audit;
     private Compaction _compaction;
     private Set<String> _tags;
     private History _history;
@@ -44,9 +43,6 @@ public final class ChangeBuilder {
         if (change.getDelta() != null) {
             _delta = change.getDelta();
         }
-        if (change.getAudit() != null) {
-            _audit = change.getAudit();
-        }
         if (change.getCompaction() != null) {
             _compaction = change.getCompaction();
         }
@@ -58,17 +54,16 @@ public final class ChangeBuilder {
 
     public boolean isEmpty() {
         return _delta == null &&
-                _audit == null &&
                 _compaction == null &&
                 _history == null;
     }
 
     public static Change just(UUID changeId, Delta delta) {
-        return new Change(changeId, delta, null, null, null, null);
+        return new Change(changeId, delta, null, null, null);
     }
 
     public static Change just(UUID changeId, Delta delta, Set<String> tags) {
-        return new Change(changeId, delta, null, null, null, tags);
+        return new Change(changeId, delta, null, null, tags);
     }
 
     public ChangeBuilder with(Delta delta) {
@@ -81,17 +76,8 @@ public final class ChangeBuilder {
         return this;
     }
 
-    public static Change just(UUID changeId, Audit audit) {
-        return new Change(changeId, null, audit, null, null, null);
-    }
-
-    public ChangeBuilder with(Audit audit) {
-        _audit = audit;
-        return this;
-    }
-
     public static Change just(UUID changeId, Compaction compaction) {
-        return new Change(changeId, null, null, compaction, null, null);
+        return new Change(changeId, null, compaction, null, null);
     }
 
     public ChangeBuilder with(Compaction compaction) {
@@ -105,6 +91,6 @@ public final class ChangeBuilder {
     }
 
     public Change build() {
-        return new Change(_changeId, _delta, _audit, _compaction, _history, _tags);
+        return new Change(_changeId, _delta, _compaction, _history, _tags);
     }
 }

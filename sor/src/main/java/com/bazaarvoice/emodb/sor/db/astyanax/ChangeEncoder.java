@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
-import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
@@ -14,8 +13,6 @@ import java.util.UUID;
 public interface ChangeEncoder {
 
     StringBuilder encodeDelta(String delta, @Nullable EnumSet<ChangeFlag> changeFlags, Set<String> tags, StringBuilder changeBody);
-
-    String encodeAudit(Audit audit);
 
     StringBuilder encodeCompaction(Compaction compaction, StringBuilder builder);
 

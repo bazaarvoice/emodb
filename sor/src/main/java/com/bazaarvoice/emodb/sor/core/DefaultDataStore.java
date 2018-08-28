@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
@@ -25,6 +26,7 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -34,7 +36,7 @@ import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.DeltaUpdate;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -60,6 +62,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
@@ -104,6 +107,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Optional<URI> _stashRootDirectory;
     private final Condition _stashBlackListTableCondition;
     private final Timer _resolveAnnotatedEventTimer;
+    private final AuditWriter _auditWriter;
     @VisibleForTesting
     protected final Counter _archiveDeltaSize;
     private final Meter _discardedCompactions;
@@ -116,16 +120,17 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, DatabusEventWriterRegistry eventWriterRegistry, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
-                            @StashBlackListTableCondition Condition stashBlackListTableCondition) {
+                            @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
+                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter, metricRegistry);
     }
 
     @VisibleForTesting
     public DefaultDataStore(DatabusEventWriterRegistry eventWriterRegistry,TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
-                            Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
+                            Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
+                            Condition stashBlackListTableCondition, AuditWriter auditWriter, MetricRegistry metricRegistry) {
         _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -135,6 +140,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _historyStore = checkNotNull(historyStore, "historyStore");
         _stashRootDirectory = checkNotNull(stashRootDirectory, "stashRootDirectory");
         _stashBlackListTableCondition = checkNotNull(stashBlackListTableCondition, "stashBlackListTableCondition");
+        _auditWriter = checkNotNull(auditWriter, "auditWriter");
         _resolveAnnotatedEventTimer = metricRegistry.timer(getMetricName("resolve_event"));
 
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
@@ -484,6 +490,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                                         @Nullable UUID start, @Nullable UUID end, boolean reversed, long limit, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkNotNull(key, "key");
+        if (includeAuditInformation) {
+            throw new UnsupportedOperationException("Audit data is no longer accessable via EmoDB app servers.");
+        }
         if (start != null && end != null) {
             if (reversed) {
                 checkArgument(TimeUUIDs.compare(start, end) >= 0, "Start must be >=End for reversed ranges");
@@ -498,7 +507,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         // Query the database.  Return the raw timeline.  Don't perform compaction--it modifies the timeline which
         // could make getTimeline() less useful for debugging.
-        return _dataReaderDao.readTimeline(new Key(table, key), includeContentData, includeAuditInformation, start, end, reversed, limit, consistency);
+        return _dataReaderDao.readTimeline(new Key(table, key), includeContentData, start, end, reversed, limit, consistency);
     }
 
     @Override
@@ -633,9 +642,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             return;
         }
 
-        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
+        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, DeltaUpdate>() {
             @Override
-            public RecordUpdate apply(Update update) {
+            public DeltaUpdate apply(Update update) {
                 checkNotNull(update, "update");
                 String tableName = update.getTable();
                 String key = update.getKey();
@@ -664,11 +673,20 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
                 }
 
-                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
+                // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
+                // Update the audit to include the tags associated with the update
+                Audit augmentedAudit = AuditBuilder.from(update.getAudit())
+                        .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(delta.toString()).toString())
+                        .set(Audit.TAGS, tags)
+                        .build();
+
+                _auditWriter.persist(tableName, key, audit, TimeUUIDs.getTimeMillis(changeId));
+
+                return new DeltaUpdate(table, key, changeId, delta, tags, update.getConsistency());
             }
         }), new DataWriterDAO.UpdateListener() {
             @Override
-            public void beforeWrite(Collection<RecordUpdate> updateBatch) {
+            public void beforeWrite(Collection<DeltaUpdate> updateBatch) {
                 // Tell the databus we're about to write.
                 // Algorithm note: It is worth mentioning here how we make sure our data bus listeners do not lose updates.
                 // 1. We always write to databus *before* writing to SoR. If we fail to write to databus, then we also fail
@@ -682,7 +700,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // before polling the event.
 
                 List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
-                for (RecordUpdate update : updateBatch) {
+                for (DeltaUpdate update : updateBatch) {
                     if (!update.getTable().isInternal()) {
                         updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
                     }

@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.DeltaUpdate;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -44,7 +44,7 @@ public class PausableDataWriterDAO implements DataWriterDAO {
     }
 
     @Override
-    public void updateAll(final Iterator<RecordUpdate> updates, final UpdateListener listener) {
+    public void updateAll(final Iterator<DeltaUpdate> updates, final UpdateListener listener) {
         write(() -> _delegate.updateAll(updates, listener));
     }
 

@@ -183,7 +183,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     public void testGetDocTimelineRestricted() {
         Audit audit = new AuditBuilder().setLocalHost().build();
         List<Change> expected = ImmutableList.of(
-                new ChangeBuilder(TimeUUIDs.newUUID()).with(audit).build());
+                new ChangeBuilder(TimeUUIDs.newUUID()).build());
         when(_server.getTimeline("a-table-1", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG))
                 .thenReturn(expected.iterator());
 
@@ -842,9 +842,8 @@ public class DataStoreJerseyTest extends ResourceTest {
     public void testGetTimeline() throws Exception {
         UUID start = TimeUUIDs.uuidForTimestamp(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse("2012-03-15 06:12:34.567"));
         UUID end = TimeUUIDs.uuidForTimestamp(new Date());
-        Audit audit = new AuditBuilder().setLocalHost().build();
         List<Change> expected = ImmutableList.of(
-                new ChangeBuilder(TimeUUIDs.newUUID()).with(audit).build());
+                new ChangeBuilder(TimeUUIDs.newUUID()).build());
         when(_server.getTimeline("table-name", "row-key", false, true, start, end, false, 123, ReadConsistency.WEAK))
                 .thenReturn(expected.iterator());
 
@@ -854,7 +853,6 @@ public class DataStoreJerseyTest extends ResourceTest {
         assertEquals(actual.size(), expected.size());
         assertEquals(actual.get(0).getId(), expected.get(0).getId());
         assertEquals(actual.get(0).getDelta(), expected.get(0).getDelta());
-        assertEquals(actual.get(0).getAudit(), expected.get(0).getAudit());
         assertEquals(actual.get(0).getCompaction(), expected.get(0).getCompaction());
         verify(_server).getTimeline("table-name", "row-key", false, true, start, end, false, 123, ReadConsistency.WEAK);
         verifyNoMoreInteractions(_server);
@@ -883,7 +881,6 @@ public class DataStoreJerseyTest extends ResourceTest {
         assertEquals(actual.size(), expected.size());
         assertEquals(actual.get(0).getId(), expected.get(0).getId());
         assertEquals(actual.get(0).getDelta(), expected.get(0).getDelta());
-        assertEquals(actual.get(0).getAudit(), expected.get(0).getAudit());
         assertEquals(actual.get(0).getCompaction(), expected.get(0).getCompaction());
         verify(_server).getTimeline("table-name", "row-key", true, false, null, null, true, 10, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);

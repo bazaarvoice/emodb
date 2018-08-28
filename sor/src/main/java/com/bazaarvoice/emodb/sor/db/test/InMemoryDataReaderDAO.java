@@ -2,8 +2,6 @@ package com.bazaarvoice.emodb.sor.db.test;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.Compaction;
@@ -13,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
+import com.bazaarvoice.emodb.sor.db.astyanax.MergeIterator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -54,7 +53,6 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, MigratorReaderDAO, MigratorWriterDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
-    private final Map<String, NavigableMap<String, Map<UUID, Change>>> _auditChanges = Maps.newHashMap();
     private int _fullConsistencyDelayMillis = Integer.MAX_VALUE;
     private Long _fullConsistencyTimestamp;
     private int _columnBatchSize = 50;
@@ -126,7 +124,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation,
+    public Iterator<Change> readTimeline(Key key, boolean includeContentData,
                                          UUID start, UUID end, boolean reversed, long limit, ReadConsistency consistency) {
         checkNotNull(key, "key");
 
@@ -136,11 +134,6 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
         NavigableMap<UUID, Change> map = Maps.newTreeMap(ordering);
         if (includeContentData) {
             map.putAll(safeGet(_contentChanges, table, key.getKey()));
-        }
-        if (includeAuditInformation) {
-            for (Map.Entry<UUID, Change> entry : safeGet(_auditChanges, table, key.getKey()).entrySet()) {
-                map.put(entry.getKey(), ChangeBuilder.merge(map.get(entry.getKey()), entry.getValue()));
-            }
         }
         if (start != null) {
             map = map.tailMap(start, true);
@@ -152,7 +145,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency consistency) {
+    public Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency consistency) {
         return Iterators.emptyIterator();
     }
 
@@ -238,25 +231,21 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
+    public void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener) {
         while (updates.hasNext()) {
-            RecordUpdate update = updates.next();
+            DeltaUpdate update = updates.next();
             listener.beforeWrite(Collections.singleton(update));
-            update(update.getTable(), update.getKey(), update.getChangeId(), update.getDelta(), update.getAudit(), update.getTags(), update.getConsistency());
+            update(update.getTable(), update.getKey(), update.getChangeId(), update.getDelta(), update.getTags(), update.getConsistency());
         }
     }
 
-    private synchronized void update(Table table, String key, UUID changeId, Delta delta, Audit audit, Set<String> tags, WriteConsistency ignored) {
+    private synchronized void update(Table table, String key, UUID changeId, Delta delta, Set<String> tags, WriteConsistency ignored) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(changeId, "changeId");
         checkNotNull(delta, "delta");
-        checkNotNull(audit, "audit");
 
-        // Add tags to audit
-        Audit auditWithTags = AuditBuilder.from(audit).set(Audit.TAGS, tags).build();
         safePut(_contentChanges, table.getName(), key, changeId, ChangeBuilder.just(changeId, delta, tags));
-        safePut(_auditChanges, table.getName(), key, changeId, ChangeBuilder.just(changeId, auditWithTags));
     }
 
     @Override
@@ -340,7 +329,6 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     @Override
     public void purgeUnsafe(Table table) {
         _contentChanges.remove(table.getName());
-        _auditChanges.remove(table.getName());
     }
 
     private NavigableMap<String, Map<UUID, Change>> safeGet(Map<String, NavigableMap<String, Map<UUID, Change>>> map, String key) {

@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.test;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
@@ -61,11 +62,12 @@ public class MultiDCDataStores {
             if (asyncCompacter) {
                 _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new DatabusEventWriterRegistry(), _tableDao,
                         _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
-                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse());
+                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter());
             } else {
                 _stores[i] = new DefaultDataStore(new DatabusEventWriterRegistry(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
                         _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _historyStores[i],
-                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
+                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                        new DiscardingAuditWriter(), metricRegistry);
             }
         }
     }
