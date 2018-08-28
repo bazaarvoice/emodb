@@ -680,7 +680,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                         .set(Audit.TAGS, tags)
                         .build();
 
-                _auditWriter.persist(tableName, key, audit, TimeUUIDs.getTimeMillis(changeId));
+                _auditWriter.persist(tableName, key, augmentedAudit, TimeUUIDs.getTimeMillis(changeId));
 
                 return new DeltaUpdate(table, key, changeId, delta, tags, update.getConsistency());
             }
