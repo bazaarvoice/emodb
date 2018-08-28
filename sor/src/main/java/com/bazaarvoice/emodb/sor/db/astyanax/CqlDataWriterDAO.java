@@ -99,7 +99,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener) {
+    public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
         _astyanaxWriterDAO.updateAll(updates, listener);
     }
 

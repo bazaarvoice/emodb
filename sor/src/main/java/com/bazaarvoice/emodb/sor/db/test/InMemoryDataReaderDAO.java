@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
-import com.bazaarvoice.emodb.sor.db.astyanax.MergeIterator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -231,9 +230,9 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener) {
+    public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
         while (updates.hasNext()) {
-            DeltaUpdate update = updates.next();
+            RecordUpdate update = updates.next();
             listener.beforeWrite(Collections.singleton(update));
             update(update.getTable(), update.getKey(), update.getChangeId(), update.getDelta(), update.getTags(), update.getConsistency());
         }

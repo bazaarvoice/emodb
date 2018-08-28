@@ -10,19 +10,21 @@ import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public final class DeltaUpdate {
+public final class RecordUpdate {
     private final Table _table;
     private final String _key;
     private final UUID _changeId;
     private final Delta _delta;
+    private final Audit _audit;
     private final WriteConsistency _consistency;
     private final Set<String> _tags;
 
-    public DeltaUpdate(Table table, String key, UUID changeId, Delta delta, Set<String> tags, WriteConsistency consistency) {
+    public RecordUpdate(Table table, String key, UUID changeId, Delta delta, Audit audit, Set<String> tags, WriteConsistency consistency) {
         _table = checkNotNull(table, "table");
         _key = checkNotNull(key, "key");
         _changeId = checkNotNull(changeId, "changeId");
         _delta = checkNotNull(delta, "delta");
+        _audit = checkNotNull(audit, "audit");
         _consistency = checkNotNull(consistency, "consistency");
         _tags = checkNotNull(tags, "tags");
     }
@@ -41,6 +43,10 @@ public final class DeltaUpdate {
 
     public Delta getDelta() {
         return _delta;
+    }
+
+    public Audit getAudit() {
+        return _audit;
     }
 
     public WriteConsistency getConsistency() {

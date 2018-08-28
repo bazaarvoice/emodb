@@ -30,7 +30,7 @@ public interface DataWriterDAO {
     long getRawConsistencyTimestamp(Table table);
 
     /** Creates, modifies or deletes a collection of data items in the data store. */
-    void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener);
+    void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener);
 
     /** Deletes one or more deltas and replaces them with the specified update. */
     void compact(Table table, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta,
@@ -43,6 +43,6 @@ public interface DataWriterDAO {
     void purgeUnsafe(Table table);
 
     interface UpdateListener {
-        void beforeWrite(Collection<DeltaUpdate> updates);
+        void beforeWrite(Collection<RecordUpdate> updates);
     }
 }

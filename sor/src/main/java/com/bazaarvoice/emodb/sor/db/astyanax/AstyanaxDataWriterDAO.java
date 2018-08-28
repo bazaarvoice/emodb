@@ -10,7 +10,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.DeltaUpdate;
+import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDelta;
@@ -32,7 +32,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -149,14 +148,14 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
     @Timed(name = "bv.emodb.sor.AstyanaxDataWriterDAO.updateAll", absolute = true)
     @Override
-    public void updateAll(Iterator<DeltaUpdate> updates, UpdateListener listener) {
+    public void updateAll(Iterator<RecordUpdate> updates, UpdateListener listener) {
         Map<BatchKey, List<BatchUpdate>> batchMap = Maps.newLinkedHashMap();
         int numPending = 0;
 
         // Group the updates by distinct placement and consistency since a Cassandra mutation only works
         // with a single keyspace and consistency at a time.
         while (updates.hasNext()) {
-            DeltaUpdate update = updates.next();
+            RecordUpdate update = updates.next();
 
             AstyanaxTable table = (AstyanaxTable) update.getTable();
             for (AstyanaxStorage storage : table.getWriteStorage()) {
@@ -202,9 +201,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
     private void write(BatchKey batchKey, List<BatchUpdate> updates, UpdateListener listener) {
         // Invoke the configured listener.  This is used to write events to the databus.
-        listener.beforeWrite(Collections2.transform(updates, new Function<BatchUpdate, DeltaUpdate>() {
+        listener.beforeWrite(Collections2.transform(updates, new Function<BatchUpdate, RecordUpdate>() {
             @Override
-            public DeltaUpdate apply(BatchUpdate update) {
+            public RecordUpdate apply(BatchUpdate update) {
                 return update.getUpdate();
             }
         }));
@@ -216,7 +215,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
         for (BatchUpdate batchUpdate : updates) {
             AstyanaxStorage storage = batchUpdate.getStorage();
-            DeltaUpdate update = batchUpdate.getUpdate();
+            RecordUpdate update = batchUpdate.getUpdate();
             ByteBuffer rowKey = storage.getRowKey(update.getKey());
 
             Delta delta = update.getDelta();
@@ -471,9 +470,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     /** Value used for grouping batches of update operations for execution. */
     private static class BatchUpdate {
         private final AstyanaxStorage _storage;
-        private final DeltaUpdate _update;
+        private final RecordUpdate _update;
 
-        BatchUpdate(AstyanaxStorage storage, DeltaUpdate record) {
+        BatchUpdate(AstyanaxStorage storage, RecordUpdate record) {
             _storage = storage;
             _update = record;
         }
@@ -482,7 +481,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             return _storage;
         }
 
-        DeltaUpdate getUpdate() {
+        RecordUpdate getUpdate() {
             return _update;
         }
     }

@@ -36,7 +36,7 @@ import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.Record;
-import com.bazaarvoice.emodb.sor.db.DeltaUpdate;
+import com.bazaarvoice.emodb.sor.db.RecordUpdate;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -642,9 +642,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             return;
         }
 
-        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, DeltaUpdate>() {
+        _dataWriterDao.updateAll(Iterators.transform(updatesIter, new Function<Update, RecordUpdate>() {
             @Override
-            public DeltaUpdate apply(Update update) {
+            public RecordUpdate apply(Update update) {
                 checkNotNull(update, "update");
                 String tableName = update.getTable();
                 String key = update.getKey();
@@ -682,11 +682,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
                 _auditWriter.persist(tableName, key, augmentedAudit, TimeUUIDs.getTimeMillis(changeId));
 
-                return new DeltaUpdate(table, key, changeId, delta, tags, update.getConsistency());
+                return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
             }
         }), new DataWriterDAO.UpdateListener() {
             @Override
-            public void beforeWrite(Collection<DeltaUpdate> updateBatch) {
+            public void beforeWrite(Collection<RecordUpdate> updateBatch) {
                 // Tell the databus we're about to write.
                 // Algorithm note: It is worth mentioning here how we make sure our data bus listeners do not lose updates.
                 // 1. We always write to databus *before* writing to SoR. If we fail to write to databus, then we also fail
@@ -700,7 +700,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 // before polling the event.
 
                 List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(updateBatch.size());
-                for (DeltaUpdate update : updateBatch) {
+                for (RecordUpdate update : updateBatch) {
                     if (!update.getTable().isInternal()) {
                         updateRefs.add(new UpdateRef(update.getTable().getName(), update.getKey(), update.getChangeId(), tags));
                     }
