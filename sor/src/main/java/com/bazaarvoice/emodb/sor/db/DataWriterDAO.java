@@ -44,5 +44,6 @@ public interface DataWriterDAO {
 
     interface UpdateListener {
         void beforeWrite(Collection<RecordUpdate> updates);
+        void afterWrite(Collection<RecordUpdate> updates);
     }
 }

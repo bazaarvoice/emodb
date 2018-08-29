@@ -201,12 +201,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
     private void write(BatchKey batchKey, List<BatchUpdate> updates, UpdateListener listener) {
         // Invoke the configured listener.  This is used to write events to the databus.
-        listener.beforeWrite(Collections2.transform(updates, new Function<BatchUpdate, RecordUpdate>() {
-            @Override
-            public RecordUpdate apply(BatchUpdate update) {
-                return update.getUpdate();
-            }
-        }));
+        listener.beforeWrite(Collections2.transform(updates, BatchUpdate::getUpdate));
 
         DeltaPlacement placement = batchKey.getPlacement();
         MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
@@ -295,6 +290,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         }
 
         execute(mutation, "batch update %d records in placement %s", updateCount, placement.getName());
+
+        // Invoke the configured listener.  This is used to write audits.
+        listener.afterWrite(Collections2.transform(updates, BatchUpdate::getUpdate));
 
         _updateMeter.mark(updates.size());
     }

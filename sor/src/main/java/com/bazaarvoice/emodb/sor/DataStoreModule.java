@@ -105,6 +105,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Phaser;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
@@ -206,14 +207,18 @@ public class DataStoreModule extends PrivateModule {
 
         bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
 
+        bind(Phaser.class).annotatedWith(DataWriteShutdown.class).toInstance(new Phaser());
+
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
-        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(DefaultDataStore.class);
+        bind(DataStore.class).annotatedWith(ManagedDataStoreDelegate.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).annotatedWith(ManagedTableBackingStoreDelegate.class).to(DefaultDataStore.class);
+        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(ManagedDataStore.class);
         expose(DataStore.class);
 
         // The AstyanaxTableDAO class uses the DataStore (recursively) to store table metadata
-        bind(TableBackingStore.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).to(ManagedDataStore.class);
         expose(TableBackingStore.class);
 
         // Publish events to listeners like the Databus via an instance of EventBus
@@ -418,7 +423,8 @@ public class DataStoreModule extends PrivateModule {
 
     @Provides @Singleton
     AuditWriter provideAuditWriter(DataStoreConfiguration configuration, Clock clock,
-                                   LifeCycleRegistry lifeCycleRegistry, Environment environment) {
+                                   @DataWriteShutdown Phaser shutdownPhaser, LifeCycleRegistry lifeCycleRegistry,
+                                   Environment environment) {
         AuditWriterConfiguration auditLogConfig = configuration.getAuditWriterConfiguration();
 
         if(auditLogConfig == null) {
@@ -450,7 +456,8 @@ public class DataStoreModule extends PrivateModule {
         Duration maxBatchTime = Duration.ofMillis(auditLogConfig.getMaxBatchTime().getMillis());
         AthenaAuditWriter athenaAuditWriter = new AthenaAuditWriter(amazonS3, auditLogConfig.getLogBucket(),
                 auditLogConfig.getLogPath(), auditLogConfig.getMaxFileSize(), maxBatchTime, stagingDir,
-                auditLogConfig.getLogFilePrefix(), environment.getObjectMapper(), clock, lifeCycleRegistry);
+                auditLogConfig.getLogFilePrefix(), environment.getObjectMapper(), clock, shutdownPhaser,
+                lifeCycleRegistry);
 
         athenaAuditWriter.setFileTransfersEnabled(auditLogConfig.isFileTransfersEnabled());
         return athenaAuditWriter;

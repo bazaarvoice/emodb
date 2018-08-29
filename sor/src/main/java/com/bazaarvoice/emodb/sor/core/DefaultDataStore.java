@@ -673,15 +673,6 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             "The 'changeId' UUID is from too far in the past: " + TimeUUIDs.getDate(changeId));
                 }
 
-                // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
-                // Update the audit to include the tags associated with the update
-                Audit augmentedAudit = AuditBuilder.from(update.getAudit())
-                        .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(delta.toString()).toString())
-                        .set(Audit.TAGS, tags)
-                        .build();
-
-                _auditWriter.persist(tableName, key, augmentedAudit, TimeUUIDs.getTimeMillis(changeId));
-
                 return new RecordUpdate(table, key, changeId, delta, audit, tags, update.getConsistency());
             }
         }), new DataWriterDAO.UpdateListener() {
@@ -708,6 +699,24 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 if (!updateRefs.isEmpty()) {
                     _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }
+            }
+
+            public void afterWrite(Collection<RecordUpdate> updateBatch) {
+                // Write the audit to the audit store after we know the delta has written sucessfully.
+                // Using this model for writing audits, there should never be any audit written for a delta that
+                // didn't end in Cassandra. However, it is absolutely possible for audits to be missing;
+
+                // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
+                // Update the audit to include the tags associated with the update
+                updateBatch.forEach(update -> {
+                    Audit augmentedAudit = AuditBuilder.from(update.getAudit())
+                            .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(update.getDelta().toString()).toString())
+                            .set(Audit.TAGS, tags)
+                            .build();
+
+                    _auditWriter.persist(update.getTable().getName(), update.getKey(), augmentedAudit, TimeUUIDs.getTimeMillis(update.getChangeId()));
+
+                });
             }
         });
     }

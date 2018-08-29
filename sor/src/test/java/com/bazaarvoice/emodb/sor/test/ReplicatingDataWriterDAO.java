@@ -117,7 +117,12 @@ public class ReplicatingDataWriterDAO implements DataWriterDAO {
     }
 
     private UpdateListener noop() {
-        return updates -> {
+        return new UpdateListener() {
+            @Override
+            public void beforeWrite(Collection<RecordUpdate> updates) { }
+
+            @Override
+            public void afterWrite(Collection<RecordUpdate> updates) { }
         };
     }
 }

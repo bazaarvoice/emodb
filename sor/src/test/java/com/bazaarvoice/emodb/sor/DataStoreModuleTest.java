@@ -78,8 +78,6 @@ public class DataStoreModuleTest {
         assertNotNull(injector.getInstance(DataProvider.class));
         assertNotNull(injector.getInstance(DatabusEventWriterRegistry.class));
 
-        assertTrue(injector.getInstance(DataProvider.class) == injector.getInstance(DataStore.class));
-
         // Verify that some things we expect to be private are, indeed, private
         assertPrivate(injector, MutexTableDAO.class);
         assertPrivate(injector, CachingTableDAO.class);

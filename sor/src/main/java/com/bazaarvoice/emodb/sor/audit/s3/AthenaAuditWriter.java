@@ -5,6 +5,7 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
+import com.bazaarvoice.emodb.sor.core.DataWriteShutdown;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +17,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.util.Size;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
@@ -36,13 +38,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -91,15 +87,17 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
     private final Clock _clock;
     private final ObjectWriter _objectWriter;
     private final ConcurrentMap<Long, AuditOutput> _openAuditOutputs = Maps.newConcurrentMap();
+    private final Phaser _shutdownPhaser;
 
     private ScheduledExecutorService _auditService;
     private ExecutorService _fileTransferService;
     private AuditOutput _mruAuditOutput;
     private boolean _fileTransfersEnabled = true;
 
+    @Inject
     public AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                              File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                             LifeCycleRegistry lifeCycleRegistry) {
+                             @DataWriteShutdown Phaser shutdownPhaser, LifeCycleRegistry lifeCycleRegistry) {
         _s3 = requireNonNull(s3);
         _s3Bucket = requireNonNull(s3Bucket);
 
@@ -119,6 +117,7 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
         _stagingDir = requireNonNull(stagingDir, "stagingDir");
         _logFilePrefix = requireNonNull(logFilePrefix, "logFilePrefix");
         _clock = requireNonNull(clock, "clock");
+        _shutdownPhaser = requireNonNull(shutdownPhaser, "shutdownPhaser");
 
         // Audit queue isn't completely unbounded but is large enough to ensure at several times the normal write rate
         // it can accept audits without blocking.
@@ -135,10 +134,10 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
     @VisibleForTesting
     AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                       File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                      LifeCycleRegistry lifeCycleRegistry, ScheduledExecutorService auditService,
+                      Phaser shutdownPhaser, LifeCycleRegistry lifeCycleRegistry, ScheduledExecutorService auditService,
                       ExecutorService fileTransferService) {
         this(s3, s3Bucket, s3Path, maxFileSize, maxBatchTime, stagingDir, logFilePrefix, objectMapper, clock,
-                lifeCycleRegistry);
+                shutdownPhaser, lifeCycleRegistry);
         _auditService = auditService;
         _fileTransferService = fileTransferService;
     }

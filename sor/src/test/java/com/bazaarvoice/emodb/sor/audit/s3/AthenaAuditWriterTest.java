@@ -32,6 +32,7 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -114,8 +115,8 @@ public class AthenaAuditWriterTest {
         _fileTransferService = mock(ExecutorService.class);
 
         AthenaAuditWriter writer = new AthenaAuditWriter(_s3, BUCKET, s3Path, maxFileSize,
-                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock, mock(LifeCycleRegistry.class),
-                _auditService, _fileTransferService);
+                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock,
+                new Phaser(), mock(LifeCycleRegistry.class), _auditService, _fileTransferService);
         writer.start();
 
         // On start two services should have been submitted: one to poll the audit queue and one to close log files and
