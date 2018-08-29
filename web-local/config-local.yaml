@@ -239,6 +239,8 @@ server:
     - type: instrumentedHttp
       port: 8081
 
+  shutdownGracePeriod: 60s
+
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
     enabled: false

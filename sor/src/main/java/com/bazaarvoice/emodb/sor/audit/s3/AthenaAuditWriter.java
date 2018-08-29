@@ -182,15 +182,28 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
 
     @Override
     public void stop() throws Exception {
+        _shutdownPhaser.arriveAndAwaitAdvance();
         _auditService.shutdown();
+
+        if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
+            _log.warn("Audits still processing unexpectedly after shutdown");
+        } else {
+            // Poll the queue one last time and drain anything that is still remaining
+            processQueuedAudits();
+        }
+
+        // Close all log files and prepare them for transfer.
+        closeCompleteLogFiles(true);
+        prepareClosedLogFilesForTransfer();
+        transferLogFilesToS3();
+
         _fileTransferService.shutdown();
 
-        if (!_auditService.awaitTermination(30, TimeUnit.SECONDS)) {
-            _log.warn("Audits still processing unexpectedly after shutdown");
+        if (_fileTransferService.awaitTermination(30, TimeUnit.SECONDS)) {
+            _log.info("All audits were successfully persisted prior to shutdown");
+        } else {
+            _log.warn("All audits could not be persisted prior to shutdown");
         }
-        // Close all complete log files.  Don't transfer them now since we're shutting down; the next time the service
-        // starts they'll be transferred.
-        closeCompleteLogFiles(true);
     }
 
     @Override
