@@ -182,7 +182,7 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
 
     @Override
     public void stop() throws Exception {
-        _shutdownPhaser.arriveAndAwaitAdvance();
+        _shutdownPhaser.awaitAdvanceInterruptibly(_shutdownPhaser.arrive(), 5, TimeUnit.SECONDS);
         _auditService.shutdown();
 
         if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
@@ -199,7 +199,7 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
 
         _fileTransferService.shutdown();
 
-        if (_fileTransferService.awaitTermination(30, TimeUnit.SECONDS)) {
+        if (_fileTransferService.awaitTermination(15, TimeUnit.SECONDS)) {
             _log.info("All audits were successfully persisted prior to shutdown");
         } else {
             _log.warn("All audits could not be persisted prior to shutdown");

@@ -38,14 +38,14 @@ public class ManagedDataStore implements DataStore, TableBackingStore, Managed {
     }
 
     @Override
-    public void start() throws Exception {
+    public void start() {
         // register and deregister during startup and shutdown. This ensures that writes have truly been shutoff, and
         // not that there are just no current writes occurring.
         _writerPhaser.register();
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop() {
         _writesAccepted = false;
         _writerPhaser.arriveAndDeregister();
     }
