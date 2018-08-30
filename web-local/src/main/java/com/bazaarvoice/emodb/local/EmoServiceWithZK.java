@@ -16,6 +16,7 @@ import com.bazaarvoice.emodb.uac.client.UserAccessControlFixedHostDiscoverySourc
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.EmoService;
 import com.bazaarvoice.emodb.web.auth.ApiKeyEncryption;
+import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
@@ -208,7 +209,8 @@ public class EmoServiceWithZK {
             return;
         }
 
-        ObjectMapper objectMapper = CustomJsonObjectMapperFactory.build(new YAMLFactory());
+        ObjectMapper objectMapper = EmoServiceObjectMapperFactory.configure(
+                CustomJsonObjectMapperFactory.build(new YAMLFactory()));
         EmoConfiguration emoConfig;
 
         try {
