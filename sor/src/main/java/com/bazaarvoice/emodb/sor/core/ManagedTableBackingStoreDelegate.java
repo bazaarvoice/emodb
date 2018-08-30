@@ -11,7 +11,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for {@link ManagedDataStore}'s {@link com.bazaarvoice.emodb.table.db.TableBackingStore} delegate.
+ * Guice binding annotation for {@link WriteCloseableDataStore}'s {@link com.bazaarvoice.emodb.table.db.TableBackingStore} delegate.
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)

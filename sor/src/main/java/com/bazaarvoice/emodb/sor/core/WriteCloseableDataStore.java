@@ -2,24 +2,30 @@ package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.*;
+import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import io.dropwizard.lifecycle.Managed;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.Phaser;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
-public class ManagedDataStore implements DataStore, TableBackingStore, Managed {
+public class WriteCloseableDataStore implements DataStore, TableBackingStore, Closeable {
+
+    private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);
 
     private final DataStore _delegate;
     private final TableBackingStore _tableBackingStore;
@@ -27,27 +33,24 @@ public class ManagedDataStore implements DataStore, TableBackingStore, Managed {
     private volatile boolean _writesAccepted;
 
     @Inject
-    public ManagedDataStore(@ManagedDataStoreDelegate DataStore delegate,
-                            @ManagedTableBackingStoreDelegate TableBackingStore tableBackingStore,
-                            @DataWriteShutdown Phaser writePhaser, LifeCycleRegistry lifeCycleRegistry) {
+    public WriteCloseableDataStore(@ManagedDataStoreDelegate DataStore delegate,
+                                   @ManagedTableBackingStoreDelegate TableBackingStore tableBackingStore,
+                                   GracefulShutdownRegistry gracefulShutdownRegistry) {
         _delegate = requireNonNull(delegate);
         _tableBackingStore = requireNonNull(tableBackingStore);
-        _writerPhaser = requireNonNull(writePhaser);
         _writesAccepted = true;
-        requireNonNull(lifeCycleRegistry).manage(this);
+        _writerPhaser = new Phaser();
+        requireNonNull(gracefulShutdownRegistry).registerWriter(this);
     }
 
     @Override
-    public void start() {
-        // register and deregister during startup and shutdown. This ensures that writes have truly been shutoff, and
-        // not that there are just no current writes occurring.
-        _writerPhaser.register();
-    }
-
-    @Override
-    public void stop() {
+    public void close() {
         _writesAccepted = false;
-        _writerPhaser.arriveAndDeregister();
+        try {
+            _writerPhaser.awaitAdvanceInterruptibly(_writerPhaser.arrive(), 10, TimeUnit.SECONDS);
+        } catch (InterruptedException | TimeoutException e) {
+            _log.warn("Failed to shutdown writes fully, there are likely uncompleted writes.");
+        }
     }
 
     @Override

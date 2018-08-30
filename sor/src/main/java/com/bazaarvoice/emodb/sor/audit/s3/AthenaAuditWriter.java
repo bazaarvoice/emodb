@@ -2,33 +2,26 @@ package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
-import com.bazaarvoice.emodb.sor.core.DataWriteShutdown;
+import com.bazaarvoice.emodb.sor.core.GracefulShutdownRegistry;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.util.Size;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.net.URI;
+import java.io.*;
 import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
@@ -37,6 +30,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -62,7 +56,7 @@ import static java.util.Objects.requireNonNull;
  *     <li>The host itself terminates before all files are delivered to S3.</li>
  * </ol>
  */
-public class AthenaAuditWriter implements AuditWriter, Managed {
+public class AthenaAuditWriter implements AuditWriter, Closeable {
 
     private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);
 
@@ -87,7 +81,6 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
     private final Clock _clock;
     private final ObjectWriter _objectWriter;
     private final ConcurrentMap<Long, AuditOutput> _openAuditOutputs = Maps.newConcurrentMap();
-    private final Phaser _shutdownPhaser;
 
     private ScheduledExecutorService _auditService;
     private ExecutorService _fileTransferService;
@@ -97,7 +90,17 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
     @Inject
     public AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                              File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                             @DataWriteShutdown Phaser shutdownPhaser, LifeCycleRegistry lifeCycleRegistry) {
+                             GracefulShutdownRegistry gracefulShutdownRegistry) {
+        this(s3, s3Bucket, s3Path, maxFileSize, maxBatchTime, stagingDir, logFilePrefix, objectMapper, clock,
+                gracefulShutdownRegistry, null, null);
+    }
+
+    @VisibleForTesting
+    AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
+                      File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
+                      GracefulShutdownRegistry gracefulShutdownRegistry, ScheduledExecutorService auditService,
+                      ExecutorService fileTransferService) {
+
         _s3 = requireNonNull(s3);
         _s3Bucket = requireNonNull(s3Bucket);
 
@@ -117,7 +120,6 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
         _stagingDir = requireNonNull(stagingDir, "stagingDir");
         _logFilePrefix = requireNonNull(logFilePrefix, "logFilePrefix");
         _clock = requireNonNull(clock, "clock");
-        _shutdownPhaser = requireNonNull(shutdownPhaser, "shutdownPhaser");
 
         // Audit queue isn't completely unbounded but is large enough to ensure at several times the normal write rate
         // it can accept audits without blocking.
@@ -128,22 +130,15 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
                 .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
                 .writer();
 
-        lifeCycleRegistry.manage(this);
-    }
+        // Two threads for the audit service: once to drain queued audits and one to close audit logs files and submit
+        // them for transfer.  Normally these are initially null and locally managed, but unit tests may provide
+        // pre-configured instances.
+        _auditService = Optional.ofNullable(auditService)
+                .orElse(Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("audit-log-%d").build()));
+        _fileTransferService = Optional.ofNullable(fileTransferService)
+                .orElse(Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("audit-transfer-%d").build()));
 
-    @VisibleForTesting
-    AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
-                      File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                      Phaser shutdownPhaser, LifeCycleRegistry lifeCycleRegistry, ScheduledExecutorService auditService,
-                      ExecutorService fileTransferService) {
-        this(s3, s3Bucket, s3Path, maxFileSize, maxBatchTime, stagingDir, logFilePrefix, objectMapper, clock,
-                shutdownPhaser, lifeCycleRegistry);
-        _auditService = auditService;
-        _fileTransferService = fileTransferService;
-    }
 
-    @Override
-    public void start() {
         long now = _clock.millis();
         long msToNextBatch = _maxBatchTimeMs - (now % _maxBatchTimeMs);
 
@@ -163,33 +158,27 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
             }
         }
 
-        // Two threads for the audit service: once to drain queued audits and one to close audit logs files and submit
-        // them for transfer.  Normally these are initially null and locally managed, but unit tests may provide
-        // pre-configured instances.
-        if (_auditService == null) {
-            _auditService = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("audit-log-%d").build());
-        }
-        if (_fileTransferService == null) {
-            _fileTransferService = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("audit-transfer-%d").build());
-        }
-
         _auditService.scheduleWithFixedDelay(this::processQueuedAudits,
                 0, 1, TimeUnit.SECONDS);
 
         _auditService.scheduleAtFixedRate(this::doLogFileMaintenance,
                 msToNextBatch, _maxBatchTimeMs, TimeUnit.MILLISECONDS);
+
+        requireNonNull(gracefulShutdownRegistry).registerWriteDependendent(this);
     }
 
     @Override
-    public void stop() throws Exception {
-        _shutdownPhaser.awaitAdvanceInterruptibly(_shutdownPhaser.arrive(), 5, TimeUnit.SECONDS);
+    public void close() throws IOException {
         _auditService.shutdown();
-
-        if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
-            _log.warn("Audits still processing unexpectedly after shutdown");
-        } else {
-            // Poll the queue one last time and drain anything that is still remaining
-            processQueuedAudits();
+        try {
+            if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
+                _log.warn("Audits still processing unexpectedly after shutdown");
+            } else {
+                // Poll the queue one last time and drain anything that is still remaining
+                processQueuedAudits();
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         // Close all log files and prepare them for transfer.
@@ -199,10 +188,14 @@ public class AthenaAuditWriter implements AuditWriter, Managed {
 
         _fileTransferService.shutdown();
 
-        if (_fileTransferService.awaitTermination(15, TimeUnit.SECONDS)) {
-            _log.info("All audits were successfully persisted prior to shutdown");
-        } else {
-            _log.warn("All audits could not be persisted prior to shutdown");
+        try {
+            if (_fileTransferService.awaitTermination(15, TimeUnit.SECONDS)) {
+                _log.info("All audits were successfully persisted prior to shutdown");
+            } else {
+                _log.warn("All audits could not be persisted prior to shutdown");
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
