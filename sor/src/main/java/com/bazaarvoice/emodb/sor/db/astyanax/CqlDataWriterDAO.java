@@ -267,7 +267,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         Session session = placement.getKeyspace().getCqlSession();
         BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
         AtomicReference<Throwable> error = new AtomicReference<>();
-        Phaser phaser = new Phaser();
+        Phaser phaser = new Phaser(1);
         ByteBuffer lastRowKey = null;
         int currentStatementSize = 0;
         FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
