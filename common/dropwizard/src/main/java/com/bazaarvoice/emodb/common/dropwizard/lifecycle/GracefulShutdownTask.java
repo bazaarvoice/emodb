@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.common.dropwizard.lifecycle;
 
+import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 
 import java.io.PrintWriter;
@@ -10,8 +12,10 @@ public class GracefulShutdownTask extends Task {
 
     private static final String NAME = "graceful-shutdown";
 
-    public GracefulShutdownTask() {
+    @Inject
+    public GracefulShutdownTask(TaskRegistry taskRegistry) {
         super(NAME);
+        taskRegistry.addTask(this);
     }
 
     @Override

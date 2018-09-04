@@ -9,7 +9,6 @@ import com.bazaarvoice.emodb.common.dropwizard.jersey.ServerErrorResponseMetrics
 import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamFilter;
 import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamResourceFilterFactory;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.GracefulShutdownTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -238,7 +237,6 @@ public class EmoService extends Application<EmoConfiguration> {
         //noinspection unchecked
         _environment.jersey().getResourceConfig().getContainerResponseFilters()
                 .add(new ServerErrorResponseMetricsFilter(_environment.metrics()));
-        _environment.admin().addTask(new GracefulShutdownTask());
     }
 
     private void evaluateInvalidateCaches()

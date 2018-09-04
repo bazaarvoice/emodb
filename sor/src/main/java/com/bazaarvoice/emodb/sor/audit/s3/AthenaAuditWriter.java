@@ -44,7 +44,7 @@ import static java.util.Objects.requireNonNull;
  *
  * This audit writer favors fast, non-blocking calls to {@link #persist(String, String, Audit, long)} over guaranteeing
  * a completely loss-less audit history.  To achieve this all audits are written to an in-memory queue.  That queue
- * is written to a local log file until it has reached a maximum size or age, bot configurable in the constructor.
+ * is written to a local log file until it has reached a maximum size or age, both configurable in the constructor.
  * At this time the file is asynchronously GZIP'd then delivered to S3.  Once the file is delivered it is deleted from
  * the local host.
  *
@@ -307,7 +307,7 @@ public class AthenaAuditWriter implements AuditWriter, Closeable {
     private void processQueuedAudits() {
         QueuedAudit audit;
         try {
-            while (!_auditService.isShutdown() && (audit = _auditQueue.poll()) != null) {
+            while ((audit = _auditQueue.poll()) != null) {
                 boolean written = false;
                 while (!written) {
                     AuditOutput auditOutput = getAuditOutputForTime(audit.time);

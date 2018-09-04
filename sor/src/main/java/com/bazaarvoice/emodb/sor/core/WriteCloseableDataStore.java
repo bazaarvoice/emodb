@@ -9,6 +9,13 @@ import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,7 +23,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.net.URI;
 import java.time.Duration;
-import java.util.*;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -39,7 +45,7 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
         _delegate = requireNonNull(delegate);
         _tableBackingStore = requireNonNull(tableBackingStore);
         _writesAccepted = true;
-        _writerPhaser = new Phaser();
+        _writerPhaser = new Phaser(1);
         requireNonNull(gracefulShutdownRegistry).registerWriter(this);
     }
 
@@ -251,10 +257,8 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
     }
 
     private Iterable<Update> closeableIterator(Iterator<Update> updates) {
-        return new Iterable<Update>() {
-            @Override
-            public Iterator<Update> iterator() {
-                return new AbstractIterator<Update>() {
+        return () ->
+                new AbstractIterator<Update>() {
                     @Override
                     protected Update computeNext() {
                         if (!updates.hasNext() || !_writesAccepted) {
@@ -263,7 +267,5 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
                         return updates.next();
                     }
                 };
-            }
-        };
     }
 }

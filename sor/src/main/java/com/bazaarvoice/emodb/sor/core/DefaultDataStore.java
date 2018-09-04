@@ -704,7 +704,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             public void afterWrite(Collection<RecordUpdate> updateBatch) {
                 // Write the audit to the audit store after we know the delta has written sucessfully.
                 // Using this model for writing audits, there should never be any audit written for a delta that
-                // didn't end in Cassandra. However, it is absolutely possible for audits to be missing;
+                // didn't end in Cassandra. However, it is absolutely possible for audits to be missing if Emo
+                // terminates unexpectedly without a graceful shutdown to drain all audit that haven't been flushed yet.
 
                 // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
                 // Update the audit to include the tags associated with the update

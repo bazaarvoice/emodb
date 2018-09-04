@@ -176,9 +176,7 @@ public class CasBlobStoreTest {
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
-                bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
-                        Validation.buildDefaultValidatorFactory().getValidator(),
-                        new MetricRegistry(), ClassLoader.getSystemClassLoader()));
+                bind(Environment.class).toInstance(mock(Environment.class));
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

@@ -29,6 +29,7 @@ import com.bazaarvoice.emodb.common.dropwizard.healthcheck.DropwizardHealthCheck
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.DropwizardLifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.GracefulShutdownTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.DropwizardTaskRegistry;
@@ -284,6 +285,7 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             bind(TaskRegistry.class).to(getTaskRegistryClass()).asEagerSingleton();
+            bind(GracefulShutdownTask.class).asEagerSingleton();
             bind(ResourceRegistry.class).to(DropwizardResourceRegistry.class).asEagerSingleton();
             bind(String.class).annotatedWith(ServerCluster.class).toInstance(_configuration.getCluster());
             bind(JerseyClientConfiguration.class).toInstance(_configuration.getHttpClientConfiguration());

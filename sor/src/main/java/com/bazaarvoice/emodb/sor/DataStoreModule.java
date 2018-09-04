@@ -210,6 +210,7 @@ public class DataStoreModule extends PrivateModule {
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
+        bind(WriteCloseableDataStore.class).asEagerSingleton();
         bind(DataStore.class).annotatedWith(ManagedDataStoreDelegate.class).to(DefaultDataStore.class);
         bind(TableBackingStore.class).annotatedWith(ManagedTableBackingStoreDelegate.class).to(DefaultDataStore.class);
         bind(DataStore.class).annotatedWith(LocalDataStore.class).to(WriteCloseableDataStore.class);
