@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
@@ -87,21 +89,24 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
     private ExecutorService _fileTransferService;
     private AuditOutput _mruAuditOutput;
     private boolean _fileTransfersEnabled;
+    private final RateLimitedLog _rateLimitedLog;
 
     @Inject
-    public AthenaAuditWriter(AuditWriterConfiguration config, AmazonS3 s3, ObjectMapper objectMapper, Clock clock) {
+    public AthenaAuditWriter(AuditWriterConfiguration config, AmazonS3 s3, ObjectMapper objectMapper, Clock clock,
+                             RateLimitedLogFactory rateLimitedLogFactory) {
 
         this(s3, config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
                 Duration.ofMillis(config.getMaxBatchTime().getMillis()),
                 config.getStagingDir() != null ? new File(config.getStagingDir()) : com.google.common.io.Files.createTempDir(),
-                config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), null, null);
+                config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), rateLimitedLogFactory,
+                null, null);
     }
 
     @VisibleForTesting
     AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                       File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                      boolean fileTransfersEnabled, ScheduledExecutorService auditService,
-                      ExecutorService fileTransferService) {
+                      boolean fileTransfersEnabled, RateLimitedLogFactory rateLimitedLogFactory,
+                      ScheduledExecutorService auditService, ExecutorService fileTransferService) {
 
         _s3 = requireNonNull(s3);
         _s3Bucket = requireNonNull(s3Bucket);
@@ -161,6 +166,8 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
                 }
             }
         }
+
+        _rateLimitedLog = requireNonNull(rateLimitedLogFactory.from(_log));
 
         _auditService.scheduleWithFixedDelay(() -> processQueuedAudits(true),
                 0, 1, TimeUnit.SECONDS);
@@ -287,7 +294,7 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
                         } catch (Exception e) {
 
                             // Log the error, try again on the next iteration
-                            _log.warn("Failed to copy log file {}", logFile, e);
+                            _rateLimitedLog.error(e, "Failed to copy log file {}", logFile);
                         }
                     }
                 });

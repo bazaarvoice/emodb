@@ -1,8 +1,6 @@
 package com.bazaarvoice.emodb.common.dropwizard.log;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
-import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Functions;
 import com.google.common.base.Objects;

@@ -2,6 +2,9 @@ package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectResult;
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
@@ -16,6 +19,8 @@ import io.dropwizard.util.Size;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.matchers.LessThan;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -114,8 +119,8 @@ public class AthenaAuditWriterTest {
         _fileTransferService = mock(ExecutorService.class);
 
         AthenaAuditWriter writer = new AthenaAuditWriter(_s3, BUCKET, s3Path, maxFileSize,
-                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock, true, _auditService,
-                _fileTransferService);
+                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock, true,
+                log -> mock(RateLimitedLog.class) ,_auditService, _fileTransferService);
 
         // On start two services should have been submitted: one to poll the audit queue and one to close log files and
         // initiate transfers.  Capture them now.

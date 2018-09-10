@@ -17,6 +17,8 @@ import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -208,6 +210,7 @@ public class DataStoreModule extends PrivateModule {
         if (_configuration.getAuditWriterConfiguration() != null) {
             bind(AuditWriterConfiguration.class).toInstance(_configuration.getAuditWriterConfiguration());
             bind(AmazonS3.class).toInstance(getAmazonS3Client(_configuration.getAuditWriterConfiguration()));
+            bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
             bind(AthenaAuditWriter.class).asEagerSingleton();
             bind(AuditWriter.class).to(AthenaAuditWriter.class);
             bind(AuditFlusher.class).to(AthenaAuditWriter.class);
