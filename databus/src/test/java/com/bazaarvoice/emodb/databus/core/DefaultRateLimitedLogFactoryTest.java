@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import io.dropwizard.util.Duration;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;

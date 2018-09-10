@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.PollResult;

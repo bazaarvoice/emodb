@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Databus;
