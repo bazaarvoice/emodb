@@ -8,6 +8,8 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -93,20 +95,21 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
 
     @Inject
     public AthenaAuditWriter(AuditWriterConfiguration config, AmazonS3 s3, ObjectMapper objectMapper, Clock clock,
-                             RateLimitedLogFactory rateLimitedLogFactory) {
+                             RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
 
         this(s3, config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
                 Duration.ofMillis(config.getMaxBatchTime().getMillis()),
                 config.getStagingDir() != null ? new File(config.getStagingDir()) : com.google.common.io.Files.createTempDir(),
                 config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), rateLimitedLogFactory,
-                null, null);
+                metricRegistry, null, null);
     }
 
     @VisibleForTesting
     AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                       File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
                       boolean fileTransfersEnabled, RateLimitedLogFactory rateLimitedLogFactory,
-                      ScheduledExecutorService auditService, ExecutorService fileTransferService) {
+                      MetricRegistry metricRegistry, ScheduledExecutorService auditService,
+                      ExecutorService fileTransferService) {
 
         _s3 = requireNonNull(s3);
         _s3Bucket = requireNonNull(s3Bucket);
@@ -168,6 +171,9 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
         }
 
         _rateLimitedLog = requireNonNull(rateLimitedLogFactory.from(_log));
+
+        // Guage metric to measure the size of the audit queue
+        metricRegistry.register(MetricRegistry.name(AthenaAuditWriter.class, "auditQueue", "size"), (Gauge<Integer>) _auditQueue::size);
 
         _auditService.scheduleWithFixedDelay(() -> processQueuedAudits(true),
                 0, 1, TimeUnit.SECONDS);
