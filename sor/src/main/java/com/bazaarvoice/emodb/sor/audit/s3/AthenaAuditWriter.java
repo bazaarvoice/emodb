@@ -1,12 +1,6 @@
 package com.bazaarvoice.emodb.sor.audit.s3;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
@@ -168,7 +162,7 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
             }
         }
 
-        _auditService.scheduleWithFixedDelay(this::processQueuedAudits,
+        _auditService.scheduleWithFixedDelay(() -> processQueuedAudits(true),
                 0, 1, TimeUnit.SECONDS);
 
         _auditService.scheduleAtFixedRate(this::doLogFileMaintenance,
@@ -179,11 +173,12 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
     public void flushAndShutdown() {
         _auditService.shutdown();
         try {
-            if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
-                _log.warn("Audits still processing unexpectedly after shutdown");
+            if (!_auditService.awaitTermination(5, TimeUnit.SECONDS)) {
+                _log.warn("Audits service did not shutdown cleanly.");
+                _auditService.shutdownNow();
             } else {
                 // Poll the queue one last time and drain anything that is still remaining
-                processQueuedAudits();
+                processQueuedAudits(false);
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
@@ -197,7 +192,7 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
         _fileTransferService.shutdown();
 
         try {
-            if (_fileTransferService.awaitTermination(15, TimeUnit.SECONDS)) {
+            if (_fileTransferService.awaitTermination(30, TimeUnit.SECONDS)) {
                 _log.info("All audits were successfully persisted prior to shutdown");
             } else {
                 _log.warn("All audits could not be persisted prior to shutdown");
@@ -304,10 +299,10 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
     /**
      * This method is run at regular intervals to remove audits from the audit queue and write them to a local file.
      */
-    private void processQueuedAudits() {
+    private void processQueuedAudits(boolean interruptable) {
         QueuedAudit audit;
         try {
-            while ((audit = _auditQueue.poll()) != null) {
+            while (!(_auditService.isShutdown() && interruptable) && ((audit = _auditQueue.poll()) != null)) {
                 boolean written = false;
                 while (!written) {
                     AuditOutput auditOutput = getAuditOutputForTime(audit.time);
