@@ -235,6 +235,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
             RecordUpdate update = updates.next();
             listener.beforeWrite(Collections.singleton(update));
             update(update.getTable(), update.getKey(), update.getChangeId(), update.getDelta(), update.getTags(), update.getConsistency());
+            listener.afterWrite(Collections.singleton(update));
         }
     }
 
