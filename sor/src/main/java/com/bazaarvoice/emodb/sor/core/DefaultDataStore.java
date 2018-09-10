@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -491,7 +492,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkLegalTableName(tableName);
         checkNotNull(key, "key");
         if (includeAuditInformation) {
-            throw new UnsupportedOperationException("Audit data is no longer accessable via EmoDB app servers.");
+            throw new AuditsUnavailableException();
         }
         if (start != null && end != null) {
             if (reversed) {

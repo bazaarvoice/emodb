@@ -34,7 +34,7 @@ public class ExceptionMappers {
                 new InvalidEmoPermissionExceptionMapper(),
                 new InsufficientRolePermissionExceptionMapper(),
                 new InvalidStashRequestExceptionMapper(),
-                new UnsupportedOperationExceptionMapper());
+                new AuditsUnavailableExceptionMapper());
     }
 
     public static Iterable<Class> getMapperTypes() {
