@@ -1,10 +1,17 @@
 package com.bazaarvoice.emodb.sor.audit.s3;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
-import com.bazaarvoice.emodb.sor.core.GracefulShutdownRegistry;
+import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +63,7 @@ import static java.util.Objects.requireNonNull;
  *     <li>The host itself terminates before all files are delivered to S3.</li>
  * </ol>
  */
-public class AthenaAuditWriter implements AuditWriter, Closeable {
+public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
 
     private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);
 
@@ -85,20 +92,21 @@ public class AthenaAuditWriter implements AuditWriter, Closeable {
     private ScheduledExecutorService _auditService;
     private ExecutorService _fileTransferService;
     private AuditOutput _mruAuditOutput;
-    private boolean _fileTransfersEnabled = true;
+    private boolean _fileTransfersEnabled;
 
     @Inject
-    public AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
-                             File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                             GracefulShutdownRegistry gracefulShutdownRegistry) {
-        this(s3, s3Bucket, s3Path, maxFileSize, maxBatchTime, stagingDir, logFilePrefix, objectMapper, clock,
-                gracefulShutdownRegistry, null, null);
+    public AthenaAuditWriter(AuditWriterConfiguration config, AmazonS3 s3, ObjectMapper objectMapper, Clock clock) {
+
+        this(s3, config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
+                Duration.ofMillis(config.getMaxBatchTime().getMillis()),
+                config.getStagingDir() != null ? new File(config.getStagingDir()) : com.google.common.io.Files.createTempDir(),
+                config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), null, null);
     }
 
     @VisibleForTesting
     AthenaAuditWriter(AmazonS3 s3, String s3Bucket, String s3Path, long maxFileSize, Duration maxBatchTime,
                       File stagingDir, String logFilePrefix, ObjectMapper objectMapper, Clock clock,
-                      GracefulShutdownRegistry gracefulShutdownRegistry, ScheduledExecutorService auditService,
+                      boolean fileTransfersEnabled, ScheduledExecutorService auditService,
                       ExecutorService fileTransferService) {
 
         _s3 = requireNonNull(s3);
@@ -129,6 +137,8 @@ public class AthenaAuditWriter implements AuditWriter, Closeable {
         _objectWriter = objectMapper.copy()
                 .configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
                 .writer();
+
+        _fileTransfersEnabled = fileTransfersEnabled;
 
         // Two threads for the audit service: once to drain queued audits and one to close audit logs files and submit
         // them for transfer.  Normally these are initially null and locally managed, but unit tests may provide
@@ -163,12 +173,10 @@ public class AthenaAuditWriter implements AuditWriter, Closeable {
 
         _auditService.scheduleAtFixedRate(this::doLogFileMaintenance,
                 msToNextBatch, _maxBatchTimeMs, TimeUnit.MILLISECONDS);
-
-        requireNonNull(gracefulShutdownRegistry).registerWriteDependendent(this);
-    }
+        }
 
     @Override
-    public void close() throws IOException {
+    public void flushAndShutdown() {
         _auditService.shutdown();
         try {
             if (!_auditService.awaitTermination(15, TimeUnit.SECONDS)) {
@@ -208,14 +216,6 @@ public class AthenaAuditWriter implements AuditWriter, Closeable {
             // audit retention, just warn that it happened.
             _log.warn("Interrupted attempting to write audit for {}/{}", table, key);
         }
-    }
-
-    /**
-     * Enables or disables transferring files to S3.  Normally this is always true, which is the default, but local
-     * servers and unit tests may disable.
-     */
-    public void setFileTransfersEnabled(boolean fileTransfersEnabled) {
-        _fileTransfersEnabled = fileTransfersEnabled;
     }
 
     /**

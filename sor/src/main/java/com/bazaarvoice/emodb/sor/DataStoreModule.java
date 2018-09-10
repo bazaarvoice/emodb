@@ -33,6 +33,7 @@ import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
@@ -82,7 +83,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.Files;
 import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
@@ -92,11 +92,9 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
-import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
-import java.io.File;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -138,8 +136,10 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class DataStoreModule extends PrivateModule {
     private final EmoServiceMode _serviceMode;
+    private final DataStoreConfiguration _configuration;
 
-    public DataStoreModule(EmoServiceMode serviceMode) {
+    public DataStoreModule(EmoServiceMode serviceMode, DataStoreConfiguration configuration) {
+        _configuration = configuration;
         _serviceMode = serviceMode;
     }
 
@@ -205,7 +205,17 @@ public class DataStoreModule extends PrivateModule {
 
         bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
 
-        bind(GracefulShutdownRegistry.class).asEagerSingleton();
+        if (_configuration.getAuditWriterConfiguration() != null) {
+            bind(AuditWriterConfiguration.class).toInstance(_configuration.getAuditWriterConfiguration());
+            bind(AmazonS3.class).toInstance(getAmazonS3Client(_configuration.getAuditWriterConfiguration()));
+            bind(AthenaAuditWriter.class).asEagerSingleton();
+            bind(AuditWriter.class).to(AthenaAuditWriter.class);
+            bind(AuditFlusher.class).to(AthenaAuditWriter.class);
+        } else {
+            bind(DiscardingAuditWriter.class).asEagerSingleton();
+            bind(AuditWriter.class).to(DiscardingAuditWriter.class);
+            bind(AuditFlusher.class).to(DiscardingAuditWriter.class);
+        }
 
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
@@ -245,6 +255,10 @@ public class DataStoreModule extends PrivateModule {
         bind(DataTools.class).to(DefaultDataStore.class);
         expose(DataTools.class);
 
+        bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
+        bind(GracefulShutdownManager.class).asEagerSingleton();
+
+        // Tools for migration to blocked deltas
         bind(MigratorTools.class).to(DefaultMigratorTools.class);
         expose(MigratorTools.class);
     }
@@ -420,45 +434,24 @@ public class DataStoreModule extends PrivateModule {
                 .or(Conditions.alwaysFalse());
     }
 
-    @Provides @Singleton
-    AuditWriter provideAuditWriter(DataStoreConfiguration configuration, Clock clock,
-                                   GracefulShutdownRegistry gracefulShutdownRegistry,
-                                   Environment environment) {
-        AuditWriterConfiguration auditLogConfig = configuration.getAuditWriterConfiguration();
 
-        if(auditLogConfig == null) {
-            return new DiscardingAuditWriter();
-        }
+    private AmazonS3 getAmazonS3Client(AuditWriterConfiguration configuration) {
 
         AWSCredentialsProvider credentialsProvider;
-        if (auditLogConfig.getS3AccessKey() != null && auditLogConfig.getS3SecretKey() != null) {
+        if (configuration.getS3AccessKey() != null && configuration.getS3SecretKey() != null) {
             credentialsProvider = new StaticCredentialsProvider(
-                    new BasicAWSCredentials(auditLogConfig.getS3AccessKey(), auditLogConfig.getS3SecretKey()));
+                    new BasicAWSCredentials(configuration.getS3AccessKey(), configuration.getS3SecretKey()));
         } else {
             credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
-        AmazonS3 amazonS3 = new AmazonS3Client(credentialsProvider)
-                .withRegion(Regions.fromName(auditLogConfig.getLogBucketRegion()));
 
-        if (auditLogConfig.getS3Endpoint() != null) {
-            amazonS3.setEndpoint(auditLogConfig.getS3Endpoint());
+        AmazonS3 s3 = new AmazonS3Client(credentialsProvider)
+                .withRegion(Regions.fromName(configuration.getLogBucketRegion()));
+
+        if (configuration.getS3Endpoint() != null) {
+            s3.setEndpoint(configuration.getS3Endpoint());
         }
-
-        String stagingDirName = auditLogConfig.getStagingDir();
-        File stagingDir;
-        if (stagingDirName != null) {
-            stagingDir = new File(stagingDirName);
-        } else {
-            stagingDir = Files.createTempDir();
-        }
-
-        Duration maxBatchTime = Duration.ofMillis(auditLogConfig.getMaxBatchTime().getMillis());
-        AthenaAuditWriter athenaAuditWriter = new AthenaAuditWriter(amazonS3, auditLogConfig.getLogBucket(),
-                auditLogConfig.getLogPath(), auditLogConfig.getMaxFileSize(), maxBatchTime, stagingDir,
-                auditLogConfig.getLogFilePrefix(), environment.getObjectMapper(), clock, gracefulShutdownRegistry);
-
-        athenaAuditWriter.setFileTransfersEnabled(auditLogConfig.isFileTransfersEnabled());
-        return athenaAuditWriter;
+        return s3;
     }
 
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {

@@ -2,11 +2,10 @@ package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.core.GracefulShutdownRegistry;
+import com.bazaarvoice.emodb.sor.core.GracefulShutdownManager;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ArrayListMultimap;
@@ -33,7 +32,6 @@ import java.time.ZonedDateTime;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Phaser;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -116,8 +114,8 @@ public class AthenaAuditWriterTest {
         _fileTransferService = mock(ExecutorService.class);
 
         AthenaAuditWriter writer = new AthenaAuditWriter(_s3, BUCKET, s3Path, maxFileSize,
-                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock,
-                mock(GracefulShutdownRegistry.class), _auditService, _fileTransferService);
+                maxBatchTime, _tempStagingDir, prefix, Jackson.newObjectMapper(), _clock, true, _auditService,
+                _fileTransferService);
 
         // On start two services should have been submitted: one to poll the audit queue and one to close log files and
         // initiate transfers.  Capture them now.

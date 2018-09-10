@@ -129,12 +129,14 @@ public class CasBlobStoreTest {
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "media_global", new TestCassandraConfiguration("media_global", "ugc_blob"))));
 
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Duration.ofDays(2)));
+                        .setHistoryTtl(Duration.ofDays(2));
+
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
@@ -182,7 +184,7 @@ public class CasBlobStoreTest {
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
                 install(new CacheManagerModule());
-                install(new DataStoreModule(serviceMode));
+                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
                 install(new BlobStoreModule(serviceMode, "bv.emodb.blob", new MetricRegistry()));
             }
         });

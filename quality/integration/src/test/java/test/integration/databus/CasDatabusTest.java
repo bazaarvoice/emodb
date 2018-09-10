@@ -116,12 +116,14 @@ public class CasDatabusTest {
                 bind(DatabusConfiguration.class).toInstance(new DatabusConfiguration()
                         .setCassandraConfiguration(cassandraConfiguration));
 
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc", "app_remote:default"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Duration.ofDays(2)));
+                        .setHistoryTtl(Duration.ofDays(2));
+
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
@@ -183,7 +185,7 @@ public class CasDatabusTest {
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
                 install(new CacheManagerModule());
-                install(new DataStoreModule(serviceMode));
+                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
                 install(new DatabusModule(serviceMode, metricRegistry));
             }
         });

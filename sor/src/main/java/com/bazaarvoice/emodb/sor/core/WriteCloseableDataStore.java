@@ -6,6 +6,8 @@ import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -29,7 +31,7 @@ import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
-public class WriteCloseableDataStore implements DataStore, TableBackingStore, Closeable {
+public class WriteCloseableDataStore implements DataStore, TableBackingStore, DataWriteCloser {
 
     private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);
 
@@ -37,26 +39,29 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
     private final TableBackingStore _tableBackingStore;
     private final Phaser _writerPhaser;
     private volatile boolean _writesAccepted;
+    private final Counter _writesRejectedCounter;
 
     @Inject
     public WriteCloseableDataStore(@ManagedDataStoreDelegate DataStore delegate,
                                    @ManagedTableBackingStoreDelegate TableBackingStore tableBackingStore,
-                                   GracefulShutdownRegistry gracefulShutdownRegistry) {
+                                   MetricRegistry metricRegistry) {
         _delegate = requireNonNull(delegate);
         _tableBackingStore = requireNonNull(tableBackingStore);
         _writesAccepted = true;
         _writerPhaser = new Phaser(1);
-        requireNonNull(gracefulShutdownRegistry).registerWriter(this);
+        _writesRejectedCounter = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "WriteCloseableDataStore",
+                "writesRejected"));
     }
 
     @Override
-    public void close() {
+    public void closeWrites() {
         _writesAccepted = false;
         try {
             _writerPhaser.awaitAdvanceInterruptibly(_writerPhaser.arrive(), 10, TimeUnit.SECONDS);
         } catch (InterruptedException | TimeoutException e) {
             _log.warn("Failed to shutdown writes fully, there are likely uncompleted writes.");
         }
+
     }
 
     @Override
@@ -192,6 +197,7 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
             Iterator<Update> updateIterator = updates.iterator();
             _delegate.updateAll(closeableIterator(updateIterator), tags);
             if (updateIterator.hasNext()) {
+                _writesRejectedCounter.inc();
                 throw new ServiceUnavailableException();
             }
         } finally {
@@ -226,6 +232,7 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
             Iterator<Update> updateIterator = updates.iterator();
             _delegate.updateAllForFacade(closeableIterator(updateIterator), tags);
             if (updateIterator.hasNext()) {
+                _writesRejectedCounter.inc();
                 throw new ServiceUnavailableException();
             }
         } finally {
@@ -249,6 +256,7 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Cl
             if (_writesAccepted) {
                 runnable.run();
             } else {
+                _writesRejectedCounter.inc();
                 throw new ServiceUnavailableException();
             }
         } finally {

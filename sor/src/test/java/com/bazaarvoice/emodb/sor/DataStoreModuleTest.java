@@ -65,7 +65,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class DataStoreModuleTest {
@@ -109,8 +108,7 @@ public class DataStoreModuleTest {
             protected void configure() {
                 binder().requireExplicitBindings();
 
-                // construct the minimum necessary elements to allow a DataStore module to be created.
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setHistoryTtl(Duration.ofDays(2))
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys"))
                         .setCassandraClusters(ImmutableMap.of("app_global", new CassandraConfiguration()
@@ -118,7 +116,10 @@ public class DataStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "app_global", new KeyspaceConfiguration())))));
+                                        "app_global", new KeyspaceConfiguration()))));
+
+                // construct the minimum necessary elements to allow a DataStore module to be created.
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
@@ -151,7 +152,7 @@ public class DataStoreModuleTest {
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
                         new MetricRegistry(), ClassLoader.getSystemClassLoader()));
-                install(new DataStoreModule(serviceMode));
+                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
             }
         });
 

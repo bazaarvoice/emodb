@@ -29,7 +29,6 @@ import com.bazaarvoice.emodb.common.dropwizard.healthcheck.DropwizardHealthCheck
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.DropwizardLifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.GracefulShutdownTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.DropwizardTaskRegistry;
@@ -137,6 +136,7 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.registry.zookeeper.ZooKeeperServiceRegistry;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -285,7 +285,6 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             bind(TaskRegistry.class).to(getTaskRegistryClass()).asEagerSingleton();
-            bind(GracefulShutdownTask.class).asEagerSingleton();
             bind(ResourceRegistry.class).to(DropwizardResourceRegistry.class).asEagerSingleton();
             bind(String.class).annotatedWith(ServerCluster.class).toInstance(_configuration.getCluster());
             bind(JerseyClientConfiguration.class).toInstance(_configuration.getHttpClientConfiguration());
@@ -332,8 +331,9 @@ public class EmoModule extends AbstractModule {
             bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)
                     .to(Key.get(new TypeLiteral<Setting<Boolean>>(){}, CqlForScans.class));
             bind(SorCqlDriverTask.class).asEagerSingleton();
+            bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
 
-            install(new DataStoreModule(_serviceMode));
+            install(new DataStoreModule(_serviceMode, _configuration.getDataStoreConfiguration()));
         }
 
         /** Provide ZooKeeper namespaced to SoR data. */
