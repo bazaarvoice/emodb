@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
@@ -13,7 +14,6 @@ import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
-import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.net.URI;
@@ -59,11 +59,11 @@ public class MultiDCDataStores {
         for (int i = 0; i < numDCs; i++) {
             _historyStores[i] = new InMemoryHistoryStore();
             if (asyncCompacter) {
-                _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new EventBus(), _tableDao,
+                _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new DatabusEventWriterRegistry(), _tableDao,
                         _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
                         Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse());
             } else {
-                _stores[i] = new DefaultDataStore(new EventBus(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
+                _stores[i] = new DefaultDataStore(new DatabusEventWriterRegistry(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
                         _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _historyStores[i],
                         Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), metricRegistry);
             }

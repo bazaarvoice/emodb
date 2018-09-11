@@ -53,11 +53,11 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Range;
-import com.google.common.eventbus.EventBus;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -100,7 +100,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> @{@link ReplicationKey} String
  * <li> @{@link SystemIdentity} String
  * <li> DataStore {@link DataProvider}
- * <li> DataStore {@link EventBus}
+ * <li> DataStore {@link DatabusEventWriterRegistry}
  * <li> DataStore {@link DataStoreConfiguration}
  * <li> {@link com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer}
  * <li> @{@link DefaultJoinFilter} Supplier&lt;{@link Condition}&gt;

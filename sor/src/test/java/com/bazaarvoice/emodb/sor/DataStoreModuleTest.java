@@ -22,6 +22,7 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataWriterDAO;
@@ -39,7 +40,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.eventbus.EventBus;
 import com.google.common.net.HostAndPort;
 import com.google.inject.AbstractModule;
 import com.google.inject.ConfigurationException;
@@ -73,7 +73,7 @@ public class DataStoreModuleTest {
 
         assertNotNull(injector.getInstance(DataStore.class));
         assertNotNull(injector.getInstance(DataProvider.class));
-        assertNotNull(injector.getInstance(EventBus.class));
+        assertNotNull(injector.getInstance(DatabusEventWriterRegistry.class));
 
         assertTrue(injector.getInstance(DataProvider.class) == injector.getInstance(DataStore.class));
 

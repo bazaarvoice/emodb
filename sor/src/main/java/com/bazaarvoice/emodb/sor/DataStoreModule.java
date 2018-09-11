@@ -71,7 +71,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.eventbus.EventBus;
 import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
@@ -203,8 +202,8 @@ public class DataStoreModule extends PrivateModule {
         expose(TableBackingStore.class);
 
         // Publish events to listeners like the Databus via an instance of EventBus
-        bind(EventBus.class).asEagerSingleton();
-        expose(EventBus.class);
+        bind(DatabusEventWriterRegistry.class).asEagerSingleton();
+        expose(DatabusEventWriterRegistry.class);
         // The Databus uses a back-door API to the DataStore.
         bind(DataProvider.class).to(DefaultDataStore.class);
         expose(DataProvider.class);

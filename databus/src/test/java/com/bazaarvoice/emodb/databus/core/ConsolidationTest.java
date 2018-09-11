@@ -17,6 +17,7 @@ import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
@@ -25,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -333,13 +333,13 @@ public class ConsolidationTest {
 
     private DefaultDatabus newDatabus(DatabusEventStore eventStore, DataProvider dataProvider, Clock clock) {
         LifeCycleRegistry lifeCycle = mock(LifeCycleRegistry.class);
-        EventBus eventBus = mock(EventBus.class);
+        DatabusEventWriterRegistry eventWriterRegistry = mock(DatabusEventWriterRegistry.class);
         SubscriptionDAO subscriptionDao = mock(SubscriptionDAO.class);
         SubscriptionEvaluator subscriptionEvaluator = mock(SubscriptionEvaluator.class);
         JobService jobService = mock(JobService.class);
         JobHandlerRegistry jobHandlerRegistry = mock(JobHandlerRegistry.class);
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
-        return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
+        return new DefaultDatabus(lifeCycle, eventWriterRegistry, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, databusAuthorizer, "replication",
                 Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), 1, key -> 0,
                 new MetricRegistry(), clock);

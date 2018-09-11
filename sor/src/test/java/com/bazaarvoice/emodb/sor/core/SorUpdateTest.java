@@ -12,8 +12,6 @@ import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.testng.collections.Lists;
@@ -27,15 +25,14 @@ public class SorUpdateTest {
     private static final String PLACEMENT = "app_global:default";
 
     private DataStore _dataStore;
-    private EventBus _eventBus;
     private UpdateIntentEvent _updateIntentEvent;
 
     @BeforeTest
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
-        _eventBus = new EventBus();
-        _eventBus.register(this);
-        _dataStore = new InMemoryDataStore(_eventBus, dataDAO, new MetricRegistry());
+        DatabusEventWriterRegistry eventWriterRegistry = new DatabusEventWriterRegistry();
+        eventWriterRegistry.registerDatabusEventWriter(event -> _updateIntentEvent = event);
+        _dataStore = new InMemoryDataStore(eventWriterRegistry, dataDAO, new MetricRegistry());
 
 
         // Create a table for our test
@@ -73,12 +70,6 @@ public class SorUpdateTest {
         // Verify that the ignorable flag is set
         expectedUpdateIntentEvent = new UpdateIntentEvent(_dataStore, Lists.newArrayList(new UpdateRef("test:table", "rowkey", changeId2, ImmutableSet.of("ignore"))));
         assertEquals(_updateIntentEvent.getUpdateRefs(), expectedUpdateIntentEvent.getUpdateRefs(), "Expected events not generated on databus");
-    }
-
-    @Subscribe
-    public void simulateDatabusSubscribeMethod(UpdateIntentEvent event) {
-        // Capture the updateIntentEvent
-        _updateIntentEvent = event;
     }
 
     private void resetValues() {

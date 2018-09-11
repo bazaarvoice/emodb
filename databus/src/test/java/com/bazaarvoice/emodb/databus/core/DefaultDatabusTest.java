@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.beust.jcommander.internal.Sets;
@@ -34,7 +35,6 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
-import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -86,7 +86,7 @@ public class DefaultDatabusTest {
                 Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build()));
         SubscriptionDAO mockSubscriptionDao = mock(SubscriptionDAO.class);
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
                 1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
@@ -140,7 +140,7 @@ public class DefaultDatabusTest {
         when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(false); // Items are not redundant.
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
@@ -183,7 +183,7 @@ public class DefaultDatabusTest {
         when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(true); // Items are redundant.
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
@@ -229,7 +229,7 @@ public class DefaultDatabusTest {
         when(annotatedContent.isChangeDeltaRedundant(any(UUID.class))).thenReturn(true);
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
@@ -281,7 +281,7 @@ public class DefaultDatabusTest {
                 .thenReturn(1489090001000L);
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), clock);
@@ -352,7 +352,7 @@ public class DefaultDatabusTest {
         Clock clock = Clock.fixed(Instant.now(), ZoneId.systemDefault());
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
                 1, key -> 0, new MetricRegistry(), clock);
@@ -404,7 +404,7 @@ public class DefaultDatabusTest {
         when(masterPartitioner.getPartition("key3")).thenReturn(0);
 
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider(), mock(SubscriptionDAO.class),
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider(), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
                 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
@@ -414,7 +414,7 @@ public class DefaultDatabusTest {
             updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
         }
 
-        testDatabus.onUpdateIntent(new UpdateIntentEvent(this, updateRefs));
+        testDatabus.writeEvent(new UpdateIntentEvent(this, updateRefs));
 
         assertEquals(eventsStored, ImmutableSetMultimap.builder()
                 .putAll(ChannelNames.getMasterFanoutChannel(0), updateRefs.get(0), updateRefs.get(3))

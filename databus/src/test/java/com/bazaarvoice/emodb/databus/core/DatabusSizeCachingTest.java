@@ -7,9 +7,9 @@ import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
-import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
@@ -44,7 +44,7 @@ public class DatabusSizeCachingTest {
 
         DatabusEventStore mockEventStore = mock(DatabusEventStore.class);
         DefaultDatabus testDatabus = new DefaultDatabus(
-                mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
                 mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
                 1, key -> 0, mock(MetricRegistry.class), clock);
