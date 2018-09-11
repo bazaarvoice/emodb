@@ -13,7 +13,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.Collection;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 import org.testng.collections.Lists;
 
@@ -30,7 +30,7 @@ public class SorUpdateTest {
     private DatabusEventWriterRegistry _eventWriterRegistry;
     private Collection<UpdateRef> _updateRefs;
 
-    @BeforeTest
+    @BeforeMethod
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
         _eventWriterRegistry = new DatabusEventWriterRegistry();
