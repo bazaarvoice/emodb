@@ -3,6 +3,8 @@ package com.bazaarvoice.emodb.databus.core;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -46,8 +48,9 @@ public class DatabusSizeCachingTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
-                mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
-                1, key -> 0, mock(MetricRegistry.class), clock);
+                mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
+                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, mock(MetricRegistry.class), clock);
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000

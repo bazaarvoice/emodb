@@ -51,6 +51,8 @@
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
+        <!-- Apachae Kafka -->
+        <kafka.version>1.1.0</kafka.version>
     </properties>
 
     <dependencyManagement>
@@ -103,6 +105,11 @@
             </dependency>
 
             <!-- 3rd-party dependencies -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka_2.12</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.clearspring.analytics</groupId>
                 <artifactId>stream</artifactId>

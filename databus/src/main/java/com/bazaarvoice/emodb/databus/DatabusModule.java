@@ -38,6 +38,8 @@ import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAO;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAODelegate;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAOExecutorService;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAORegistry;
+import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationManager;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationSource;
 import com.bazaarvoice.emodb.databus.repl.ReplicationEnabledTask;
@@ -70,10 +72,12 @@ import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 import io.dropwizard.util.Duration;
+import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.curator.framework.CuratorFramework;
 
 import java.time.Clock;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -115,6 +119,11 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class DatabusModule extends PrivateModule {
     private static final int MAX_THREADS_FOR_QUEUE_DRAINING = 10;
+
+    // TODO this should really be configurable
+    private static final int MAX_THREADS_FOR_KAFKA_FANOUT = 1;
+    private static final int MAX_THREADS_FOR_KAFKA_RESOLVER = 1;
+    private static final int MAX_THREADS_FOR_KAFKA_RESOLVER_RETRY = 1;
 
     private final EmoServiceMode _serviceMode;
     private MetricRegistry _metricRegistry;
@@ -171,6 +180,7 @@ public class DatabusModule extends PrivateModule {
         // Bind the cross-data center outbound replication end point
         bind(ReplicationSource.class).to(DefaultReplicationSource.class).asEagerSingleton();
         expose(ReplicationSource.class);
+
     }
 
     @Provides @Singleton
@@ -220,6 +230,27 @@ public class DatabusModule extends PrivateModule {
         return queueDrainService;
     }
 
+    @Provides @Singleton @KafkaFanoutExecutorService
+    ExecutorService provideKafkaFanoutService (LifeCycleRegistry lifeCycleRegistry) {
+        ExecutorService kafkaFanoutService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_FANOUT, new ThreadFactoryBuilder().setNameFormat("kafkaFanout-%d").build());
+        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaFanoutService, Duration.seconds(1), "kafka-fanout"));
+        return kafkaFanoutService;
+    }
+
+    @Provides @Singleton @KafkaResolverExecutorService
+    ExecutorService provideKafkaResolverService (LifeCycleRegistry lifeCycleRegistry) {
+        ExecutorService kafkaResolverService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_RESOLVER, new ThreadFactoryBuilder().setNameFormat("kafkaResolver-%d").build());
+        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaResolverService, Duration.seconds(1), "kafka-resolver"));
+        return kafkaResolverService;
+    }
+
+    @Provides @Singleton @KafkaResolverRetryExecutorService
+    ExecutorService provideKafkaResolverRetryService (LifeCycleRegistry lifeCycleRegistry) {
+        ExecutorService kafkaResolverRetryService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_RESOLVER_RETRY, new ThreadFactoryBuilder().setNameFormat("kafkaResolverRetry-%d").build());
+        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaResolverRetryService, Duration.seconds(1), "kafka-resolver-retry"));
+        return kafkaResolverRetryService;
+    }
+
     @Provides @Singleton @MasterFanoutPartitions
     Integer provideMasterFanoutPartitions(DatabusConfiguration configuration) {
         checkArgument(Range.closed(1, 16).contains(configuration.getMasterFanoutPartitions()),
@@ -248,6 +279,50 @@ public class DatabusModule extends PrivateModule {
             return PartitionSelector.SINGLE_PARTITION_SELECTOR;
         }
         return new HashingPartitionSelector(numPartitions);
+    }
+
+    @Provides @Singleton @KafkaEnabled
+    Boolean provideKafkaEnabled(DatabusConfiguration configuration) { return configuration.getKafkaEnabled(); }
+
+    @Provides @Singleton @KafkaTestForceRetry
+    Boolean provideKafkaTestForceRetry(DatabusConfiguration configuration) { return configuration.getKafkaTestForceRetry(); }
+
+    @Provides @Singleton @KafkaTestForceRetryToFail
+    Boolean provideKafkaTestForceRetryToFail(DatabusConfiguration configuration) { return configuration.getKafkaTestForceRetryToFail(); }
+
+    @Provides @Singleton @KafkaEventProducerConfiguration
+    KafkaProducerConfiguration provideKafkaEventProducerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getEventProducerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaFannedOutEventProducerConfiguration
+    KafkaProducerConfiguration provideKafkaFannedOutEventProducerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getFannedOutEventProducerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaResolvedEventProducerConfiguration
+    KafkaProducerConfiguration provideKafkaResolvedEventProducerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getResolvedEventProducerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaRetryEventProducerConfiguration
+    KafkaProducerConfiguration provideKafkaRetryEventProducerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getRetryEventProducerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaEventConsumerConfiguration
+    KafkaConsumerConfiguration provideKafkaEventConsumerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getEventConsumerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaFannedOutEventConsumerConfiguration
+    KafkaConsumerConfiguration provideKafkaFannedOutEventConsumerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getFannedOutEventConsumerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaRetryEventConsumerConfiguration
+    KafkaConsumerConfiguration provideKafkaRetryEventConsumerConfiguration(DatabusConfiguration configuration) {
+        return configuration.getRetryEventConsumerConfiguration();
     }
 
 }

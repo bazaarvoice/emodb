@@ -5,6 +5,19 @@ import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
+import com.bazaarvoice.emodb.databus.KafkaEnabled;
+import com.bazaarvoice.emodb.databus.KafkaEventConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaFannedOutEventConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaFannedOutEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaFanoutExecutorService;
+import com.bazaarvoice.emodb.databus.KafkaResolvedEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaResolverExecutorService;
+import com.bazaarvoice.emodb.databus.KafkaResolverRetryExecutorService;
+import com.bazaarvoice.emodb.databus.KafkaRetryEventConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaRetryEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaTestForceRetry;
+import com.bazaarvoice.emodb.databus.KafkaTestForceRetryToFail;
 import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
@@ -20,6 +33,8 @@ import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
@@ -65,21 +80,32 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
+import kafka.utils.Json;
+import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.FileInputStream;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
@@ -152,6 +178,27 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private ExecutorService _drainService;
     private ConcurrentMap<String, Long> _drainedSubscriptionsMap = Maps.newConcurrentMap();
 
+    // TODO Kafka prototype stuff
+    private final Producer<String, ByteBuffer> eventProducer;
+    private final ExecutorService _kafkaFanoutService;
+    private final ExecutorService _kafkaResolverService;
+    private final ExecutorService _kafkaResolverRetryService;
+    private final KafkaProducerConfiguration _eventProducerConfiguration;
+    private final KafkaProducerConfiguration _fannedOutEventProducerConfiguration;
+    private final KafkaProducerConfiguration _resolvedEventProducerConfiguration;
+    private final KafkaProducerConfiguration _retryEventProducerConfiguration;
+    private final KafkaConsumerConfiguration _eventConsumerConfiguration;
+    private final KafkaConsumerConfiguration _fannedOutEventConsumerConfiguration;
+    private final KafkaConsumerConfiguration _retryEventConsumerConfiguration;
+    private Boolean _kafkaEnabled;
+    private Boolean _kafkaTestForceRetry;
+    private Boolean _kafkaTestForceRetryToFail;
+    private static final String MASTER_QUEUE_TOPIC_NAME = "master-queue";
+    private static final String RESOLVER_QUEUE_TOPIC_NAME = "resolver-queue";
+    private static final String RESOLVER_RETRY_QUEUE_TOPIC_NAME = "resolver-retry-queue";
+    private static final long FIVE_MINUTES = 5 * 60 * 1000; // 5 miuntes in milliseconds
+    private static final long PHANTOM_UPDATE_TIMEOUT = FIVE_MINUTES * 3;
+
     @Inject
     public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
                           SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
@@ -160,6 +207,19 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @SystemIdentity String systemOwnerId,
                           @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition,
                           @QueueDrainExecutorService ExecutorService drainService,
+                          @KafkaFanoutExecutorService ExecutorService kafkaFanoutService,
+                          @KafkaResolverExecutorService ExecutorService kafkaResolverService,
+                          @KafkaResolverRetryExecutorService ExecutorService kafkaResolverRetryService,
+                          @KafkaEventProducerConfiguration KafkaProducerConfiguration eventProducerConfiguration,
+                          @KafkaFannedOutEventProducerConfiguration KafkaProducerConfiguration fannedOutEventProducerConfiguration,
+                          @KafkaResolvedEventProducerConfiguration KafkaProducerConfiguration resolvedEventProducerConfiguration,
+                          @KafkaRetryEventProducerConfiguration KafkaProducerConfiguration retryEventProducerConfiguration,
+                          @KafkaEventConsumerConfiguration KafkaConsumerConfiguration eventConsumerConfiguration,
+                          @KafkaFannedOutEventConsumerConfiguration KafkaConsumerConfiguration fannedOutEventConsumerConfiguration,
+                          @KafkaRetryEventConsumerConfiguration KafkaConsumerConfiguration retryEventConsumerConfiguration,
+                          @KafkaEnabled Boolean kafkaEnabled,
+                          @KafkaTestForceRetry Boolean kafkaTestForceRetry,
+                          @KafkaTestForceRetryToFail Boolean kafkaTestForceRetryToFail,
                           @MasterFanoutPartitions int masterPartitions,
                           @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
@@ -173,6 +233,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _systemOwnerId = systemOwnerId;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
         _drainService = checkNotNull(drainService, "drainService");
+        _kafkaFanoutService = checkNotNull(kafkaFanoutService, "kafkaFanoutService");
+        _kafkaResolverService = checkNotNull(kafkaResolverService, "kafkaResolverService");
+        _kafkaResolverRetryService = checkNotNull(kafkaResolverRetryService, "kafkaResolverRetryService");
         _masterPartitionSelector = masterPartitionSelector;
         _ticker = ClockTicker.getTicker(clock);
         _clock = clock;
@@ -200,6 +263,17 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         return Maps.immutableEntry(internalEventCountUpTo(key.channelName, key.limitAsked), key.limitAsked);
                     }
                 });
+        _eventProducerConfiguration = eventProducerConfiguration;
+        _fannedOutEventProducerConfiguration = fannedOutEventProducerConfiguration;
+        _resolvedEventProducerConfiguration = resolvedEventProducerConfiguration;
+        _retryEventProducerConfiguration = retryEventProducerConfiguration;
+        _eventConsumerConfiguration = eventConsumerConfiguration;
+        _fannedOutEventConsumerConfiguration = fannedOutEventConsumerConfiguration;
+        _retryEventConsumerConfiguration = retryEventConsumerConfiguration;
+        _kafkaEnabled = new Boolean(kafkaEnabled);
+        _kafkaTestForceRetry = new Boolean(kafkaTestForceRetry);
+        _kafkaTestForceRetryToFail = new Boolean(kafkaTestForceRetryToFail);
+
         lifeCycle.manage(this);
 
         ImmutableList.Builder<String> masterFanoutChannels = ImmutableList.builder();
@@ -211,6 +285,25 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerMoveSubscriptionJobHandler(jobHandlerRegistry);
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
+
+        if (_kafkaEnabled) {
+
+            // Set up Kafka producers and consumers
+            eventProducer = new KafkaProducer<>(_eventProducerConfiguration.getProps());
+
+            // Start resolver retry task
+            submitResolverRetryServiceTask();
+
+            // Start resolver task
+            submitResolverServiceTask();
+
+            // Start fanout task
+            submitFanoutServiceTask();
+
+        } else {
+            eventProducer = null;
+        }
+
     }
 
     private void registerMoveSubscriptionJobHandler(JobHandlerRegistry jobHandlerRegistry) {
@@ -398,6 +491,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         for (UpdateRef ref : event.getUpdateRefs()) {
             int partition = _masterPartitionSelector.getPartition(ref.getKey());
             eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
+            if (_kafkaEnabled) {
+                eventProducer.send(new ProducerRecord<>(MASTER_QUEUE_TOPIC_NAME, UpdateRefSerializer.toByteBuffer(ref)));
+                _log.info("DefaultDataBus: sent event to Kafka master-queue topic: " + ref.toString());
+            }
         }
         _eventStore.addAll(eventIds.build());
     }
@@ -1015,6 +1112,37 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         });
     }
 
+
+    private static MutableBoolean shutdownAllFanoutTasks = new MutableBoolean(false);
+    private void submitFanoutServiceTask() {
+        _kafkaFanoutService.submit(new Runnable() {
+            @Override
+            public void run() {
+                doKafkaFanout(shutdownAllFanoutTasks);
+            }
+        });
+    }
+
+    private static MutableBoolean shutdownAllResolverTasks = new MutableBoolean(false);
+    private void submitResolverServiceTask() {
+        _kafkaResolverService.submit(new Runnable() {
+            @Override
+            public void run() {
+                doKafkaResolver(shutdownAllResolverTasks);
+            }
+        });
+    }
+
+    private static MutableBoolean shutdownAllResolverRetryTasks = new MutableBoolean(false);
+    private void submitResolverRetryServiceTask() {
+        _kafkaResolverRetryService.submit(new Runnable() {
+            @Override
+            public void run() {
+                doKafkaResolverRetry(shutdownAllResolverRetryTasks);
+            }
+        });
+    }
+
     private void doDrainQueue(String subscription, int itemsToFetch, Cache<String, Boolean> knownNonRedundantEvents) {
         boolean anyRedundantItemFound = false;
         Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
@@ -1102,6 +1230,345 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         } else {
             _drainedSubscriptionsMap.remove(subscription);
         }
+    }
+
+    /**
+     * Task to pull events off master-queue topic and send them to resolver-queue topic with their list of subscriptions attached
+     */
+    private void doKafkaFanout(MutableBoolean shutdownFlag) {
+
+        try {
+
+            // Not sure if Kafka producers are thread-safe, to be ultra safe create this thread's consumer and producer
+            // right here
+
+            // Set up Kafka producer
+            KafkaProducer<String, ByteBuffer> fannedOutEventProducer = new KafkaProducer<>(_fannedOutEventProducerConfiguration.getProps());
+            _log.info("DefaultDatabus.doKafkaFanout: created fannedOutEventProducer...");
+
+            // Set up Kafka consumer
+            KafkaConsumer<String, ByteBuffer> eventConsumer = new KafkaConsumer<>(_eventConsumerConfiguration.getProps());
+            eventConsumer.subscribe(Arrays.asList(MASTER_QUEUE_TOPIC_NAME));
+            _log.info("DefaultDatabus.doKafkaFanout: created eventConsumer...");
+
+            // Poll master topic to see if there are update events
+            while (shutdownFlag.isFalse()) {
+
+                // Get available events off the master queue topic
+                _log.info("DefaultDatabus.doKafkaFanout: polling for master-queue topic entries...");
+                Iterable<ConsumerRecord<String, ByteBuffer>> polledEvents = eventConsumer.poll(1000).records(MASTER_QUEUE_TOPIC_NAME);
+
+                // Find all matching subscriptions for all events and then put the events along with their subscriptions
+                // onto the resolver queue topic
+                for (ConsumerRecord<String, ByteBuffer> polledEvent : polledEvents) {
+                    try {
+
+                        UpdateRef ref = UpdateRefSerializer.fromByteBuffer(polledEvent.value());
+
+                        _log.info("DefaultDatabus.doKafkaFanout: read event from master-queue: " + polledEvent.topic() + " ==> (table: " + ref.getTable() + ", key: " + ref.getKey() + ", changeId: " + ref.getChangeId());
+
+                        Iterable<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
+
+                        _log.info("DefaultDatabus.doKafkaFanout: got list of subscriptions, first one = " + subscriptions.iterator().next().getName());
+
+                        SubscriptionEvaluator.MatchEventData matchEventData = _subscriptionEvaluator.getMatchEventData(ref);
+
+                        _log.info("DefaultDatabus.doKafkaFanout: got matching event data (" + matchEventData.getTable() + "/" + matchEventData.getKey() +")");
+
+                        Iterable<OwnedSubscription> matchingSubscriptions = _subscriptionEvaluator.matches(subscriptions, matchEventData);
+
+                        _log.info("DefaultDatabus.doKafkaFanout: got list of matching subscriptions, first one = " + matchingSubscriptions.iterator().next().getName());
+
+                        Set<String> matchingSubscriptionNames = new HashSet<>();
+                        for (OwnedSubscription subscription : matchingSubscriptions) {
+                            matchingSubscriptionNames.add(subscription.getName());
+                        }
+
+                        // If a polled event has subscribers
+                        if (!matchingSubscriptionNames.isEmpty()) {
+
+                            _log.info("DefaultDatabus.doKafkaFanout: event had matching subscriptions " + matchingSubscriptionNames.toString());
+
+                            // Create new tuple for resolving
+                            FannedOutUpdateRef fannedOutUpdateRef = new FannedOutUpdateRef(ref, matchingSubscriptionNames);
+
+                            // Put event into the resolver queue
+                            fannedOutEventProducer.send(new ProducerRecord<>(RESOLVER_QUEUE_TOPIC_NAME, FannedOutUpdateRefSerializer.toByteBuffer(fannedOutUpdateRef)));
+
+                            _log.info("DefaultDatabus.doKafkaFanout: wrote event to resolver-queue ==> " + fannedOutUpdateRef.toString());
+
+                        } else {
+                            _log.warn("DefaultDatabus.doKafkaFanout: event " + UpdateRefSerializer.fromByteBuffer(polledEvent.value()).toString() + " had no matching subscription!");
+                        }
+
+                    } catch (OrphanedEventException oee) {
+                        _log.warn("DefaultDatabus.doKafkaFanout: Orphaned event exception for event: " + UpdateRefSerializer.fromByteBuffer(polledEvent.value()).getChangeId());
+                    } catch (Throwable t) {
+                        _log.error("DefaultDatabus.doKafkaFanout: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(polledEvent.value()).getChangeId());
+                    }
+                }
+
+            }
+
+            fannedOutEventProducer.close();
+            eventConsumer.close();
+
+            _log.info ("DefaultDatabus.doKafkaFanout: shut down Kafka fanout task...");
+
+        } catch (Throwable t) {
+            _log.error("DefaultDatabus.doKafkaFanout: caught exception " + t.getClass().getName() + ", message = " + t.getLocalizedMessage());
+        }
+
+    }
+
+
+    /**
+     * Task to pull events off resolver-queue topic and resolve them, sending them to resolver-retry-queue topic if resolution is not possible at this time
+     */
+    private void doKafkaResolver(MutableBoolean shutdownFlag) {
+
+        try {
+
+            // Not sure if Kafka producers are thread-safe, to be ultra safe create this thread's consumer and producer
+            // right here
+
+            // Set up Kafka producer for resolved events
+            KafkaProducer<String, String> resolvedEventProducer = new KafkaProducer<>(_resolvedEventProducerConfiguration.getProps());
+            _log.info("DefaultDatabus.doKafkaResolver: created resolvedEventProducer...");
+
+            // Set up Kafka producer for resolution retry events
+            KafkaProducer<String, ByteBuffer> resolvedEventRetryProducer = new KafkaProducer<>(_retryEventProducerConfiguration.getProps());
+            _log.info("DefaultDatabus.doKafkaResolver: created resolvedEventRetryProducer...");
+
+            // Set up Kafka consumer
+            KafkaConsumer<String, ByteBuffer> fannedOutEventConsumer = new KafkaConsumer<>(_fannedOutEventConsumerConfiguration.getProps());
+            fannedOutEventConsumer.subscribe(Arrays.asList(RESOLVER_QUEUE_TOPIC_NAME));
+            _log.info("DefaultDatabus.doKafkaResolver: created fannedOutEventConsumer...");
+
+            // Poll resolver topic to see if there are fanned-out update events
+            while (shutdownFlag.isFalse()) {
+
+                // Get available events off the resolver queue topic
+                _log.info("DefaultDatabus.doKafkaResolver: polling for resolver-queue topic entries...");
+                Iterable<ConsumerRecord<String, ByteBuffer>> fannedOutEvents = fannedOutEventConsumer.poll(1000).records(RESOLVER_QUEUE_TOPIC_NAME);
+
+                // Find all matching subscriptions for all events and then put the events along with their subscriptions
+                // onto the resolver queue topic
+                for (ConsumerRecord<String, ByteBuffer> fannedOutEvent: fannedOutEvents) {
+                    try {
+
+                        // Deserialize the fanned out update
+                        FannedOutUpdateRef fannedOutUpdateRef = FannedOutUpdateRefSerializer.fromByteBuffer(fannedOutEvent.value());
+
+                        _log.info("DefaultDatabus.doKafkaResolver: read event from resolver-queue: " + fannedOutEvent.topic() + " ==> " + fannedOutUpdateRef.toString());
+
+                        // Try to resolve the update
+                        UpdateRef updateRef = fannedOutUpdateRef.getUpdateRef();
+                        Set<String> subscriptionNames = fannedOutUpdateRef.getSubscriptionNames();
+
+                        EventList eventList = new EventList();
+                        eventList.add(updateRef.getKey(), updateRef.getChangeId(), updateRef.getTags());
+
+                        Coordinate coord = Coordinate.of(updateRef.getTable(), updateRef.getKey());
+                        HashMap<Coordinate, EventList> eventMap = new HashMap<>();
+                        eventMap.put(coord, eventList);
+
+                        String firstSubscriptionName = subscriptionNames.iterator().next();
+
+                        // resolve document once, in this case for the first subscription
+                        final List<Item> items = Lists.newArrayList();
+                        resolvePeekOrPollEvents(firstSubscriptionName, eventMap, 1,
+                            (theCoord, item) -> {
+                                // Unlike with the original batch the deferred batch's events are always
+                                // already de-duplicated by coordinate, so there is no need to maintain
+                                // a coordinate-to-item uniqueness map.
+                                if (_kafkaTestForceRetry) {
+                                    _log.info("DefaultDatabus.doKafkaResolver: running in test mode, forcing retries...");
+                                } else {
+                                    items.add(item);
+                                }
+                            });
+
+
+                        // An item may not have been resolved for various reasons, so check if it is available
+                        if (!items.isEmpty()) {
+                            // Now get JSON doc
+                            String document = Json.encodeAsString(Json.encodeAsString(items.get(0)._content));
+                            _log.info("DefaultDatabus.doKafkaResolver: resolved document == " + document);
+
+                            // Write document to every subscription's topic
+                            for (String subscriptionName : subscriptionNames) {
+                                // TODO This is a kludge inserted here because __system_bus:replay and __system_bus:canary-emo_cluster
+                                // TODO are apparently invalid Kafka topic names
+                                if (!subscriptionName.startsWith("__")) {
+                                    resolvedEventProducer.send(new ProducerRecord<>(subscriptionName, document));
+                                    _log.info("DefaultDatabus.doKafkaResolver: sent document to subscription topic " + subscriptionName);
+                                }
+                            }
+
+                        // send unresolved objects to the retry queue for processing
+                        } else {
+                            _log.info("DefaultDatabus.doKafkaResolver: event " + fannedOutUpdateRef.toString() + " not resolved yet, sending to retry queue...");
+
+                            // Create fanned out resolver retry reference
+                            Long firstResolveTime = System.currentTimeMillis();
+                            FannedOutUpdateRetryRef ref = new FannedOutUpdateRetryRef(fannedOutUpdateRef, firstResolveTime, firstResolveTime);
+                            ByteBuffer refBuffer = FannedOutUpdateRetryRefSerializer.toByteBuffer(ref);
+
+                            // Send to retry queue again
+                            resolvedEventRetryProducer.send(new ProducerRecord<>(RESOLVER_RETRY_QUEUE_TOPIC_NAME, refBuffer));
+                        }
+
+                    } catch (Throwable t) {
+                        _log.error("DefaultDatabus.doKafkaResolver: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(fannedOutEvent.value()).getChangeId());
+                    }
+                }
+
+            }
+
+            resolvedEventProducer.close();
+            fannedOutEventConsumer.close();
+
+            _log.info ("DefaultDatabus.doKafkaResolver: shut down Kafka resolver task...");
+
+        } catch (Throwable t) {
+            _log.error("DefaultDatabus.doKafkaResolver: caught exception " + t.getClass().getName() + ", message = " + t.getLocalizedMessage());
+        }
+
+    }
+
+
+    /**
+     * Task to pull events off resolver-retry-queue topic and resolve them
+     */
+    private void doKafkaResolverRetry(MutableBoolean shutdownFlag) {
+
+        try {
+
+            // Not sure if Kafka producers are thread-safe, to be ultra safe create this thread's consumer and producer
+            // right here
+
+            // Set up Kafka producer for resolved events
+            KafkaProducer<String, String> resolvedEventProducer = new KafkaProducer<>(_resolvedEventProducerConfiguration.getProps());
+            _log.info("DefaultDatabus.doKafkaResolverRetry: created resolvedEventProducer...");
+
+            // Set up Kafka producer for unresolved events that must be retried again
+            KafkaProducer<String, ByteBuffer> retryEventProducer = new KafkaProducer<>(_retryEventProducerConfiguration.getProps());
+            _log.info("DefaultDatabus.doKafkaResolverRetry: created retryEventProducer...");
+
+            // Set up Kafka consumer
+            KafkaConsumer<String, ByteBuffer> retryEventConsumer = new KafkaConsumer<>(_retryEventConsumerConfiguration.getProps());
+            retryEventConsumer.subscribe(Arrays.asList(RESOLVER_RETRY_QUEUE_TOPIC_NAME));
+            _log.info("DefaultDatabus.doKafkaResolverRetry: created retryEventConsumer...");
+
+            // Poll resolver topic to see if there are fanned-out update events
+            while (shutdownFlag.isFalse()) {
+
+                // Get available events off the resolver queue topic
+                _log.info("DefaultDatabus.doKafkaResolverRetry: polling for resolver-retry-queue topic entries...");
+                Iterable<ConsumerRecord<String, ByteBuffer>> retryEvents = retryEventConsumer.poll(1000).records(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
+
+                // Find all matching subscriptions for all events and then put the events along with their subscriptions
+                // onto the resolver queue topic
+                for (ConsumerRecord<String, ByteBuffer> retryEvent: retryEvents) {
+                    try {
+
+                        // Save current time of resolution
+                        long currentResolveTime = System.currentTimeMillis();
+
+                        // Deserialize the fanned out update
+                        FannedOutUpdateRetryRef fannedOutUpdateRetryRef = FannedOutUpdateRetryRefSerializer.fromByteBuffer(retryEvent.value());
+
+                        _log.info("DefaultDatabus.doKafkaResolverRetry: read event from resolver-retry-queue: " + retryEvent.topic() + " ==> " + fannedOutUpdateRetryRef.toString());
+
+                        // Try to resolve the update
+                        UpdateRef updateRef = fannedOutUpdateRetryRef.getFannedOutUpdateRef().getUpdateRef();
+                        Set<String> subscriptionNames = fannedOutUpdateRetryRef.getFannedOutUpdateRef().getSubscriptionNames();
+
+                        EventList eventList = new EventList();
+                        eventList.add(updateRef.getKey(), updateRef.getChangeId(), updateRef.getTags());
+
+                        Coordinate coord = Coordinate.of(updateRef.getTable(), updateRef.getKey());
+                        HashMap<Coordinate, EventList> eventMap = new HashMap<>();
+                        eventMap.put(coord, eventList);
+
+                        String firstSubscriptionName = subscriptionNames.iterator().next();
+
+                        // resolve document once, in this case for the first subscription
+                        final List<Item> items = Lists.newArrayList();
+                        resolvePeekOrPollEvents(firstSubscriptionName, eventMap, 1,
+                            (theCoord, item) -> {
+                                // Unlike with the original batch the deferred batch's events are always
+                                // already de-duplicated by coordinate, so there is no need to maintain
+                                // a coordinate-to-item uniqueness map.
+                                if (_kafkaTestForceRetryToFail) {
+                                    _log.info("DefaultDatabus.doKafkaResolverRetry: in test mode, forcing all retries to fail...");
+                                } else {
+                                    items.add(item);
+                                }
+                            });
+
+                        // An item may not have been resolved for various reasons, so check if it is available
+                        if (!items.isEmpty()) {
+                            // Now get JSON doc
+                            String document = Json.encodeAsString(Json.encodeAsString(items.get(0)._content));
+                            _log.info("DefaultDatabus.doKafkaResolverRetry: resolved document == " + document);
+
+                            // Write document to every subscription's topic
+                            for (String subscriptionName : subscriptionNames) {
+                                // TODO This is a kludge inserted here because __system_bus:replay and __system_bus:canary-emo_cluster
+                                // TODO are apparently invalid Kafka topic names
+                                if (!subscriptionName.startsWith("__")) {
+                                    resolvedEventProducer.send(new ProducerRecord<>(subscriptionName, document));
+                                    _log.info("DefaultDatabus.doKafkaResolverRetry: sent document to subscription topic " + subscriptionName);
+                                }
+                            }
+
+                        // If document is still not resolvable, requeue it until maximum time limit is reached,
+                        // after which the document should be considered a phantom update
+                        } else {
+
+                            // If the reference is not beyond the threshold requeue it and try again
+                            if (currentResolveTime - fannedOutUpdateRetryRef.getTimeOfFirstResolve() < PHANTOM_UPDATE_TIMEOUT) {
+
+                                _log.info("DefaultDatabus.doKafkaResolverRetry: event " + fannedOutUpdateRetryRef.toString() + " not resolved yet, being requeued...");
+
+                                // Create new retry reference
+                                FannedOutUpdateRetryRef newRetryRef = new FannedOutUpdateRetryRef(fannedOutUpdateRetryRef.getFannedOutUpdateRef(), fannedOutUpdateRetryRef.getTimeOfFirstResolve(), currentResolveTime);
+                                ByteBuffer newRetryRefBuffer = FannedOutUpdateRetryRefSerializer.toByteBuffer(newRetryRef);
+
+                                // requeue the entry on the retry queue
+                                retryEventProducer.send(new ProducerRecord<>(RESOLVER_RETRY_QUEUE_TOPIC_NAME, newRetryRefBuffer));
+
+                            } else {
+
+                                _log.warn("DefaultDatabus.doKafkaResolverRetry: change ID " +
+                                    fannedOutUpdateRetryRef.getFannedOutUpdateRef().getUpdateRef().getChangeId() + "dropped as phantom update...");
+
+                            }
+
+                        }
+
+                    } catch (Throwable t) {
+                        _log.error("DefaultDatabus.doKafkaResolverRetry: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(retryEvent.value()).getChangeId());
+                    }
+                }
+
+                // delay prior to reading retry queue
+                Thread.sleep(FIVE_MINUTES);
+
+            }
+
+            resolvedEventProducer.close();
+            retryEventProducer.close();
+            retryEventConsumer.close();
+
+            _log.info ("DefaultDatabus.doKafkaResolverRetry: shut down Kafka resolver retry task...");
+
+        } catch (Throwable t) {
+            _log.error("DefaultDatabus.doKafkaResolverRetry: caught exception " + t.getClass().getName() + ", message = " + t.getLocalizedMessage());
+        }
+
     }
 
     /**
@@ -1301,5 +1768,16 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 return Ordering.natural().immutableSortedCopy(tags);
         }
 
+    }
+
+    @Override
+    public void finalize() {
+        _log.info("DefaultDatabus.finalize: Trying to shut down Kafka fanout and resolver services...");
+        shutdownAllFanoutTasks.setValue(true);
+        shutdownAllResolverTasks.setValue(true);
+        shutdownAllResolverRetryTasks.setValue(true);
+        _kafkaFanoutService.shutdownNow();
+        _kafkaResolverService.shutdownNow();
+        _kafkaResolverRetryService.shutdownNow();
     }
 }

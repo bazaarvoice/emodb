@@ -84,6 +84,14 @@ public class SubscriptionEvaluator {
         }
     }
 
+    public MatchEventData getMatchEventData(UpdateRef ref) throws OrphanedEventException {
+        try {
+            return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getKey(), ref.getTags(), ref.getChangeId());
+        } catch (UnknownTableException e) {
+            throw new OrphanedEventException(ref.getTable(), Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(ref.getChangeId())));
+        }
+    }
+
     private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
         return _databusAuthorizer.owner(subscription.getOwnerId()).canReceiveEventsFromTable(table.getName());
     }

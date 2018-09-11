@@ -7,6 +7,8 @@ import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
+import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
 import com.bazaarvoice.emodb.event.api.DedupEventStore;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
@@ -341,7 +343,9 @@ public class ConsolidationTest {
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, databusAuthorizer, "replication",
-                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), 1, key -> 0,
+                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
+                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0,
                 new MetricRegistry(), clock);
     }
 
