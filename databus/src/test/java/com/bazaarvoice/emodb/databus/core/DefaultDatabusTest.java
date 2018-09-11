@@ -21,7 +21,6 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
-import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.beust.jcommander.internal.Sets;
 import com.codahale.metrics.MetricRegistry;
@@ -414,7 +413,7 @@ public class DefaultDatabusTest {
             updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
         }
 
-        testDatabus.writeEvent(new UpdateIntentEvent(this, updateRefs));
+        testDatabus.writeEvent(updateRefs);
 
         assertEquals(eventsStored, ImmutableSetMultimap.builder()
                 .putAll(ChannelNames.getMasterFanoutChannel(0), updateRefs.get(0), updateRefs.get(3))

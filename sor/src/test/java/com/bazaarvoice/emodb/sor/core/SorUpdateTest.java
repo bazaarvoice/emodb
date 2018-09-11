@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.sor.test.SystemClock;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import java.util.Collection;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 import org.testng.collections.Lists;
@@ -19,20 +20,21 @@ import org.testng.collections.Lists;
 import java.util.UUID;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 public class SorUpdateTest {
     private static final String TABLE_NAME = "test:table";
     private static final String PLACEMENT = "app_global:default";
 
     private DataStore _dataStore;
-    private UpdateIntentEvent _updateIntentEvent;
+    private DatabusEventWriterRegistry _eventWriterRegistry;
+    private Collection<UpdateRef> _updateRefs;
 
     @BeforeTest
     public void SetupTest() {
         final InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO();
-        DatabusEventWriterRegistry eventWriterRegistry = new DatabusEventWriterRegistry();
-        eventWriterRegistry.registerDatabusEventWriter(event -> _updateIntentEvent = event);
-        _dataStore = new InMemoryDataStore(eventWriterRegistry, dataDAO, new MetricRegistry());
+        _eventWriterRegistry = new DatabusEventWriterRegistry();
+        _dataStore = new InMemoryDataStore(_eventWriterRegistry, dataDAO, new MetricRegistry());
 
 
         // Create a table for our test
@@ -44,7 +46,8 @@ public class SorUpdateTest {
 
     @Test
     public void testUpdatesAndDatabusEvents() {
-        resetValues();
+        _eventWriterRegistry.registerDatabusEventWriter(refs -> _updateRefs = refs);
+        _updateRefs = null;
         UUID changeId1 = TimeUUIDs.newUUID();
         SystemClock.tick();
         UUID changeId2 = TimeUUIDs.newUUID();
@@ -53,13 +56,13 @@ public class SorUpdateTest {
                 .build(),
                 new AuditBuilder().setComment("Update").build());
 
-        // Verify that databus would receive the correct UpdateIntentEvent
-        UpdateIntentEvent expectedUpdateIntentEvent = new UpdateIntentEvent(_dataStore, Lists.newArrayList(
-                new UpdateRef("test:table", "rowkey", changeId1, ImmutableSet.<String>of())));
-        assertEquals(_updateIntentEvent.getUpdateRefs(), expectedUpdateIntentEvent.getUpdateRefs(), "Expected events not generated on databus");
+        // Verify that databus would receive the correct UpdateRefs
+        assertEquals(_updateRefs, Lists.newArrayList(
+                new UpdateRef("test:table", "rowkey", changeId1, ImmutableSet.<String>of())),
+                "Expected events not generated on databus");
 
         // Try updating the event but suppress databus events
-        resetValues();
+        _updateRefs = null;
         _dataStore.updateAll(Lists.newArrayList(new Update("test:table", "rowkey", changeId2,
                         Deltas.mapBuilder()
                                 .update("test", Deltas.literal("testValue"))
@@ -68,11 +71,32 @@ public class SorUpdateTest {
                 ImmutableSet.of("ignore"));
 
         // Verify that the ignorable flag is set
-        expectedUpdateIntentEvent = new UpdateIntentEvent(_dataStore, Lists.newArrayList(new UpdateRef("test:table", "rowkey", changeId2, ImmutableSet.of("ignore"))));
-        assertEquals(_updateIntentEvent.getUpdateRefs(), expectedUpdateIntentEvent.getUpdateRefs(), "Expected events not generated on databus");
+        assertEquals(_updateRefs,
+                Lists.newArrayList(new UpdateRef("test:table", "rowkey", changeId2, ImmutableSet.of("ignore"))),
+                "Expected events not generated on databus");
     }
 
-    private void resetValues() {
-        _updateIntentEvent = null;
+
+    @Test
+    public void testFailedDatabus() {
+
+        _dataStore.update("test:table", "rowkey", TimeUUIDs.newUUID(), Deltas.mapBuilder()
+                        .update("test", Deltas.literal("foo"))
+                        .build(),
+                new AuditBuilder().setComment("This update should succeed").build());
+
+        _eventWriterRegistry.registerDatabusEventWriter(refs -> {
+            throw new RuntimeException();
+        });
+
+        try {
+            _dataStore.update("test:table", "rowkey", TimeUUIDs.newUUID(), Deltas.mapBuilder()
+                            .update("test", Deltas.literal("testValue"))
+                            .build(),
+                    new AuditBuilder().setComment("This update should fail").build());
+            fail();
+        } catch (RuntimeException e) {
+            assertEquals(_dataStore.get("test:table", "rowkey").get("test"), "foo");
+        }
     }
 }

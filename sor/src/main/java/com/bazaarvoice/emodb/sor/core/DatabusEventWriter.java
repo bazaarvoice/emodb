@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import java.util.Collection;
+
 /**
  * Interface that should register with {@link DatabusEventWriterRegistry} and write events to the databus prior to
  * writing them to the system of record. If an event fails to be written to the databus, then it should propagate and
@@ -8,5 +10,5 @@ package com.bazaarvoice.emodb.sor.core;
 public interface DatabusEventWriter {
 
 
-    void writeEvent(UpdateIntentEvent event);
+    void writeEvent(Collection<UpdateRef> refs);
 }

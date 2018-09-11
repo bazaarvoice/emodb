@@ -40,7 +40,6 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriter;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
-import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
@@ -391,15 +390,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     }
 
     @Override
-    public void writeEvent(UpdateIntentEvent event) {
-        if (event.getUpdateRefs()
-                .stream()
-                .map(UpdateRef::getKey)
-                .anyMatch(key -> key.equals("demo1"))) {
-            throw new RuntimeException();
-        }
+    public void writeEvent(Collection<UpdateRef> refs) {
         ImmutableMultimap.Builder<String, ByteBuffer> eventIds = ImmutableMultimap.builder();
-        for (UpdateRef ref : event.getUpdateRefs()) {
+        for (UpdateRef ref : refs) {
             int partition = _masterPartitionSelector.getPartition(ref.getKey());
             eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
         }

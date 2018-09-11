@@ -4,7 +4,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
- * This is used to be used to send events to the databus prior to writing to the system of record.
+ * This is used to send events to the databus prior to writing to the system of record.
  * This databus should register as an {@link DatabusEventWriter} with this registry and then take events synchronously.
  * If an event fails to be written to the databus, then it should propagate and exception and prevent Emo from writing
  * to the system of record.
@@ -21,7 +21,7 @@ public class DatabusEventWriterRegistry {
 
     public void registerDatabusEventWriter(DatabusEventWriter databusWriter) {
         checkNotNull(databusWriter);
-        checkArgument(!_hasRegistered);
+        checkArgument(!_hasRegistered, "Databus Event Writer already registered");
         _databusWriter = databusWriter;
         _hasRegistered = true;
     }

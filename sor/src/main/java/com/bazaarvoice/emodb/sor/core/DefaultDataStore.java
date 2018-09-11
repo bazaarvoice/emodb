@@ -687,7 +687,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventWriterRegistry.getDatabusWriter().writeEvent(new UpdateIntentEvent(this, updateRefs));
+                    _eventWriterRegistry.getDatabusWriter().writeEvent(updateRefs);
                 }
             }
         });
