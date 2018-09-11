@@ -306,7 +306,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         boolean firstSlab = true;
 
         Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(channel)
                         .withColumnRange(range.build())
                         .autoPaginate(true));
