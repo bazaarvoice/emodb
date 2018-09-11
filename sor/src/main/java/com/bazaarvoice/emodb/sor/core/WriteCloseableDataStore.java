@@ -65,16 +65,6 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     }
 
     @Override
-    public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
-        return _delegate.listTables(fromTableExclusive, limit);
-    }
-
-    @Override
-    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
-        return _delegate.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
-    }
-
-    @Override
     public void createTable(String table, TableOptions options, Map<String, ?> template, Audit audit) throws TableExistsException {
         executeIfAcceptingWrites(() -> _delegate.createTable(table, options, template, audit));
     }
@@ -87,6 +77,111 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     @Override
     public void purgeTableUnsafe(String table, Audit audit) throws UnknownTableException {
         executeIfAcceptingWrites(() -> _delegate.purgeTableUnsafe(table, audit));
+    }
+
+    @Override
+    public void setTableTemplate(String table, Map<String, ?> template, Audit audit) throws UnknownTableException {
+        executeIfAcceptingWrites(() -> _delegate.setTableTemplate(table, template, audit));
+    }
+
+    @Override
+    public void update(String table, String key, UUID changeId, Delta delta, Audit audit) {
+        executeIfAcceptingWrites(() -> _delegate.update(table, key, changeId, delta, audit));
+    }
+
+    @Override
+    public void update(String table, String key, UUID changeId, Delta delta, Audit audit, WriteConsistency consistency) {
+        executeIfAcceptingWrites(() -> _delegate.update(table, key, changeId, delta, audit, consistency));
+    }
+
+    @Override
+    public void updateAll(Iterable<Update> updates) {
+        updateAll(updates, ImmutableSet.of());
+
+    }
+
+    @Override
+    public void updateAll(Iterable<Update> updates, Set<String> tags) {
+        _writerPhaser.register();
+        try {
+            Iterator<Update> updateIterator = updates.iterator();
+            _delegate.updateAll(closeableIterator(updateIterator), tags);
+            if (updateIterator.hasNext()) {
+                _writesRejectedCounter.inc();
+                throw new ServiceUnavailableException();
+            }
+        } finally {
+            _writerPhaser.arriveAndDeregister();
+        }
+    }
+
+    @Override
+    public void createFacade(String table, FacadeOptions options, Audit audit) throws TableExistsException {
+        executeIfAcceptingWrites(() -> _delegate.createFacade(table, options, audit));
+    }
+
+    @Override
+    public void updateAllForFacade(Iterable<Update> updates) {
+        updateAllForFacade(updates, ImmutableSet.of());
+    }
+
+    @Override
+    public void updateAllForFacade(Iterable<Update> updates, Set<String> tags) {
+        _writerPhaser.register();
+        try {
+            Iterator<Update> updateIterator = updates.iterator();
+            _delegate.updateAllForFacade(closeableIterator(updateIterator), tags);
+            if (updateIterator.hasNext()) {
+                _writesRejectedCounter.inc();
+                throw new ServiceUnavailableException();
+            }
+        } finally {
+            _writerPhaser.arriveAndDeregister();
+        }
+    }
+
+    @Override
+    public void dropFacade(String table, String placement, Audit audit) throws UnknownTableException {
+        executeIfAcceptingWrites(() -> _delegate.dropFacade(table, placement, audit));
+    }
+
+    private void executeIfAcceptingWrites(Runnable runnable) {
+        _writerPhaser.register();
+        try {
+            if (_writesAccepted) {
+                runnable.run();
+            } else {
+                _writesRejectedCounter.inc();
+                throw new ServiceUnavailableException();
+            }
+        } finally {
+            _writerPhaser.arriveAndDeregister();
+        }
+    }
+
+    private Iterable<Update> closeableIterator(Iterator<Update> updates) {
+        return () ->
+                new AbstractIterator<Update>() {
+                    @Override
+                    protected Update computeNext() {
+                        if (!updates.hasNext() || !_writesAccepted) {
+                            return endOfData();
+                        }
+                        return updates.next();
+                    }
+                };
+    }
+
+    // Methods below simply defer to delegate
+
+    @Override
+    public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
+        return _delegate.listTables(fromTableExclusive, limit);
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
+        return _delegate.listUnpublishedDatabusEvents(fromInclusive, toExclusive);
     }
 
     @Override
@@ -107,11 +202,6 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     @Override
     public Map<String, Object> getTableTemplate(String table) throws UnknownTableException {
         return _delegate.getTableTemplate(table);
-    }
-
-    @Override
-    public void setTableTemplate(String table, Map<String, ?> template, Audit audit) throws UnknownTableException {
-        executeIfAcceptingWrites(() -> _delegate.setTableTemplate(table, template, audit));
     }
 
     @Override
@@ -175,37 +265,6 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     }
 
     @Override
-    public void update(String table, String key, UUID changeId, Delta delta, Audit audit) {
-        executeIfAcceptingWrites(() -> _delegate.update(table, key, changeId, delta, audit));
-    }
-
-    @Override
-    public void update(String table, String key, UUID changeId, Delta delta, Audit audit, WriteConsistency consistency) {
-        executeIfAcceptingWrites(() -> _delegate.update(table, key, changeId, delta, audit, consistency));
-    }
-
-    @Override
-    public void updateAll(Iterable<Update> updates) {
-        updateAll(updates, ImmutableSet.of());
-
-    }
-
-    @Override
-    public void updateAll(Iterable<Update> updates, Set<String> tags) {
-        _writerPhaser.register();
-        try {
-            Iterator<Update> updateIterator = updates.iterator();
-            _delegate.updateAll(closeableIterator(updateIterator), tags);
-            if (updateIterator.hasNext()) {
-                _writesRejectedCounter.inc();
-                throw new ServiceUnavailableException();
-            }
-        } finally {
-            _writerPhaser.arriveAndDeregister();
-        }
-    }
-
-    @Override
     public void compact(String table, String key, @Nullable Duration ttlOverride, ReadConsistency readConsistency, WriteConsistency writeConsistency) {
         _delegate.compact(table, key, ttlOverride, readConsistency, writeConsistency);
     }
@@ -215,65 +274,10 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
         return _delegate.getTablePlacements();
     }
 
-    @Override
-    public void createFacade(String table, FacadeOptions options, Audit audit) throws TableExistsException {
-        executeIfAcceptingWrites(() -> _delegate.createFacade(table, options, audit));
-    }
 
-    @Override
-    public void updateAllForFacade(Iterable<Update> updates) {
-        updateAllForFacade(updates, ImmutableSet.of());
-    }
-
-    @Override
-    public void updateAllForFacade(Iterable<Update> updates, Set<String> tags) {
-        _writerPhaser.register();
-        try {
-            Iterator<Update> updateIterator = updates.iterator();
-            _delegate.updateAllForFacade(closeableIterator(updateIterator), tags);
-            if (updateIterator.hasNext()) {
-                _writesRejectedCounter.inc();
-                throw new ServiceUnavailableException();
-            }
-        } finally {
-            _writerPhaser.arriveAndDeregister();
-        }
-    }
-
-    @Override
-    public void dropFacade(String table, String placement, Audit audit) throws UnknownTableException {
-        executeIfAcceptingWrites(() -> _delegate.dropFacade(table, placement, audit));
-    }
 
     @Override
     public URI getStashRoot() throws StashNotAvailableException {
         return _delegate.getStashRoot();
-    }
-
-    private void executeIfAcceptingWrites(Runnable runnable) {
-        _writerPhaser.register();
-        try {
-            if (_writesAccepted) {
-                runnable.run();
-            } else {
-                _writesRejectedCounter.inc();
-                throw new ServiceUnavailableException();
-            }
-        } finally {
-            _writerPhaser.arriveAndDeregister();
-        }
-    }
-
-    private Iterable<Update> closeableIterator(Iterator<Update> updates) {
-        return () ->
-                new AbstractIterator<Update>() {
-                    @Override
-                    protected Update computeNext() {
-                        if (!updates.hasNext() || !_writesAccepted) {
-                            return endOfData();
-                        }
-                        return updates.next();
-                    }
-                };
     }
 }
