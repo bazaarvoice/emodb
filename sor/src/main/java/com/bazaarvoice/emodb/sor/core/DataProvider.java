@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * The minimal interface necessary to support the Databus, in concert with {@link UpdateIntentEvent}.
+ * The minimal interface necessary to support the Databus, in concert with {@link UpdateRef}.
  */
 public interface DataProvider {
     /** Returns the template associated with a table. */

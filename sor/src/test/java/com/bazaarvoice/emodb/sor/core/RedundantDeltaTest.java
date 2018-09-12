@@ -34,7 +34,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
-import com.google.common.eventbus.EventBus;
 import org.testng.annotations.Test;
 
 import java.net.URI;
@@ -60,7 +59,7 @@ public class RedundantDeltaTest {
     @Test
     public void testRedundantDeltas() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
@@ -116,7 +115,7 @@ public class RedundantDeltaTest {
     @Test
     public void testRedundancyWithTags() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
@@ -196,7 +195,7 @@ public class RedundantDeltaTest {
     @Test
     public void testTagsForNestedMapDeltas() {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
@@ -215,7 +214,7 @@ public class RedundantDeltaTest {
     @Test
     public void testRedundancyWithCompactionAndUnchangedTag() throws Exception {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), new InMemoryTableDAO(), dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
@@ -291,7 +290,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 
@@ -362,7 +361,7 @@ public class RedundantDeltaTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
         InMemoryTableDAO tableDao = new InMemoryTableDAO();
 
-        DefaultDataStore store = new DefaultDataStore(new EventBus(), tableDao, dataDao, dataDao,
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new MetricRegistry());
 

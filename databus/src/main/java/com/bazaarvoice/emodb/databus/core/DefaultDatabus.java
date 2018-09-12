@@ -38,7 +38,8 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriter;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
@@ -60,8 +61,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
@@ -72,7 +71,6 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -92,7 +90,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class DefaultDatabus implements OwnerAwareDatabus, Managed {
+public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Managed {
 
     private static final Logger _log = LoggerFactory.getLogger(DefaultDatabus.class);
 
@@ -122,7 +120,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     /* This is how long we submit tasks to drain the queue for each subscription from one poll request */
     private static final Duration MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION = Duration.ofMinutes(1);
 
-    private final EventBus _eventBus;
+    private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final SubscriptionDAO _subscriptionDao;
     private final DatabusEventStore _eventStore;
     private final DataProvider _dataProvider;
@@ -153,8 +151,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private ConcurrentMap<String, Long> _drainedSubscriptionsMap = Maps.newConcurrentMap();
 
     @Inject
-    public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
-                          SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
+    public DefaultDatabus(LifeCycleRegistry lifeCycle, DatabusEventWriterRegistry eventWriterRegistry,
+                          DataProvider dataProvider, SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, DatabusAuthorizer databusAuthorizer,
                           @SystemIdentity String systemOwnerId,
@@ -163,7 +161,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @MasterFanoutPartitions int masterPartitions,
                           @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
-        _eventBus = eventBus;
+        _eventWriterRegistry = eventWriterRegistry;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
         _dataProvider = dataProvider;
@@ -299,13 +297,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             throws Exception {
         // Create a databus replay subscription
         createDatabusReplaySubscription();
-        _eventBus.register(this);
+        _eventWriterRegistry.registerDatabusEventWriter(this);
     }
 
     @Override
     public void stop()
             throws Exception {
-        _eventBus.unregister(this);
     }
 
     @Override
@@ -392,10 +389,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         return subscription;
     }
 
-    @Subscribe
-    public void onUpdateIntent(UpdateIntentEvent event) {
+    @Override
+    public void writeEvents(Collection<UpdateRef> refs) {
         ImmutableMultimap.Builder<String, ByteBuffer> eventIds = ImmutableMultimap.builder();
-        for (UpdateRef ref : event.getUpdateRefs()) {
+        for (UpdateRef ref : refs) {
             int partition = _masterPartitionSelector.getPartition(ref.getKey());
             eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
         }

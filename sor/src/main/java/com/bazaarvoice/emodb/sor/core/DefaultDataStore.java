@@ -59,7 +59,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
@@ -94,7 +93,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
 
-    private final EventBus _eventBus;
+    private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final TableDAO _tableDao;
     private final DataReaderDAO _dataReaderDao;
     private final DataWriterDAO _dataWriterDao;
@@ -113,19 +112,20 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private StashTableDAO _stashTableDao;
 
     @Inject
-    public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, EventBus eventBus, TableDAO tableDao,
+    public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, DatabusEventWriterRegistry eventWriterRegistry, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition) {
-        this(eventBus, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
+        this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
     }
 
     @VisibleForTesting
-    public DefaultDataStore(EventBus eventBus, TableDAO tableDao, DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
+    public DefaultDataStore(DatabusEventWriterRegistry eventWriterRegistry,TableDAO tableDao,
+                            DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
-        _eventBus = checkNotNull(eventBus, "eventBus");
+        _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
         _dataWriterDao = checkNotNull(dataWriterDao, "dataWriterDao");
@@ -687,7 +687,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                     }
                 }
                 if (!updateRefs.isEmpty()) {
-                    _eventBus.post(new UpdateIntentEvent(this, updateRefs));
+                    _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }
             }
         });
