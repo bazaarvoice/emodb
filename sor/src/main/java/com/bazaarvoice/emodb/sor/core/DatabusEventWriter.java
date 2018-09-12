@@ -10,5 +10,5 @@ import java.util.Collection;
 public interface DatabusEventWriter {
 
 
-    void writeEvent(Collection<UpdateRef> refs);
+    void writeEvents(Collection<UpdateRef> refs);
 }

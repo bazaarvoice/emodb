@@ -390,7 +390,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     }
 
     @Override
-    public void writeEvent(Collection<UpdateRef> refs) {
+    public void writeEvents(Collection<UpdateRef> refs) {
         ImmutableMultimap.Builder<String, ByteBuffer> eventIds = ImmutableMultimap.builder();
         for (UpdateRef ref : refs) {
             int partition = _masterPartitionSelector.getPartition(ref.getKey());

@@ -413,7 +413,7 @@ public class DefaultDatabusTest {
             updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
         }
 
-        testDatabus.writeEvent(updateRefs);
+        testDatabus.writeEvents(updateRefs);
 
         assertEquals(eventsStored, ImmutableSetMultimap.builder()
                 .putAll(ChannelNames.getMasterFanoutChannel(0), updateRefs.get(0), updateRefs.get(3))
