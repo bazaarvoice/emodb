@@ -11,8 +11,6 @@ import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamResourceFi
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
-import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
-import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
@@ -61,6 +59,7 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListedIpFilter;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
@@ -68,8 +67,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import com.google.common.io.Closeables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -260,9 +257,10 @@ public class EmoService extends Application<EmoConfiguration> {
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
         CompactionControlSource compactionControlSource = _injector.getInstance(Key.get(CompactionControlSource.class, LocalCompactionControl.class));
-
+        DataStoreUpdateThrottler updateThrottle = _injector.getInstance(DataStoreUpdateThrottler.class);
+        
         // Start the System Of Record service
-        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource));
+        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource, updateThrottle));
     }
 
     private void evaluateBlobStore()

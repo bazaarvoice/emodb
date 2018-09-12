@@ -36,6 +36,7 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.compactioncontrol.CompactionControlResource1;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
@@ -112,11 +113,14 @@ public class DataStoreResource1 {
     private final DataStore _dataStore;
     private final DataStoreAsync _dataStoreAsync;
     private final CompactionControlSource _compactionControlSource;
+    private final DataStoreUpdateThrottler _updateThrottle;
 
-    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync, CompactionControlSource compactionControlSource) {
+    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync, CompactionControlSource compactionControlSource,
+                              DataStoreUpdateThrottler updateThrottle) {
         _dataStore = dataStore;
         _dataStoreAsync = dataStoreAsync;
         _compactionControlSource = compactionControlSource;
+        _updateThrottle = updateThrottle;
     }
 
     @Path ("_compcontrol")
@@ -699,7 +703,7 @@ public class DataStoreResource1 {
         UUID changeId = (changeIdParam != null) ? changeIdParam.get() : TimeUUIDs.newUUID();  // optional, defaults to new uuid
 
         // Perform the update
-        Iterable<Update> updates = asPermissionCheckingIterable(Collections.singletonList(new Update(table, key,
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(Collections.singletonList(new Update(table, key,
                 changeId, delta, audit, consistency.get())).iterator(), subject, facade);
         if (facade) {
             _dataStore.updateAllForFacade(updates, tags);
@@ -743,7 +747,7 @@ public class DataStoreResource1 {
                                      @QueryParam ("tag") List<String> tags,
                                      @Authenticated Subject subject) {
         Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
-        Iterable<Update> updates = asPermissionCheckingIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, false);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, false);
         _dataStore.updateAll(updates, tagsSet);
         return SuccessResponse.instance();
     }
@@ -764,7 +768,7 @@ public class DataStoreResource1 {
     public SuccessResponse updateAllForFacade(InputStream in, @QueryParam ("tag") List<String> tags,
                                               @Authenticated Subject subject) {
         Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
-        Iterable<Update> updates = asPermissionCheckingIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
         _dataStore.updateAllForFacade(updates, tagsSet);
         return SuccessResponse.instance();
     }
@@ -844,16 +848,21 @@ public class DataStoreResource1 {
         });
 
         if (facade != null && facade.get()) {
-            _dataStore.updateAllForFacade(asPermissionCheckingIterable(updates, subject, true));
+            _dataStore.updateAllForFacade(asSubjectSafeUpdateIterable(updates, subject, true));
         } else {
             // Parse and iterate through the deltas such that we never hold all the deltas in memory at once.
-            _dataStore.updateAll(asPermissionCheckingIterable(updates, subject, false));
+            _dataStore.updateAll(asSubjectSafeUpdateIterable(updates, subject, false));
         }
 
         return SuccessResponse.instance();
     }
 
-    private Iterable<Update> asPermissionCheckingIterable(Iterator<Update> updates, final Subject subject, final boolean isFacade) {
+    /**
+     * Takes an update stream from a subject and performs the following actions on it:
+     * 1. Checks that the subject has permission to update the record being updated
+     * 2. Applies any active rate limiting for updates by the subject
+     */
+    private Iterable<Update> asSubjectSafeUpdateIterable(Iterator<Update> updates, final Subject subject, final boolean isFacade) {
         return Iterables.filter(
                 OneTimeIterable.wrap(updates),
                 new Predicate<Update>() {
@@ -870,6 +879,13 @@ public class DataStoreResource1 {
                         if (!hasPermission) {
                             throw new UnauthorizedException("not authorized to update table " + update.getTable());
                         }
+
+                        // Facades are a unique case used internally for shoveling data across data centers, so don't rate
+                        // limit facade updates.
+                        if (!isFacade) {
+                            _updateThrottle.beforeUpdate(subject.getId());
+                        }
+
                         return true;
                     }
                 });

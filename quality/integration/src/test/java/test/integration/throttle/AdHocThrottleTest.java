@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestRegulator;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestRegulatorSupplier;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
+import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
@@ -111,7 +112,9 @@ public class AdHocThrottleTest extends ResourceTest {
         createRole(roleManager, null, "all-sor-role", ImmutableSet.of("sor|*|*"));
 
         return setupResourceTestRule(
-                Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)), new InMemoryCompactionControlSource())),
+                Collections.<Object>singletonList(new DataStoreResource1(
+                        _dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)),
+                        new InMemoryCompactionControlSource(), new UnlimitedDataStoreUpdateThrottler())),
                 Collections.<Object>singletonList(new ConcurrentRequestsThrottlingFilter(_deferringRegulatorSupplier)),
                 authIdentityManager, permissionManager);
     }
