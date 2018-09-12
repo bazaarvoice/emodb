@@ -14,6 +14,11 @@ public class DatabusEventWriterRegistry {
     private DatabusEventWriter _databusWriter;
     private boolean _hasRegistered;
 
+    /**
+     * The initial databus registration is a no-op which will discard all events sent to it until the databus registers.
+     * If the databus never registers, than events will continue to be discarded. It is okay for events to be discarded
+     * in certain Emo service modes, such as stash. However, it is certainly not okay during normal web operation.
+     */
     public DatabusEventWriterRegistry() {
         _hasRegistered = false;
         _databusWriter = event -> {};

@@ -96,7 +96,8 @@ public class SorUpdateTest {
                     new AuditBuilder().setComment("This update should fail").build());
             fail();
         } catch (RuntimeException e) {
-            assertEquals(_dataStore.get("test:table", "rowkey").get("test"), "foo");
+            assertEquals(_dataStore.get("test:table", "rowkey").get("test"), "foo",
+                    "Record should not have been updated after databus event write failed");
         }
     }
 }
