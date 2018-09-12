@@ -170,13 +170,14 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Note: unlike the read methods, the count method does not delete empty slabs (!open && count==0) since
         // we can't trust results w/ConsistencyLevel.CL_ONE.
 
-        Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
+        Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(channel)
                         .withColumnRange(new RangeBuilder().setLimit(100).build())
                         .autoPaginate(true));
 
-        for (Column<ByteBuffer> manifestColumn : manifestColumns) {
+        while (manifestColumns.hasNext()) {
+            Column<ByteBuffer> manifestColumn = manifestColumns.next();
             ByteBuffer slabId = manifestColumn.getName();
 
             if (total <= limit) {
@@ -205,7 +206,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
     @Override
     public boolean moveIfFast(String fromChannel, String toChannel) {
-        Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
+        Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(fromChannel)
                         .withColumnRange(new RangeBuilder().setLimit(50).build())
@@ -213,7 +214,8 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         List<ByteBuffer> closedSlabs = Lists.newArrayList();
         boolean movedAll = true;
-        for (Column<ByteBuffer> manifestColumn : manifestColumns) {
+        while (manifestColumns.hasNext()) {
+            Column<ByteBuffer> manifestColumn = manifestColumns.next();
             ByteBuffer slabId = manifestColumn.getName();
             boolean open = manifestColumn.getBooleanValue();
             if (open) {
@@ -329,7 +331,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
             range.setStart(oldestSlab);
         }
 
-        final Iterator<Column<ByteBuffer>> manifestColumns = executePaginatedStream(
+        final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(channel)
                         .withColumnRange(range.build())
@@ -476,7 +478,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     }
 
     /** Executes a {@code RowQuery} with {@code autoPaginate(true)} repeatedly as necessary to fetch all pages. */
-    private <K, C> Iterator<Column<C>> executePaginatedStream(final RowQuery<K, C> query) {
+    private <K, C> Iterator<Column<C>> executePaginated(final RowQuery<K, C> query) {
         return Iterators.concat(new AbstractIterator<Iterator<Column<C>>>() {
             @Override
             protected Iterator<Column<C>> computeNext() {
@@ -485,14 +487,6 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
             }
         });
     }
-
-    /**
-     * Convenience interface to {@link #executePaginatedStream(RowQuery)} as an {@link Iterable} backed by the
-     * paginated results which can be iterated exactly once.
-     */
-     private <K, C> Iterable<Column<C>> executePaginated(final RowQuery<K, C> query) {
-         return OneTimeIterable.wrap(executePaginatedStream(query));
-     }
 
      private <R> R execute(Execution<R> execution) {
         OperationResult<R> operationResult;
