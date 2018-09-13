@@ -98,7 +98,7 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
                              RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
 
         this(s3, config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
-                Duration.ofMillis(config.getMaxBatchTime().getMillis()),
+                Duration.ofMillis(config.getMaxBatchTime().toMillis()),
                 config.getStagingDir() != null ? new File(config.getStagingDir()) : com.google.common.io.Files.createTempDir(),
                 config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), rateLimitedLogFactory,
                 metricRegistry, null, null);
@@ -187,7 +187,7 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
         _auditService.shutdown();
         try {
             if (!_auditService.awaitTermination(5, TimeUnit.SECONDS)) {
-                _log.warn("Audits service did not shutdown cleanly.");
+                _log.warn("Audit service did not shutdown cleanly.");
                 _auditService.shutdownNow();
             } else {
                 // Poll the queue one last time and drain anything that is still remaining

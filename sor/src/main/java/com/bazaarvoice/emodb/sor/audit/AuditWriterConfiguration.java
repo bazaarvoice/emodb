@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.sor.audit;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.dropwizard.util.Size;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import javax.annotation.Nonnull;
 
 public class AuditWriterConfiguration {
@@ -32,7 +32,7 @@ public class AuditWriterConfiguration {
     private long _maxFileSize = Size.megabytes(50).toBytes();
 
     @JsonProperty("maxBatchTime")
-    private Duration _maxBatchTime = Duration.standardMinutes(2);
+    private Duration _maxBatchTime = Duration.ofMinutes(2);
 
     @JsonProperty("stagingDir")
     private String _stagingDir;

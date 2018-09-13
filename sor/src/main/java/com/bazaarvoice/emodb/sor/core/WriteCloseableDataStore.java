@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -22,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.Phaser;
@@ -56,12 +56,24 @@ public class WriteCloseableDataStore implements DataStore, TableBackingStore, Da
     @Override
     public void closeWrites() {
         _writesAccepted = false;
+
+        postWritesClosed();
+
         try {
             _writerPhaser.awaitAdvanceInterruptibly(_writerPhaser.arrive(), 10, TimeUnit.SECONDS);
         } catch (InterruptedException | TimeoutException e) {
             _log.warn("Failed to shutdown writes fully, there are likely uncompleted writes.");
         }
 
+    }
+
+    /**
+     * This method is for testing only. It is called when writesAccepted has been set to false, but all existing writes
+     * have not returned yet. Test classes should override if they need such information.
+     */
+    @VisibleForTesting
+    protected void postWritesClosed() {
+        // no-op
     }
 
     @Override

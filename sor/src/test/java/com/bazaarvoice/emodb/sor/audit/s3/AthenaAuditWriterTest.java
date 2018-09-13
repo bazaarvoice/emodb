@@ -2,13 +2,10 @@ package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
-import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.core.GracefulShutdownManager;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Charsets;
@@ -20,8 +17,6 @@ import io.dropwizard.util.Size;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.mockito.ArgumentCaptor;
 import org.mockito.internal.matchers.LessThan;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -42,11 +37,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.longThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -58,7 +53,6 @@ public class AthenaAuditWriterTest {
 
     private AmazonS3 _s3;
     private Multimap<String, Map<String, Object>> _uploadedAudits = ArrayListMultimap.create();
-    private AthenaAuditWriter _writer;
     private File _tempStagingDir;
     private ScheduledExecutorService _auditService;
     private ExecutorService _fileTransferService;
@@ -137,9 +131,6 @@ public class AthenaAuditWriterTest {
                 eq(maxBatchTime.toMillis()), eq(TimeUnit.MILLISECONDS));
         _doLogFileMaintenance = doLogFileMaintenance.getValue();
 
-        // Normally should avoid resetting mocks but it's already embedded in the writer.
-        reset(_auditService);
-
         return writer;
     }
 
@@ -177,6 +168,47 @@ public class AthenaAuditWriterTest {
 
         int i = 0;
         for (Map<String, Object> auditMap : auditMaps) {
+            assertEquals(auditMap.get("tablename"), "test:table");
+            assertEquals(auditMap.get("key"), "key" + i);
+            assertEquals(auditMap.get("time"), auditTime);
+            assertEquals(auditMap.get("comment"), "comment" + i);
+            assertEquals(auditMap.get("custom"), "{\"custom\":\"custom" + i + "\"}");
+            i += 1;
+        }
+    }
+
+    @Test
+    public void testGracefulShutdown() throws InterruptedException {
+        String prefix = "emodb-audit";
+        long maxFileSize = Size.megabytes(1).toBytes();
+        Duration maxBatchTime = Duration.ofSeconds(10);
+
+        AthenaAuditWriter writer = createWriter("shutdown/", prefix, maxFileSize, maxBatchTime);
+
+        long auditTime = _now.toEpochMilli();
+        for (int i=0; i < 10; i++) {
+            Audit audit = new AuditBuilder().setComment("comment" + i).set("custom", "custom" + i).build();
+            writer.persist("test:table", "key" + i, audit, auditTime);
+        }
+
+        when(_auditService.awaitTermination(anyInt(), any(TimeUnit.class))).thenReturn(true);
+        when(_fileTransferService.awaitTermination(anyInt(), any(TimeUnit.class))).thenReturn(true);
+
+        writer.flushAndShutdown();
+
+        ArgumentCaptor<Runnable> fileTransferRunnable = ArgumentCaptor.forClass(Runnable.class);
+        verify(_fileTransferService).submit(fileTransferRunnable.capture());
+        fileTransferRunnable.getValue().run();
+
+        assertEquals(_uploadedAudits.keySet().size(), 1);
+        String key = _uploadedAudits.keySet().iterator().next();
+        assertTrue(key.matches("shutdown/date=20180101/emodb-audit.20180101000000.[a-f0-9\\-]{36}.log.gz"));
+
+        Collection<Map<String, Object>> auditMaps = _uploadedAudits.get(key);
+        assertEquals(auditMaps.size(), 10);
+
+        int i = 0;
+        for (Map<String, Object> auditMap : auditMaps ) {
             assertEquals(auditMap.get("tablename"), "test:table");
             assertEquals(auditMap.get("key"), "key" + i);
             assertEquals(auditMap.get("time"), auditTime);
