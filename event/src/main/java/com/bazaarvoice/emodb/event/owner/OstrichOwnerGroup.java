@@ -225,7 +225,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
         _dropwizardTask.register(taskName, leaderService);
-        leaderService.start();
+        leaderService.startAsync();
         return Optional.of(leaderService);
     }
 
@@ -233,7 +233,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         if (ref.isPresent()) {
             Service service = ref.get();
             _log.info("Stopping owned service {}: {}", _group, name);
-            service.stop();
+            service.stopAsync();
         }
     }
 
@@ -247,7 +247,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
             return false;
         }
         try {
-            service.start().get(waitMillis, TimeUnit.MILLISECONDS);
+            service.startAsync().awaitRunning(waitMillis, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             // Fall through
         }

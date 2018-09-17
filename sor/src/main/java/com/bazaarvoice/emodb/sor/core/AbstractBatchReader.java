@@ -5,6 +5,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 
@@ -26,8 +27,8 @@ abstract public class AbstractBatchReader<T> extends AbstractIterator<T> {
     // Amount to increment the next batch size until the maximum is achieved
     private final int _batchIncrementSize;
     private int _currentBatchSize;
-    private final Stopwatch _timer = new Stopwatch();
-    private Iterator<T> _batch = Iterators.emptyIterator();
+    private final Stopwatch _timer = Stopwatch.createUnstarted();
+    private Iterator<T> _batch = Collections.emptyIterator();
     // In the event of a timeout record the amount of time that elapsed before the timeout
     private long _lastTimeoutTime;
 
@@ -91,7 +92,7 @@ abstract public class AbstractBatchReader<T> extends AbstractIterator<T> {
     private boolean loadNextBatch() {
         if (!hasNextBatch()) {
             // No batches remaining to load
-            _batch = Iterators.emptyIterator();
+            _batch = Collections.emptyIterator();
             return true;
         }
 

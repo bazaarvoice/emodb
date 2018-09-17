@@ -145,7 +145,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
     @Override
     public Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency consistency) {
-        return Iterators.emptyIterator();
+        return Collections.emptyIterator();
     }
 
     @Override
@@ -176,7 +176,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     public Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
                                                          ReadConsistency consistency, @Nullable Instant cutoffTime) {
         // TODO:  Create a simulation for this method
-        return Iterators.emptyIterator();
+        return Collections.emptyIterator();
     }
 
     @Override

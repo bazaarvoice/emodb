@@ -18,12 +18,12 @@ public class ManagedGuavaService implements Managed {
 
     @Override
     public void start() throws Exception {
-        _service.startAndWait();
+        _service.startAsync().awaitRunning();
     }
 
     @Override
     public void stop() throws Exception {
-        _service.stopAndWait();
+        _service.stopAsync().awaitTerminated();
     }
 
     // For debugging

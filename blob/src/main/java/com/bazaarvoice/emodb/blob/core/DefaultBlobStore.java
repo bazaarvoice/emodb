@@ -26,8 +26,8 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
+import java.util.function.Supplier;
 import org.apache.commons.codec.binary.Hex;
 
 import javax.annotation.Nullable;
@@ -299,7 +299,7 @@ public class DefaultBlobStore implements BlobStore {
     }
 
     @Override
-    public void put(String tableName, String blobId, InputSupplier<? extends InputStream> in, Map<String,String> attributes, @Nullable Duration ttl) throws IOException {
+    public void put(String tableName, String blobId, Supplier<? extends InputStream> in, Map<String,String> attributes, @Nullable Duration ttl) throws IOException {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
         checkNotNull(in, "in");
@@ -310,7 +310,7 @@ public class DefaultBlobStore implements BlobStore {
         long timestamp = _storageProvider.getCurrentTimestamp(table);
         int chunkSize = _storageProvider.getDefaultChunkSize();
 
-        DigestInputStream md5In = new DigestInputStream(in.getInput(), getMessageDigest("MD5"));
+        DigestInputStream md5In = new DigestInputStream(in.get(), getMessageDigest("MD5"));
         DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
 
         // A more aggressive solution like the Astyanax ObjectWriter recipe would improve performance by pipelining

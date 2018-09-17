@@ -287,14 +287,14 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         ByteBuffer rowKey = storage.getRowKey(key.getKey());
 
         // Read Delta and Compaction objects
-        Iterator<Change> deltas = Iterators.emptyIterator();
+        Iterator<Change> deltas = Collections.emptyIterator();
         if (includeContentData) {
             ColumnFamily<ByteBuffer, UUID> cf = placement.getDeltaColumnFamily();
             deltas = decodeColumns(columnScan(rowKey, placement, cf, start, end, reversed, limit, 0, consistency));
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Iterators.emptyIterator();
+        Iterator<Change> deltaHistory = Collections.emptyIterator();
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = placement.getDeltaHistoryColumnFamily();
         deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, limit, 0, consistency));
 
@@ -470,7 +470,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         ByteBufferRange keyRange = storage.getSplitRange(splitRange, fromKeyExclusive, split);
         // The fromKeyExclusive might be equal to the end token of the split.  If so, there's nothing to return.
         if (keyRange.getStart().equals(keyRange.getEnd())) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         // In contrast to the scan() method, scan a single range prefix (the one associated with this split).
@@ -832,7 +832,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
                 // around which is absolutely *not* what we want since it could return data for another table.
                 if (_done || BufferUtils.compareUnsigned(_rangeStart, _rangeEnd) >= 0) {
                     _done = true;
-                    return Iterators.emptyIterator();
+                    return Collections.emptyIterator();
                 }
 
                 Timer.Context timer = _scanBatchTimer.time();
@@ -1122,7 +1122,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Row<ByteBuffer, UUID>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }
@@ -1160,9 +1160,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
-                Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
-                Iterators.<RecordEntryRawMetadata>emptyIterator());
+                Collections.emptyIterator(),
+                Collections.emptyIterator(),
+                Collections.emptyIterator());
     }
 
     private Iterator<Change> decodeColumns(Iterator<Column<UUID>> iter) {

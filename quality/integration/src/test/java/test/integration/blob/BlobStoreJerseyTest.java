@@ -41,9 +41,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import java.util.function.Supplier;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -680,17 +680,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testPut() throws IOException {
-        InputSupplier<InputStream> in = new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                return new ByteArrayInputStream("blob-content".getBytes());
-            }
-        };
+        Supplier<InputStream> in = () -> new ByteArrayInputStream("blob-content".getBytes());
         Map<String, String> attributes = ImmutableMap.of("key", "value");
         blobClient().put("table-name", "blob-id", in, attributes, Duration.ofDays(30));
 
         //noinspection unchecked
-        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes), eq(Duration.ofDays(30)));
+        verify(_server).put(eq("table-name"), eq("blob-id"), isA(Supplier.class), eq(attributes), eq(Duration.ofDays(30)));
         verifyNoMoreInteractions(_server);
     }
 
