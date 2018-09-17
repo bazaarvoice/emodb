@@ -21,6 +21,8 @@ public class KafkaConsumerConfiguration {
     private static final String DEFAULT_VALUE_DESERIALIZER = "org.apache.kafka.common.serialization.ByteBufferDeserializer";
     private static final String DEFAULT_GROUP_ID = "emodb.comsumer";
     private static final int DEFAULT_MAX_POLL_INTERVAL_MS = 60000; // one minute max between polls?
+    private static final boolean DEFAULT_AUTO_COMMIT_ENABLE = false;
+    private static final int DEFAULT_AUTO_COMMIT_INTERVAL_MS = 60000;
 
     @Valid
     @NotNull
@@ -47,6 +49,17 @@ public class KafkaConsumerConfiguration {
     @JsonProperty("max.poll.interval.ms")
     private int _maxPollIntervalMs = DEFAULT_MAX_POLL_INTERVAL_MS;
 
+    @Valid
+    @NotNull
+    @JsonProperty("auto.commit.enable")
+    private boolean _autoCommitEnable = DEFAULT_AUTO_COMMIT_ENABLE;
+
+    @Valid
+    @NotNull
+    @JsonProperty("auto.commit.interval.ms")
+    private int _autoCommitIntervalMs = DEFAULT_AUTO_COMMIT_INTERVAL_MS;
+
+
     public String getBootstrapServers() { return _bootstrapServers; }
     public void setBootstrapServers( String bootstrapServers) { _bootstrapServers = bootstrapServers; }
 
@@ -62,6 +75,12 @@ public class KafkaConsumerConfiguration {
     public int getMaxPollIntervalMs() { return _maxPollIntervalMs; }
     public void setMaxPollIntervalMs(int maxPollIntervalMs) { _maxPollIntervalMs = maxPollIntervalMs; }
 
+    public boolean getAutoCommitEnable() { return _autoCommitEnable; }
+    public void setAutoCommitEnable(boolean autoCommitEnable) { _autoCommitEnable = autoCommitEnable; }
+
+    public int getAutoCommitIntervalMs() { return _autoCommitIntervalMs; }
+    public void setAutoCommitIntervalMs(int autoCommitIntervalMs) { _autoCommitIntervalMs = autoCommitIntervalMs; }
+
     public Properties getProps() {
         Properties props = new Properties();
         props.put("bootstrap.servers", _bootstrapServers);
@@ -69,6 +88,8 @@ public class KafkaConsumerConfiguration {
         props.put("key.deserializer", _keyDeserializer);
         props.put("value.deserializer", _valueDeserializer);
         props.put("max.poll.interval.ms", _maxPollIntervalMs);
+        props.put("auto.commit.enable", _autoCommitEnable);
+        props.put("auto.commit.interval.ms", _autoCommitIntervalMs);
         return props;
     }
 

@@ -84,9 +84,11 @@ import kafka.utils.Json;
 import org.apache.commons.lang.mutable.MutableBoolean;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1267,6 +1269,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                         _log.info("DefaultDatabus.doKafkaFanout: read event from master-queue: " + polledEvent.topic() + " ==> (table: " + ref.getTable() + ", key: " + ref.getKey() + ", changeId: " + ref.getChangeId());
 
+                        // The idea of doing this every time is to catch new subscriptions created since last update was processed - is this necessary?
                         Iterable<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
 
                         _log.info("DefaultDatabus.doKafkaFanout: got list of subscriptions, first one = " + subscriptions.iterator().next().getName());
@@ -1307,6 +1310,21 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         _log.error("DefaultDatabus.doKafkaFanout: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(polledEvent.value()).getChangeId());
                     }
                 }
+
+                // Get partition assigned to this consumer
+                TopicPartition partition = eventConsumer.assignment().iterator().next(); // only assigned to one partition at a time, plus right now there is only one partition anyway
+
+                // Get offset after reading the events and save it in an OffsetAndMetadata object
+                long offset = eventConsumer.position(partition);
+                OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(offset);
+
+                // create a map from the partition to the offset
+                Map<TopicPartition, OffsetAndMetadata> commitMap = new HashMap<>();
+                commitMap.put(partition, offsetAndMetadata);
+
+                // commit the partition for its corresponding offset
+                eventConsumer.commitSync(commitMap);
+
 
             }
 
@@ -1423,6 +1441,20 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         _log.error("DefaultDatabus.doKafkaResolver: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(fannedOutEvent.value()).getChangeId());
                     }
                 }
+
+                // Get partition assigned to this consumer
+                TopicPartition partition = fannedOutEventConsumer.assignment().iterator().next(); // only assigned to one partition at a time, plus right now there is only one partition anyway
+
+                // Get offset after reading the events and save it in an OffsetAndMetadata object
+                long offset = fannedOutEventConsumer.position(partition);
+                OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(offset);
+
+                // create a map from the partition to the offset
+                Map<TopicPartition, OffsetAndMetadata> commitMap = new HashMap<>();
+                commitMap.put(partition, offsetAndMetadata);
+
+                // commit the partition for its corresponding offset
+                fannedOutEventConsumer.commitSync(commitMap);
 
             }
 
@@ -1553,6 +1585,20 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         _log.error("DefaultDatabus.doKafkaResolverRetry: Unexpected exception " + t.getClass().getName() + " for event: " + UpdateRefSerializer.fromByteBuffer(retryEvent.value()).getChangeId());
                     }
                 }
+
+                // Get partition assigned to this consumer
+                TopicPartition partition = retryEventConsumer.assignment().iterator().next(); // only assigned to one partition at a time, plus right now there is only one partition anyway
+
+                // Get offset after reading the events and save it in an OffsetAndMetadata object
+                long offset = retryEventConsumer.position(partition);
+                OffsetAndMetadata offsetAndMetadata = new OffsetAndMetadata(offset);
+
+                // create a map from the partition to the offset
+                Map<TopicPartition, OffsetAndMetadata> commitMap = new HashMap<>();
+                commitMap.put(partition, offsetAndMetadata);
+
+                // commit the partition for its corresponding offset
+                retryEventConsumer.commitSync(commitMap);
 
                 // delay prior to reading retry queue
                 Thread.sleep(FIVE_MINUTES);
