@@ -1,12 +1,5 @@
 package com.bazaarvoice.emodb.sor;
 
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.internal.StaticCredentialsProvider;
-import com.amazonaws.regions.Regions;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
@@ -36,8 +29,8 @@ import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
+import com.bazaarvoice.emodb.sor.audit.AuditStore;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
-import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -80,6 +73,7 @@ import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -138,10 +132,8 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class DataStoreModule extends PrivateModule {
     private final EmoServiceMode _serviceMode;
-    private final DataStoreConfiguration _configuration;
 
-    public DataStoreModule(EmoServiceMode serviceMode, DataStoreConfiguration configuration) {
-        _configuration = configuration;
+    public DataStoreModule(EmoServiceMode serviceMode) {
         _serviceMode = serviceMode;
     }
 
@@ -207,18 +199,10 @@ public class DataStoreModule extends PrivateModule {
 
         bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
 
-        if (_configuration.getAuditWriterConfiguration() != null) {
-            bind(AuditWriterConfiguration.class).toInstance(_configuration.getAuditWriterConfiguration());
-            bind(AmazonS3.class).toInstance(getAmazonS3Client(_configuration.getAuditWriterConfiguration()));
-            bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
-            bind(AthenaAuditWriter.class).asEagerSingleton();
-            bind(AuditWriter.class).to(AthenaAuditWriter.class);
-            bind(AuditFlusher.class).to(AthenaAuditWriter.class);
-        } else {
-            bind(DiscardingAuditWriter.class).asEagerSingleton();
-            bind(AuditWriter.class).to(DiscardingAuditWriter.class);
-            bind(AuditFlusher.class).to(DiscardingAuditWriter.class);
-        }
+        bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
+
+        bind(AuditWriter.class).to(AuditStore.class);
+        bind(AuditFlusher.class).to(AuditStore.class);
 
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
@@ -264,6 +248,17 @@ public class DataStoreModule extends PrivateModule {
         // Tools for migration to blocked deltas
         bind(MigratorTools.class).to(DefaultMigratorTools.class);
         expose(MigratorTools.class);
+    }
+
+    @Provides @Singleton
+    AuditStore provideAuditStore(DataStoreConfiguration dataStoreConfiguration, ObjectMapper objectMapper, Clock clock,
+                                 RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
+        if (dataStoreConfiguration.getAuditWriterConfiguration() != null) {
+            return new AthenaAuditWriter(dataStoreConfiguration.getAuditWriterConfiguration(), objectMapper, clock,
+                    rateLimitedLogFactory, metricRegistry);
+        }
+
+        return new DiscardingAuditWriter();
     }
 
     @Provides @Singleton
@@ -435,26 +430,6 @@ public class DataStoreModule extends PrivateModule {
         return configuration.getStashBlackListTableCondition()
                 .transform(Conditions::fromString)
                 .or(Conditions.alwaysFalse());
-    }
-
-
-    private AmazonS3 getAmazonS3Client(AuditWriterConfiguration configuration) {
-
-        AWSCredentialsProvider credentialsProvider;
-        if (configuration.getS3AccessKey() != null && configuration.getS3SecretKey() != null) {
-            credentialsProvider = new StaticCredentialsProvider(
-                    new BasicAWSCredentials(configuration.getS3AccessKey(), configuration.getS3SecretKey()));
-        } else {
-            credentialsProvider = new DefaultAWSCredentialsProviderChain();
-        }
-
-        AmazonS3 s3 = new AmazonS3Client(credentialsProvider)
-                .withRegion(Regions.fromName(configuration.getLogBucketRegion()));
-
-        if (configuration.getS3Endpoint() != null) {
-            s3.setEndpoint(configuration.getS3Endpoint());
-        }
-        return s3;
     }
 
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {

@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 /**
  * Audit writer implementation which discards all incoming audits.
  */
-public class DiscardingAuditWriter implements AuditWriter, AuditFlusher {
+public class DiscardingAuditWriter implements AuditStore {
     @Override
     public void persist(String table, String key, Audit audit, long auditTime) {
         // Discard

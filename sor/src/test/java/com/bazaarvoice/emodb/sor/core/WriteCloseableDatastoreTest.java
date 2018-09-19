@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -28,14 +29,11 @@ public class WriteCloseableDatastoreTest {
 
     @Test
     public void testShutdown() throws InterruptedException, ExecutionException {
-        Iterable<Update> updateIterable = () -> new AbstractIterator<Update>() {
-            @Override
-            protected Update computeNext() {
-                return new Update("table-name", "key-name", TimeUUIDs.newUUID(),
+        Iterable<Update> updateIterable = Iterables.cycle(
+                new Update("table-name", "key-name", TimeUUIDs.newUUID(),
                         Deltas.literal(ImmutableMap.of("empty", "empty")),
-                        new AuditBuilder().setComment("empty value").build());
-            }
-        };
+                        new AuditBuilder().setComment("empty value").build())
+        );
 
 
         DataStore dataStore = mock(DataStore.class);
@@ -52,7 +50,9 @@ public class WriteCloseableDatastoreTest {
                     closeWritesLock.acquireUninterruptibly();
                 }
             }
+            // Check to make sure that writes were closed and the iterator cut off when it was supposed to
             assertEquals(count, 5);
+
             return null;
         }).when(dataStore).updateAll(any(), any());
 
@@ -70,14 +70,13 @@ public class WriteCloseableDatastoreTest {
         Future updateAllFuture = Executors.newSingleThreadExecutor().submit(() -> {
             try {
                 writeCloseableDataStore.updateAll(updateIterable);
-                fail();
+                fail("Write succeeded when it should have failed due to shutdown. Should have thrown a" +
+                        "ServiceUnavailablException.");
             } catch (ServiceUnavailableException e) { }
         });
 
         iteratorLock.acquireUninterruptibly();
-        Future writeCloserFuture = Executors.newSingleThreadExecutor().submit(() -> {
-            writeCloseableDataStore.closeWrites();
-        });
+        Future writeCloserFuture = Executors.newSingleThreadExecutor().submit(writeCloseableDataStore::closeWrites);
 
         updateAllFuture.get();
         writeCloserFuture.get();

@@ -333,7 +333,7 @@ public class EmoModule extends AbstractModule {
             bind(SorCqlDriverTask.class).asEagerSingleton();
             bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
 
-            install(new DataStoreModule(_serviceMode, _configuration.getDataStoreConfiguration()));
+            install(new DataStoreModule(_serviceMode));
         }
 
         /** Provide ZooKeeper namespaced to SoR data. */

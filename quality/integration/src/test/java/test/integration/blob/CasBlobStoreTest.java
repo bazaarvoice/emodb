@@ -184,7 +184,7 @@ public class CasBlobStoreTest {
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
                 install(new CacheManagerModule());
-                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
+                install(new DataStoreModule(serviceMode));
                 install(new BlobStoreModule(serviceMode, "bv.emodb.blob", new MetricRegistry()));
             }
         });

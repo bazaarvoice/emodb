@@ -186,7 +186,7 @@ public class CasDataStoreTest {
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
                 install(new CacheManagerModule());
-                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
+                install(new DataStoreModule(serviceMode));
             }
         });
         _store = injector.getInstance(DataStore.class);

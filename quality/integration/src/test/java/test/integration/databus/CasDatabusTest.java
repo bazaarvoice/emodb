@@ -185,7 +185,7 @@ public class CasDatabusTest {
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
                 install(new CacheManagerModule());
-                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
+                install(new DataStoreModule(serviceMode));
                 install(new DatabusModule(serviceMode, metricRegistry));
             }
         });

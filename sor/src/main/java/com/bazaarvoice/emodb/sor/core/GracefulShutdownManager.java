@@ -14,6 +14,10 @@ import java.util.Set;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Because Emo persists audits in batches, it is necessary to ensure that they all get persisted when Emo shuts down.
+ * This class leverages Dropwizard's {@link Managed} API to facilitate this process during shutdown.
+ */
 public class GracefulShutdownManager implements Managed {
 
     private final static Logger _log = LoggerFactory.getLogger(GracefulShutdownManager.class);

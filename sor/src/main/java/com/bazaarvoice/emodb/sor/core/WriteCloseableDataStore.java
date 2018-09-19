@@ -31,6 +31,11 @@ import java.util.concurrent.TimeoutException;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * This {@link DataStore} is designed to provide the ability to stop the ability to write to it
+ * via {@link #closeWrites()}, which allows all single delta writes to finish and interrupts all streaming updates.
+ * Emo requires this functionality in order to gracefully shutdown and preserve audit logs.
+ */
 public class WriteCloseableDataStore implements DataStore, TableBackingStore, DataWriteCloser {
 
     private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);

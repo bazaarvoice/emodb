@@ -1,11 +1,18 @@
 package com.bazaarvoice.emodb.sor.audit.s3;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.internal.StaticCredentialsProvider;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
+import com.bazaarvoice.emodb.sor.audit.AuditStore;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.codahale.metrics.Gauge;
@@ -61,7 +68,7 @@ import static java.util.Objects.requireNonNull;
  *     <li>The host itself terminates before all files are delivered to S3.</li>
  * </ol>
  */
-public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
+public class AthenaAuditWriter implements AuditStore {
 
     private final static Logger _log = LoggerFactory.getLogger(AthenaAuditWriter.class);
 
@@ -94,10 +101,10 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
     private final RateLimitedLog _rateLimitedLog;
 
     @Inject
-    public AthenaAuditWriter(AuditWriterConfiguration config, AmazonS3 s3, ObjectMapper objectMapper, Clock clock,
+    public AthenaAuditWriter(AuditWriterConfiguration config, ObjectMapper objectMapper, Clock clock,
                              RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
 
-        this(s3, config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
+        this(getAmazonS3Client(config), config.getLogBucket(), config.getLogPath(), config.getMaxFileSize(),
                 Duration.ofMillis(config.getMaxBatchTime().toMillis()),
                 config.getStagingDir() != null ? new File(config.getStagingDir()) : com.google.common.io.Files.createTempDir(),
                 config.getLogFilePrefix(), objectMapper, clock, config.isFileTransfersEnabled(), rateLimitedLogFactory,
@@ -145,10 +152,10 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
         // Two threads for the audit service: once to drain queued audits and one to close audit logs files and submit
         // them for transfer.  Normally these are initially null and locally managed, but unit tests may provide
         // pre-configured instances.
-        _auditService = Optional.ofNullable(auditService)
-                .orElse(Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("audit-log-%d").build()));
-        _fileTransferService = Optional.ofNullable(fileTransferService)
-                .orElse(Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("audit-transfer-%d").build()));
+        _auditService = auditService != null ? auditService :
+                Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder().setNameFormat("audit-log-%d").build());
+        _fileTransferService = fileTransferService != null ? fileTransferService :
+                Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("audit-transfer-%d").build());
 
 
         long now = _clock.millis();
@@ -180,18 +187,37 @@ public class AthenaAuditWriter implements AuditWriter, AuditFlusher {
 
         _auditService.scheduleAtFixedRate(this::doLogFileMaintenance,
                 msToNextBatch, _maxBatchTimeMs, TimeUnit.MILLISECONDS);
+    }
+
+    private static AmazonS3 getAmazonS3Client(AuditWriterConfiguration configuration) {
+
+        AWSCredentialsProvider credentialsProvider;
+        if (configuration.getS3AccessKey() != null && configuration.getS3SecretKey() != null) {
+            credentialsProvider = new StaticCredentialsProvider(
+                    new BasicAWSCredentials(configuration.getS3AccessKey(), configuration.getS3SecretKey()));
+        } else {
+            credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
+
+        AmazonS3 s3 = new AmazonS3Client(credentialsProvider)
+                .withRegion(Regions.fromName(configuration.getLogBucketRegion()));
+
+        if (configuration.getS3Endpoint() != null) {
+            s3.setEndpoint(configuration.getS3Endpoint());
+        }
+        return s3;
+    }
 
     @Override
     public void flushAndShutdown() {
         _auditService.shutdown();
         try {
-            if (!_auditService.awaitTermination(5, TimeUnit.SECONDS)) {
-                _log.warn("Audit service did not shutdown cleanly.");
-                _auditService.shutdownNow();
-            } else {
+            if (_auditService.awaitTermination(5, TimeUnit.SECONDS)) {
                 // Poll the queue one last time and drain anything that is still remaining
                 processQueuedAudits(false);
+            } else {
+                _log.warn("Audit service did not shutdown cleanly.");
+                _auditService.shutdownNow();
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);

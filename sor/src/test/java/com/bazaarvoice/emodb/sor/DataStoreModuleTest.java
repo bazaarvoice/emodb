@@ -152,7 +152,7 @@ public class DataStoreModuleTest {
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
                         new MetricRegistry(), ClassLoader.getSystemClassLoader()));
-                install(new DataStoreModule(serviceMode, dataStoreConfiguration));
+                install(new DataStoreModule(serviceMode));
             }
         });
 
