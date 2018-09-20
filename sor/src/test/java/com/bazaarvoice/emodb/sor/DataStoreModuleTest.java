@@ -35,6 +35,7 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
@@ -47,8 +48,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.sun.jersey.api.client.Client;
-import io.dropwizard.jackson.Jackson;
-import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.imps.CuratorFrameworkState;
 import org.apache.curator.utils.EnsurePath;
@@ -149,9 +148,7 @@ public class DataStoreModuleTest {
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
-                bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
-                        Validation.buildDefaultValidatorFactory().getValidator(),
-                        new MetricRegistry(), ClassLoader.getSystemClassLoader()));
+                bind(ObjectMapper.class).toInstance(mock(ObjectMapper.class));
                 install(new DataStoreModule(serviceMode));
             }
         });
