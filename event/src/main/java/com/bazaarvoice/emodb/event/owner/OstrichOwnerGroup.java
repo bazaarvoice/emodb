@@ -225,7 +225,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
         _dropwizardTask.register(taskName, leaderService);
-        leaderService.startAsync();
+        leaderService.startAsync().awaitRunning();
         return Optional.of(leaderService);
     }
 
