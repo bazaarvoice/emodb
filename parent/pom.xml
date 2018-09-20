@@ -111,6 +111,11 @@
                 <version>${kafka.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-streams</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.clearspring.analytics</groupId>
                 <artifactId>stream</artifactId>
                 <version>2.5.2</version>

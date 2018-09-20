@@ -343,9 +343,8 @@ public class ConsolidationTest {
         DatabusAuthorizer databusAuthorizer = ConstantDatabusAuthorizer.ALLOW_ALL;
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, databusAuthorizer, "replication",
-                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0,
+                Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0,
                 new MetricRegistry(), clock);
     }
 

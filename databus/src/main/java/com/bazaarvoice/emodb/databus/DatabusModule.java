@@ -230,27 +230,6 @@ public class DatabusModule extends PrivateModule {
         return queueDrainService;
     }
 
-    @Provides @Singleton @KafkaFanoutExecutorService
-    ExecutorService provideKafkaFanoutService (LifeCycleRegistry lifeCycleRegistry) {
-        ExecutorService kafkaFanoutService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_FANOUT, new ThreadFactoryBuilder().setNameFormat("kafkaFanout-%d").build());
-        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaFanoutService, Duration.seconds(1), "kafka-fanout"));
-        return kafkaFanoutService;
-    }
-
-    @Provides @Singleton @KafkaResolverExecutorService
-    ExecutorService provideKafkaResolverService (LifeCycleRegistry lifeCycleRegistry) {
-        ExecutorService kafkaResolverService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_RESOLVER, new ThreadFactoryBuilder().setNameFormat("kafkaResolver-%d").build());
-        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaResolverService, Duration.seconds(1), "kafka-resolver"));
-        return kafkaResolverService;
-    }
-
-    @Provides @Singleton @KafkaResolverRetryExecutorService
-    ExecutorService provideKafkaResolverRetryService (LifeCycleRegistry lifeCycleRegistry) {
-        ExecutorService kafkaResolverRetryService = Executors.newFixedThreadPool(MAX_THREADS_FOR_KAFKA_RESOLVER_RETRY, new ThreadFactoryBuilder().setNameFormat("kafkaResolverRetry-%d").build());
-        lifeCycleRegistry.manage(new ExecutorServiceManager(kafkaResolverRetryService, Duration.seconds(1), "kafka-resolver-retry"));
-        return kafkaResolverRetryService;
-    }
-
     @Provides @Singleton @MasterFanoutPartitions
     Integer provideMasterFanoutPartitions(DatabusConfiguration configuration) {
         checkArgument(Range.closed(1, 16).contains(configuration.getMasterFanoutPartitions()),
@@ -295,34 +274,9 @@ public class DatabusModule extends PrivateModule {
         return configuration.getEventProducerConfiguration();
     }
 
-    @Provides @Singleton @KafkaFannedOutEventProducerConfiguration
-    KafkaProducerConfiguration provideKafkaFannedOutEventProducerConfiguration(DatabusConfiguration configuration) {
-        return configuration.getFannedOutEventProducerConfiguration();
-    }
-
     @Provides @Singleton @KafkaResolvedEventProducerConfiguration
     KafkaProducerConfiguration provideKafkaResolvedEventProducerConfiguration(DatabusConfiguration configuration) {
         return configuration.getResolvedEventProducerConfiguration();
-    }
-
-    @Provides @Singleton @KafkaRetryEventProducerConfiguration
-    KafkaProducerConfiguration provideKafkaRetryEventProducerConfiguration(DatabusConfiguration configuration) {
-        return configuration.getRetryEventProducerConfiguration();
-    }
-
-    @Provides @Singleton @KafkaEventConsumerConfiguration
-    KafkaConsumerConfiguration provideKafkaEventConsumerConfiguration(DatabusConfiguration configuration) {
-        return configuration.getEventConsumerConfiguration();
-    }
-
-    @Provides @Singleton @KafkaFannedOutEventConsumerConfiguration
-    KafkaConsumerConfiguration provideKafkaFannedOutEventConsumerConfiguration(DatabusConfiguration configuration) {
-        return configuration.getFannedOutEventConsumerConfiguration();
-    }
-
-    @Provides @Singleton @KafkaRetryEventConsumerConfiguration
-    KafkaConsumerConfiguration provideKafkaRetryEventConsumerConfiguration(DatabusConfiguration configuration) {
-        return configuration.getRetryEventConsumerConfiguration();
     }
 
 }

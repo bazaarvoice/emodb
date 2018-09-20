@@ -72,33 +72,8 @@ public class DatabusConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty("kafka.fannedOutEventProducerConfiguration")
-    private KafkaProducerConfiguration _fannedOutEventProducerConfiguration = new KafkaProducerConfiguration();
-
-    @Valid
-    @NotNull
     @JsonProperty("kafka.resolvedEventProducerConfiguration")
     private KafkaProducerConfiguration _resolvedEventProducerConfiguration = new KafkaProducerConfiguration();
-
-    @Valid
-    @NotNull
-    @JsonProperty("kafka.retryEventProducerConfiguration")
-    private KafkaProducerConfiguration _retryEventProducerConfiguration = new KafkaProducerConfiguration();
-
-    @Valid
-    @NotNull
-    @JsonProperty("kafka.eventConsumerConfiguration")
-    private KafkaConsumerConfiguration _eventConsumerConfiguration = new KafkaConsumerConfiguration();
-
-    @Valid
-    @NotNull
-    @JsonProperty("kafka.fannedOutEventConsumerConfiguration")
-    private KafkaConsumerConfiguration _fannedOutEventConsumerConfiguration = new KafkaConsumerConfiguration();
-
-    @Valid
-    @NotNull
-    @JsonProperty("kafka.retryEventConsumerConfiguration")
-    private KafkaConsumerConfiguration _retryEventConsumerConfiguration = new KafkaConsumerConfiguration();
 
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
@@ -173,41 +148,10 @@ public class DatabusConfiguration {
         _eventProducerConfiguration = eventProducerConfiguration;
     }
 
-    public KafkaProducerConfiguration getFannedOutEventProducerConfiguration() { return _fannedOutEventProducerConfiguration; }
-
-    public void setFannedOutEventProducerConfiguration(KafkaProducerConfiguration fannedOutEventProducerConfiguration) {
-        _fannedOutEventProducerConfiguration = fannedOutEventProducerConfiguration;
-    }
-
     public KafkaProducerConfiguration getResolvedEventProducerConfiguration() { return _resolvedEventProducerConfiguration; }
 
     public void setResolvedEventProducerConfiguration(KafkaProducerConfiguration resolvedEventProducerConfiguration) {
         _resolvedEventProducerConfiguration = resolvedEventProducerConfiguration;
     }
-
-    public KafkaProducerConfiguration getRetryEventProducerConfiguration() { return _retryEventProducerConfiguration; }
-
-    public void setRetryEventProducerConfiguration(KafkaProducerConfiguration retryEventProducerConfiguration) {
-        _retryEventProducerConfiguration = retryEventProducerConfiguration;
-    }
-
-    public KafkaConsumerConfiguration getEventConsumerConfiguration() { return _eventConsumerConfiguration; }
-
-    public void setEventConsumerConfiguration(KafkaConsumerConfiguration eventConsumerConfiguration) {
-        _eventConsumerConfiguration = eventConsumerConfiguration;
-    }
-
-    public KafkaConsumerConfiguration getFannedOutEventConsumerConfiguration() { return _fannedOutEventConsumerConfiguration; }
-
-    public void setFannedOutEventConsumerConfiguration(KafkaConsumerConfiguration fannedOutEventConsumerConfiguration) {
-        _fannedOutEventConsumerConfiguration = fannedOutEventConsumerConfiguration;
-    }
-
-    public KafkaConsumerConfiguration getRetryEventConsumerConfiguration() { return _retryEventConsumerConfiguration; }
-
-    public void setRetryEventConsumerConfiguration(KafkaConsumerConfiguration retryEventConsumerConfiguration) {
-        _retryEventConsumerConfiguration = retryEventConsumerConfiguration;
-    }
-
 
 }

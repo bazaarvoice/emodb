@@ -91,9 +91,7 @@ public class DefaultDatabusTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mockSubscriptionDao,
                 mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
-                mock(ExecutorService.class), mock(ExecutorService.class), mock(ExecutorService.class),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
         testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
                 Duration.ofDays(7));
@@ -146,9 +144,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -190,9 +187,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -237,9 +233,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
@@ -290,9 +285,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), clock);
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 500);
         assertFalse(pollResult.hasMoreEvents());
@@ -362,9 +356,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), clock);
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 10);
         // Because of padding all events were read from the event store.  However, since the padded events will be
@@ -415,9 +408,8 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(EventBus.class), new TestDataProvider(), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(), MoreExecutors.sameThreadExecutor(),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaProducerConfiguration(),
-                new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(), new KafkaConsumerConfiguration(),new Boolean(false), new Boolean(false), new Boolean(false), 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
 
         List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
         for (int i=0; i < 4; i++) {

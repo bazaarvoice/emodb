@@ -131,16 +131,6 @@ databus:
       key.serializer: org.apache.kafka.common.serialization.StringSerializer
       value.serializer: org.apache.kafka.common.serialization.ByteBufferSerializer
       client.id: event-producer
-  kafka.fannedOutEventProducerConfiguration:
-      bootstrap.servers: localhost:9092
-      acks: all
-      retries: 0
-      batch.size: 16384
-      linger.ms: 1
-      buffer.memory: 33554432
-      key.serializer: org.apache.kafka.common.serialization.StringSerializer
-      value.serializer: org.apache.kafka.common.serialization.ByteBufferSerializer
-      client.id: fanned-out-event-producer
   kafka.resolvedEventProducerConfiguration:
       bootstrap.servers: localhost:9092
       acks: all
@@ -151,35 +141,6 @@ databus:
       key.serializer: org.apache.kafka.common.serialization.StringSerializer
       value.serializer: org.apache.kafka.common.serialization.StringSerializer
       client.id: resolved-event-producer
-  kafka.retryEventProducerConfiguration:
-      bootstrap.servers: localhost:9092
-      acks: all
-      retries: 0
-      batch.size: 16384
-      linger.ms: 1
-      buffer.memory: 33554432
-      key.serializer: org.apache.kafka.common.serialization.StringSerializer
-      value.serializer: org.apache.kafka.common.serialization.ByteBufferSerializer
-      client.id: retry-event-producer
-  kafka.eventConsumerConfiguration:
-      bootstrap.servers: localhost:9092
-      group.id: master-queue-consumer
-      key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value.deserializer: org.apache.kafka.common.serialization.ByteBufferDeserializer
-      auto.commit.enable: false
-  kafka.fannedOutEventConsumerConfiguration:
-      bootstrap.servers: localhost:9092
-      group.id: resolver-queue-consumer
-      key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value.deserializer: org.apache.kafka.common.serialization.ByteBufferDeserializer
-      auto.commit.enable: false
-  kafka.retryEventConsumerConfiguration:
-      bootstrap.servers: localhost:9092
-      group.id: resolver-retry-queue-consumer
-      max.poll.interval.ms: 330000
-      key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value.deserializer: org.apache.kafka.common.serialization.ByteBufferDeserializer
-      auto.commit.enable: false
 
 
 blobStore:
