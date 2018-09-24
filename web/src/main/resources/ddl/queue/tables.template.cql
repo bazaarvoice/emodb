@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS manifest (
   PRIMARY KEY (queue, slabid)
 ) WITH COMPACT STORAGE
   AND gc_grace_seconds = 0
-  AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}
+  AND compaction={'sstable_size_in_mb': '40', 'tombstone_compaction_interval': '14400', 'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'}
   AND compression = {'sstable_compression': ''};
 
 -- One row per slabId.  Each "slab" contains a list of messages, one message per column.  The application imposes a
