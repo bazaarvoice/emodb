@@ -88,6 +88,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.slf4j.Logger;
@@ -195,6 +196,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     private final StreamsBuilder builder;
     private final KafkaStreams kafkaStreams;
+    private KTable<String, String> subscriptionTable;
 
     private static final String MASTER_QUEUE_TOPIC_NAME = "master-queue";
     private static final String RESOLVER_QUEUE_TOPIC_NAME = "resolver-queue";
@@ -313,14 +315,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 flatMap((key, value) -> makeResolvedEventRecords(value)).branch((key, value) -> value != null, (key, value) -> value == null);
 
             // Send resolved documents to subscription topic
-            branches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
+            branches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
             branches[1].to(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
 
             // Process any initially unresolved documents, retrying as needed
             KStream<String, ByteBuffer>[] retryBranches = retryEventStream.transform(RetryTransformer::new).branch((key, value) -> value != null && value.array().length > 0, (key, value) -> value == null);
 
             // Published documents that resolved after retry to subscription topic
-            retryBranches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
+            retryBranches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
 
             // Send documents that did not resolve after retry back to the resolver retry topic
             retryBranches[1].to(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
@@ -1371,103 +1373,19 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private void publishDocumentToSubscription(String key, ByteBuffer document, KafkaProducer<String, String> resolvedDocumentProducer) {
 
         // Split the key at the semicolon to get the various parts
-        String[] splitKey = key.split(";");
-        String subscriptionName = splitKey[0];
+        String[] splitKey = key.split("/");
+        String subscriptionName = splitKey[2];
 
         // Explicitly create topic if it does not already exist
         if (!AdminUtils.topicExists(zkUtils, subscriptionName)) {
             AdminUtils.createTopic(zkUtils, subscriptionName, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
+
+            // Also create a KTable for this topic keyed by document coordinates
+            subscriptionTable = builder.table(subscriptionName);
         }
 
         // publish to topic
         resolvedDocumentProducer.send(new ProducerRecord<>(subscriptionName, StandardCharsets.UTF_8.decode(document).toString()));
-    }
-
-
-    private void processRetryEventRecords(@NotNull String key, @NotNull KafkaProducer<String, String> resolvedDocumentProducer, @NotNull KafkaProducer<String, KeyValue<String,ByteBuffer>> retryDocumentProducer) {
-
-        try {
-
-            _log.info("DefaultDatabus.processRetryEventRecords: key == " + key);
-
-            // TODO delay to allow document resolution and keep CPU from getting pinned
-            Thread.sleep(5000);
-
-            // Split the key at the semicolon to get the various parts
-            String[] splitKey = key.split(";");
-            String subscriptionName = splitKey[0];
-            String tableName = splitKey[1];
-            String docKey = splitKey[2];
-            UUID changeId = UUID.fromString(splitKey[3]);
-            String tagsSetString = splitKey[4];
-            Set<String> tags;
-            if (tagsSetString == null || tagsSetString.length() == 0) {
-                tagsSetString = "";
-                tags = new HashSet<>();
-            } else {
-                tags = new HashSet<>(Arrays.asList(tagsSetString));
-            }
-            Long firstResolveTime = Long.parseLong(splitKey[5]);
-            Long lastResolveTime = Long.parseLong(splitKey[6]);
-
-            EventList eventList = new EventList();
-            eventList.add(docKey, changeId, tags);
-
-            Coordinate coord = Coordinate.of(tableName, docKey);
-            HashMap<Coordinate, EventList> eventMap = new HashMap<>();
-            eventMap.put(coord, eventList);
-
-            // resolve document
-            final List<Item> items = Lists.newArrayList();
-            resolvePeekOrPollEvents(subscriptionName, eventMap, 1,
-                (theCoord, item) -> {
-                    // Unlike with the original batch the deferred batch's events are always
-                    // already de-duplicated by coordinate, so there is no need to maintain
-                    // a coordinate-to-item uniqueness map.
-                    if (_kafkaTestForceRetryToFail) {
-                        _log.info("DefaultDatabus.processRetryEventRecords: running in test mode, forcing retries to fail...");
-                    } else {
-                        items.add(item);
-                    }
-                });
-
-            long currentResolveTime = System.currentTimeMillis();
-
-            // An item may not have been resolved for various reasons, so check if it is available
-            if (!items.isEmpty()) {
-                // Now get JSON doc
-                String document = Json.encodeAsString(items.get(0)._content);
-                _log.info("DefaultDatabus.processRetryEventRecords: resolved document == " + document);
-
-                // Explicitly create topic if it does not already exist
-                if (!AdminUtils.topicExists(zkUtils, subscriptionName)) {
-                    AdminUtils.createTopic(zkUtils, subscriptionName, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
-                }
-
-                // Publish the document to its subscription
-                resolvedDocumentProducer.send(new ProducerRecord<>(subscriptionName, document));
-
-                // send unresolved objects to the retry queue for processing IF not too much time has elapsed!
-            } else {
-                _log.info("DefaultDatabus.processRetryEventRecords: document " + tableName + "/" + docKey + " change ID " + changeId.toString() + " not resolved yet...");
-
-                if (lastResolveTime - firstResolveTime < PHANTOM_UPDATE_TIMEOUT) {
-
-                    String newKey = subscriptionName + ";" + tableName + ";" + docKey + ";" + changeId.toString() + ";" + tagsSetString + ";" + firstResolveTime + ";" + currentResolveTime;
-                    ByteBuffer value = ByteBuffer.allocate(0);
-                    KeyValue<String, ByteBuffer> kv = new KeyValue<>(key, value);
-                    retryDocumentProducer.send(new ProducerRecord<>(RESOLVER_RETRY_QUEUE_TOPIC_NAME, kv));
-
-                } else {
-                    _log.warn("DefaultDatabus.doKafkaResolverRetry: change ID " + changeId + "dropped as phantom update...");
-                }
-
-            }
-
-        } catch (Throwable t) {
-            _log.error("DefaultDatabus.processRetryEventRecords: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
-        }
-
     }
 
 
@@ -1704,6 +1622,46 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                     }
 
                 }
+
+            } catch (Throwable t) {
+                _log.error("DefaultDatabus.processRetryEventRecords: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
+            }
+
+            return null;
+        }
+
+        @Override public KeyValue<String, ByteBuffer> punctuate(final long l) {
+            return null;
+        }
+
+        @Override public void close() {
+
+        }
+    }
+
+
+    private class KTableKeyTransformer implements Transformer<String, ByteBuffer, KeyValue<String, ByteBuffer>> {
+
+        @Override public void init(final ProcessorContext processorContext) {
+
+        }
+
+        @Override public KeyValue<String, ByteBuffer> transform(final String key, final ByteBuffer byteBuffer) {
+
+            try {
+
+                _log.info("DefaultDatabus.KTableKeyTransformer.transform: key == " + key);
+
+                // Split the key at the semicolon to get the various parts
+                String[] splitKey = key.split(";");
+                String subscriptionName = splitKey[0];
+                String tableName = splitKey[1];
+                String docKey = splitKey[2];
+                String docCoord = tableName + "/" + docKey + "/" + subscriptionName;
+
+                _log.info("DefaultDatabus.KTableKeyTransformer.transform: new key == " + docCoord);
+
+                return new KeyValue<>(docCoord, byteBuffer);
 
             } catch (Throwable t) {
                 _log.error("DefaultDatabus.processRetryEventRecords: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
