@@ -132,7 +132,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
 
         // Consider any wait of longer than 1 millisecond to be throttled
         if (microsWaited >= 1000) {
-            _throttleWaitTimeMs.update((long) (microsWaited * 1000));
+            _throttleWaitTimeMs.update((long) (microsWaited / 1000));
         }
     }
 
@@ -214,10 +214,6 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
             } else {
                 return new ExpiringRateLimiter(createRateLimiter(newRate), expirationTime);
             }
-        }
-
-        DataStoreUpdateThrottle getMetadata() {
-            return new DataStoreUpdateThrottle(_rateLimiter.getRate(), _expirationTime);
         }
     }
 
