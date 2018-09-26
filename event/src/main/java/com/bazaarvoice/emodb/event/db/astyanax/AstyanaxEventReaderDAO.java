@@ -244,7 +244,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
     void readAll(String channel, SlabFilter filter, EventSink sink) {
         // PeekingIterator is needed so that we can look ahead and see the next slab Id
-        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(readManifestForChannel(channel));
+        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(readManifestForChannel(channel, ConsistencyLevel.CL_LOCAL_QUORUM));
 
         while (manifestColumns.hasNext()) {
             Column<ByteBuffer> manifestColumn = manifestColumns.next();
@@ -295,7 +295,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // we still occasionally (10 seconds) re-reads all slabs to pick up any of these newer-older slabs we may
         // have missed.
 
-        Iterator<Column<ByteBuffer>> manifestColumns = readManifestForChannel(channel);
+        Iterator<Column<ByteBuffer>> manifestColumns = readManifestForChannel(channel, ConsistencyLevel.CL_LOCAL_ONE);
 
         while (manifestColumns.hasNext()) {
             Column<ByteBuffer> manifestColumn = manifestColumns.next();
@@ -324,7 +324,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         }
     }
 
-    private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel) {
+    private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, ConsistencyLevel consistencyLevel) {
         final ByteBuffer oldestSlab = _oldestSlab.getIfPresent(channel);
         RangeBuilder range = new RangeBuilder().setLimit(50);
         if (oldestSlab != null) {
@@ -332,7 +332,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         }
 
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistencyLevel)
                         .getKey(channel)
                         .withColumnRange(range.build())
                         .autoPaginate(true));
