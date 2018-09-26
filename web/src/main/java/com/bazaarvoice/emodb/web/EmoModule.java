@@ -24,6 +24,7 @@ import com.bazaarvoice.emodb.common.dropwizard.guice.SelfAdminHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.DropwizardHealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
@@ -82,7 +83,6 @@ import com.bazaarvoice.emodb.sor.core.DataStoreAsyncModule;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
@@ -113,8 +113,14 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleControlTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottle;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleControlTask;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleMapStore;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
+import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
@@ -134,7 +140,12 @@ import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.net.HostAndPort;
-import com.google.inject.*;
+import com.google.inject.AbstractModule;
+import com.google.inject.Key;
+import com.google.inject.Provides;
+import com.google.inject.ProvisionException;
+import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
@@ -699,6 +710,16 @@ public class EmoModule extends AbstractModule {
             bind(IpBlacklistControlTask.class).asEagerSingleton();
             bind(AdHocThrottleControlTask.class).asEagerSingleton();
             bind(AdHocThrottleManager.class).asEagerSingleton();
+            bind(DataStoreUpdateThrottleManager.class).asEagerSingleton();
+            bind(DataStoreUpdateThrottler.class).to(DataStoreUpdateThrottleManager.class);
+            bind(DataStoreUpdateThrottleControlTask.class).asEagerSingleton();
+        }
+
+        /** Provides a ZooKeeper-based set of API Key DataStore update throttles. */
+        @Provides @Singleton @DataStoreUpdateThrottleMapStore
+        MapStore<DataStoreUpdateThrottle> provideDataStoreUpdateRateLimitMapStore(@Global CuratorFramework curator, LifeCycleRegistry lifeCycle) {
+            CuratorFramework webCurator = withComponentNamespace(curator, "web");
+            return lifeCycle.manage(new ZkMapStore<>(webCurator, "/sor-update-throttles", new ZkDataStoreUpdateThrottleSerializer()));
         }
     }
 

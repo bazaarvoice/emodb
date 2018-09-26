@@ -47,6 +47,7 @@ import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.DefaultRoles;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
+import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
@@ -143,7 +144,9 @@ public class DataStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "standard", DefaultRoles.standard.getPermissions());
         createRole(roleManager, null, "update-with-events", ImmutableSet.of("sor|update|*"));
 
-        return setupResourceTestRule(Collections.<Object>singletonList(new DataStoreResource1(_server, mock(DataStoreAsync.class), new InMemoryCompactionControlSource())), authIdentityManager, permissionManager);
+        return setupResourceTestRule(Collections.<Object>singletonList(
+                new DataStoreResource1(_server, mock(DataStoreAsync.class), new InMemoryCompactionControlSource(), new UnlimitedDataStoreUpdateThrottler())),
+                authIdentityManager, permissionManager);
     }
 
     @After

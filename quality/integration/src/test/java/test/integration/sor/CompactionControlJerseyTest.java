@@ -17,6 +17,7 @@ import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.DefaultRoles;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
+import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.sun.jersey.api.client.ClientResponse;
@@ -42,8 +43,9 @@ public class CompactionControlJerseyTest extends ResourceTest {
     private CompactionControlSource _compactionControlSourceServer = mock(CompactionControlSource.class);
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupReplicationResourceTestRule(ImmutableList.<Object>of(new DataStoreResource1(_dataStoreServer, mock(DataStoreAsync.class),
-                    _compactionControlSourceServer)));
+    public ResourceTestRule _resourceTestRule = setupReplicationResourceTestRule(ImmutableList.<Object>of(
+            new DataStoreResource1(_dataStoreServer, mock(DataStoreAsync.class), _compactionControlSourceServer,
+                    new UnlimitedDataStoreUpdateThrottler())));
 
     protected static ResourceTestRule setupReplicationResourceTestRule(List<Object> resourceList) {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
