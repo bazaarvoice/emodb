@@ -196,7 +196,6 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     private final StreamsBuilder builder;
     private final KafkaStreams kafkaStreams;
-    private KTable<String, String> subscriptionTable;
 
     private static final String MASTER_QUEUE_TOPIC_NAME = "master-queue";
     private static final String RESOLVER_QUEUE_TOPIC_NAME = "resolver-queue";
@@ -1379,9 +1378,6 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         // Explicitly create topic if it does not already exist
         if (!AdminUtils.topicExists(zkUtils, subscriptionName)) {
             AdminUtils.createTopic(zkUtils, subscriptionName, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
-
-            // Also create a KTable for this topic keyed by document coordinates
-            subscriptionTable = builder.table(subscriptionName);
         }
 
         // publish to topic
