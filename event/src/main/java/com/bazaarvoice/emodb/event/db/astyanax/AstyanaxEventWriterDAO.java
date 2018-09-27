@@ -153,7 +153,7 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
 
             void run() {
                 _manifestRow = update.updateRow(ColumnFamilies.MANIFEST, channel);
-                _eventReaderDAO.readAll(channel, this, this);
+                _eventReaderDAO.readAll(channel, this, this, false);
             }
 
             // SlabFilter interface, called before scanning events in a slab.
