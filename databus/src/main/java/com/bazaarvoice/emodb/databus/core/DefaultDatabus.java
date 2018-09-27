@@ -1413,7 +1413,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                             // An item may not have been resolved for various reasons, so check if it is available
                             if (!items.isEmpty()) {
                                 // Now get JSON doc
-                                String document = Json.encodeAsString(Json.encodeAsString(items.get(0)._content));
+                                String document = Json.encodeAsString(items.get(0)._content);
                                 _log.info("DefaultDatabus.doKafkaResolver: resolved document == " + document);
 
                                 // Write document to every subscription's topic
@@ -1547,7 +1547,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                             // An item may not have been resolved for various reasons, so check if it is available
                             if (!items.isEmpty()) {
                                 // Now get JSON doc
-                                String document = Json.encodeAsString(Json.encodeAsString(items.get(0)._content));
+                                String document = Json.encodeAsString(items.get(0)._content);
                                 _log.info("DefaultDatabus.doKafkaResolverRetry: resolved document == " + document);
 
                                 // Write document to every subscription's topic
