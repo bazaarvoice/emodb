@@ -239,12 +239,12 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     @ParameterizedTimed(type = "AstyanaxEventReaderDAO")
     @Override
     public void readAll(String channel, EventSink sink, Date since) {
-        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink);
+        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink, true);
     }
 
-    void readAll(String channel, SlabFilter filter, EventSink sink) {
+    void readAll(String channel, SlabFilter filter, EventSink sink, boolean weak) {
         // PeekingIterator is needed so that we can look ahead and see the next slab Id
-        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(readManifestForChannel(channel));
+        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(readManifestForChannel(channel, weak));
 
         while (manifestColumns.hasNext()) {
             Column<ByteBuffer> manifestColumn = manifestColumns.next();
@@ -295,7 +295,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // we still occasionally (10 seconds) re-reads all slabs to pick up any of these newer-older slabs we may
         // have missed.
 
-        Iterator<Column<ByteBuffer>> manifestColumns = readManifestForChannel(channel);
+        Iterator<Column<ByteBuffer>> manifestColumns = readManifestForChannel(channel, true);
 
         while (manifestColumns.hasNext()) {
             Column<ByteBuffer> manifestColumn = manifestColumns.next();
@@ -324,21 +324,38 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         }
     }
 
-    private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel) {
-        final ByteBuffer oldestSlab = _oldestSlab.getIfPresent(channel);
+    /**
+     * Reads the ordered manifest for a channel.  The read can either be weak or strong.  A weak read will use CL1
+     * and may use the cached oldest slab from a previous strong call to improve performance.  A strong read will use
+     * CL local_quorum and will always read the entire manifest row.  This makes a weak read significantly faster than a
+     * strong read but also means the call is not guaranteed to return the entire manifest.  Because of this at least
+     * every 10 seconds a weak read for a channel is automatically promoted to a strong read.
+     *
+     * The vast majority of calls to this method are performed during a "peek" or "poll" operation.  Since these are
+     * typically called repeatedly a weak call provides improved performance while guaranteeing that at least every
+     * 10 seconds the manifest is strongly read so no slabs are missed over time.  Calls which must guarantee
+     * the full manifest should explicitly request strong consistency.
+     */
+    private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
+        final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
+        final ConsistencyLevel consistency;
+
         RangeBuilder range = new RangeBuilder().setLimit(50);
         if (oldestSlab != null) {
             range.setStart(oldestSlab);
+            consistency = ConsistencyLevel.CL_LOCAL_ONE;
+        } else {
+            consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
         }
 
         final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
                         .getKey(channel)
                         .withColumnRange(range.build())
                         .autoPaginate(true));
 
         if (oldestSlab != null) {
-            // Query was executed using the cached oldest slab, so don't update the cache with an unreliable oldest value
+            // Query was executed weakly using the cached oldest slab, so don't update the cache with an unreliable oldest value
             return manifestColumns;
         } else {
             PeekingIterator<Column<ByteBuffer>> peekingManifestColumns = Iterators.peekingIterator(manifestColumns);
