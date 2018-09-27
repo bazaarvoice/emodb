@@ -97,14 +97,14 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
     public void beforeUpdate(String id) {
         checkNotNull(id, "Rate limiting of SOR updates should only be applied to API requests with an API key");
 
-        double microsWaited = 0;
-        double maybeMicrosWaited;
+        double millisWaited = 0;
+        double maybeSecondsWaited;
 
         // First, apply instance rate limit
         ExpiringRateLimiter rateLimiter = _instanceRateLimit;
         if (rateLimiter != null) {
-            if ((maybeMicrosWaited = rateLimiter.rateLimit()) != -1) {
-                microsWaited = maybeMicrosWaited;
+            if ((maybeSecondsWaited = rateLimiter.rateLimit()) != -1) {
+                millisWaited = maybeSecondsWaited * 1000.0;
             } else {
                 synchronized (this) {
                     if (_instanceRateLimit != null && !_instanceRateLimit.isActive()) {
@@ -121,8 +121,8 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
         // Next apply API Key rate limit
         rateLimiter = _rateLimitByApiKey.get(id);
         if (rateLimiter != null) {
-            if ((maybeMicrosWaited = rateLimiter.rateLimit()) != -1) {
-                microsWaited += maybeMicrosWaited;
+            if ((maybeSecondsWaited = rateLimiter.rateLimit()) != -1) {
+                millisWaited += maybeSecondsWaited * 1000.0;
             } else {
                 // Same as with the instance throttle we accept an edge race condition so we can clear expired throttles.
                 _rateLimitByApiKey.remove(id, rateLimiter);
@@ -131,8 +131,8 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
         }
 
         // Consider any wait of longer than 1 millisecond to be throttled
-        if (microsWaited >= 1000) {
-            _throttleWaitTimeMs.update((long) (microsWaited / 1000));
+        if (millisWaited >= 1) {
+            _throttleWaitTimeMs.update((long) millisWaited);
         }
     }
 
@@ -193,7 +193,7 @@ public class DataStoreUpdateThrottleManager implements DataStoreUpdateThrottler 
 
         /**
          * Applies the rate limiter if it has not expired.
-         * @return The number of microseconds spent waiting due to rate limiting, or -1 if the rate limit was inactive.
+         * @return The number of seconds spent waiting due to rate limiting, or -1 if the rate limit was inactive.
          */
         double rateLimit() {
             if (isActive()) {
