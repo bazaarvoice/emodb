@@ -63,7 +63,7 @@ public class CanaryTest {
         verify(_databus).subscribe("__system_bus:canary-cluster", Conditions.alwaysTrue(),
                 Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
 
-        _canary.startAsync().awaitRunning();
+        _canary.startAsync();
 
         // Starting the canary sends a single initialization runnable to the service, so execute it now.
         ArgumentCaptor<Runnable> runnable = ArgumentCaptor.forClass(Runnable.class);
