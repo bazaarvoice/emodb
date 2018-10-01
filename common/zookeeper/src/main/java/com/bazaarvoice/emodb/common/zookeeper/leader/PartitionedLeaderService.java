@@ -284,7 +284,7 @@ public class PartitionedLeaderService implements Managed {
                 Service delegateService = _leaderService.getCurrentDelegateService().orNull();
                 if (delegateService != null) {
                     _log.info("Relinquishing leadership of partition {} for {}", _partition, _serviceName);
-                    delegateService.stopAsync();
+                    delegateService.stopAsync().awaitTerminated();
                 }
                 return true;
             } else {

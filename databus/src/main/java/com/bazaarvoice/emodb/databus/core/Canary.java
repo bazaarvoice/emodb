@@ -106,7 +106,7 @@ public class Canary extends AbstractScheduledService {
             }
         } catch (Throwable t) {
             _rateLimitedLog.error(t, "Unexpected canary exception: {}", t);
-            stopAsync();  // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync().awaitTerminated();  // Give up leadership temporarily.  Maybe another server will have more success.
         }
     }
 

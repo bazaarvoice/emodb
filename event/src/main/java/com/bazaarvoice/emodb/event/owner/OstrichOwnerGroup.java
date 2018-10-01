@@ -233,7 +233,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         if (ref.isPresent()) {
             Service service = ref.get();
             _log.info("Stopping owned service {}: {}", _group, name);
-            service.stopAsync();
+            service.stopAsync().awaitTerminated();
         }
     }
 

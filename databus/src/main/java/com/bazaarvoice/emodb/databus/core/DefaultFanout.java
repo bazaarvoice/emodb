@@ -158,7 +158,7 @@ public class DefaultFanout extends AbstractScheduledService {
             // flooding the logs with a continuous stream of error messages.  Include the event source name in the
             // message template so we rate limit each event source independently.
             _rateLimitedLog.error(t, "Unexpected fanout exception copying from " + _name + ": {}", t);
-            stopAsync();  // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync().awaitTerminated();  // Give up leadership temporarily.  Maybe another server will have more success.
         }
     }
 

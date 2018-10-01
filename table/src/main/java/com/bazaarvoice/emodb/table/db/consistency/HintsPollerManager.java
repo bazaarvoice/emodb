@@ -64,8 +64,7 @@ public class HintsPollerManager implements Managed {
             throws Exception {
         _leaderServiceList = getLeaderServices(_timestampCache, _curator, _self, _cqlSessionForHintsPollerMap, _clusterHintsPoller, _dropwizardTask, _metricRegistry);
         for (LeaderService leaderService : _leaderServiceList) {
-            leaderService.startAsync();
-            leaderService.awaitRunning();
+            leaderService.startAsync().awaitRunning();
         }
     }
 
@@ -73,8 +72,7 @@ public class HintsPollerManager implements Managed {
     public void stop()
             throws Exception {
         for (LeaderService leaderService : _leaderServiceList) {
-            leaderService.stopAsync();
-            leaderService.awaitTerminated();
+            leaderService.stopAsync().awaitTerminated();
         }
     }
 
