@@ -63,7 +63,7 @@ public class HintsPollerService extends AbstractScheduledService {
             pollForHints();
         } catch (Throwable t) {
             _log.error("Unexpected HintsPoller exception for Cassandra cluster {}.", _clusterName, t);
-            stopAsync().awaitTerminated();  // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync();  // Give up leadership temporarily.  Maybe another server will have more success.
         }
     }
 
