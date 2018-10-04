@@ -270,6 +270,12 @@ public class DatabusModule extends PrivateModule {
     @Provides @Singleton @KafkaTestForceRetryToFail
     Boolean provideKafkaTestForceRetryToFail(DatabusConfiguration configuration) { return configuration.getKafkaTestForceRetryToFail(); }
 
+    @Provides @Singleton @ZookeeperURL
+    String provideZookeeperUrl(DatabusConfiguration configuration) { return configuration.getZookeeperUrl(); }
+
+    @Provides @Singleton @KafkaBootstrapServers
+    String provideKafkaBootstrapServers(DatabusConfiguration configuration) { return configuration.getKafkaBootstrapServers(); }
+
     @Provides @Singleton @KafkaEventProducerConfiguration
     KafkaProducerConfiguration provideKafkaEventProducerConfiguration(DatabusConfiguration configuration) {
         return configuration.getEventProducerConfiguration();

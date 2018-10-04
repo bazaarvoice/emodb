@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
+import com.bazaarvoice.emodb.databus.KafkaBootstrapServers;
 import com.bazaarvoice.emodb.databus.KafkaEnabled;
 import com.bazaarvoice.emodb.databus.KafkaEventProducerConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaMasterQueueTopicConfiguration;
@@ -15,6 +16,7 @@ import com.bazaarvoice.emodb.databus.KafkaTestForceRetryToFail;
 import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
+import com.bazaarvoice.emodb.databus.ZookeeperURL;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
@@ -200,6 +202,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private Boolean _kafkaTestForceRetry;
     private Boolean _kafkaTestForceRetryToFail;
 
+    private final String _zookeeperUrl;
+    private final String _kafkaBootstrapServers;
+
     private final StreamsBuilder builder;
     private final KafkaStreams kafkaStreams;
 
@@ -224,6 +229,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @KafkaEnabled Boolean kafkaEnabled,
                           @KafkaTestForceRetry Boolean kafkaTestForceRetry,
                           @KafkaTestForceRetryToFail Boolean kafkaTestForceRetryToFail,
+                          @ZookeeperURL String zookeeperUrl,
+                          @KafkaBootstrapServers String kafkaBootstrapServers,
                           @MasterFanoutPartitions int masterPartitions,
                           @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
@@ -271,6 +278,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _kafkaEnabled = new Boolean(kafkaEnabled);
         _kafkaTestForceRetry = new Boolean(kafkaTestForceRetry);
         _kafkaTestForceRetryToFail = new Boolean(kafkaTestForceRetryToFail);
+        _zookeeperUrl = zookeeperUrl;
+        _kafkaBootstrapServers = kafkaBootstrapServers;
 
         lifeCycle.manage(this);
 
@@ -286,7 +295,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
         if (_kafkaEnabled) {
 
-            scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection("localhost:2181", 30000, 30000);
+            scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection(_zookeeperUrl, 30000, 30000);
             zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
 
             // Explicitly create topics
@@ -303,8 +312,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             resolvedDocumentProducer = new KafkaProducer<>(_resolvedEventProducerConfiguration.getProps());
 
             Properties props = new Properties();
-            props.put(StreamsConfig.APPLICATION_ID_CONFIG, "databus-application");
-            props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+            props.put(StreamsConfig.APPLICATION_ID_CONFIG, "emodb-databus-application");
+            props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaBootstrapServers);
             props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteBuffer().getClass());
 

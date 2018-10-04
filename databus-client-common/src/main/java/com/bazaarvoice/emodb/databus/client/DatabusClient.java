@@ -19,15 +19,9 @@ import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
 import com.bazaarvoice.emodb.databus.api.UnknownMoveException;
 import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
-import com.bazaarvoice.emodb.databus.kafka.KafkaTopicConfiguration;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.ostrich.partition.PartitionKey;
 import com.fasterxml.jackson.core.type.TypeReference;
-import kafka.admin.AdminUtils;
-import kafka.admin.RackAwareMode;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -40,7 +34,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Properties;
 import java.util.TimeZone;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -109,42 +102,65 @@ public class DatabusClient implements AuthDatabus {
                    int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
                    double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
 
-        // Do Cassandra subscription
-        subscribe(apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, true);
+        // Call Emo with Kafka query params
+        subscribe(apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, true, numKafkaTopicPartitions,
+          kafkaTopicReplicationFactor, kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes,
+          kafkaTopicMinCleanableDirtyRatio, kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
 
-        scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection("localhost:2181", 30000, 30000);
-        ZkUtils zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
-
-        // Create Kafka topic if it does not exist already
-        if (!AdminUtils.topicExists(zkUtils, subscription)) {
-
-            // Populate Kafka topic properties
-            Properties props = KafkaTopicConfiguration.makeKafkaProps(kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes,
-                kafkaTopicMinCleanableDirtyRatio, kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
-
-            AdminUtils.createTopic(zkUtils, subscription, numKafkaTopicPartitions, kafkaTopicReplicationFactor, props, RackAwareMode.Disabled$.MODULE$);
-        }
     }
 
-    @Override
     public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         checkNotNull(subscription, "subscription");
         checkNotNull(tableFilter, "tableFilter");
         try {
             URI uri = _databus.clone()
-                    .segment(subscription)
-                    .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, (int) Duration.ofDays(30).getSeconds()))
-                    .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, (int) Duration.ofDays(30).getSeconds()))
-                    .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
-                    .build();
+                .segment(subscription)
+                .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
+                .build();
             _client.resource(uri)
-                    .type(JSON_CONDITION_MEDIA_TYPE)
-                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(tableFilter.toString());
+                .type(JSON_CONDITION_MEDIA_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .put(tableFilter.toString());
         } catch (EmoClientException e) {
             throw convertException(e);
         }
     }
+
+
+    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter, int numKafkaTopicPartitions,
+                          int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                          double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+
+        checkNotNull(subscription, "subscription");
+        checkNotNull(tableFilter, "tableFilter");
+        try {
+            URI uri = _databus.clone()
+                .segment(subscription)
+                .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
+                .queryParam("partitions", Integer.toString(numKafkaTopicPartitions))
+                .queryParam("replicationFactor", Integer.toString(kafkaTopicReplicationFactor))
+                .queryParam("cleanupPolicy", kafkaTopicCleanupPolicy)
+                .queryParam("compressionType", kafkaTopicCompressionType)
+                .queryParam("deleteRetentionMs", Long.toString(kafkaTopicDeleteRetentionMs))
+                .queryParam("maxMessageBytes", Integer.toString(kafkaTopicMaxMessageBytes))
+                .queryParam("minCleanableDirtyRatio", Double.toString(kafkaTopicMinCleanableDirtyRatio))
+                .queryParam("minInSyncReplicas", Integer.toString(kafkaTopicMinInSyncReplicas))
+                .queryParam("retentionMs", Long.toString(kafkaTopicRetentionMs))
+                .build();
+            _client.resource(uri)
+                .type(JSON_CONDITION_MEDIA_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                .put(tableFilter.toString());
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
+
 
     // Any server can manage subscriptions, no need for @PartitionKey
     @Override
@@ -158,14 +174,6 @@ public class DatabusClient implements AuthDatabus {
             _client.resource(uri)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .delete();
-
-            scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection("localhost:2181", 30000, 30000);
-            ZkUtils zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
-
-            // Delete Kafka topic if it exists
-            if (AdminUtils.topicExists(zkUtils, subscription)) {
-                AdminUtils.deleteTopic(zkUtils, subscription);
-            }
 
         } catch (EmoClientException e) {
             throw convertException(e);

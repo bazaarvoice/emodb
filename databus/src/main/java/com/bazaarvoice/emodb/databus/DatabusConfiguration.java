@@ -68,6 +68,16 @@ public class DatabusConfiguration {
 
     @Valid
     @NotNull
+    @JsonProperty("zookeeper.url")
+    private String _zookeeperUrl = "localhost:2181";
+
+    @Valid
+    @NotNull
+    @JsonProperty("kafka.bootstrapServers")
+    private String _kafkaBootstrapServers = "localhost:9092";
+
+    @Valid
+    @NotNull
     @JsonProperty("kafka.eventProducerConfiguration")
     private KafkaProducerConfiguration _eventProducerConfiguration = new KafkaProducerConfiguration();
 
@@ -152,6 +162,15 @@ public class DatabusConfiguration {
     public Boolean getKafkaTestForceRetryToFail() { return _kafkaTestForceRetryToFail; }
 
     public void setKafkaTestForceRetryToFail(boolean forceRetryToFail) { _kafkaTestForceRetryToFail = new Boolean(forceRetryToFail); }
+
+    public String getZookeeperUrl() { return _zookeeperUrl; }
+
+    public void setZookeeperUrl(String zookeeperUrl) { _zookeeperUrl = zookeeperUrl; }
+
+    public String getKafkaBootstrapServers() { return _kafkaBootstrapServers; }
+
+    public void setKafkaBootstrapServers(String kafkaBootstrapServers) { _kafkaBootstrapServers = kafkaBootstrapServers; }
+
 
 
     public KafkaProducerConfiguration getEventProducerConfiguration() { return _eventProducerConfiguration; }

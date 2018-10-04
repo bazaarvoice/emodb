@@ -345,7 +345,7 @@ public class ConsolidationTest {
         return new DefaultDatabus(lifeCycle, eventBus, dataProvider, subscriptionDao, eventStore, subscriptionEvaluator,
                 jobService, jobHandlerRegistry, databusAuthorizer, "replication",
                 Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaTopicConfiguration("master-queue"), new KafkaTopicConfiguration("resolver-retry-queue"), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0,
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaTopicConfiguration("master-queue"), new KafkaTopicConfiguration("resolver-retry-queue"), new Boolean(false), new Boolean(false), new Boolean(false), "localhost:2181", "localhost:9092",1, key -> 0,
                 new MetricRegistry(), clock);
     }
 
