@@ -79,12 +79,12 @@ public class DatabusConfiguration {
     @Valid
     @NotNull
     @JsonProperty("kafka.masterQueueTopicConfiguration")
-    private KafkaTopicConfiguration _masterQueueTopicConfiguration = new KafkaTopicConfiguration();
+    private KafkaTopicConfiguration _masterQueueTopicConfiguration = new KafkaTopicConfiguration("default-master-queue");
 
     @Valid
     @NotNull
     @JsonProperty("kafka.resolverRetryQueueTopicConfiguration")
-    private KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration = new KafkaTopicConfiguration();
+    private KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration = new KafkaTopicConfiguration("default-resolver-retry-queue");
 
 
     public CassandraConfiguration getCassandraConfiguration() {

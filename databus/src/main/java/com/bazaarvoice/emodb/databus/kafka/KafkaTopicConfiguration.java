@@ -21,13 +21,7 @@ public class KafkaTopicConfiguration {
     private static final long DEFAULT_RETENTION_MS = 604800000;
     private static final int DEFAULT_PARTITIONS = 1;
     private static final int DEFAULT_REPLICATION_FACTOR = 1;
-
-    // This function provides a unique topic name for each instance when the default constructor
-    // is used in a test for example
-    private static String getDefaultTopicName() {
-        return "default-topic-name-" + UUID.randomUUID();
-    }
-
+    private static final String DEFAULT_TOPIC_NAME = "default-topic-name";
 
     @Valid
     @NotNull
@@ -77,7 +71,7 @@ public class KafkaTopicConfiguration {
     @Valid
     @NotNull
     @JsonProperty("name")
-    private String _topicName = getDefaultTopicName();
+    private String _topicName = DEFAULT_TOPIC_NAME;
 
     // Default constructor gets all default values
     public KafkaTopicConfiguration() {}
