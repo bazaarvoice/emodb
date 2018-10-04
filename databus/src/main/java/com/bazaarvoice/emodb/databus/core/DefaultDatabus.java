@@ -520,6 +520,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
         _subscriptionDao.deleteSubscription(subscription);
         _eventStore.purge(subscription);
+
+        // Delete Kafka topic if it exists
+        if (AdminUtils.topicExists(zkUtils, subscription)) {
+            AdminUtils.deleteTopic(zkUtils, subscription);
+        }
+
     }
 
     @Override

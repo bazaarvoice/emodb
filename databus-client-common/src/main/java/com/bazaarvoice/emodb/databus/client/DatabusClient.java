@@ -158,6 +158,15 @@ public class DatabusClient implements AuthDatabus {
             _client.resource(uri)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .delete();
+
+            scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection("localhost:2181", 30000, 30000);
+            ZkUtils zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
+
+            // Delete Kafka topic if it exists
+            if (AdminUtils.topicExists(zkUtils, subscription)) {
+                AdminUtils.deleteTopic(zkUtils, subscription);
+            }
+
         } catch (EmoClientException e) {
             throw convertException(e);
         }
