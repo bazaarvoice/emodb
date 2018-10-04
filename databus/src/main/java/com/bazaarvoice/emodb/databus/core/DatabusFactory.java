@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.auth.proxy.Credential;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -51,6 +52,15 @@ public class DatabusFactory {
             @Override
             public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
                 _ownerAwareDatabus.subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl);
+            }
+
+            @Override
+            public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                                  int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                                  double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+                _ownerAwareDatabus.subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl, numKafkaTopicPartitions,
+                    kafkaTopicReplicationFactor, kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes, kafkaTopicMinCleanableDirtyRatio,
+                    kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
             }
 
             @Override

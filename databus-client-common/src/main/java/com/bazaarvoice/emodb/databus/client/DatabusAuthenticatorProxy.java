@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.ostrich.partition.PartitionKey;
 
 import javax.annotation.Nullable;
+import javax.security.auth.Subject;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
@@ -108,6 +109,14 @@ class DatabusAuthenticatorProxy implements Databus {
         _authDatabus.subscribe(_apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }
 
+    @Override
+    public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                          int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                          double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+        _authDatabus.subscribe(_apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, numKafkaTopicPartitions,
+            kafkaTopicReplicationFactor, kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes,
+            kafkaTopicMinCleanableDirtyRatio, kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
+    }
     @Override
     public long getClaimCount(@PartitionKey String subscription) {
         return _authDatabus.getClaimCount(_apiKey, subscription);

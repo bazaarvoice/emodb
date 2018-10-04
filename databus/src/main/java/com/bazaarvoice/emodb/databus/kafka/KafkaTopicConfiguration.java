@@ -148,5 +148,18 @@ public class KafkaTopicConfiguration {
         return props;
     }
 
+    public static Properties makeKafkaProps(String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+        double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+        Properties props = new Properties();
+        props.put("cleanup.policy", kafkaTopicCleanupPolicy);
+        props.put("compression.type", kafkaTopicCompressionType);
+        props.put("delete.retention.ms", Long.toString(kafkaTopicDeleteRetentionMs));
+        props.put("max.message.bytes", Integer.toString(kafkaTopicMaxMessageBytes));
+        props.put("min.cleanable.dirty.ratio", Double.toString(kafkaTopicMinCleanableDirtyRatio));
+        props.put("min.insync.replicas", Integer.toString(kafkaTopicMinInSyncReplicas));
+        props.put("retention.ms", Long.toString(kafkaTopicRetentionMs));
+        return props;
+    }
+
 
 }

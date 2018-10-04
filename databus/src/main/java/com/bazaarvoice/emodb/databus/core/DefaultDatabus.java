@@ -465,6 +465,26 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
     @Override
+    public void subscribe(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                   int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                   double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+
+        // Do Cassandra subscription
+        subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl, true);
+
+        // Create Kafka topic if it does not exist already
+        if (!AdminUtils.topicExists(zkUtils, subscription)) {
+
+            // Populate Kafka topic properties
+            Properties props = KafkaTopicConfiguration.makeKafkaProps(kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes,
+              kafkaTopicMinCleanableDirtyRatio, kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
+
+            AdminUtils.createTopic(zkUtils, subscription, numKafkaTopicPartitions, kafkaTopicReplicationFactor, props, RackAwareMode.Disabled$.MODULE$);
+        }
+
+    }
+
+    @Override
     public void subscribe(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl,
                           Duration eventTtl, boolean includeDefaultJoinFilter) {
         // This call should be deprecated soon.
@@ -1377,11 +1397,6 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         // Split the key at the semicolon to get the various parts
         String[] splitKey = key.split("/");
         String subscriptionName = splitKey[2];
-
-        // Explicitly create topic if it does not already exist
-        if (!AdminUtils.topicExists(zkUtils, subscriptionName)) {
-            AdminUtils.createTopic(zkUtils, subscriptionName, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
-        }
 
         // publish to topic
         resolvedDocumentProducer.send(new ProducerRecord<>(subscriptionName, StandardCharsets.UTF_8.decode(document).toString()));

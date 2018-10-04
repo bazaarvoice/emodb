@@ -109,6 +109,15 @@ public class DatabusResource1 {
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
                                      @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam,
                                      @QueryParam ("includeDefaultJoinFilter") BooleanParam includeDefaultJoinFilterParam,
+                                     @QueryParam ("partitions") IntParam numKafkaTopicPartitions,
+                                     @QueryParam ("replicationFactor") IntParam kafkaTopicReplicationFactor,
+                                     @QueryParam ("cleanupPolicy") @DefaultValue ("delete") String kafkaTopicCleanupPolicy,
+                                     @QueryParam ("compressionType") @DefaultValue ("uncompressed") String kafkaTopicCompressionType,
+                                     @QueryParam ("deleteRetentionMs") @DefaultValue ("86400000") LongParam kafkaTopicDeleteRetentionMs,
+                                     @QueryParam ("maxMessageBytes") @DefaultValue ("1000012") IntParam kafkaTopicMaxMessageBytes,
+                                     @QueryParam ("minCleanableDirtyRatio") @DefaultValue ("0.5") Double kafkaTopicMinCleanableDirtyRatio,
+                                     @QueryParam ("minInSyncReplicas") @DefaultValue ("1") IntParam kafkaTopicMinInSyncReplicas,
+                                     @QueryParam ("retentionMs") @DefaultValue ("604800000") LongParam kafkaTopicRetentionMs,
                                      @Authenticated Subject subject) {
 
         // By default, include the default join filter condition
@@ -123,7 +132,14 @@ public class DatabusResource1 {
             tableFilter = new ConditionParam(conditionString).get();
         }
 
-        _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), includeDefaultJoinFilter);
+        if (numKafkaTopicPartitions != null && kafkaTopicReplicationFactor != null) {
+            _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), numKafkaTopicPartitions.get(),
+                kafkaTopicReplicationFactor.get(), kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs.get(),
+                kafkaTopicMaxMessageBytes.get(), kafkaTopicMinCleanableDirtyRatio.doubleValue(), kafkaTopicMinInSyncReplicas.get(), kafkaTopicRetentionMs.get());
+        } else {
+            _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), includeDefaultJoinFilter);
+        }
+
         return SuccessResponse.instance();
     }
 

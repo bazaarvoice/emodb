@@ -14,6 +14,10 @@ public interface Databus {
 
     void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl);
 
+    void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                   int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                   double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs);
+
     /**
      * NOTE: This call will be deprecated.
      * Subscribe for table events based on the Condition

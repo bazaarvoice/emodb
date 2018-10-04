@@ -77,6 +77,15 @@ public class TrustedDatabus implements AuthDatabus {
     }
 
     @Override
+    public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                   int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                   double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+        subscribe(apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, numKafkaTopicPartitions,
+            kafkaTopicReplicationFactor, kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes, kafkaTopicMinCleanableDirtyRatio,
+            kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
+    }
+
+    @Override
     public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         _databus.subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }

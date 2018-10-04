@@ -42,6 +42,15 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
     }
 
     @Override
+    public void subscribe(Subject subject, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, int numKafkaTopicPartitions,
+                   int kafkaTopicReplicationFactor, String kafkaTopicCleanupPolicy, String kafkaTopicCompressionType, long kafkaTopicDeleteRetentionMs, int kafkaTopicMaxMessageBytes,
+                   double kafkaTopicMinCleanableDirtyRatio, int kafkaTopicMinInSyncReplicas, long kafkaTopicRetentionMs) {
+        databus(subject).subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, numKafkaTopicPartitions,
+            kafkaTopicReplicationFactor, kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs, kafkaTopicMaxMessageBytes,
+            kafkaTopicMinCleanableDirtyRatio, kafkaTopicMinInSyncReplicas, kafkaTopicRetentionMs);
+    }
+
+    @Override
     public void unsubscribe(Subject subject, @PartitionKey String subscription) {
         databus(subject).unsubscribe(subscription);
     }
