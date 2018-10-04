@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAO;
 import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
 import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaTopicConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import org.apache.commons.lang.mutable.MutableBoolean;
@@ -74,6 +75,17 @@ public class DatabusConfiguration {
     @NotNull
     @JsonProperty("kafka.resolvedEventProducerConfiguration")
     private KafkaProducerConfiguration _resolvedEventProducerConfiguration = new KafkaProducerConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty("kafka.masterQueueTopicConfiguration")
+    private KafkaTopicConfiguration _masterQueueTopicConfiguration = new KafkaTopicConfiguration();
+
+    @Valid
+    @NotNull
+    @JsonProperty("kafka.resolverRetryQueueTopicConfiguration")
+    private KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration = new KafkaTopicConfiguration();
+
 
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
@@ -153,5 +165,18 @@ public class DatabusConfiguration {
     public void setResolvedEventProducerConfiguration(KafkaProducerConfiguration resolvedEventProducerConfiguration) {
         _resolvedEventProducerConfiguration = resolvedEventProducerConfiguration;
     }
+
+    public KafkaTopicConfiguration getMasterQueueTopicConfiguration() { return _masterQueueTopicConfiguration; }
+
+    public void setMasterQueueTopicConfiguration(KafkaTopicConfiguration masterQueueTopicConfiguration) {
+        _masterQueueTopicConfiguration = masterQueueTopicConfiguration;
+    }
+
+    public KafkaTopicConfiguration getResolverRetryQueueTopicConfiguration() { return _resolverRetryQueueTopicConfiguration; }
+
+    public void setResolverRetryQueueTopicConfiguration(KafkaTopicConfiguration resolverRetryQueueTopicConfiguration) {
+        _resolverRetryQueueTopicConfiguration = resolverRetryQueueTopicConfiguration;
+    }
+
 
 }

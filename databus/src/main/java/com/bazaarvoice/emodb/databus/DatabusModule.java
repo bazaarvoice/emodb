@@ -40,6 +40,7 @@ import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAOExecutorSe
 import com.bazaarvoice.emodb.databus.db.generic.CachingSubscriptionDAORegistry;
 import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
 import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaTopicConfiguration;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationManager;
 import com.bazaarvoice.emodb.databus.repl.DefaultReplicationSource;
 import com.bazaarvoice.emodb.databus.repl.ReplicationEnabledTask;
@@ -277,6 +278,16 @@ public class DatabusModule extends PrivateModule {
     @Provides @Singleton @KafkaResolvedEventProducerConfiguration
     KafkaProducerConfiguration provideKafkaResolvedEventProducerConfiguration(DatabusConfiguration configuration) {
         return configuration.getResolvedEventProducerConfiguration();
+    }
+
+    @Provides @Singleton @KafkaMasterQueueTopicConfiguration
+    KafkaTopicConfiguration provideKafkaMasterQueueTopicConfiguration(DatabusConfiguration configuration) {
+        return configuration.getMasterQueueTopicConfiguration();
+    }
+
+    @Provides @Singleton @KafkaResolverRetryQueueTopicConfiguration
+    KafkaTopicConfiguration provideKafkaResolverRetryQueueTopicConfiguration(DatabusConfiguration configuration) {
+        return configuration.getResolverRetryQueueTopicConfiguration();
     }
 
 }

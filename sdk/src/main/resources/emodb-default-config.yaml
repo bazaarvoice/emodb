@@ -129,6 +129,28 @@ databus:
       key.serializer: org.apache.kafka.common.serialization.StringSerializer
       value.serializer: org.apache.kafka.common.serialization.StringSerializer
       client.id: resolved-event-producer
+  kafka.masterQueueTopicConfiguration:
+      cleanup.policy: delete
+      compression.type: uncompressed
+      delete.retention.ms: 86400000
+      max.message.bytes: 1000012
+      min.cleanable.dirty.ratio: 0.5
+      min.insync.replicas: 1
+      retention.ms: 604800000
+      partitions: 1
+      replication.factor: 1
+      name: master-queue
+  kafka.resolverRetryQueueTopicConfiguration:
+      cleanup.policy: delete
+      compression.type: uncompressed
+      delete.retention.ms: 86400000
+      max.message.bytes: 1000012
+      min.cleanable.dirty.ratio: 0.5
+      min.insync.replicas: 1
+      retention.ms: 604800000
+      partitions: 1
+      replication.factor: 1
+      name: resolver-retry-queue
 
 blobStore:
 

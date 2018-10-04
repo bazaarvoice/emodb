@@ -7,7 +7,9 @@ import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.KafkaEnabled;
 import com.bazaarvoice.emodb.databus.KafkaEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaMasterQueueTopicConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaResolvedEventProducerConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaResolverRetryQueueTopicConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaTestForceRetry;
 import com.bazaarvoice.emodb.databus.KafkaTestForceRetryToFail;
 import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
@@ -26,6 +28,7 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaTopicConfiguration;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.event.api.EventSink;
@@ -190,6 +193,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     private final KafkaProducerConfiguration _eventProducerConfiguration;
     private final KafkaProducerConfiguration _resolvedEventProducerConfiguration;
+    private final KafkaTopicConfiguration _masterQueueTopicConfiguration;
+    private final KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration;
+
     private Boolean _kafkaEnabled;
     private Boolean _kafkaTestForceRetry;
     private Boolean _kafkaTestForceRetryToFail;
@@ -197,9 +203,6 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final StreamsBuilder builder;
     private final KafkaStreams kafkaStreams;
 
-    private static final String MASTER_QUEUE_TOPIC_NAME = "master-queue";
-    private static final String RESOLVER_QUEUE_TOPIC_NAME = "resolver-queue";
-    private static final String RESOLVER_RETRY_QUEUE_TOPIC_NAME = "resolver-retry-queue";
     private static final long FIVE_MINUTES = 5 * 60 * 1000; // 5 miuntes in milliseconds
     private static final long PHANTOM_UPDATE_TIMEOUT = FIVE_MINUTES * 3;
 
@@ -216,6 +219,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @QueueDrainExecutorService ExecutorService drainService,
                           @KafkaEventProducerConfiguration KafkaProducerConfiguration eventProducerConfiguration,
                           @KafkaResolvedEventProducerConfiguration KafkaProducerConfiguration resolvedEventProducerConfiguration,
+                          @KafkaMasterQueueTopicConfiguration KafkaTopicConfiguration masterQueueTopicConfiguration,
+                          @KafkaResolverRetryQueueTopicConfiguration KafkaTopicConfiguration resolverRetryQueueTopicConfiguration,
                           @KafkaEnabled Boolean kafkaEnabled,
                           @KafkaTestForceRetry Boolean kafkaTestForceRetry,
                           @KafkaTestForceRetryToFail Boolean kafkaTestForceRetryToFail,
@@ -261,6 +266,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 });
         _eventProducerConfiguration = eventProducerConfiguration;
         _resolvedEventProducerConfiguration = resolvedEventProducerConfiguration;
+        _masterQueueTopicConfiguration = masterQueueTopicConfiguration;
+        _resolverRetryQueueTopicConfiguration = resolverRetryQueueTopicConfiguration;
         _kafkaEnabled = new Boolean(kafkaEnabled);
         _kafkaTestForceRetry = new Boolean(kafkaTestForceRetry);
         _kafkaTestForceRetryToFail = new Boolean(kafkaTestForceRetryToFail);
@@ -283,16 +290,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
 
             // Explicitly create topics
-            if (!AdminUtils.topicExists(zkUtils, MASTER_QUEUE_TOPIC_NAME)) {
-                AdminUtils.createTopic(zkUtils, MASTER_QUEUE_TOPIC_NAME, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
+            if (!AdminUtils.topicExists(zkUtils, _masterQueueTopicConfiguration.getTopicName())) {
+                AdminUtils.createTopic(zkUtils, _masterQueueTopicConfiguration.getTopicName(), _masterQueueTopicConfiguration.getPartitions(), _masterQueueTopicConfiguration.getReplicationFactor(), _masterQueueTopicConfiguration.getKafkaProps(), RackAwareMode.Disabled$.MODULE$);
             }
 
-            if (!AdminUtils.topicExists(zkUtils, RESOLVER_QUEUE_TOPIC_NAME)) {
-                AdminUtils.createTopic(zkUtils, RESOLVER_QUEUE_TOPIC_NAME, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
-            }
-
-            if (!AdminUtils.topicExists(zkUtils, RESOLVER_RETRY_QUEUE_TOPIC_NAME)) {
-                AdminUtils.createTopic(zkUtils, RESOLVER_RETRY_QUEUE_TOPIC_NAME, 1, 1, new Properties(), RackAwareMode.Disabled$.MODULE$);
+            if (!AdminUtils.topicExists(zkUtils, _resolverRetryQueueTopicConfiguration.getTopicName())) {
+                AdminUtils.createTopic(zkUtils, _resolverRetryQueueTopicConfiguration.getTopicName(), _resolverRetryQueueTopicConfiguration.getPartitions(), _resolverRetryQueueTopicConfiguration.getReplicationFactor(), _resolverRetryQueueTopicConfiguration.getKafkaProps(), RackAwareMode.Disabled$.MODULE$);
             }
 
             // Set up Kafka producers and consumers
@@ -306,16 +309,16 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteBuffer().getClass());
 
             builder = new StreamsBuilder();
-            KStream<String, ByteBuffer> eventStream = builder.stream(MASTER_QUEUE_TOPIC_NAME);
-            KStream<String, ByteBuffer> retryEventStream = builder.stream(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
+            KStream<String, ByteBuffer> eventStream = builder.stream(_masterQueueTopicConfiguration.getTopicName());
+            KStream<String, ByteBuffer> retryEventStream = builder.stream(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             // Splits into two streams, one for documents which are resolved (branches[0]) and one for documents that did not resolve (branches[1])
-            KStream<String, ByteBuffer>[] branches = eventStream.mapValues(value -> makeFannedOutEventRecord(value)).through(RESOLVER_QUEUE_TOPIC_NAME).
+            KStream<String, ByteBuffer>[] branches = eventStream.mapValues(value -> makeFannedOutEventRecord(value)).
                 flatMap((key, value) -> makeResolvedEventRecords(value)).branch((key, value) -> value != null, (key, value) -> value == null);
 
             // Send resolved documents to subscription topic
             branches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
-            branches[1].to(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
+            branches[1].to(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             // Process any initially unresolved documents, retrying as needed
             KStream<String, ByteBuffer>[] retryBranches = retryEventStream.transform(RetryTransformer::new).branch((key, value) -> value != null && value.array().length > 0, (key, value) -> value == null);
@@ -324,7 +327,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             retryBranches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
 
             // Send documents that did not resolve after retry back to the resolver retry topic
-            retryBranches[1].to(RESOLVER_RETRY_QUEUE_TOPIC_NAME);
+            retryBranches[1].to(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             kafkaStreams = new KafkaStreams(builder.build(), props);
             kafkaStreams.start();
@@ -525,7 +528,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             int partition = _masterPartitionSelector.getPartition(ref.getKey());
             eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
             if (_kafkaEnabled) {
-                eventProducer.send(new ProducerRecord<>(MASTER_QUEUE_TOPIC_NAME, UpdateRefSerializer.toByteBuffer(ref)));
+                eventProducer.send(new ProducerRecord<>(_masterQueueTopicConfiguration.getTopicName(), UpdateRefSerializer.toByteBuffer(ref)));
                 _log.info("DefaultDataBus: sent event to Kafka master-queue topic: " + ref.toString());
             }
         }

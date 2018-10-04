@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.databus.kafka.KafkaConsumerConfiguration;
 import com.bazaarvoice.emodb.databus.kafka.KafkaProducerConfiguration;
+import com.bazaarvoice.emodb.databus.kafka.KafkaTopicConfiguration;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -49,7 +50,7 @@ public class DatabusSizeCachingTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
                 mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, mock(MetricRegistry.class), clock);
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaTopicConfiguration("master-queue"), new KafkaTopicConfiguration("resolver-retry-queue"), new Boolean(false), new Boolean(false), new Boolean(false), 1, key -> 0, mock(MetricRegistry.class), clock);
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000
