@@ -27,10 +27,14 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.hibernate.validator.constraints.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Pattern;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
@@ -109,15 +113,15 @@ public class DatabusResource1 {
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
                                      @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam,
                                      @QueryParam ("includeDefaultJoinFilter") BooleanParam includeDefaultJoinFilterParam,
-                                     @QueryParam ("partitions") IntParam numKafkaTopicPartitions,
-                                     @QueryParam ("replicationFactor") IntParam kafkaTopicReplicationFactor,
-                                     @QueryParam ("cleanupPolicy") @DefaultValue ("delete") String kafkaTopicCleanupPolicy,
-                                     @QueryParam ("compressionType") @DefaultValue ("uncompressed") String kafkaTopicCompressionType,
-                                     @QueryParam ("deleteRetentionMs") @DefaultValue ("86400000") LongParam kafkaTopicDeleteRetentionMs,
-                                     @QueryParam ("maxMessageBytes") @DefaultValue ("1000012") IntParam kafkaTopicMaxMessageBytes,
+                                     @QueryParam ("partitions") @Min(1) IntParam numKafkaTopicPartitions,
+                                     @QueryParam ("replicationFactor") @Min(1) IntParam kafkaTopicReplicationFactor,
+                                     @QueryParam ("cleanupPolicy") @DefaultValue ("delete") @Pattern(regexp="delete|compact") String kafkaTopicCleanupPolicy,
+                                     @QueryParam ("compressionType") @DefaultValue ("uncompressed") @Pattern(regexp="uncompressed|snappy|lz4|gzip|producer") String kafkaTopicCompressionType,
+                                     @QueryParam ("deleteRetentionMs") @DefaultValue ("86400000") @Min(1) LongParam kafkaTopicDeleteRetentionMs,
+                                     @QueryParam ("maxMessageBytes") @DefaultValue ("1000012") @Min(1) IntParam kafkaTopicMaxMessageBytes,
                                      @QueryParam ("minCleanableDirtyRatio") @DefaultValue ("0.5") Double kafkaTopicMinCleanableDirtyRatio,
-                                     @QueryParam ("minInSyncReplicas") @DefaultValue ("1") IntParam kafkaTopicMinInSyncReplicas,
-                                     @QueryParam ("retentionMs") @DefaultValue ("604800000") LongParam kafkaTopicRetentionMs,
+                                     @QueryParam ("minInSyncReplicas") @DefaultValue ("1") @Min(1) IntParam kafkaTopicMinInSyncReplicas,
+                                     @QueryParam ("retentionMs") @DefaultValue ("604800000") @Min(1) LongParam kafkaTopicRetentionMs,
                                      @Authenticated Subject subject) {
 
         // By default, include the default join filter condition
