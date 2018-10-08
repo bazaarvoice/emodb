@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
+import com.sun.jersey.api.core.InjectParam;
 import io.dropwizard.jersey.params.BooleanParam;
 import io.dropwizard.jersey.params.IntParam;
 import io.dropwizard.jersey.params.LongParam;
@@ -31,9 +32,14 @@ import org.hibernate.validator.constraints.NotBlank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -98,6 +104,64 @@ public class DatabusResource1 {
         return streamingIterator(_databus.listSubscriptions(subject, Strings.emptyToNull(fromKeyExclusive), limit.get()));
     }
 
+
+    public static class KafkaParams {
+
+        @QueryParam ("partitions")
+        @Min(1)
+        @Valid
+        public Integer partitions;
+
+        @QueryParam ("replicationFactor")
+        @Min(1)
+        @Valid
+        public Integer replicationFactor;
+
+        @QueryParam ("cleanupPolicy")
+        @Pattern(regexp="delete|compact")
+        @DefaultValue ("delete")
+        @Valid
+        public String cleanupPolicy;
+
+        @QueryParam ("compressionType")
+        @Pattern(regexp="uncompressed|snappy|lz4|gzip|producer")
+        @DefaultValue ("uncompressed")
+        @Valid
+        public String compressionType;
+
+        @QueryParam ("deleteRetentionMs")
+        @Min(1)
+        @DefaultValue ("86400000")
+        @Valid
+        public long deleteRetentionMs;
+
+        @QueryParam ("maxMessageBytes")
+        @Min(1)
+        @DefaultValue ("1000012")
+        @Valid
+        public int maxMessageBytes;
+
+        @QueryParam ("minCleanableDirtyRatio")
+        @DecimalMin("0.0")
+        @DecimalMax("1.0")
+        @DefaultValue ("0.5")
+        @Valid
+        public double minCleanableDirtyRatio;
+
+        @QueryParam ("minInSyncReplicas")
+        @Min(1)
+        @DefaultValue ("1")
+        @Valid
+        public int minInSyncReplicas;
+
+        @QueryParam ("retentionMs")
+        @Min(1)
+        @DefaultValue ("604800000")
+        @Valid
+        public long retentionMs;
+
+    }
+
     @PUT
     @Path ("{subscription}")
     @Consumes ("application/x.json-condition")
@@ -113,15 +177,7 @@ public class DatabusResource1 {
                                      @QueryParam ("eventTtl") @DefaultValue ("86400") SecondsParam eventTtl,
                                      @QueryParam ("ignoreSuppressedEvents") BooleanParam ignoreSuppressedEventsParam,
                                      @QueryParam ("includeDefaultJoinFilter") BooleanParam includeDefaultJoinFilterParam,
-                                     @QueryParam ("partitions") @Min(1) IntParam numKafkaTopicPartitions,
-                                     @QueryParam ("replicationFactor") @Min(1) IntParam kafkaTopicReplicationFactor,
-                                     @QueryParam ("cleanupPolicy") @DefaultValue ("delete") @Pattern(regexp="delete|compact") String kafkaTopicCleanupPolicy,
-                                     @QueryParam ("compressionType") @DefaultValue ("uncompressed") @Pattern(regexp="uncompressed|snappy|lz4|gzip|producer") String kafkaTopicCompressionType,
-                                     @QueryParam ("deleteRetentionMs") @DefaultValue ("86400000") @Min(1) LongParam kafkaTopicDeleteRetentionMs,
-                                     @QueryParam ("maxMessageBytes") @DefaultValue ("1000012") @Min(1) IntParam kafkaTopicMaxMessageBytes,
-                                     @QueryParam ("minCleanableDirtyRatio") @DefaultValue ("0.5") Double kafkaTopicMinCleanableDirtyRatio,
-                                     @QueryParam ("minInSyncReplicas") @DefaultValue ("1") @Min(1) IntParam kafkaTopicMinInSyncReplicas,
-                                     @QueryParam ("retentionMs") @DefaultValue ("604800000") @Min(1) LongParam kafkaTopicRetentionMs,
+                                     @InjectParam @Valid KafkaParams kafkaParams,
                                      @Authenticated Subject subject) {
 
         // By default, include the default join filter condition
@@ -136,10 +192,10 @@ public class DatabusResource1 {
             tableFilter = new ConditionParam(conditionString).get();
         }
 
-        if (numKafkaTopicPartitions != null && kafkaTopicReplicationFactor != null) {
-            _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), numKafkaTopicPartitions.get(),
-                kafkaTopicReplicationFactor.get(), kafkaTopicCleanupPolicy, kafkaTopicCompressionType, kafkaTopicDeleteRetentionMs.get(),
-                kafkaTopicMaxMessageBytes.get(), kafkaTopicMinCleanableDirtyRatio.doubleValue(), kafkaTopicMinInSyncReplicas.get(), kafkaTopicRetentionMs.get());
+        if (kafkaParams.partitions != null && kafkaParams.replicationFactor != null) {
+            _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), kafkaParams.partitions,
+                kafkaParams.replicationFactor, kafkaParams.cleanupPolicy, kafkaParams.compressionType, kafkaParams.deleteRetentionMs,
+                kafkaParams.maxMessageBytes, kafkaParams.minCleanableDirtyRatio, kafkaParams.minInSyncReplicas, kafkaParams.retentionMs);
         } else {
             _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), includeDefaultJoinFilter);
         }
