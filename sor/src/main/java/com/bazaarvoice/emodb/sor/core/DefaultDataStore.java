@@ -17,6 +17,7 @@ import com.bazaarvoice.emodb.sor.api.Names;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -385,7 +386,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private Expanded expand(final Record record, boolean ignoreRecent, final ReadConsistency consistency) {
         long fullConsistencyTimeStamp = _dataWriterDao.getFullConsistencyTimestamp(record.getKey().getTable());
         long rawConsistencyTimeStamp = _dataWriterDao.getRawConsistencyTimestamp(record.getKey().getTable());
-        Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(record.getKey().getTable().getAvailability().getPlacement());
+        Map<StashTimeKey, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getStashTimesForPlacement(record.getKey().getTable().getAvailability().getPlacement());
         // we will consider the earliest timestamp found as our compactionControlTimestamp.
         // we are also filtering out any expired timestamps. (CompactionControlMonitor should do this for us, but for now it's running every hour. So, just to fill that gap, we are filtering here.)
         // If no timestamps are found, then taking minimum value because we want all the deltas after the compactionControlTimestamp to be deleted as per the compaction rules as usual.

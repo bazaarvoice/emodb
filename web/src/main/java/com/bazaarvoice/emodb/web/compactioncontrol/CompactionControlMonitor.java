@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
@@ -57,7 +58,7 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     }
 
     private void updateMetrics(long currentTimeInMillis) {
-        Map<String, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getAllStashTimes();
+        Map<StashTimeKey, StashRunTimeInfo> stashTimeInfoMap = _compactionControlSource.getAllStashTimes();
         if (stashTimeInfoMap.size() > 0) {
             long oldestCompactionControlTime = stashTimeInfoMap.values().stream()
                     .map(StashRunTimeInfo::getTimestamp)
@@ -73,12 +74,12 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     protected void deleteExpiredStashTimes(long currentTimeInMillis) {
         try {
             _log.debug("Checking for expired stash times at {}", currentTimeInMillis);
-            Map<String, StashRunTimeInfo> expiredStashTimes = _compactionControlSource.getAllStashTimes().entrySet().stream()
+            Map<StashTimeKey, StashRunTimeInfo> expiredStashTimes = _compactionControlSource.getAllStashTimes().entrySet().stream()
                     .filter(entry -> entry.getValue().getExpiredTimestamp() < currentTimeInMillis).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-            for (Map.Entry<String, StashRunTimeInfo> expiredStashTimeInfo : expiredStashTimes.entrySet()) {
+            for (Map.Entry<StashTimeKey, StashRunTimeInfo> expiredStashTimeInfo : expiredStashTimes.entrySet()) {
                 // If we are deleting the entries here, then there could be a problem which we may want to know. So setting it as a warn.
-                _log.warn("Deleting the stash time entry for id: {}", expiredStashTimeInfo.getKey());
-                _compactionControlSource.deleteStashTime(expiredStashTimeInfo.getKey(), expiredStashTimeInfo.getValue().getDataCenter());
+                _log.warn("Deleting the stash time entry for id: {} and datacenter: {}", expiredStashTimeInfo.getKey().getId(), expiredStashTimeInfo.getKey().getDatacenter());
+                _compactionControlSource.deleteStashTime(expiredStashTimeInfo.getKey().getId(), expiredStashTimeInfo.getValue().getDataCenter());
             }
         } catch (Exception e) {
             _log.error("Unexpected exception deleting the expired stash times", e);

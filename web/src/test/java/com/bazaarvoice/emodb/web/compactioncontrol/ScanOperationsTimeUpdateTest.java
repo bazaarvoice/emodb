@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DataTools;
@@ -76,12 +77,12 @@ public class ScanOperationsTimeUpdateTest {
         // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
         Thread.sleep(Duration.ofSeconds(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 1);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), true);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(StashTimeKey.of("test1", "us-east")), true);
 
         // cancel the scan
         scanUploader.cancel("test1");
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), false);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(StashTimeKey.of("test1", "us-east")), false);
     }
 
     @Test
@@ -113,7 +114,7 @@ public class ScanOperationsTimeUpdateTest {
         // sleeping for 1 sec just to be certain that the thread was executed in scanAndUpload process.
         Thread.sleep(Duration.ofSeconds(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("test1"), false);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(StashTimeKey.of("test1", "us-east")), false);
     }
 
     /***

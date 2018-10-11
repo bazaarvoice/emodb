@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.web.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
@@ -68,7 +69,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getAllStashTimes() {
+    public Map<StashTimeKey, StashRunTimeInfo> getAllStashTimes() {
         try {
             return _localCompactionControl.getAllStashTimes();
         } catch (Exception e) {
@@ -78,7 +79,7 @@ public class DelegateCompactionControlSource implements CompactionControlSource 
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
+    public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
         try {
             return _localCompactionControl.getStashTimesForPlacement(placement);
         } catch (Exception e) {

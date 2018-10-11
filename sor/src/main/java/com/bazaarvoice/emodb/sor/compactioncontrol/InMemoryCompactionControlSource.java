@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.sor.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -28,7 +29,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
         checkNotNull(dataCenter, "dataCenter");
 
         try {
-            _stashStartTimestampInfo.put(id, new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
+            _stashStartTimestampInfo.put(zkKey(id, dataCenter), new StashRunTimeInfo(timestamp, placements, dataCenter, expiredTimestamp));
         } catch (Exception e) {
             _log.error("Failed to update stash timestamp info for id: {}", id, e);
             throw Throwables.propagate(e);
@@ -40,7 +41,7 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
         checkNotNull(id, "id");
 
         try {
-            _stashStartTimestampInfo.remove(id);
+            _stashStartTimestampInfo.remove(zkKey(id, dataCenter));
         } catch (Exception e) {
             _log.error("Failed to delete stash timestamp info for id: {}", id, e);
             throw Throwables.propagate(e);
@@ -51,20 +52,25 @@ public class InMemoryCompactionControlSource implements CompactionControlSource 
     public StashRunTimeInfo getStashTime(String id, String dataCenter) {
         checkNotNull(id, "id");
 
-        return _stashStartTimestampInfo.get(id);
+        return _stashStartTimestampInfo.get(zkKey(id, dataCenter));
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getAllStashTimes() {
-        return _stashStartTimestampInfo;
+    public Map<StashTimeKey, StashRunTimeInfo> getAllStashTimes() {
+        return DefaultCompactionControlSource.getStashTimesWithTupleKeys(_stashStartTimestampInfo);
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
-        return _stashStartTimestampInfo.size() > 0 ? _stashStartTimestampInfo.entrySet()
-                .stream()
-                .filter(stashTime -> stashTime.getValue().getPlacements().contains(placement))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                : ImmutableMap.of();
+    public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
+        return DefaultCompactionControlSource.getStashTimesWithTupleKeys(
+                _stashStartTimestampInfo.size() > 0 ? _stashStartTimestampInfo.entrySet()
+                        .stream()
+                        .filter(stashTime -> stashTime.getValue().getPlacements().contains(placement))
+                        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
+                        : ImmutableMap.of());
+    }
+
+    private String zkKey(String id, String dataCenter) {
+        return DefaultCompactionControlSource.zkKey(id, dataCenter);
     }
 }

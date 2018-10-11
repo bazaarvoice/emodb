@@ -16,7 +16,7 @@ public interface CompactionControlSource {
 
     StashRunTimeInfo getStashTime(String id, String dataCenter);
 
-    Map<String, StashRunTimeInfo> getAllStashTimes();
+    Map<StashTimeKey, StashRunTimeInfo> getAllStashTimes();
 
-    Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement);
+    Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement);
 }

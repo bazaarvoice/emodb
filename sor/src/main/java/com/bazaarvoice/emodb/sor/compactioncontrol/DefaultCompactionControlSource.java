@@ -3,10 +3,13 @@ package com.bazaarvoice.emodb.sor.compactioncontrol;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,20 +76,35 @@ public class DefaultCompactionControlSource implements CompactionControlSource {
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getAllStashTimes() {
-        return _stashStartTimestampInfo.getAll();
+    public Map<StashTimeKey, StashRunTimeInfo> getAllStashTimes() {
+        // Zookeeper entries have "ID@datacenter" as key names; example: daily-2018-05-26-00-00-00@eu-west-1-prod.
+        // Separating the ID and datacenter in the key.
+        return getStashTimesWithTupleKeys(_stashStartTimestampInfo.getAll());
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
+    public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
         Map<String, StashRunTimeInfo> stashTimes = _stashStartTimestampInfo.getAll();
-        return stashTimes.size() > 0 ? stashTimes.entrySet().stream()
+        return getStashTimesWithTupleKeys(stashTimes.size() > 0 ? stashTimes.entrySet().stream()
                 .filter(stashTime -> stashTime.getValue().getPlacements().contains(placement))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))
-                : ImmutableMap.of();
+                : ImmutableMap.of());
     }
 
-    private String zkKey(String id, String dataCenter) {
-        return id + "-" + dataCenter;
+    @VisibleForTesting
+    protected static String zkKey(String id, String dataCenter) {
+        if (id.contains(StashTimeKey.ZK_STRING_DELIMITER)) {
+          throw new IllegalArgumentException("Id cannot contain character: " + StashTimeKey.ZK_STRING_DELIMITER);
+        }
+        return id + StashTimeKey.ZK_STRING_DELIMITER + dataCenter;
+    }
+
+    @VisibleForTesting
+    protected static Map<StashTimeKey, StashRunTimeInfo> getStashTimesWithTupleKeys(Map<String, StashRunTimeInfo> stashTimesFromZk) {
+        Map<StashTimeKey, StashRunTimeInfo> allStashTimes = Maps.newHashMap();
+        for (Map.Entry<String, StashRunTimeInfo> stashTimeFromZk : stashTimesFromZk.entrySet()) {
+            allStashTimes.put(StashTimeKey.fromString(stashTimeFromZk.getKey()), stashTimeFromZk.getValue());
+        }
+        return allStashTimes;
     }
 }

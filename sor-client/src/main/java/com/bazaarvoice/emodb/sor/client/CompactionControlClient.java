@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.google.common.base.Preconditions;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -93,7 +94,7 @@ public class CompactionControlClient implements CompactionControlSource {
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getAllStashTimes() {
+    public Map<StashTimeKey, StashRunTimeInfo> getAllStashTimes() {
         try {
             URI uri = _compactionControlSource.clone()
                     .segment("_compcontrol", "stash-time")
@@ -108,7 +109,7 @@ public class CompactionControlClient implements CompactionControlSource {
     }
 
     @Override
-    public Map<String, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
+    public Map<StashTimeKey, StashRunTimeInfo> getStashTimesForPlacement(String placement) {
         checkNotNull(placement, "placement");
 
         try {

@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.compactioncontrol;
 
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
+import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.ImmutableList;
@@ -26,24 +27,25 @@ public class CompactionControlMonitorTest {
         long expiredTimestamp3 = timestamp3 + Duration.ofHours(10).toMillis();
 
         CompactionControlSource compactionControlSource = new InMemoryCompactionControlSource();
-        compactionControlSource.updateStashTime("dc1-1", timestamp1, ImmutableList.of("placement-1"), expiredTimestamp1, "dc1");
-        compactionControlSource.updateStashTime("dc1-2", timestamp2, ImmutableList.of("placement-1"), expiredTimestamp2, "dc1");
-        compactionControlSource.updateStashTime("dc1-3", timestamp3, ImmutableList.of("placement-1"), expiredTimestamp3, "dc1");
+        compactionControlSource.updateStashTime("id-1", timestamp1, ImmutableList.of("placement-1"), expiredTimestamp1, "us-east-1");
+        compactionControlSource.updateStashTime("id-2", timestamp2, ImmutableList.of("placement-1"), expiredTimestamp2, "us-east-1");
+        compactionControlSource.updateStashTime("id-3", timestamp3, ImmutableList.of("placement-1"), expiredTimestamp3, "us-east-1");
 
         CompactionControlMonitor compactionControlMonitor = new CompactionControlMonitor(compactionControlSource, mock(Clock.class), new MetricRegistry());
 
         compactionControlMonitor.deleteExpiredStashTimes(timestamp1 + Duration.ofMinutes(10).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 3);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("dc1-1"), true);
+        StashTimeKey stashTimeKey = StashTimeKey.of("id-1", "us-east-1");
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), true);
 
         compactionControlMonitor.deleteExpiredStashTimes(expiredTimestamp1 + Duration.ofMinutes(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 2);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("dc1-1"), false);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
 
         compactionControlMonitor.deleteExpiredStashTimes(expiredTimestamp3 + Duration.ofMinutes(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("dc1-2"), false);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey("dc1-3"), false);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
+        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
     }
 
 }
