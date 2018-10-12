@@ -35,7 +35,7 @@ public class DefaultHistoryStore implements HistoryStore {
     @Override
     public Iterator<Change> getDeltaHistories(String table, String rowId) {
         Key key = new Key(_tableDao.get(table), rowId);
-        return _dataReaderDao.getExistingAudits(key, null, null, ReadConsistency.STRONG);
+        return _dataReaderDao.getExistingHistories(key, null, null, ReadConsistency.STRONG);
     }
 
     @Override

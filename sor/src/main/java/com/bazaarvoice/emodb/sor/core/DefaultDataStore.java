@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
@@ -25,6 +26,8 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -60,6 +63,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
@@ -104,6 +108,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Optional<URI> _stashRootDirectory;
     private final Condition _stashBlackListTableCondition;
     private final Timer _resolveAnnotatedEventTimer;
+    private final AuditWriter _auditWriter;
     @VisibleForTesting
     protected final Counter _archiveDeltaSize;
     private final Meter _discardedCompactions;
@@ -116,16 +121,17 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, DatabusEventWriterRegistry eventWriterRegistry, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
-                            @StashBlackListTableCondition Condition stashBlackListTableCondition) {
+                            @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, metricRegistry);
+                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter, metricRegistry);
     }
 
     @VisibleForTesting
     public DefaultDataStore(DatabusEventWriterRegistry eventWriterRegistry,TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
-                            Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource, Condition stashBlackListTableCondition, MetricRegistry metricRegistry) {
+                            Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
+                            Condition stashBlackListTableCondition, AuditWriter auditWriter, MetricRegistry metricRegistry) {
         _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -135,6 +141,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _historyStore = checkNotNull(historyStore, "historyStore");
         _stashRootDirectory = checkNotNull(stashRootDirectory, "stashRootDirectory");
         _stashBlackListTableCondition = checkNotNull(stashBlackListTableCondition, "stashBlackListTableCondition");
+        _auditWriter = checkNotNull(auditWriter, "auditWriter");
         _resolveAnnotatedEventTimer = metricRegistry.timer(getMetricName("resolve_event"));
 
         _archiveDeltaSize = metricRegistry.counter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "archivedDeltaSize"));
@@ -484,6 +491,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                                         @Nullable UUID start, @Nullable UUID end, boolean reversed, long limit, ReadConsistency consistency) {
         checkLegalTableName(tableName);
         checkNotNull(key, "key");
+        if (includeAuditInformation) {
+            throw new AuditsUnavailableException();
+        }
         if (start != null && end != null) {
             if (reversed) {
                 checkArgument(TimeUUIDs.compare(start, end) >= 0, "Start must be >=End for reversed ranges");
@@ -498,7 +508,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         // Query the database.  Return the raw timeline.  Don't perform compaction--it modifies the timeline which
         // could make getTimeline() less useful for debugging.
-        return _dataReaderDao.readTimeline(new Key(table, key), includeContentData, includeAuditInformation, start, end, reversed, limit, consistency);
+        return _dataReaderDao.readTimeline(new Key(table, key), includeContentData, start, end, reversed, limit, consistency);
     }
 
     @Override
@@ -690,6 +700,25 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                 if (!updateRefs.isEmpty()) {
                     _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
                 }
+            }
+
+            public void afterWrite(Collection<RecordUpdate> updateBatch) {
+                // Write the audit to the audit store after we know the delta has written sucessfully.
+                // Using this model for writing audits, there should never be any audit written for a delta that
+                // didn't end in Cassandra. However, it is absolutely possible for audits to be missing if Emo
+                // terminates unexpectedly without a graceful shutdown to drain all audit that haven't been flushed yet.
+
+                // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
+                // Update the audit to include the tags associated with the update
+                updateBatch.forEach(update -> {
+                    Audit augmentedAudit = AuditBuilder.from(update.getAudit())
+                            .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(update.getDelta().toString()).toString())
+                            .set(Audit.TAGS, tags)
+                            .build();
+
+                    _auditWriter.persist(update.getTable().getName(), update.getKey(), augmentedAudit, TimeUUIDs.getTimeMillis(update.getChangeId()));
+
+                });
             }
         });
     }

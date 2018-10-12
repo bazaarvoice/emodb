@@ -26,11 +26,11 @@ public interface DataReaderDAO {
     Iterator<Record> readAll(Collection<Key> keys, ReadConsistency consistency);
 
     /** Retrieves history for a single piece of content using the specified range restrictions. */
-    Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation,
+    Iterator<Change> readTimeline(Key key, boolean includeContentData,
                                   UUID start, UUID end, boolean reversed, long limit, ReadConsistency consistency);
 
-    /** Retrieves history of audit records using the specified range restrictions. */
-    Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency consistency);
+    /** Retrieves history of deltas using the specified range restrictions. */
+    Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency consistency);
 
     /** Retrieves up to {@code limit} records from the specified table. */
     Iterator<Record> scan(Table table, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency);

@@ -4,6 +4,7 @@ import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DataCenterFanoutPartitions;

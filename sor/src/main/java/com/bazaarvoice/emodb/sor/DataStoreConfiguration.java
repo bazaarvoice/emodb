@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -74,6 +75,10 @@ public class DataStoreConfiguration {
     @JsonProperty("stashBlackListTableCondition")
     private Optional<String> _stashBlackListTableCondition = Optional.absent();
 
+    @Valid
+    @JsonProperty("auditWriter")
+    private AuditWriterConfiguration _auditWriterConfiguration;
+
     public Optional<String> getStashBlackListTableCondition() {
         return _stashBlackListTableCondition;
     }
@@ -89,6 +94,10 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setValidTablePlacements(Set<String> validTablePlacements) {
         _validTablePlacements = validTablePlacements;
         return this;
+    }
+
+    public void setAuditWriterConfiguration(AuditWriterConfiguration auditWriterConfiguration) {
+        _auditWriterConfiguration = auditWriterConfiguration;
     }
 
     public int getMinimumSplitsPerTable() {
@@ -162,5 +171,9 @@ public class DataStoreConfiguration {
 
     public int getDeltaBlockSizeInKb() {
         return _deltaBlockSizeInKb;
+    }
+
+    public AuditWriterConfiguration getAuditWriterConfiguration() {
+        return _auditWriterConfiguration;
     }
 }

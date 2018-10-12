@@ -18,12 +18,10 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.testng.annotations.Test;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,7 +42,7 @@ public class DeltaHistoryTest {
     private static final String KEY2 = "key2";
 
     @Test
-    public void testDeltaAudits() {
+    public void testDeltaHistories() {
         MetricRegistry metricRegistry = new MetricRegistry();
 
         // Just use one datacenter for this test
@@ -97,12 +95,12 @@ public class DeltaHistoryTest {
         Resolver resolver = new DefaultResolver(intrinsics);
 
         Map<UUID, Change> map = Maps.newLinkedHashMap();
-        int countOfAuditedDeltas = 0;
+        int countOfHistoryDeltas = 0;
         int version = 0;
         while (allChangesEver.hasNext()) {
             Change change = allChangesEver.next();
             if (change.getHistory() != null) {
-                countOfAuditedDeltas++;
+                countOfHistoryDeltas++;
                 assertEquals(++version, Long.parseLong(change.getHistory().getContent().get("~version").toString()),
                 "Version continuity failed");
             }
@@ -118,8 +116,8 @@ public class DeltaHistoryTest {
             resolver.update(entry.getKey(), entry.getValue().getDelta(), entry.getValue().getTags());
         }
 
-        // Verify we have 4 audited deltas
-        assertEquals(countOfAuditedDeltas, 4, "There should be 4 deltas stored in audits that got compacted away.");
+        // Verify we have 4 history deltas
+        assertEquals(countOfHistoryDeltas, 4, "There should be 4 deltas stored in audits that got compacted away.");
 
         // Verify we have a total of 5 distinct changes.
         assertEquals(5, map.size(), "We should have 5 distinct changes");
@@ -160,7 +158,7 @@ public class DeltaHistoryTest {
         int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.historyStore(0).getDeltaHistories(TABLE, KEY),
                 Integer.MAX_VALUE);
 
-        assertEquals(countOfAuditedDeltas, countOfDeltasAfterHugeDelta,
+        assertEquals(countOfHistoryDeltas, countOfDeltasAfterHugeDelta,
                 "The number of audited deltas should always stay the same once a huge delta is added");
 
         // Make sure that the archived delta size goes back to 0
@@ -312,7 +310,7 @@ public class DeltaHistoryTest {
             protected Change computeNext() {
                 while (liveChanges.hasNext()) {
                     Change change = liveChanges.next();
-                    if (change.getDelta() != null) {
+                    if (change.getHistory() == null && change.getCompaction() == null) {
                         return change;
                     }
                 }

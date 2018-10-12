@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;

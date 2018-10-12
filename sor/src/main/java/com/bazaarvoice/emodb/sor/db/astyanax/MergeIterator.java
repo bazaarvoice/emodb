@@ -15,12 +15,12 @@ import java.util.UUID;
  * Similar to {@link Iterators#mergeSorted(Iterable, java.util.Comparator)} but specialized for {@link Change}
  * objects which should be combined when changes have the same changeId.
  */
-class MergeIterator extends AbstractIterator<Change> {
+public class MergeIterator extends AbstractIterator<Change> {
     private final PeekingIterator<Change> _iter1;
     private final PeekingIterator<Change> _iter2;
     private final Ordering<UUID> _ordering;
 
-    static Iterator<Change> merge(Iterator<Change> iter1, Iterator<Change> iter2, boolean reversed) {
+    public static Iterator<Change> merge(Iterator<Change> iter1, Iterator<Change> iter2, boolean reversed) {
         if (!iter2.hasNext()) {
             return iter1;
         } else if (!iter1.hasNext()) {

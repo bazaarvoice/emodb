@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
-import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.Compaction;
@@ -32,7 +31,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
         D2,  // delta (version 2 encoding includes tags)
         D3,  // delta (version 3 encoding, adds change flags to D2
         C1,  // compaction (version 1 encoding)
-        A1,  // audit (version 1 encoding)
         H1,  // historical deltas (version 1 encoding)
     }
 
@@ -77,11 +75,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
 
         return changeBody;
-    }
-
-    @Override
-    public String encodeAudit(Audit audit) {
-        return encodeChange(Encoding.A1, JsonHelper.asJson(audit), new StringBuilder()).toString();
     }
 
     @Override
@@ -161,9 +154,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
             case C1:
                 builder.with(JsonHelper.fromJson(body, Compaction.class));
                 break;
-            case A1:
-                builder.with(JsonHelper.fromJson(body, Audit.class));
-                break;
             case H1:
                 builder.with(JsonHelper.fromJson(body, History.class));
                 break;
@@ -206,8 +196,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
                     return Encoding.D3;
                 case 'C' | ('1' << 8):
                     return Encoding.C1;
-                case 'A' | ('1' << 8):
-                    return Encoding.A1;
                 case 'H' | ('1' << 8):
                     return Encoding.H1;
             }

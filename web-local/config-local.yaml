@@ -105,7 +105,9 @@ systemOfRecord:
     tooManyDeltasThreshold: 20
     console:
       type: console
-
+#  auditWriter:
+#    logBucket: bv-emodb-local-audit
+#    logPath: localAudit
 
 databus:
   longPollPollingThreadCount: 0
@@ -236,6 +238,8 @@ server:
   adminConnectors:
     - type: instrumentedHttp
       port: 8081
+
+  shutdownGracePeriod: 60s
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.

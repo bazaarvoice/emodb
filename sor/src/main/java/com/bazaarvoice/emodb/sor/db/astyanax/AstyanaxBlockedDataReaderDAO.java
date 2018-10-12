@@ -276,8 +276,8 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
     }
 
     @Override
-    public Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation,
-                                         UUID start, UUID end, boolean reversed, long limit, ReadConsistency consistency) {
+    public Iterator<Change> readTimeline(Key key, boolean includeContentData, UUID start, UUID end, boolean reversed,
+                                         long limit, ReadConsistency consistency) {
         checkNotNull(key, "key");
         checkArgument(limit > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
@@ -297,22 +297,16 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
 
         }
 
-        // Read Audit objects
-        Iterator<Change> audits = Iterators.emptyIterator();
+        // Read History objects
         Iterator<Change> deltaHistory = Iterators.emptyIterator();
-        if (includeAuditInformation) {
-            ColumnFamily<ByteBuffer, UUID> cf = placement.getAuditColumnFamily();
-            audits = decodeColumns(columnScan(rowKey, placement, cf, start, end, reversed, _uuidInc, limit, 0, consistency));
-            ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = placement.getDeltaHistoryColumnFamily();
-            deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, _uuidInc, limit, 0, consistency));
-        }
+        ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = placement.getDeltaHistoryColumnFamily();
+        deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, _uuidInc, limit, 0, consistency));
 
-        Iterator<Change> deltaPlusAudit = MergeIterator.merge(deltas, audits, reversed);
-        return touch(MergeIterator.merge(deltaPlusAudit, deltaHistory, reversed));
+        return touch(MergeIterator.merge(deltas, deltaHistory, reversed));
     }
 
     @Override
-    public Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency consistency) {
+    public Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency consistency) {
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
         ByteBuffer rowKey = storage.getRowKey(key.getKey());
@@ -655,10 +649,6 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
             copyRange(sourcePlacement, sourcePlacement.getBlockedDeltaColumnFamily(),
                     dest, destPlacement, destPlacement.getBlockedDeltaColumnFamily(),
                     _deltaKeyInc, keyRange, progress);
-            // Copy audit records in this split.
-            copyRange(sourcePlacement, sourcePlacement.getAuditColumnFamily(),
-                    dest, destPlacement, destPlacement.getAuditColumnFamily(),
-                    _uuidInc, keyRange, progress);
             // Copy delta history records in this split.
             copyRange(sourcePlacement, sourcePlacement.getDeltaHistoryColumnFamily(),
                     dest, destPlacement, destPlacement.getDeltaHistoryColumnFamily(),
@@ -690,7 +680,6 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
                 putAll(mutation.withRow(destCf, newRowKey), columns);
 
                 // If this is a wide row, copy the remaining columns w/separate mutation objects.
-                // This is especially common with the audit column family.
                 if (columns.size() >= largeRowThreshold) {
                     C lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
                     Iterator<List<Column<C>>> columnsIter = Iterators.partition(

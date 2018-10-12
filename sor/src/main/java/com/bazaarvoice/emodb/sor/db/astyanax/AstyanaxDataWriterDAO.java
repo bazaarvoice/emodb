@@ -2,9 +2,6 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
-import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.api.AuditBuilder;
-import com.bazaarvoice.emodb.sor.api.AuditSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.DeltaSizeLimitException;
 import com.bazaarvoice.emodb.sor.api.History;
@@ -35,7 +32,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.hash.Hashing;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
@@ -75,10 +71,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private static final int MAX_PENDING_SIZE = 200;
     // Must match thrift_framed_transport_size_in_mb value from cassandra.yaml
     private static final int MAX_THRIFT_FRAMED_TRANSPORT_SIZE = 15 * 1024 * 1024;
-    // Because of the thrift framed transport size conservatively limit the size of deltas and audits
+    // Because of the thrift framed transport size conservatively limit the size of deltas
     // to allow ample room for additional metadata and protocol overhead.
     private static final int MAX_DELTA_SIZE = 10 * 1024 * 1024;   // 10 MB delta limit, measured in UTF-8 bytes
-    private static final int MAX_AUDIT_SIZE = 1 * 1024 * 1024;    // 1 MB audit limit, measured in UTF-8 bytes
 
     private final AstyanaxKeyScanner _keyScanner;
     private final DataWriterDAO _cqlWriterDAO;
@@ -106,7 +101,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  FullConsistencyTimeProvider fullConsistencyTimeProvider, HistoryStore historyStore,
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
-                                 DAOUtils daoUtils, @BlockSize int deltaBlockSize, @PrefixLength int deltaPrefixLength,
+                                 DAOUtils daoUtils, @BlockSize int deltaBlockSize,
+                                 @PrefixLength int deltaPrefixLength,
                                  @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable,
                                  @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
 
@@ -205,12 +201,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
 
     private void write(BatchKey batchKey, List<BatchUpdate> updates, UpdateListener listener) {
         // Invoke the configured listener.  This is used to write events to the databus.
-        listener.beforeWrite(Collections2.transform(updates, new Function<BatchUpdate, RecordUpdate>() {
-            @Override
-            public RecordUpdate apply(BatchUpdate update) {
-                return update.getUpdate();
-            }
-        }));
+        listener.beforeWrite(Collections2.transform(updates, BatchUpdate::getUpdate));
 
         DeltaPlacement placement = batchKey.getPlacement();
         MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
@@ -236,46 +227,31 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 changeFlags.add(ChangeFlag.MAP_DELTA);
             }
 
-            // Add the hash of the delta to the audit log to make it easy to tell when the same delta is written multiple times
-            // Update the audit to include the tags associated with the update
-            Audit augmentedAudit = AuditBuilder.from(update.getAudit())
-                    .set(Audit.SHA1, Hashing.sha1().hashUnencodedChars(deltaString).toString())
-                    .set(Audit.TAGS, tags)
-                    .build();
-
             // Regardless of migration stage, we will still encode both deltas versions
 
             // The values are encoded in a flexible format that allows versioning of the strings
             ByteBuffer encodedBlockDelta = stringToByteBuffer(_changeEncoder.encodeDelta(deltaString, changeFlags, tags, new StringBuilder(_deltaPrefix)).toString());
             ByteBuffer encodedDelta = encodedBlockDelta.duplicate();
             encodedDelta.position(encodedDelta.position() + _deltaPrefixLength);
-            ByteBuffer encodedAudit = stringToByteBuffer(_changeEncoder.encodeAudit(augmentedAudit));
 
             int deltaSize = _writeToLegacyDeltaTable ? encodedDelta.remaining(): 0;
             int blockDeltaSize = _writeToBlockedDeltaTable ? encodedBlockDelta.remaining() : 0;
-            int auditSize = encodedAudit.remaining();
 
             UUID changeId = update.getChangeId();
 
-            // Validate sizes of individual deltas and audits
+            // Validate sizes of individual deltas
             if (deltaSize > MAX_DELTA_SIZE) {
                 _oversizeUpdateMeter.mark();
                 throw new DeltaSizeLimitException("Delta exceeds size limit of " + MAX_DELTA_SIZE + ": " + deltaSize, deltaSize);
             }
-            if (auditSize > MAX_AUDIT_SIZE) {
-                _oversizeUpdateMeter.mark();
-                throw new AuditSizeLimitException("Audit exceeds size limit of " + MAX_AUDIT_SIZE + ": " + auditSize, auditSize);
-            }
 
             // Perform a quick validation that the size of the mutation batch as a whole won't exceed the thrift threshold.
             // This validation is inexact and overly-conservative but it is cheap and fast.
-            if (!mutation.isEmpty() && approxMutationSize + deltaSize + blockDeltaSize + auditSize > MAX_DELTA_SIZE + MAX_AUDIT_SIZE) {
+            if (!mutation.isEmpty() && approxMutationSize + deltaSize + blockDeltaSize > MAX_DELTA_SIZE) {
                 // Adding the next row may exceed the Thrift threshold.  Check definitively now.  This is fairly expensive
                 // which is why we don't do it unless the cheap check above passes.
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
-
-                potentiallyOversizeMutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
 
                 if (_writeToLegacyDeltaTable) {
                     //this will be removed in the next version
@@ -295,16 +271,13 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            mutation.withRow(placement.getAuditColumnFamily(), rowKey).putColumn(changeId, encodedAudit, null);
-            approxMutationSize += auditSize;
-
             // this will be removed in the next version
             if (_writeToLegacyDeltaTable) {
                 mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
                 approxMutationSize += deltaSize;
             }
 
-            if (deltaSize + blockDeltaSize + auditSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
+            if (deltaSize + blockDeltaSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
                 execute(mutation, "update large record in old table in placement %s", placement.getName());
                 approxMutationSize = 0;
             }
@@ -315,7 +288,11 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             }
             updateCount += 1;
         }
+
         execute(mutation, "batch update %d records in placement %s", updateCount, placement.getName());
+
+        // Invoke the configured listener.  This is used to write audits.
+        listener.afterWrite(Collections2.transform(updates, BatchUpdate::getUpdate));
 
         _updateMeter.mark(updates.size());
     }
@@ -341,7 +318,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     public void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency) {
         checkNotNull(tbl, "table");
         checkNotNull(key, "key");
-        checkNotNull(histories, "audits");
+        checkNotNull(histories, "histories");
         checkNotNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) tbl;
@@ -388,7 +365,6 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             ByteBuffer rowKey = storage.getRowKey(keyIter.next());
             mutation.withRow(placement.getDeltaColumnFamily(), rowKey).delete();
             mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey).delete();
-            mutation.withRow(placement.getAuditColumnFamily(), rowKey).delete();
             if (mutation.getRowCount() >= 100) {
                 progress.run();
                 execute(mutation, "purge %d records from placement %s", mutation.getRowCount(), placement.getName());

@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -26,6 +28,11 @@ import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
+import com.bazaarvoice.emodb.sor.audit.AuditStore;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
+import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
+import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.*;
@@ -66,6 +73,7 @@ import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -190,15 +198,23 @@ public class DataStoreModule extends PrivateModule {
         install(new DAOModule());
 
         bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
-        
+
+        bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
+
+        bind(AuditWriter.class).to(AuditStore.class);
+        bind(AuditFlusher.class).to(AuditStore.class);
+
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
-        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(DefaultDataStore.class);
+        bind(WriteCloseableDataStore.class).asEagerSingleton();
+        bind(DataStore.class).annotatedWith(ManagedDataStoreDelegate.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).annotatedWith(ManagedTableBackingStoreDelegate.class).to(DefaultDataStore.class);
+        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(WriteCloseableDataStore.class);
         expose(DataStore.class);
 
         // The AstyanaxTableDAO class uses the DataStore (recursively) to store table metadata
-        bind(TableBackingStore.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).to(WriteCloseableDataStore.class);
         expose(TableBackingStore.class);
 
         // Publish events to listeners like the Databus via an instance of EventBus
@@ -226,8 +242,23 @@ public class DataStoreModule extends PrivateModule {
         bind(DataTools.class).to(DefaultDataStore.class);
         expose(DataTools.class);
 
+        bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
+        bind(GracefulShutdownManager.class).asEagerSingleton();
+
+        // Tools for migration to blocked deltas
         bind(MigratorTools.class).to(DefaultMigratorTools.class);
         expose(MigratorTools.class);
+    }
+
+    @Provides @Singleton
+    AuditStore provideAuditStore(DataStoreConfiguration dataStoreConfiguration, ObjectMapper objectMapper, Clock clock,
+                                 RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
+        if (dataStoreConfiguration.getAuditWriterConfiguration() != null) {
+            return new AthenaAuditWriter(dataStoreConfiguration.getAuditWriterConfiguration(), objectMapper, clock,
+                    rateLimitedLogFactory, metricRegistry);
+        }
+
+        return new DiscardingAuditWriter();
     }
 
     @Provides @Singleton

@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.core;
+package com.bazaarvoice.emodb.common.dropwizard.log;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.google.common.annotations.VisibleForTesting;

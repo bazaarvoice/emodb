@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.core;
+package com.bazaarvoice.emodb.common.dropwizard.log;
 
 import org.slf4j.Logger;
 

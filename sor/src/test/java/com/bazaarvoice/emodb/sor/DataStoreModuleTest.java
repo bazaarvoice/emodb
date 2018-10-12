@@ -35,6 +35,7 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.Cache;
@@ -53,6 +54,7 @@ import org.apache.curator.utils.EnsurePath;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
+import javax.validation.Validation;
 import java.time.Clock;
 import java.time.Duration;
 
@@ -62,7 +64,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertNotNull;
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class DataStoreModuleTest {
@@ -74,8 +75,6 @@ public class DataStoreModuleTest {
         assertNotNull(injector.getInstance(DataStore.class));
         assertNotNull(injector.getInstance(DataProvider.class));
         assertNotNull(injector.getInstance(DatabusEventWriterRegistry.class));
-
-        assertTrue(injector.getInstance(DataProvider.class) == injector.getInstance(DataStore.class));
 
         // Verify that some things we expect to be private are, indeed, private
         assertPrivate(injector, MutexTableDAO.class);
@@ -108,8 +107,7 @@ public class DataStoreModuleTest {
             protected void configure() {
                 binder().requireExplicitBindings();
 
-                // construct the minimum necessary elements to allow a DataStore module to be created.
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setHistoryTtl(Duration.ofDays(2))
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys"))
                         .setCassandraClusters(ImmutableMap.of("app_global", new CassandraConfiguration()
@@ -117,7 +115,10 @@ public class DataStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "app_global", new KeyspaceConfiguration())))));
+                                        "app_global", new KeyspaceConfiguration()))));
+
+                // construct the minimum necessary elements to allow a DataStore module to be created.
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
@@ -147,7 +148,7 @@ public class DataStoreModuleTest {
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
-
+                bind(ObjectMapper.class).toInstance(mock(ObjectMapper.class));
                 install(new DataStoreModule(serviceMode));
             }
         });

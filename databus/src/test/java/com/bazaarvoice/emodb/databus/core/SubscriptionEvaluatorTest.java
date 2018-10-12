@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.model.DefaultOwnedSubscription;

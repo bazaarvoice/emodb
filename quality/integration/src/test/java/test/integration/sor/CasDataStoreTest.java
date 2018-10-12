@@ -48,6 +48,7 @@ import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.ServiceRegistry;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -61,8 +62,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import io.dropwizard.jackson.Jackson;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
+import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
@@ -73,6 +76,7 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import javax.validation.Validation;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -125,12 +129,14 @@ public class CasDataStoreTest {
                 bind(HealthCheckRegistry.class).toInstance(_healthChecks);
                 bind(TaskRegistry.class).toInstance(mock(TaskRegistry.class));
 
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Duration.ofDays(2)));
+                        .setHistoryTtl(Duration.ofDays(2));
+
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
 
@@ -171,6 +177,10 @@ public class CasDataStoreTest {
 
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
+
+                bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
+                        Validation.buildDefaultValidatorFactory().getValidator(),
+                        new MetricRegistry(), ClassLoader.getSystemClassLoader()));
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

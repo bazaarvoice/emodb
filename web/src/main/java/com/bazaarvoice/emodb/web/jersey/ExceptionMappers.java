@@ -33,7 +33,8 @@ public class ExceptionMappers {
                 new EmoApiKeyExistsExceptionMapper(),
                 new InvalidEmoPermissionExceptionMapper(),
                 new InsufficientRolePermissionExceptionMapper(),
-                new InvalidStashRequestExceptionMapper());
+                new InvalidStashRequestExceptionMapper(),
+                new AuditsUnavailableExceptionMapper());
     }
 
     public static Iterable<Class> getMapperTypes() {

@@ -57,7 +57,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     private final Logger _log = LoggerFactory.getLogger(CqlBlockedDataReaderDAO.class);
 
     /**
-     * Depending on the placement and type of data being queried (delta, audit, or delta history) the names of the
+     * Depending on the placement and type of data being queried (delta or delta history) the names of the
      * columns being queried can change.  However, by quering the columns in a fixed well-known order in each
      * {@link QueryBuilder#select()} the results can be efficiently read by position rather than name.
      */
@@ -728,7 +728,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     }
 
     /**
-     * Reads columns from the delta, audit, or delta history table.  The range of columns, order, and limit can be
+     * Reads columns from the delta or delta history table.  The range of columns, order, and limit can be
      * parameterized.
      */
     private ResultSet columnScan(DeltaPlacement placement, TableDDL tableDDL, ByteBuffer rowKey, Range<RangeTimeUUID> columnRange,
@@ -761,7 +761,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     }
 
     @Override
-    public Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation, UUID start, UUID end,
+    public Iterator<Change> readTimeline(Key key, boolean includeContentData, UUID start, UUID end,
                                          boolean reversed, long limit, ReadConsistency readConsistency) {
         checkNotNull(key, "key");
         checkArgument(limit > 0, "Limit must be >0");
@@ -791,22 +791,16 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
             deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry), scaledLimit));
         }
 
-        // Read Audit objects
-        Iterator<Change> audits = Iterators.emptyIterator();
+        // Read History objects
         Iterator<Change> deltaHistory = Iterators.emptyIterator();
-        if (includeAuditInformation) {
-            TableDDL auditDDL = placement.getAuditTableDDL();
-            audits = decodeColumns(Iterators.limit(columnScan(placement, auditDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
-            TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
-            deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
-        }
+        TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
+        deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
 
-        Iterator<Change> deltaPlusAudit = MergeIterator.merge(deltas, audits, reversed);
-        return touch(MergeIterator.merge(deltaPlusAudit, deltaHistory, reversed));
+        return touch(MergeIterator.merge(deltas, deltaHistory, reversed));
     }
 
     @Override
-    public Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency readConsistency) {
+    public Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency readConsistency) {
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
         ByteBuffer rowKey = storage.getRowKey(key.getKey());
