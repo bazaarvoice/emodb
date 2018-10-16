@@ -288,6 +288,11 @@ public class DistributedMigratorRangeMonitor implements Managed {
                 return true;
             }
 
+            while (!_rangeMigrator.isCapableOfMigrating(placement)) {
+                _log.warn("FCL is too high. Delta migration will block until it comes down.");
+                Thread.sleep(60 * 1000);
+            }
+
             _log.info("Started migration range task: {}", task);
 
             _statusDAO.setMigratorRangeTaskActive(migrationId, taskId, new Date());
