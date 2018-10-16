@@ -20,6 +20,7 @@
         <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
         <config.file>config-local.yaml</config.file>
         <ddl.file>config-ddl-local.yaml</ddl.file>
+        <permissions.file/>
     </properties>
 
     <dependencies>
@@ -150,6 +151,8 @@
                                         <argument>${project.basedir}/${config.file}</argument>
                                         <argument>${project.basedir}/${ddl.file}</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -212,6 +215,8 @@
                                         <argument>${project.basedir}/config-local-main-role.yaml</argument>
                                         <argument>${project.basedir}/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
