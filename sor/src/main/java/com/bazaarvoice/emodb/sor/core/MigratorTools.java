@@ -7,10 +7,12 @@ import com.google.common.util.concurrent.RateLimiter;
 
 import java.util.Iterator;
 
-// interface to migrate deltas from old tables to new tables with blocking
+// Interface to migrate deltas from old tables to new tables with blocking
 public interface MigratorTools {
 
     void writeRows(String placement, Iterator<MigrationScanResult> results, RateLimiter rateLimiter);
 
     Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange);
+
+    long getFullConsistencyTimestamp(String placement);
 }

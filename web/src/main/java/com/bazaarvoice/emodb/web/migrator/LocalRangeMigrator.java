@@ -11,6 +11,7 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
@@ -27,6 +28,7 @@ public class LocalRangeMigrator {
     private final static float RESPLIT_FACTOR = 3;
     private final static int READ_RATE_LIMITER_SECONDS = 60;
     private final static int MAX_BATCH_SIZE = 10000;
+    private final static int MAX_FCL_SECONDS = 600;
 
     private final static Logger _log = LoggerFactory.getLogger(LocalRangeMigrator.class);
 
@@ -44,6 +46,10 @@ public class LocalRangeMigrator {
 
         _activeRangeMigrations = metricRegistry.counter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "active-range-migrations"));
         _failedRangeMigrations = metricRegistry.meter(MetricRegistry.name("bv.emodb.migrator", "Migrator", "failed-range-migrations"));
+    }
+
+    public boolean isCapableOfMigrating(String placement) {
+        return _migratorTools.getFullConsistencyTimestamp(placement) >= System.currentTimeMillis() - (MAX_FCL_SECONDS * 1000);
     }
 
     public RangeScanUploaderResult migrate(final int taskId, ScanOptions options, final String placement, ScanRange range,
@@ -64,7 +70,21 @@ public class LocalRangeMigrator {
 
             Iterator<MigrationScanResult> allResults = _migratorTools.readRows(placement, range);
 
-            Iterator<MigrationScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
+            Iterator<MigrationScanResult> interruptableResults = new AbstractIterator<MigrationScanResult>() {
+                @Override
+                protected MigrationScanResult computeNext() {
+                    if (isCapableOfMigrating(placement)) {
+                        if (allResults.hasNext()) {
+                            return allResults.next();
+                        } else {
+                            return endOfData();
+                        }
+                    }
+                    throw new RuntimeException("Migration of this range has failed due to and increased full consistency lag.");
+                }
+            };
+
+            Iterator<MigrationScanResult> results = Iterators.limit(interruptableResults, getResplitRowCount(options));
 
 
             while (System.currentTimeMillis() - startTime < options.getMaxRangeScanTime().toMillis() && results.hasNext()) {
