@@ -170,6 +170,13 @@ public class LocalMigratorMonitor extends AbstractService {
         // Update the set of active migrations
         _activeMigrations.add(id);
 
+        // Before going any further ensure the stash table snapshot has been created and, if not, do so now.
+        // This should only happen prior to the first scan range being processed.
+        if (!status.isTableSnapshotCreated()) {
+            _dataTools.createStashTokenRangeSnapshot(id, status.getOptions().getPlacements());
+            _statusDAO.setTableSnapshotCreated(id);
+        }
+
         // Before evaluating available tasks check whether any completed tasks didn't migrate their entire ranges
         // and require the addition of new tasks.
         status = resplitPartiallyCompleteTasks(status);
@@ -337,6 +344,13 @@ public class LocalMigratorMonitor extends AbstractService {
     private void cleanupMigration(String id) {
         // Remove this migration from the active set
         _activeMigrations.remove(id);
+
+        try {
+            // Remove the table snapshots set for this migration
+            _dataTools.clearStashTokenRangeSnapshot(id);
+        } catch (Exception e) {
+            _log.error("Failed to clean up table set for scan {}", id, e);
+        }
 
     }
 
