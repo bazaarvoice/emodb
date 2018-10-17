@@ -15,23 +15,24 @@ public class MigratorStatus extends ScanStatus {
     private int _maxWritesPerSecond;
 
     public MigratorStatus(ScanStatus scanStatus, int maxWritesPerSecond) {
-        this(scanStatus.getScanId(), scanStatus.getOptions(), scanStatus.isCanceled(),
-                scanStatus.getStartTime(), scanStatus.getPendingScanRanges(),
+        this(scanStatus.getScanId(), scanStatus.getOptions(), scanStatus.isTableSnapshotCreated(),
+                scanStatus.isCanceled(), scanStatus.getStartTime(), scanStatus.getPendingScanRanges(),
                 scanStatus.getActiveScanRanges(), scanStatus.getCompleteScanRanges(),
                 scanStatus.getCompleteTime(), maxWritesPerSecond);
     }
 
     @JsonCreator
     public MigratorStatus(@JsonProperty ("scanId") String scanId,
-                      @JsonProperty ("options") ScanOptions options,
-                      @JsonProperty ("canceled") boolean canceled,
-                      @JsonProperty ("startTime") Date startTime,
-                      @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingMigrationRanges,
-                      @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeMigrationRanges,
-                      @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeMigrationRanges,
-                      @JsonProperty ("completeTime") @Nullable Date completeTime,
-                      @JsonProperty ("maxWritesPerSecond") int maxWritesPerSecond) {
-        super(scanId, options, false, canceled, startTime, pendingMigrationRanges, activeMigrationRanges, completeMigrationRanges, completeTime);
+                          @JsonProperty ("options") ScanOptions options,
+                          @JsonProperty ("tableSnapshotCreated") boolean tableSnapshotCreated,
+                          @JsonProperty ("canceled") boolean canceled,
+                          @JsonProperty ("startTime") Date startTime,
+                          @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingMigrationRanges,
+                          @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeMigrationRanges,
+                          @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeMigrationRanges,
+                          @JsonProperty ("completeTime") @Nullable Date completeTime,
+                          @JsonProperty ("maxWritesPerSecond") int maxWritesPerSecond) {
+        super(scanId, options, tableSnapshotCreated, canceled, startTime, pendingMigrationRanges, activeMigrationRanges, completeMigrationRanges, completeTime);
         _maxWritesPerSecond = maxWritesPerSecond;
     }
 

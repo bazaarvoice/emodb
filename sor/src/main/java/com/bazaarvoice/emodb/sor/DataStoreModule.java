@@ -184,6 +184,10 @@ public class DataStoreModule extends PrivateModule {
             bind(CQLStashTableDAO.class).asEagerSingleton();
             bind(StashTableDAO.class).to(AstyanaxTableDAO.class).asEagerSingleton();
             expose(StashTableDAO.class);
+        } else if (_serviceMode.specifies(EmoServiceMode.Aspect.delta_migrator)) {
+            bind(CQLStashTableDAO.class).to(CqlMigratorTableDAO.class).asEagerSingleton();
+            bind(StashTableDAO.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            expose(StashTableDAO.class);
         }
 
         // The system of record requires two bootstrap tables in which it stores its metadata about tables.
@@ -246,8 +250,10 @@ public class DataStoreModule extends PrivateModule {
         bind(GracefulShutdownManager.class).asEagerSingleton();
 
         // Tools for migration to blocked deltas
-        bind(MigratorTools.class).to(DefaultMigratorTools.class);
-        expose(MigratorTools.class);
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.delta_migrator)) {
+            bind(MigratorTools.class).to(DefaultMigratorTools.class);
+            expose(MigratorTools.class);
+        }
     }
 
     @Provides @Singleton
@@ -427,6 +433,10 @@ public class DataStoreModule extends PrivateModule {
 
     @Provides @Singleton @StashBlackListTableCondition
     protected Condition provideStashBlackListTableCondition(DataStoreConfiguration configuration) {
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.delta_migrator)) {
+            return Conditions.alwaysFalse();
+        }
+
         return configuration.getStashBlackListTableCondition()
                 .transform(Conditions::fromString)
                 .or(Conditions.alwaysFalse());

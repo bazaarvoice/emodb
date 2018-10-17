@@ -40,10 +40,10 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class CQLStashTableDAO {
     
-    private final static String STASH_TOKEN_RANGE_TABLE = "stash_token_range";
+    protected String STASH_TOKEN_RANGE_TABLE = "stash_token_range";
     // Clean up stash tables if they aren't explicitly cleaned after 3 days.  No Stash should take over 1 day
     // so this should provide ample buffer.
-    private final static int TTL = (int) TimeUnit.DAYS.toSeconds(3);
+    protected int TTL = (int) TimeUnit.DAYS.toSeconds(3);
 
     private final static String STASH_ID_COLUMN = "stash_id";
     private final static String DATA_CENTER_COLUMN = "data_center";

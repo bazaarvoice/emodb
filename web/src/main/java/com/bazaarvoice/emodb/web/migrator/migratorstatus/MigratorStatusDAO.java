@@ -78,6 +78,7 @@ public class MigratorStatusDAO implements MigratorRateLimiter {
                         .put("options", JsonHelper.convert(status.getOptions(), Map.class))
                         .put("ranges", ranges)
                         .put("canceled", false)
+                        .put("tableSnapshotCreated", status.isTableSnapshotCreated())
                         .put("startTime", status.getStartTime().getTime())
                         .put("completeTime", status.getCompleteTime() != null ? status.getCompleteTime().getTime() : null)
                         .put("maxWritesPerSecond", status.getMaxWritesPerSecond())
@@ -129,6 +130,7 @@ public class MigratorStatusDAO implements MigratorRateLimiter {
         }
         
         boolean canceled = (Boolean) map.get("canceled");
+        boolean tableSnapshotCreated = Optional.fromNullable((Boolean) map.get("tableSnapshotCreated")).or(false);
         ScanOptions options = JsonHelper.convert(map.get("options"), ScanOptions.class);
         Long completeTs = (Long) map.get("completeTime");
         Date completeTime = completeTs != null ? new Date(completeTs) : null;
@@ -177,8 +179,8 @@ public class MigratorStatusDAO implements MigratorRateLimiter {
 
         Date startTime = new Date((Long) map.get("startTime"));
 
-        return new MigratorStatus(Intrinsic.getId(map), options, canceled, startTime, pendingMigrationRanges, activeMigrationRanges,
-                completeMigrationRanges, completeTime, maxWritesPerSecond);
+        return new MigratorStatus(Intrinsic.getId(map), options, tableSnapshotCreated, canceled, startTime,
+                pendingMigrationRanges, activeMigrationRanges, completeMigrationRanges, completeTime, maxWritesPerSecond);
     }
 
     public void setMigratorRangeTaskQueued(String migrationId, int taskId, Date queuedTime) {
@@ -280,6 +282,14 @@ public class MigratorStatusDAO implements MigratorRateLimiter {
                         .update("canceled", Deltas.conditional(Conditions.equal(false), Deltas.literal(true)))
                         .build(),
                 new AuditBuilder().setLocalHost().setComment("Canceling migration").build());
+    }
+
+    public void setTableSnapshotCreated(String scanId) {
+        _dataStore.update(getTable(), scanId, TimeUUIDs.newUUID(),
+                Deltas.mapBuilder()
+                        .update("tableSnapshotCreated", Deltas.conditional(Conditions.equal(false), Deltas.literal(true)))
+                        .build(),
+                new AuditBuilder().setLocalHost().setComment("Table snapshot created").build());
     }
 
     public void setMaxWritesPerSecond(String migrationId, int maxWritesPerSecond) {

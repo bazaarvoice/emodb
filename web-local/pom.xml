@@ -402,6 +402,8 @@
                                         <argument>${project.basedir}/config-migrator.yaml</argument>
                                         <argument>${project.basedir}/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
