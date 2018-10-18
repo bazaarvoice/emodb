@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.MigratorReaderDAO;
 import com.bazaarvoice.emodb.sor.db.MigratorWriterDAO;
@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.bazaarvoice.emodb.table.db.consistency.HintsConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
@@ -27,16 +26,18 @@ public class DefaultMigratorTools implements MigratorTools {
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
     private final PlacementCache _placementCache;
     private final StashTableDAO _stashTableDao;
+    private final String _systemTablePlacement;
 
     @Inject
     public DefaultMigratorTools(MigratorReaderDAO migratorReaderDAO, MigratorWriterDAO migratorWriterDAO,
                                 HintsConsistencyTimeProvider fullConsistencyTimeProvider, PlacementCache placementCache,
-                                StashTableDAO stashTableDAO) {
+                                StashTableDAO stashTableDAO, @SystemTablePlacement String systemTablePlacement) {
         _migratorReaderDao = checkNotNull(migratorReaderDAO, "migratorReaderDao");
         _migratorWriterDao = checkNotNull(migratorWriterDAO, "migratorWriterDao");
         _fullConsistencyTimeProvider = checkNotNull(fullConsistencyTimeProvider, "fullConsistencyTimeProvider");
         _placementCache = checkNotNull(placementCache, "placementCache");
         _stashTableDao = checkNotNull(stashTableDAO, "stashTableDao");
+        _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
     }
 
     @Override
@@ -50,6 +51,11 @@ public class DefaultMigratorTools implements MigratorTools {
     public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
         checkNotNull(placement, "placement");
         checkNotNull(scanRange, "scanRange");
+
+        // System tables will not show up in the stash token ranges, so we need to scan the entire thing
+        if (placement.equals(_systemTablePlacement)) {
+            return _migratorReaderDao.readRows(placement, scanRange);
+        }
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> unwrappedRanges = scanRange.unwrapped();
