@@ -53,9 +53,10 @@
                                     <artifactItems>
                                         <artifactItem>
                                             <groupId>${project.groupId}</groupId>
-                                            <artifactId>emodb-web</artifactId>
+                                            <artifactId>${yumArtifactId}</artifactId>
                                             <version>${project.version}</version>
                                             <type>rpm</type>
+                                            <targetBaseName>${yumArtifactName}</targetBaseName>
                                             <targetExtension>noarch.rpm</targetExtension>
                                         </artifactItem>
                                     </artifactItems>
