@@ -1347,19 +1347,26 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             String firstSubscriptionName = subscriptionNames.iterator().next();
 
+            _log.info("DefaultDatabus.makeResolvedEventRecords: variables set for resolve attempt");
+
             // resolve document once, in this case for the first subscription
             final List<Item> items = Lists.newArrayList();
-            resolvePeekOrPollEvents(firstSubscriptionName, eventMap, 1,
-                (theCoord, item) -> {
-                    // Unlike with the original batch the deferred batch's events are always
-                    // already de-duplicated by coordinate, so there is no need to maintain
-                    // a coordinate-to-item uniqueness map.
-                    if (_kafkaTestForceRetry) {
-                        _log.info("DefaultDatabus.makeResolvedEventRecords: running in test mode, forcing retries...");
-                    } else {
-                        items.add(item);
-                    }
-                });
+            try {
+                resolvePeekOrPollEvents(firstSubscriptionName, eventMap, 1,
+                    (theCoord, item) -> {
+                        // Unlike with the original batch the deferred batch's events are always
+                        // already de-duplicated by coordinate, so there is no need to maintain
+                        // a coordinate-to-item uniqueness map.
+                        if (_kafkaTestForceRetry) {
+                            _log.info("DefaultDatabus.makeResolvedEventRecords: running in test mode, forcing retries...");
+                        } else {
+                            items.add(item);
+                        }
+                    });
+            } catch (Throwable t) {
+                _log.info("DefaultDatabus.makeResolvedEventRecords: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
+                _log.info("DefaultDatabus.makeResolvedEventRecords: exception stack trace: " + t.getStackTrace().toString());
+            }
 
             // TODO use Clock per Bill's suggestion later
             Long firstResolveTime = System.currentTimeMillis();

@@ -140,7 +140,7 @@ databus:
       buffer.memory: 33554432
       key.serializer: org.apache.kafka.common.serialization.StringSerializer
       value.serializer: org.apache.kafka.common.serialization.ByteBufferSerializer
-      client.id: event-producer
+      client.id: emodb-databus-application-event-producer
   kafka.resolvedEventProducerConfiguration:
       bootstrap.servers: localhost:9092
       acks: all
@@ -150,7 +150,7 @@ databus:
       buffer.memory: 33554432
       key.serializer: org.apache.kafka.common.serialization.StringSerializer
       value.serializer: org.apache.kafka.common.serialization.StringSerializer
-      client.id: resolved-event-producer
+      client.id: emodb-databus-application-resolved-event-producer
   kafka.masterQueueTopicConfiguration:
       cleanup.policy: delete
       compression.type: uncompressed

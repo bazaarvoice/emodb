@@ -63,4 +63,35 @@ public final class UpdateRef {
         return Objects.hashCode(_table, _key, _changeId, _tags);
     }
 
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (_table != null) {
+            sb.append("{ _table: " + _table);
+        } else {
+            sb.append("{ _table: NULL");
+        }
+
+        if (_key != null) {
+            sb.append(", _key: " + _key);
+        } else {
+            sb.append(", _key: NULL");
+        }
+
+        if (_changeId != null) {
+            sb.append(", _changeId: " + _changeId);
+        } else {
+            sb.append(", _changeId: NULL");
+        }
+
+        if (_tags != null) {
+            sb.append(", _tags: " + _tags.toString() + " }");
+        } else {
+            sb.append(", _tags: NULL }");
+        }
+
+        return sb.toString();
+
+    }
+
 }

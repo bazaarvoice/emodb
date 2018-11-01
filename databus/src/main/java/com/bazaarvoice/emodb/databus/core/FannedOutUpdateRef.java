@@ -22,4 +22,21 @@ public final class FannedOutUpdateRef {
 
     public Set<String> getSubscriptionNames() { return _subscriptionNames; }
 
+    @Override public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (_updateRef != null) {
+            sb.append("{ _updateRef: " + _updateRef.toString());
+        } else {
+            sb.append("{ _updateRef: NULL");
+        }
+
+        if (_updateRef != null) {
+            sb.append(", _subscriptionNames: " + _subscriptionNames.toString() + " }");
+        } else {
+            sb.append(", _subscriptionNames: NULL }");
+        }
+
+        return sb.toString();
+    }
+
 }
