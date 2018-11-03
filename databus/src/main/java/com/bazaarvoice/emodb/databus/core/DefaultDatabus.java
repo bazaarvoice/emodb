@@ -868,38 +868,56 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             Item item = null;
 
-            // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
-            for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
-                String eventId = eventData.first();
-                UUID changeId = eventData.second();
+            // If this function is called from the Kafka streaming application functions makeResolvedEventRecords() or
+            // RetryTransformer.transform(), there will be no eventId available because Kafka does not use the C* queues
+            // and so has no access to or need for slab IDs/indexIDs/channels etc. In this case, simply skip the book keeping
+            // operations that need the eventId and only return the resolved document, which is fine since Kafka streams do
+            // not require similar book keeping.
+            //
+            // Since this prototype does Kafka databus processing in parallel with the regular EmoDB C* databus the book keeping
+            // will still be done as part of that processing. When the actual code is change to remove the C* databus, we can
+            // modify this function to just do document resolution.
+            //
+            // TODO this logic is only for the combined C* / Kafka prototype
+            if (eventList.getEventAndChangeIds().get(0).first() != null) {
 
-                // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
-                if (readResult.isChangeDeltaPending(changeId)) {
-                    if (isRecent(changeId)) {
-                        recentUnknownEventIds.add(eventId);
-                        _recentUnknownMeter.mark();
-                    } else {
-                        _staleUnknownMeter.mark();
+                // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
+                for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
+                    String eventId = eventData.first();
+                    UUID changeId = eventData.second();
+
+                    // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
+                    if (readResult.isChangeDeltaPending(changeId)) {
+                        if (isRecent(changeId)) {
+                            recentUnknownEventIds.add(eventId);
+                            _recentUnknownMeter.mark();
+                        } else {
+                            _staleUnknownMeter.mark();
+                        }
+                        continue;
                     }
-                    continue;
+
+                    // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
+                    if (readResult.isChangeDeltaRedundant(changeId)) {
+                        eventIdsToDiscard.add(eventId);
+                        _redundantMeter.mark();
+                        continue;
+                    }
+
+                    Item eventItem = new Item(eventId, eventOrder.get(coord), content, tags);
+                    if (item == null) {
+                        item = eventItem;
+                    } else if (item.consolidateWith(eventItem)) {
+                        _consolidatedMeter.mark();
+                    } else {
+                        sink.accept(coord, item);
+                        item = eventItem;
+                    }
+
                 }
 
-                // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
-                if (readResult.isChangeDeltaRedundant(changeId)) {
-                    eventIdsToDiscard.add(eventId);
-                    _redundantMeter.mark();
-                    continue;
-                }
-
-                Item eventItem = new Item(eventId, eventOrder.get(coord), content, tags);
-                if (item == null) {
-                    item = eventItem;
-                } else if (item.consolidateWith(eventItem)) {
-                    _consolidatedMeter.mark();
-                } else {
-                    sink.accept(coord, item);
-                    item = eventItem;
-                }
+            } else {
+                item = new Item(null, eventOrder.get(coord), content, tags);
             }
 
             if (item != null) {
@@ -1339,7 +1357,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             Set<String> subscriptionNames = fannedOutUpdateRef.getSubscriptionNames();
 
             EventList eventList = new EventList();
-            eventList.add(updateRef.getKey(), updateRef.getChangeId(), updateRef.getTags());
+            eventList.add(null, updateRef.getChangeId(), updateRef.getTags());
 
             Coordinate coord = Coordinate.of(updateRef.getTable(), updateRef.getKey());
             HashMap<Coordinate, EventList> eventMap = new HashMap<>();
@@ -1599,7 +1617,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 Long lastResolveTime = Long.parseLong(splitKey[6]);
 
                 DefaultDatabus.EventList eventList = new DefaultDatabus.EventList();
-                eventList.add(docKey, changeId, tags);
+                eventList.add(null, changeId, tags);
 
                 Coordinate coord = Coordinate.of(tableName, docKey);
                 HashMap<Coordinate, DefaultDatabus.EventList> eventMap = new HashMap<>();
@@ -1607,17 +1625,22 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                 // resolve document
                 final List<DefaultDatabus.Item> items = Lists.newArrayList();
-                resolvePeekOrPollEvents(subscriptionName, eventMap, 1,
-                    (theCoord, item) -> {
-                        // Unlike with the original batch the deferred batch's events are always
-                        // already de-duplicated by coordinate, so there is no need to maintain
-                        // a coordinate-to-item uniqueness map.
-                        if (_kafkaTestForceRetryToFail) {
-                            _log.info("DefaultDatabus.RetryTransformer.transform: running in test mode, forcing retries to fail...");
-                        } else {
-                            items.add(item);
-                        }
+                try {
+                    resolvePeekOrPollEvents(subscriptionName, eventMap, 1,
+                        (theCoord, item) -> {
+                            // Unlike with the original batch the deferred batch's events are always
+                            // already de-duplicated by coordinate, so there is no need to maintain
+                            // a coordinate-to-item uniqueness map.
+                            if (_kafkaTestForceRetryToFail) {
+                                _log.info("DefaultDatabus.RetryTransformer.transform: running in test mode, forcing retries to fail...");
+                            } else {
+                                items.add(item);
+                            }
                     });
+                } catch (Throwable t) {
+                    _log.info("DefaultDatabus.RetryTransformer: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
+                    _log.info("DefaultDatabus.RetryTransformer: exception stack trace: " + t.getStackTrace().toString());
+                }
 
                 long currentResolveTime = System.currentTimeMillis();
                 String newKey = subscriptionName + ";" + tableName + ";" + docKey + ";" + changeId.toString() + ";" + tagsSetString + ";" + firstResolveTime + ";" + currentResolveTime;
