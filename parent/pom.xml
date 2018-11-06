@@ -52,6 +52,12 @@
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
+
+        <!-- For yum-deploy profile in emodb-rpms. This way we can deploy snapshots to yum repo-->
+        <!-- If the 'yum*' variables are changed, please change the options in emodb-deploy-snapshot jenkins build-->
+        <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
+        <yumArtifactId>emodb-web</yumArtifactId>
+
     </properties>
 
     <dependencyManagement>

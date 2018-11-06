@@ -10,7 +10,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>emodb-web</artifactId>
+    <artifactId>${yumArtifactId}</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB RESTful Web Server</name>
@@ -290,7 +290,7 @@
                                 </goals>
                                 <configuration>
                                     <group>com.bazaarvoice.emodb</group>
-                                    <name>emodb-web</name>
+                                    <name>${yumArtifactId}</name>
                                 </configuration>
                             </execution>
                         </executions>
@@ -311,7 +311,7 @@
                                         <!-- Create a symbolic link without the version number for use by supervisord. -->
                                         <softlinkSource>
                                             <location>${project.artifactId}-${project.version}.jar</location>
-                                            <destination>${project.artifactId}.jar</destination>
+                                            <destination>emodb-web.jar</destination>
                                         </softlinkSource>
                                     </sources>
                                 </mapping>

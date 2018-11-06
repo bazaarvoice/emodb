@@ -41,7 +41,7 @@
         <!-- Bazaarvoice dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-web</artifactId>
+            <artifactId>${yumArtifactId}</artifactId>
             <version>${project.version}</version>
             <exclusions>
                 <exclusion>
