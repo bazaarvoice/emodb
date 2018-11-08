@@ -31,6 +31,6 @@ public class InMemoryDataStore extends DefaultDataStore {
         super(eventWriterRegistry, new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), metricRegistry);
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry);
     }
 }

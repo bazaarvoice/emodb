@@ -423,6 +423,12 @@ public class DataStoreModule extends PrivateModule {
         return new RateLimiterCache(rateLimits, 1000);
     }
 
+    @Provides @Singleton @MinSplitSizeMap
+    MapStore<DataStoreMinSplitSize> provideMinSplitSizeMap(@DataStoreZooKeeper CuratorFramework curator,
+                                                LifeCycleRegistry lifeCycle) {
+        return lifeCycle.manage(new ZkMapStore<>(curator, "min-split-size", new ZKDataStoreMinSplitSizeSerializer()));
+    }
+
     @Provides @Singleton @StashRoot
     Optional<URI> provideStashRootDirectory(DataStoreConfiguration configuration) {
         if (configuration.getStashRoot().isPresent()) {

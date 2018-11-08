@@ -40,6 +40,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -73,6 +74,9 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.AbstractKeyspaceOperationImpl;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import com.netflix.astyanax.util.RangeBuilder;
+import io.netty.util.Timeout;
+import java.util.ArrayList;
+import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
@@ -367,19 +371,43 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
     @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplits", absolute = true)
     @Override
-    public List<String> getSplits(Table tbl, int desiredRecordsPerSplit) {
+    public List<String> getSplits(Table tbl, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
         checkNotNull(tbl, "table");
-        List<String> splits = Lists.newArrayList();
-        List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
-        for (CfSplit split : cfSplits) {
-            ByteBuffer begin = parseTokenString(split.getStartToken());
-            ByteBuffer finish = parseTokenString(split.getEndToken());
+        checkArgument(splitQuerySize % desiredRecordsPerSplit == 0);
+        checkArgument(Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2) % 2.0 == 0);
 
-            splits.add(SplitFormat.encode(new ByteBufferRangeImpl(begin, finish, -1, false)));
+        try {
+            List<String> splits = new ArrayList<>();
+            List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
+            for (CfSplit split : cfSplits) {
+
+                List<Token> splitTokens = ImmutableList.of(_tokenFactory.fromString(split.getStartToken()), _tokenFactory.fromString(split.getEndToken()));
+                for (int i = 0; i < Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2); i++) {
+                    List<Token> newTokens = new ArrayList<>(splitTokens.size() * 2 -1);
+                    for (int j = 0; j < splitTokens.size() - 1; j++) {
+                        newTokens.add(splitTokens.get(j));
+                        newTokens.add(ByteOrderedPartitioner.instance.midpoint(splitTokens.get(j), splitTokens.get(j+1)));
+                    }
+                    newTokens.add(splitTokens.get(splitTokens.size() - 1));
+                    splitTokens = newTokens;
+                }
+
+                for (int i = 0; i < splitTokens.size() -1; i++) {
+                    splits.add(SplitFormat.encode(new ByteBufferRangeImpl(_tokenFactory.toByteArray(splitTokens.get(i)),
+                            _tokenFactory.toByteArray(splitTokens.get(i + 1)), -1, false)));
+                }
+
+            }
+            // Randomize the splits so, if processed somewhat in parallel, requests distribute around the ring.
+            Collections.shuffle(splits);
+            return splits;
+        } catch (Exception e) {
+            if (isTimeoutException(e)) {
+                throw new TimeoutException();
+            } else {
+                throw Throwables.propagate(e);
+            }
         }
-        // Randomize the splits so, if processed somewhat in parallel, requests distribute around the ring.
-        Collections.shuffle(splits);
-        return splits;
     }
 
     private List<CfSplit> getCfSplits(Table tbl, int desiredRecordsPerSplit) {

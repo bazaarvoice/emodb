@@ -41,6 +41,7 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -74,6 +75,10 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.AbstractKeyspaceOperationImpl;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import com.netflix.astyanax.util.RangeBuilder;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
@@ -90,6 +95,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -98,6 +105,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
  */
 public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO, AstyanaxKeyScanner {
+
+    private final Logger _log = LoggerFactory.getLogger(AstyanaxDataReaderDAO.class);
+
     private static final int MAX_RANDOM_ROWS_BATCH = 50;
     private static final int MAX_SCAN_ROWS_BATCH = 250;
     private static final int SCAN_ROW_BATCH_INCREMENT = 50;
@@ -371,19 +381,43 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
 
     @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplits", absolute = true)
     @Override
-    public List<String> getSplits(Table tbl, int desiredRecordsPerSplit) {
+    public List<String> getSplits(Table tbl, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
         checkNotNull(tbl, "table");
-        List<String> splits = Lists.newArrayList();
-        List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
-        for (CfSplit split : cfSplits) {
-            ByteBuffer begin = parseTokenString(split.getStartToken());
-            ByteBuffer finish = parseTokenString(split.getEndToken());
+        checkArgument(splitQuerySize % desiredRecordsPerSplit == 0);
+        checkArgument(Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2) % 2.0 == 0);
 
-            splits.add(SplitFormat.encode(new ByteBufferRangeImpl(begin, finish, -1, false)));
+        try {
+            List<String> splits = new ArrayList<>();
+            List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
+            for (CfSplit split : cfSplits) {
+
+                List<Token> splitTokens = ImmutableList.of(_tokenFactory.fromString(split.getStartToken()), _tokenFactory.fromString(split.getEndToken()));
+                for (int i = 0; i < Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2); i++) {
+                    List<Token> newTokens = new ArrayList<>(splitTokens.size() * 2 -1);
+                    for (int j = 0; j < splitTokens.size() - 1; j++) {
+                        newTokens.add(splitTokens.get(j));
+                        newTokens.add(ByteOrderedPartitioner.instance.midpoint(splitTokens.get(j), splitTokens.get(j+1)));
+                    }
+                    newTokens.add(splitTokens.get(splitTokens.size() - 1));
+                    splitTokens = newTokens;
+                }
+
+                for (int i = 0; i < splitTokens.size() -1; i++) {
+                    splits.add(SplitFormat.encode(new ByteBufferRangeImpl(_tokenFactory.toByteArray(splitTokens.get(i)),
+                            _tokenFactory.toByteArray(splitTokens.get(i + 1)), -1, false)));
+                }
+
+            }
+            // Randomize the splits so, if processed somewhat in parallel, requests distribute around the ring.
+            Collections.shuffle(splits);
+            return splits;
+        } catch (Exception e) {
+            if (isTimeoutException(e)) {
+                throw new TimeoutException();
+            } else {
+                throw Throwables.propagate(e);
+            }
         }
-        // Randomize the splits so, if processed somewhat in parallel, requests distribute around the ring.
-        Collections.shuffle(splits);
-        return splits;
     }
 
     private List<CfSplit> getCfSplits(Table tbl, int desiredRecordsPerSplit) {
@@ -578,15 +612,68 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
         // Split the token range into sub-ranges with approximately the desired number of records per split
         String rangeStart = tokenRange.getStartToken();
 
-        List<CfSplit> splits = getCfSplits(
-                keyspace.getAstyanaxKeyspace(), cf, tokenRange.getStartToken(), tokenRange.getEndToken(),
-                desiredRecordsPerSplit, allTokenRanges);
+        Deque<AstyanaxBlockedDataReaderDAO.ScanRangeSplitWorkItem> splitWorkQueue = new LinkedList<>();
+        splitWorkQueue.push(new AstyanaxBlockedDataReaderDAO.ScanRangeSplitWorkItem(tokenRange, desiredRecordsPerSplit, true));
 
-        for (CfSplit split : splits) {
-            ByteBuffer begin = parseTokenString(split.getStartToken());
-            ByteBuffer finish = parseTokenString(split.getEndToken());
+        AstyanaxBlockedDataReaderDAO.ScanRangeSplitWorkItem splitWork;
+        while ((splitWork = splitWorkQueue.poll()) != null) {
+            try {
+                List<CfSplit> splits = getCfSplits(
+                        keyspace.getAstyanaxKeyspace(), cf, splitWork.range.getStartToken(), splitWork.range.getEndToken(),
+                        splitWork.desiredRecordsPerSplit, allTokenRanges);
 
-            builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                for (CfSplit split : splits) {
+                    if (splitWork.desiredRecordsPerSplit <= desiredRecordsPerSplit) {
+                        ByteBuffer begin = parseTokenString(split.getStartToken());
+                        ByteBuffer finish = parseTokenString(split.getEndToken());
+                        builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                    } else {
+                        // This work item was for a larger-than-desired split created due to a previous timeout.
+                        // Add the split back to the work queue to be split again at a smaller size.  Note that
+                        // retryOnTimeout is set to false since we've already established that growing and subdividing
+                        // it won't help.
+                        TokenRange newWorkTokenRange = new TokenRangeImpl(split.getStartToken(), split.getEndToken(), splitWork.range.getEndpoints());
+                        int newWorkDesiredSize = splitWork.desiredRecordsPerSplit / 10;
+                        splitWorkQueue.push(
+                                new AstyanaxBlockedDataReaderDAO.ScanRangeSplitWorkItem(newWorkTokenRange, newWorkDesiredSize, false));
+                        _log.debug("Decreasing scan range split to {} for keyspace {} and range {}", newWorkDesiredSize, keyspace.getName(), newWorkTokenRange);
+                    }
+                }
+            } catch (Exception e) {
+                if (isTimeoutException(e)) {
+                    if (splitWork.retryOnTimeout) {
+                        // Try again with 10 times the desired number of records per split, up to a reasonable maximum
+                        int retryDesiredRecordsPerSplit = (int) Math.min(splitWork.desiredRecordsPerSplit * 10L, Integer.MAX_VALUE);
+                        boolean retryOnTimeout = retryDesiredRecordsPerSplit < desiredRecordsPerSplit * 1000 && retryDesiredRecordsPerSplit != Integer.MAX_VALUE;
+                        splitWorkQueue.push(new AstyanaxBlockedDataReaderDAO.ScanRangeSplitWorkItem(splitWork.range, retryDesiredRecordsPerSplit, retryOnTimeout));
+                        _log.debug("Increasing scan range split to {} for keyspace {} and range {}", retryDesiredRecordsPerSplit, keyspace.getName(), splitWork.range);
+                    } else {
+                        // Either we've already grown the token range to the maximum size we're willing to try
+                        // or we've already succeeded at the larger split size but are still timing out at the smaller one.
+                        // Either way our best choice at this point is to return the over-sized range.  The caller will
+                        // have to adjust around this later.
+                        ByteBuffer begin = parseTokenString(splitWork.range.getStartToken());
+                        ByteBuffer finish = parseTokenString(splitWork.range.getEndToken());
+                        builder.addScanRange(rack, rangeStart, ScanRange.create(begin, finish));
+                        _log.warn("Unable to generate scan range split below {} for keyspace {} and range {}",
+                                splitWork.desiredRecordsPerSplit, keyspace.getName(), splitWork.range);
+                    }
+                } else {
+                    throw Throwables.propagate(e);
+                }
+            }
+        }
+    }
+
+    private class ScanRangeSplitWorkItem {
+        final TokenRange range;
+        final int desiredRecordsPerSplit;
+        final boolean retryOnTimeout;
+
+        public ScanRangeSplitWorkItem(TokenRange range, int desiredRecordsPerSplit, boolean retryOnTimeout) {
+            this.range = range;
+            this.desiredRecordsPerSplit = desiredRecordsPerSplit;
+            this.retryOnTimeout = retryOnTimeout;
         }
     }
 
@@ -837,7 +924,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
 
             @Override
             protected boolean isTimeoutException(Exception e) {
-                return Iterables.tryFind(Throwables.getCausalChain(e), Predicates.instanceOf(IsTimeoutException.class)).isPresent();
+                return AstyanaxBlockedDataReaderDAO.this.isTimeoutException(e);
             }
 
             @Override
@@ -861,6 +948,10 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
                 return false;
             }
         };
+    }
+
+    private boolean isTimeoutException(Exception e) {
+        return Iterables.tryFind(Throwables.getCausalChain(e), Predicates.instanceOf(IsTimeoutException.class)).isPresent();
     }
 
 

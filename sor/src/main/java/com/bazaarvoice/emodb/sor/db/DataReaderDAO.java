@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
 
+import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Collection;
@@ -39,13 +40,13 @@ public interface DataReaderDAO {
      * Returns a list of split identifiers that, when queried, will return all data in the table.  This method will
      * make a best effort to return splits smaller than or equal to the specified desired number of records per split.
      */
-    List<String> getSplits(Table table, int desiredRecordsPerSplit);
+    List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException;
 
     /** Retrieves up to {@code limit} records from the specified split in the specified table. */
     Iterator<Record> getSplit(Table table, String split, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency);
 
     /**
-     * Like {@link #getSplits(com.bazaarvoice.emodb.table.db.Table, int)} for an entire placement.  Useful in conjunction
+     * Like {@link #getSplits(com.bazaarvoice.emodb.table.db.Table, int, int)} for an entire placement.  Useful in conjunction
      * with a multi-table scan for scanning subranges of a token range.  Returns a ScanRangeSplits which provides
      * splits by groups of hosts.  Querying each group's hosts sequentially should evenly distribute the load.
      * The optional "subrange" parameter limits the splits only to the matching token range.

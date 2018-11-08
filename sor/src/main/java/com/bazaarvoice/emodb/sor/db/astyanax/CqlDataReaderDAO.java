@@ -63,6 +63,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
+import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -918,8 +919,8 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     // support for this call using CQL.  Therefore they must always defer to the Asytanax implementation.
 
     @Override
-    public List<String> getSplits(Table table, int desiredRecordsPerSplit) {
-        return _astyanaxReaderDAO.getSplits(table, desiredRecordsPerSplit);
+    public List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
+        return _astyanaxReaderDAO.getSplits(table, desiredRecordsPerSplit, splitQuerySize);
     }
 
     @Override

@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.Change;
@@ -58,6 +59,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -68,6 +70,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 
+import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
@@ -87,6 +91,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -97,6 +103,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
+
+    private final Logger _log = LoggerFactory.getLogger(DefaultDataStore.class);
+
 
     private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final TableDAO _tableDao;
@@ -114,6 +123,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Meter _discardedCompactions;
     private final Compactor _compactor;
     private final CompactionControlSource _compactionControlSource;
+    private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
 
     private StashTableDAO _stashTableDao;
 
@@ -121,9 +131,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     public DefaultDataStore(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry, DatabusEventWriterRegistry eventWriterRegistry, TableDAO tableDao,
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
-                            @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter) {
+                            @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
-                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter, metricRegistry);
+                historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
+                minSplitSizeMap, metricRegistry);
     }
 
     @VisibleForTesting
@@ -131,7 +143,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao,
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
-                            Condition stashBlackListTableCondition, AuditWriter auditWriter, MetricRegistry metricRegistry) {
+                            Condition stashBlackListTableCondition, AuditWriter auditWriter,
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry) {
         _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -149,6 +162,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         _compactor = new DistributedCompactor(_archiveDeltaSize, _historyStore.isDeltaHistoryEnabled(), metricRegistry);
 
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _minSplitSizeMap = checkNotNull(minSplitSizeMap, "minSplitSizeMap");
     }
 
     /**
@@ -545,8 +559,30 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkLegalTableName(tableName);
         checkArgument(desiredRecordsPerSplit > 0, "DesiredRecordsPerSplit must be >0");
 
+        DataStoreMinSplitSize minSplitSize = _minSplitSizeMap.get(tableName);
+
+        int actualSplitSize;
+
+        if (minSplitSize != null && minSplitSize.getExpirationTime().isAfter(Instant.now())) {
+            actualSplitSize = Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize());
+        } else {
+            actualSplitSize = desiredRecordsPerSplit;
+        }
+
         Table table = _tableDao.get(tableName);
-        return _dataReaderDao.getSplits(table, desiredRecordsPerSplit);
+
+        try {
+            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualSplitSize);
+        } catch (TimeoutException timeoutException) {
+            try {
+                _minSplitSizeMap.set(tableName,
+                        new DataStoreMinSplitSize(actualSplitSize * 10, Instant.now().plus(1, ChronoUnit.DAYS)));
+            } catch (Exception e) {
+                _log.warn("Unable to store min split size for table {}", tableName);
+            }
+
+            throw Throwables.propagate(timeoutException);
+        }
     }
 
     @Override
