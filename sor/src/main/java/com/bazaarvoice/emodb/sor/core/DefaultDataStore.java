@@ -559,6 +559,9 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         checkLegalTableName(tableName);
         checkArgument(desiredRecordsPerSplit > 0, "DesiredRecordsPerSplit must be >0");
 
+        // Check if Emo is allowed to request splits from Cassandra of this size. If a previous user has recently timed
+        // out trying to splits close to this size, query for larger splits according the splitSizeMap's directive.
+
         DataStoreMinSplitSize minSplitSize = _minSplitSizeMap.get(tableName);
 
         int actualSplitSize;
@@ -576,7 +579,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         } catch (TimeoutException timeoutException) {
             try {
                 _minSplitSizeMap.set(tableName,
-                        new DataStoreMinSplitSize(actualSplitSize * 10, Instant.now().plus(1, ChronoUnit.DAYS)));
+                        new DataStoreMinSplitSize(actualSplitSize * 8, Instant.now().plus(1, ChronoUnit.DAYS)));
             } catch (Exception e) {
                 _log.warn("Unable to store min split size for table {}", tableName);
             }

@@ -381,6 +381,8 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
             List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
             for (CfSplit split : cfSplits) {
 
+                // In the case in while the splitQuerySize is larger than desiredRecordsPerSplit, manually split the token ranges
+                // using ByteOrderedPartitioner's midpoint method
                 List<Token> splitTokens = ImmutableList.of(_tokenFactory.fromString(split.getStartToken()), _tokenFactory.fromString(split.getEndToken()));
                 for (int i = 0; i < Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2); i++) {
                     List<Token> newTokens = new ArrayList<>(splitTokens.size() * 2 -1);
