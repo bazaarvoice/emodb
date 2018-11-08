@@ -53,23 +53,7 @@ public class IntrinsicConditionImpl extends AbstractCondition implements Intrins
         Writer out = CharStreams.asWriter(buf);
         DeltaJson.write(out, _name);
         buf.append(':');
-        // The syntax allows a comma-separated list of conditions that are implicitly wrapped in an OrCondition.
-        // If _condition is an InCondition or OrCondition we can print them without the "in(...)" and "or(...)"
-        // wrappers to result in a cleaner string format that the parser can parse back into InCondition/OrCondition.
-        if (_condition instanceof InCondition) {
-            Set<Object> values = ((InCondition) _condition).getValues();
-            Joiner.on(',').appendTo(buf, OrderedJson.orderedStrings(values));
-        } else if (_condition instanceof OrCondition) {
-            Collection<Condition> conditions = ((OrCondition) _condition).getConditions();
-            String sep = "";
-            for (Condition condition : conditions) {
-                buf.append(sep);
-                condition.appendTo(buf);
-                sep = ",";
-            }
-        } else {
-            _condition.appendTo(buf);
-        }
+        appendSubCondition(buf, _condition);
         buf.append(')');
     }
 

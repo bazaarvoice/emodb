@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -68,7 +69,7 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
      * <code>visit(LikeCondition, IsCondition)</code> since <code>ParameterOrder.LIKE <= ParameterOrder.IS</code>.
      */
     private enum ParameterOrder {
-        CONSTANT, LIKE, COMPARISON, IS, EQUAL, IN, CONTAINS, MAP, INTRINSIC
+        CONSTANT, LIKE, COMPARISON, IS, EQUAL, IN, CONTAINS, MAP, INTRINSIC, PARTITION
     }
     
     static boolean areDistinct(Condition left, Condition right) {
@@ -265,6 +266,19 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
         return right.visit(new LeftResolvedVisitor<>(left), ParameterOrder.EQUAL);
     }
 
+    @Override
+    public Boolean visit(PartitionCondition left, Condition right) {
+        LeftResolvedVisitor<PartitionCondition> visitor = new LeftResolvedVisitor<PartitionCondition>(left) {
+            @Override
+            protected boolean visit(PartitionCondition right) {
+                // The two are distinct only if they match on number of partitions and the conditions are distinct.
+                return _left.getNumPartitions() == right.getNumPartitions() && checkAreDistinct(_left.getCondition(), right.getCondition());
+            }
+        };
+
+        return right.visit(visitor, ParameterOrder.PARTITION);
+    }
+
     /**
      * Future:  Build an actual implementation.  Currently this call is never made and is here only to satisfy
      * the {@link ConditionVisitor} interface.
@@ -432,6 +446,19 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
             return defaultDistinctCheck(right);
         }
 
+
+        @Override
+        public final Boolean visit(PartitionCondition right, ParameterOrder leftOrder) {
+            if (swapParameters(leftOrder, ParameterOrder.PARTITION)) {
+                return checkAreDistinct(right, _left);
+            }
+            return visit(right);
+        }
+
+        protected boolean visit(PartitionCondition right) {
+            return defaultDistinctCheck(right);
+        }
+        
         /**
          * Future:  Build an actual implementation.  Currently this call is never made and is here only to satisfy
          * the {@link ConditionVisitor} interface.

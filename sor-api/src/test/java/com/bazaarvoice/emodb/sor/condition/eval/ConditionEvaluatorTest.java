@@ -19,6 +19,7 @@ import org.testng.annotations.Test;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import static org.mockito.Mockito.mock;
@@ -344,6 +345,25 @@ public class ConditionEvaluatorTest {
     }
 
     @Test
+    public void testPartition() {
+        // The following list of expected values was pre-computed using the given input.  Should the hashing algorithm
+        // used by partition change then these would likely also need updating.
+        List<Integer> expected = ImmutableList.of(22, 44, 55, 43, 44, 26, 13, 25, 1, 42, 32, 36, 15, 30, 28, 62);
+        for (int i=0; i < expected.size(); i++) {
+            Intrinsics intrinsics = mock(Intrinsics.class);
+            when(intrinsics.getTable()).thenReturn("mytable");
+            when(intrinsics.getId()).thenReturn("doc" + i);
+            for (int t=1; t <= 64; t++) {
+                if (t == expected.get(i)) {
+                    assertTrue(eval(Conditions.partition(64, Conditions.equal(t)), null, intrinsics));
+                } else {
+                    assertFalse(eval(Conditions.partition(64, Conditions.equal(t)), null, intrinsics));
+                }
+            }
+        }
+    }
+
+    @Test
     public void testAndConditionOrdering() {
         // Create an "and" condition with weights out of order
         Condition cheapest = Conditions.mapBuilder()
@@ -438,7 +458,7 @@ public class ConditionEvaluatorTest {
         // Verify condition serializes in natural order by key
         assertEquals(mapCondition.toString(), "{..,\"k0\":{..,\"a\":1,\"b\":2,\"c\":3},\"k1\":{..,\"echo\":\"echo\"},\"k2\":{..,\"brown\":\"cow\",\"how\":\"now\"}}");
         // Verify conditions are returned in increasing weight
-        Iterator<Map.Entry<String, Condition>> conditions = ((MapCondition)mapCondition).getEntries().entrySet().iterator();
+        Iterator<Map.Entry<String, Condition>> conditions = ((MapCondition) mapCondition).getEntries().entrySet().iterator();
         assertEquals(conditions.next(), Maps.immutableEntry("k1", cheapest));
         assertEquals(conditions.next(), Maps.immutableEntry("k2", middle));
         assertEquals(conditions.next(), Maps.immutableEntry("k0", priciest));

@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -369,6 +370,21 @@ public class SubsetEvaluator implements ConditionVisitor<Condition, Boolean> {
         return true;
     }
 
+
+    @Override
+    public Boolean visit(PartitionCondition left, Condition right) {
+        LeftResolvedVisitor<PartitionCondition> visitor = new LeftResolvedVisitor<PartitionCondition>(left) {
+            @Override
+            public Boolean visit(PartitionCondition right, Void context) {
+                // Example: partition(8:1) subset? partition(8:in(1,2))
+                return _left.getNumPartitions() == right.getNumPartitions() &&
+                        checkIsSubset(left.getCondition(), right.getCondition());
+            }
+        };
+
+        return right.visit(visitor, null);
+    }
+
     /**
      * Visitor used to provide typed evaluation of both the left and right conditions.  Most implementations
      * leave it up to the caller to define behavior, but implementations for the common operations "and", "or",
@@ -479,6 +495,11 @@ public class SubsetEvaluator implements ConditionVisitor<Condition, Boolean> {
 
         @Override
         public Boolean visit(MapCondition right, Void context) {
+            return false;
+        }
+
+        @Override
+        public Boolean visit(PartitionCondition condition, Void context) {
             return false;
         }
     }

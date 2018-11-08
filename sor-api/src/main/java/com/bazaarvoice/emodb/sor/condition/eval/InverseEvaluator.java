@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -16,7 +17,6 @@ import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
-import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
@@ -178,6 +178,16 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         return Conditions.or(conditions);
     }
 
+    @Nullable
+    @Override
+    public Condition visit(PartitionCondition condition, Void context) {
+        Condition inverse = condition.getCondition().visit(this, null);
+        if (inverse == null) {
+            return null;
+        }
+        return Conditions.partition(condition.getNumPartitions(), inverse);
+    }
+    
     // The remaining conditions have no well-defined inverse expressible as a Condition other than not(condition).
 
     @Nullable

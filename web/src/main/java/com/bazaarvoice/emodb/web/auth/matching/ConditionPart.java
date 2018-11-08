@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -124,6 +125,12 @@ public class ConditionPart extends EmoMatchingPart {
         @Override
         public T visit(MapCondition condition, @Nullable String context) {
             throw new IllegalArgumentException("Value cannot be evaluated as an map");
+        }
+
+        @Nullable
+        @Override
+        public T visit(PartitionCondition condition, @Nullable String context) {
+            throw new IllegalArgumentException("Value cannot be evaluated as a partition");
         }
     }
 

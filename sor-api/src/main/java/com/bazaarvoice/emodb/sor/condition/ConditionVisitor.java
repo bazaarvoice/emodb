@@ -39,4 +39,7 @@ public interface ConditionVisitor<T, V> {
 
     @Nullable
     V visit(MapCondition condition, @Nullable T context);
+
+    @Nullable
+    V visit(PartitionCondition condition, @Nullable T context);
 }
