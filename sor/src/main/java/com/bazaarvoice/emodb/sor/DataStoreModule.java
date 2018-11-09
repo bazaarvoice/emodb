@@ -249,6 +249,8 @@ public class DataStoreModule extends PrivateModule {
         bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
         bind(GracefulShutdownManager.class).asEagerSingleton();
 
+        bind(MinSplitSizeCleanupMonitor.class).asEagerSingleton();
+
         // Tools for migration to blocked deltas
         if (_serviceMode.specifies(EmoServiceMode.Aspect.delta_migrator)) {
             bind(MigratorTools.class).to(DefaultMigratorTools.class);
