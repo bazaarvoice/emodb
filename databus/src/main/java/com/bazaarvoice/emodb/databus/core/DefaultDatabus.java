@@ -93,14 +93,12 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -316,6 +314,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaBootstrapServers);
             props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteBuffer().getClass());
+            props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 16);
 
             builder = new StreamsBuilder();
             KStream<String, ByteBuffer> eventStream = builder.stream(_masterQueueTopicConfiguration.getTopicName());
@@ -1399,8 +1398,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
                 for (String subscriptionName: subscriptionNames) {
                     // TODO This is a kludge inserted here because __system_bus:replay and __system_bus:canary-emo_cluster
-                    // TODO are apparently invalid Kafka topic names
-                    if (!subscriptionName.startsWith("__")) {
+                    // TODO are apparently invalid Kafka topic names, also "all" right now there are no Kafka topics for internally created subscriptions
+                    if (!subscriptionName.startsWith("__") && subscriptionName.compareTo("all") != 0) {
                         resultList.add(new KeyValue(subscriptionName+";"+fannedOutUpdateRef.getUpdateRef().getTable()+";"+fannedOutUpdateRef.getUpdateRef().getKey()+";"+fannedOutUpdateRef.getUpdateRef().getChangeId().toString()+";"+String.join(",",fannedOutUpdateRef.getUpdateRef().getTags())+";"+firstResolveTime+";"+firstResolveTime, ByteBuffer.wrap(document.getBytes(Charsets.UTF_8))));
                     }
                 }
