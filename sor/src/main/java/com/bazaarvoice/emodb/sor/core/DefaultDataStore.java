@@ -564,22 +564,23 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         DataStoreMinSplitSize minSplitSize = _minSplitSizeMap.get(tableName);
 
-        int actualSplitSize;
+        int actualMinSplitSize = desiredRecordsPerSplit;
 
         if (minSplitSize != null && minSplitSize.getExpirationTime().isAfter(Instant.now())) {
-            actualSplitSize = Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize());
-        } else {
-            actualSplitSize = desiredRecordsPerSplit;
+            while (actualMinSplitSize < Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize())) {
+                actualMinSplitSize *= 2;
+            }
         }
 
         Table table = _tableDao.get(tableName);
 
         try {
-            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualSplitSize);
+
+            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualMinSplitSize);
         } catch (TimeoutException timeoutException) {
             try {
                 _minSplitSizeMap.set(tableName,
-                        new DataStoreMinSplitSize(actualSplitSize * 8, Instant.now().plus(1, ChronoUnit.DAYS)));
+                        new DataStoreMinSplitSize(actualMinSplitSize * 8, Instant.now().plus(1, ChronoUnit.DAYS)));
             } catch (Exception e) {
                 _log.warn("Unable to store min split size for table {}", tableName);
             }

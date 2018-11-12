@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.sor.core;
 
-import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -17,6 +16,7 @@ import java.util.concurrent.TimeoutException;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
 public class MinSplitSizeTest {
@@ -26,6 +26,12 @@ public class MinSplitSizeTest {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO() {
             @Override
             public List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
+
+                // confirm that splitQuerySize / desiredRecordsPerSplit is always a power of 2
+                System.out.println(splitQuerySize);
+                assertEquals(Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2) % 1.0, 0.0);
+
+
                 if (splitQuerySize <= 10) {
                     throw new TimeoutException();
                 }
@@ -51,7 +57,7 @@ public class MinSplitSizeTest {
             fail();
         } catch (Exception e) {}
 
-        // data store should have cached that 10 is too small from previous request and return splits of 100 instead.
+        // Splits should come back normally
         assertEquals(dataStore.getSplits("table", 10).size(), 20);
 
     }
