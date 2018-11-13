@@ -166,6 +166,10 @@ public class DataStoreModule extends PrivateModule {
             bind(ClusterHintsPoller.class).asEagerSingleton();
         }
 
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.dataStore_web)) {
+            bind(MinSplitSizeCleanupMonitor.class).asEagerSingleton();
+        }
+
         // The web servers are responsible for performing background table background_table_maintenance.
         // Enable background table background_table_maintenance if specified.
         if (_serviceMode.specifies(EmoServiceMode.Aspect.background_table_maintenance)) {
@@ -248,8 +252,6 @@ public class DataStoreModule extends PrivateModule {
 
         bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
         bind(GracefulShutdownManager.class).asEagerSingleton();
-
-        bind(MinSplitSizeCleanupMonitor.class).asEagerSingleton();
 
         // Tools for migration to blocked deltas
         if (_serviceMode.specifies(EmoServiceMode.Aspect.delta_migrator)) {
