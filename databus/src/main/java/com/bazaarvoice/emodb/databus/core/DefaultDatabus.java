@@ -180,6 +180,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final Meter _drainQueueAsyncMeter;
     private final Meter _drainQueueTaskMeter;
     private final Meter _drainQueueRedundantMeter;
+
+    // TODO extra metrics for measuring flow of data through the Kafka Streams application
+    private final Meter _masterQueueReadMeter;
+    private final Meter _fanoutQueueReadMeter;
+    private final Meter _documentResolvedMeter;
+    private final Meter _stressTestTopicWriteMeter;
+    private final Meter _resolverRetryMeter;
+
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
     private final Supplier<Condition> _defaultJoinFilterCondition;
     private final Ticker _ticker;
@@ -258,6 +266,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _drainQueueAsyncMeter = newEventMeter("drainQueueAsync", metricRegistry);
         _drainQueueTaskMeter = newEventMeter("drainQueueTask", metricRegistry);
         _drainQueueRedundantMeter = newEventMeter("drainQueueRedundant", metricRegistry);
+        _masterQueueReadMeter = newEventMeter("masterQueueEventsReadCount", metricRegistry);
+        _fanoutQueueReadMeter = newEventMeter("fanoutQueueEventsReadCount", metricRegistry);
+        _documentResolvedMeter = newEventMeter("documentsResolvedCount", metricRegistry);
+        _resolverRetryMeter = newEventMeter("retryDocumentResolutionCount", metricRegistry);
+        _stressTestTopicWriteMeter = newEventMeter("stressTestTopicDocumentsWrittenCount", metricRegistry);
+
         _eventSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
                 .maximumSize(2000)
@@ -1296,6 +1310,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             UpdateRef ref = UpdateRefSerializer.fromByteBuffer(event);
 
+            _masterQueueReadMeter.mark();
             _log.info("DefaultDatabus.doKafkaFanout: read event from master-queue: ==> (table: " + ref.getTable() + ", key: " + ref.getKey() + ", changeId: " + ref.getChangeId());
 
             // The idea of doing this every time is to catch new subscriptions created since last update was processed - is this necessary?
@@ -1349,6 +1364,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // Deserialize the fanned out update
             FannedOutUpdateRef fannedOutUpdateRef = FannedOutUpdateRefSerializer.fromByteBuffer(event);
 
+            _fanoutQueueReadMeter.mark();
+
             _log.info("DefaultDatabus.makeResolvedEventRecords: read event from resolver-queue: ==> " + fannedOutUpdateRef.toString());
 
             // Try to resolve the update
@@ -1394,12 +1411,13 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 String document = Json.encodeAsString(items.get(0)._content);
                 _log.info("DefaultDatabus.makeResolvedEventRecords: resolved document == " + document);
 
+                _documentResolvedMeter.mark();
+
                 // Now create new list of K/V pairs keyed by subscription name
                 List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
                 for (String subscriptionName: subscriptionNames) {
-                    // TODO This is a kludge inserted here because __system_bus:replay and __system_bus:canary-emo_cluster
-                    // TODO are apparently invalid Kafka topic names, also "all" right now there are no Kafka topics for internally created subscriptions
-                    if (!subscriptionName.startsWith("__") && subscriptionName.compareTo("all") != 0) {
+                    // TODO this call might be too expensive to make every time, we should cache results by keeping a map of subscription names -> boolean, TRUE if Kafka topic with same name exists false otherwise
+                    if (AdminUtils.topicExists(zkUtils, subscriptionName)) {
                         resultList.add(new KeyValue(subscriptionName+";"+fannedOutUpdateRef.getUpdateRef().getTable()+";"+fannedOutUpdateRef.getUpdateRef().getKey()+";"+fannedOutUpdateRef.getUpdateRef().getChangeId().toString()+";"+String.join(",",fannedOutUpdateRef.getUpdateRef().getTags())+";"+firstResolveTime+";"+firstResolveTime, ByteBuffer.wrap(document.getBytes(Charsets.UTF_8))));
                     }
                 }
@@ -1412,9 +1430,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 // Now create new list of K/V pairs keyed by subscription name
                 List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
                 for (String subscriptionName: subscriptionNames) {
-                    // TODO This is a kludge inserted here because __system_bus:replay and __system_bus:canary-emo_cluster
-                    // TODO are apparently invalid Kafka topic names
-                    if (!subscriptionName.startsWith("__")) {
+                    // TODO this call might be too expensive to make every time, we should cache results by keeping a map of subscription names -> boolean, TRUE if Kafka topic with same name exists false otherwise
+                    if (AdminUtils.topicExists(zkUtils, subscriptionName)) {
                         resultList.add(new KeyValue(subscriptionName+";"+fannedOutUpdateRef.getUpdateRef().getTable()+";"+fannedOutUpdateRef.getUpdateRef().getKey()+";"+fannedOutUpdateRef.getUpdateRef().getChangeId().toString()+";"+String.join(",",fannedOutUpdateRef.getUpdateRef().getTags())+";"+firstResolveTime+";"+firstResolveTime, null));
                     }
                 }
@@ -1438,6 +1455,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         String subscriptionName = splitKey[2];
 
         // publish to topic
+        if (subscriptionName.compareTo("stress-test") == 0) _stressTestTopicWriteMeter.mark();
         resolvedDocumentProducer.send(new ProducerRecord<>(subscriptionName, StandardCharsets.UTF_8.decode(document).toString()));
     }
 
@@ -1594,6 +1612,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             try {
 
                 _log.info("DefaultDatabus.RetryTransformer.transform: key == " + key);
+
+                _resolverRetryMeter.mark();
 
                 // TODO delay to allow document resolution and keep CPU from getting pinned
                 Thread.sleep(5000);
