@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -22,15 +23,15 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MinSplitSizeCleanupMonitor extends LeaderService {
 
-    private static final String SERVICE_NAME = "min-split-size-cleanup-montor";
+    private static final String SERVICE_NAME = "min-split-size-cleanup-monitor";
     private static final String LEADER_DIR = "/leader/min-split-size";
 
     @Inject
     public MinSplitSizeCleanupMonitor(@DataStoreZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                                       LeaderServiceTask leaderServiceTask, LifeCycleRegistry lifecycle,
-                                      @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap) {
+                                      @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                () -> new MigratorCleanupService(minSplitSizeMap));
+                () -> new MigratorCleanupService(minSplitSizeMap, clock));
         leaderServiceTask.register(SERVICE_NAME, this);
         lifecycle.manage(new ManagedGuavaService(this));
     }
@@ -38,16 +39,18 @@ public class MinSplitSizeCleanupMonitor extends LeaderService {
     private static class MigratorCleanupService extends AbstractScheduledService {
 
         private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
+        private final Clock _clock;
 
-        public MigratorCleanupService(MapStore<DataStoreMinSplitSize> minSplitSizeMap) {
+        public MigratorCleanupService(MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
             _minSplitSizeMap = checkNotNull(minSplitSizeMap);
+            _clock = checkNotNull(clock);
         }
 
         @Override
         protected void runOneIteration() throws Exception {
             Map<String, DataStoreMinSplitSize> minSplitSizes = _minSplitSizeMap.getAll();
             for (Map.Entry<String, DataStoreMinSplitSize> entry : minSplitSizes.entrySet()) {
-                if (entry.getValue().getExpirationTime().isBefore(Instant.now())) {
+                if (entry.getValue().getExpirationTime().isBefore(_clock.instant())) {
                     _minSplitSizeMap.remove(entry.getKey());
                 }
             }

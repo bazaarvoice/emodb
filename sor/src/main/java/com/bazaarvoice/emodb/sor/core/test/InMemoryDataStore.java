@@ -13,6 +13,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.net.URI;
+import java.time.Clock;
 
 /**
  * In-memory implementation of {@link com.bazaarvoice.emodb.sor.api.DataStore}, for testing. Doesn't generate events.
@@ -31,6 +32,6 @@ public class InMemoryDataStore extends DefaultDataStore {
         super(eventWriterRegistry, new InMemoryTableDAO(), dataDao, dataDao,
                 new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry);
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
     }
 }

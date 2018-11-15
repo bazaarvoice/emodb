@@ -70,6 +70,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
@@ -124,6 +125,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
     private final Compactor _compactor;
     private final CompactionControlSource _compactionControlSource;
     private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
+    private final Clock _clock;
 
     private StashTableDAO _stashTableDao;
 
@@ -132,10 +134,10 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             DataReaderDAO dataReaderDao, DataWriterDAO dataWriterDao, SlowQueryLog slowQueryLog, HistoryStore historyStore,
                             @StashRoot Optional<URI> stashRootDirectory, @LocalCompactionControl CompactionControlSource compactionControlSource,
                             @StashBlackListTableCondition Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap) {
+                            @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
-                minSplitSizeMap, metricRegistry);
+                minSplitSizeMap, metricRegistry, clock);
     }
 
     @VisibleForTesting
@@ -144,7 +146,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
                             SlowQueryLog slowQueryLog, ExecutorService compactionExecutor, HistoryStore historyStore,
                             Optional<URI> stashRootDirectory, CompactionControlSource compactionControlSource,
                             Condition stashBlackListTableCondition, AuditWriter auditWriter,
-                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry) {
+                            MapStore<DataStoreMinSplitSize> minSplitSizeMap, MetricRegistry metricRegistry, Clock clock) {
         _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
         _tableDao = checkNotNull(tableDao, "tableDao");
         _dataReaderDao = checkNotNull(dataReaderDao, "dataReaderDao");
@@ -163,6 +165,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
         _minSplitSizeMap = checkNotNull(minSplitSizeMap, "minSplitSizeMap");
+        _clock = checkNotNull(clock, "clock");
     }
 
     /**
@@ -564,11 +567,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         DataStoreMinSplitSize minSplitSize = _minSplitSizeMap.get(tableName);
 
-        int actualMinSplitSize = desiredRecordsPerSplit;
+        int actualSplitSize = desiredRecordsPerSplit;
 
-        if (minSplitSize != null && minSplitSize.getExpirationTime().isAfter(Instant.now())) {
-            while (actualMinSplitSize < Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize())) {
-                actualMinSplitSize *= 2;
+        if (minSplitSize != null && minSplitSize.getExpirationTime().isAfter(_clock.instant())) {
+            while (actualSplitSize < Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize())) {
+                actualSplitSize *= 2;
             }
         }
 
@@ -576,11 +579,11 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         try {
 
-            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualMinSplitSize);
+            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualSplitSize);
         } catch (TimeoutException timeoutException) {
             try {
                 _minSplitSizeMap.set(tableName,
-                        new DataStoreMinSplitSize(actualMinSplitSize * 8, Instant.now().plus(1, ChronoUnit.DAYS)));
+                        new DataStoreMinSplitSize(actualSplitSize * 8, _clock.instant().plus(1, ChronoUnit.DAYS)));
             } catch (Exception e) {
                 _log.warn("Unable to store min split size for table {}", tableName);
             }

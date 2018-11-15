@@ -6,7 +6,7 @@ import java.time.Instant;
 public class ZKDataStoreMinSplitSizeSerializer implements ZkValueSerializer<DataStoreMinSplitSize> {
     @Override
     public String toString(DataStoreMinSplitSize value) {
-        return String.format("%.8f,%s", value.getMinSplitSize(), value.getExpirationTime());
+        return String.format("%d,%s", value.getMinSplitSize(), value.getExpirationTime());
 
     }
 
