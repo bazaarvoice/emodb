@@ -919,8 +919,8 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     // support for this call using CQL.  Therefore they must always defer to the Asytanax implementation.
 
     @Override
-    public List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
-        return _astyanaxReaderDAO.getSplits(table, desiredRecordsPerSplit, splitQuerySize);
+    public List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException {
+        return _astyanaxReaderDAO.getSplits(table, recordsPerSplit, localResplits);
     }
 
     @Override

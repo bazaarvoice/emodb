@@ -18,9 +18,14 @@ import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+/**
+ * Leader elected moniotor that cleans up expired {@link DataStoreMinSplitSize}'s in Zookeeper.
+ */
 public class MinSplitSizeCleanupMonitor extends LeaderService {
 
     private static final String SERVICE_NAME = "min-split-size-cleanup-monitor";
@@ -38,6 +43,8 @@ public class MinSplitSizeCleanupMonitor extends LeaderService {
 
     private static class MigratorCleanupService extends AbstractScheduledService {
 
+        private final Logger _log = LoggerFactory.getLogger(MigratorCleanupService.class);
+
         private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
         private final Clock _clock;
 
@@ -47,18 +54,21 @@ public class MinSplitSizeCleanupMonitor extends LeaderService {
         }
 
         @Override
-        protected void runOneIteration() throws Exception {
-            Map<String, DataStoreMinSplitSize> minSplitSizes = _minSplitSizeMap.getAll();
-            for (Map.Entry<String, DataStoreMinSplitSize> entry : minSplitSizes.entrySet()) {
-                if (entry.getValue().getExpirationTime().isBefore(_clock.instant())) {
-                    _minSplitSizeMap.remove(entry.getKey());
+        protected void runOneIteration() {
+            try {
+                Map<String, DataStoreMinSplitSize> minSplitSizes = _minSplitSizeMap.getAll();
+                for (Map.Entry<String, DataStoreMinSplitSize> entry : minSplitSizes.entrySet()) {
+                    if (entry.getValue().getExpirationTime().isBefore(_clock.instant())) {
+                        _minSplitSizeMap.remove(entry.getKey());
+                    }
                 }
+            } catch (Exception e) {
+                _log.warn("Failed to cleanup expired min split sizes.", e);
             }
         }
 
         /**
          *
-         * @return a schedule that causes this service to be executed once per day at midnight
          */
         @Override
         protected Scheduler scheduler() {

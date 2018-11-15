@@ -369,30 +369,35 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         }));
     }
 
+    // Manually split the token ranges using ByteOrderedPartitioner's midpoint method
+    @VisibleForTesting
+    public List<Token> resplitLocally(String startToken, String endToken, int numResplits) {
+        List<Token> splitTokens = ImmutableList.of(_tokenFactory.fromString(startToken), _tokenFactory.fromString(endToken));
+        for (int i = 0; i < numResplits; i++) {
+            List<Token> newTokens = new ArrayList<>(splitTokens.size() * 2 - 1);
+            for (int j = 0; j < splitTokens.size() - 1; j++) {
+                newTokens.add(splitTokens.get(j));
+                newTokens.add(ByteOrderedPartitioner.instance.midpoint(splitTokens.get(j), splitTokens.get(j + 1)));
+            }
+            newTokens.add(splitTokens.get(splitTokens.size() - 1));
+            splitTokens = newTokens;
+        }
+        return splitTokens;
+    }
+
     @Timed (name = "bv.emodb.sor.AstyanaxDataReaderDAO.getSplits", absolute = true)
     @Override
-    public List<String> getSplits(Table tbl, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
+    public List<String> getSplits(Table tbl, int recordsPerSplit, int localResplits) throws TimeoutException {
         checkNotNull(tbl, "table");
-        checkArgument(splitQuerySize % desiredRecordsPerSplit == 0);
-        checkArgument(Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2) % 1.0 == 0);
+        checkArgument(recordsPerSplit > 0);
+        checkArgument(localResplits > 0);
 
         try {
             List<String> splits = new ArrayList<>();
-            List<CfSplit> cfSplits = getCfSplits(tbl, desiredRecordsPerSplit);
+            List<CfSplit> cfSplits = getCfSplits(tbl, recordsPerSplit);
             for (CfSplit split : cfSplits) {
 
-                // In the case in while the splitQuerySize is larger than desiredRecordsPerSplit, manually split the token ranges
-                // using ByteOrderedPartitioner's midpoint method
-                List<Token> splitTokens = ImmutableList.of(_tokenFactory.fromString(split.getStartToken()), _tokenFactory.fromString(split.getEndToken()));
-                for (int i = 0; i < Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2); i++) {
-                    List<Token> newTokens = new ArrayList<>(splitTokens.size() * 2 -1);
-                    for (int j = 0; j < splitTokens.size() - 1; j++) {
-                        newTokens.add(splitTokens.get(j));
-                        newTokens.add(ByteOrderedPartitioner.instance.midpoint(splitTokens.get(j), splitTokens.get(j+1)));
-                    }
-                    newTokens.add(splitTokens.get(splitTokens.size() - 1));
-                    splitTokens = newTokens;
-                }
+                List<Token> splitTokens = resplitLocally(split.getStartToken(), split.getEndToken(), localResplits);
 
                 for (int i = 0; i < splitTokens.size() -1; i++) {
                     splits.add(SplitFormat.encode(new ByteBufferRangeImpl(_tokenFactory.toByteArray(splitTokens.get(i)),

@@ -567,11 +567,14 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         DataStoreMinSplitSize minSplitSize = _minSplitSizeMap.get(tableName);
 
+        int localResplits = 0;
         int actualSplitSize = desiredRecordsPerSplit;
 
         if (minSplitSize != null && minSplitSize.getExpirationTime().isAfter(_clock.instant())) {
-            while (actualSplitSize < Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize())) {
+            while (actualSplitSize < Math.max(desiredRecordsPerSplit, minSplitSize.getMinSplitSize())
+                    && actualSplitSize < 100000000) {
                 actualSplitSize *= 2;
+                localResplits++;
             }
         }
 
@@ -579,7 +582,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
         try {
 
-            return _dataReaderDao.getSplits(table, desiredRecordsPerSplit, actualSplitSize);
+            return _dataReaderDao.getSplits(table, actualSplitSize, localResplits);
         } catch (TimeoutException timeoutException) {
             try {
                 _minSplitSizeMap.set(tableName,

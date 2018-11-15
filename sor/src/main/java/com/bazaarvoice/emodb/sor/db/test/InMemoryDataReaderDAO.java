@@ -183,13 +183,14 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
+    public List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException {
 
         List<String> splits = Lists.newArrayList();
         String start = "";
         int count = 0;
+        int splitSize = recordsPerSplit / ((int) Math.pow(2, localResplits));
         for (String key : safeGet(_contentChanges, table.getName()).keySet()) {
-            if (++count == desiredRecordsPerSplit) {
+            if (++count == splitSize) {
                 splits.add(encodeSplit(start, key));
                 start = key;
                 count = 0;

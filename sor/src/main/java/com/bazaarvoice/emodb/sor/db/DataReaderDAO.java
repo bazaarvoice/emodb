@@ -40,7 +40,7 @@ public interface DataReaderDAO {
      * Returns a list of split identifiers that, when queried, will return all data in the table.  This method will
      * make a best effort to return splits smaller than or equal to the specified desired number of records per split.
      */
-    List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException;
+    List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException;
 
     /** Retrieves up to {@code limit} records from the specified split in the specified table. */
     Iterator<Record> getSplit(Table table, String split, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency);

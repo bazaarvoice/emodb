@@ -5,19 +5,25 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
+import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.ChangeEncoder;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.codahale.metrics.MetricRegistry;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
+import org.apache.cassandra.dht.ByteOrderedPartitioner;
+
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static org.mockito.Mockito.mock;
+
 
 public class MinSplitSizeTest {
 
@@ -25,18 +31,13 @@ public class MinSplitSizeTest {
     public void testMinSplitAfterTimeout() {
         InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO() {
             @Override
-            public List<String> getSplits(Table table, int desiredRecordsPerSplit, int splitQuerySize) throws TimeoutException {
+            public List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException {
 
-                // confirm that splitQuerySize / desiredRecordsPerSplit is always a power of 2
-                System.out.println(splitQuerySize);
-                assertEquals(Math.log(splitQuerySize / desiredRecordsPerSplit) / Math.log(2) % 1.0, 0.0);
-
-
-                if (splitQuerySize <= 10) {
+                if (recordsPerSplit <= 10) {
                     throw new TimeoutException();
                 }
 
-                return super.getSplits(table, desiredRecordsPerSplit, splitQuerySize);
+                return super.getSplits(table, recordsPerSplit, localResplits);
             }
         };
 
@@ -60,5 +61,19 @@ public class MinSplitSizeTest {
         // Splits should come back normally
         assertEquals(dataStore.getSplits("table", 10).size(), 20);
 
+    }
+
+    @Test
+    public void testLocalResplitting() {
+        AstyanaxDataReaderDAO astyanaxDataReaderDAO = new AstyanaxDataReaderDAO(mock(PlacementCache.class), mock(ChangeEncoder.class), new MetricRegistry());
+
+        // Number of tokens should be 2^10 + 1 = 1025, as 1025 consecutive tokens can form 1024 ranges.
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 10).size(), 1025);
+
+        // Number of tokens should be 2^5 + 1 = 33, as 33 consecutive tokens can form 32 ranges.
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 5).size(), 33);
+
+        // Number of tokens should be 2^0 + 1 = 2, as 2 consecutive tokens can form 1 range.
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 0).size(), 2);
     }
 }
