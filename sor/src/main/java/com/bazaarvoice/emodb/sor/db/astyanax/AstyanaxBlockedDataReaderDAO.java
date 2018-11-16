@@ -400,7 +400,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
     public List<String> getSplits(Table tbl, int recordsPerSplit, int localResplits) throws TimeoutException {
         checkNotNull(tbl, "table");
         checkArgument(recordsPerSplit > 0);
-        checkArgument(localResplits > 0);
+        checkArgument(localResplits >= 0);
 
         try {
             List<String> splits = new ArrayList<>();

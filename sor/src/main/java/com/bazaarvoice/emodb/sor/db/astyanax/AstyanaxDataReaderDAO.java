@@ -390,7 +390,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
     public List<String> getSplits(Table tbl, int recordsPerSplit, int localResplits) throws TimeoutException {
         checkNotNull(tbl, "table");
         checkArgument(recordsPerSplit > 0);
-        checkArgument(localResplits > 0);
+        checkArgument(localResplits >= 0);
 
         try {
             List<String> splits = new ArrayList<>();

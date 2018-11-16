@@ -13,11 +13,12 @@ import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.codahale.metrics.MetricRegistry;
+import com.netflix.astyanax.partitioner.BOP20Partitioner;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
-import org.apache.cassandra.dht.ByteOrderedPartitioner;
 
+import org.apache.cassandra.dht.Token;
 import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
@@ -67,13 +68,33 @@ public class MinSplitSizeTest {
     public void testLocalResplitting() {
         AstyanaxDataReaderDAO astyanaxDataReaderDAO = new AstyanaxDataReaderDAO(mock(PlacementCache.class), mock(ChangeEncoder.class), new MetricRegistry());
 
+        String[] minMaxResplits3Times = {
+                "0000000000000000000000000000000000000000",
+                "1fffffffffffffffffffffffffffffffffffffffe0",
+                "3fffffffffffffffffffffffffffffffffffffffc0",
+                "5fffffffffffffffffffffffffffffffffffffffa0",
+                "7fffffffffffffffffffffffffffffffffffffff80",
+                "9fffffffffffffffffffffffffffffffffffffff60",
+                "bfffffffffffffffffffffffffffffffffffffff40",
+                "dfffffffffffffffffffffffffffffffffffffff20",
+                "ffffffffffffffffffffffffffffffffffffffff"
+        };
+
+        List<Token> splits = astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 3);
+
+        assertEquals(splits.size(), minMaxResplits3Times.length);
+
+        for (int i =0; i < splits.size(); i++) {
+            assertEquals(splits.get(i).toString(), minMaxResplits3Times[i]);
+        }
+
         // Number of tokens should be 2^10 + 1 = 1025, as 1025 consecutive tokens can form 1024 ranges.
-        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 10).size(), 1025);
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 10).size(), 1025);
 
         // Number of tokens should be 2^5 + 1 = 33, as 33 consecutive tokens can form 32 ranges.
-        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 5).size(), 33);
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 5).size(), 33);
 
         // Number of tokens should be 2^0 + 1 = 2, as 2 consecutive tokens can form 1 range.
-        assertEquals(astyanaxDataReaderDAO.resplitLocally(ByteOrderedPartitioner.MINIMUM.toString(), "555555555555555555555555a4965fe7", 0).size(), 2);
+        assertEquals(astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 0).size(), 2);
     }
 }
