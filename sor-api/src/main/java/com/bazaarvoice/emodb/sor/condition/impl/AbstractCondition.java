@@ -17,4 +17,12 @@ public abstract class AbstractCondition implements Condition {
         }
         return buf.toString();
     }
+    /**
+     * Default weight for all conditions is 1.  Conditions which are more complex than a trivial check should return
+     * a higher value.
+     */
+    @Override
+    public int weight() {
+        return 1;
+    }
 }

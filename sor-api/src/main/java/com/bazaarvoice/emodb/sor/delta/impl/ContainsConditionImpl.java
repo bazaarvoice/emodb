@@ -111,6 +111,16 @@ public class ContainsConditionImpl implements ContainsCondition {
         buf.append(")");
     }
 
+    /**
+     * "Contains" more-so than other conditions is difficult to determine the weight for a-priori since its evaluation
+     * time in the worst case scales linearly based on the input size.  For this reason the weight is skewed higher
+     * than normal.
+     */
+    @Override
+    public int weight() {
+        return 3 * _values.size();
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

@@ -10,14 +10,27 @@ import com.google.common.io.CharStreams;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Standard implementation for {@link MapCondition}.  Note that this implementation does not preserve the original order
+ * of the conditions in the provided map but sorts them such that {@link #getEntries()} is sorted by increasing weight.
+ * The serialization performed by {@link #appendTo(Appendable)} always outputs entries in order sorted by map keys.
+ */
 public class MapConditionImpl extends AbstractCondition implements MapCondition {
 
     private final Map<String, Condition> _entries;
 
     public MapConditionImpl(Map<String, Condition> entries) {
-        _entries = entries;
+        // Use a LinkedHashMap to provide a map interface which returns the conditions in weighted order.
+        final Map<String, Condition> sortedEntries = new LinkedHashMap<>();
+        entries.entrySet().stream()
+                .sorted(Comparator.comparingInt(entry -> entry.getValue().weight()))
+                .forEach(entry -> sortedEntries.put(entry.getKey(), entry.getValue()));
+        _entries = Collections.unmodifiableMap(sortedEntries);
     }
 
     @Override
@@ -41,6 +54,14 @@ public class MapConditionImpl extends AbstractCondition implements MapCondition 
             entry.getValue().appendTo(buf);
         }
         buf.append('}');
+    }
+
+    /**
+     * The worst case total weight of a "map" is the sum of the weights of all contained conditions.
+     */
+    @Override
+    public int weight() {
+        return _entries.values().stream().mapToInt(Condition::weight).sum();
     }
 
     @Override

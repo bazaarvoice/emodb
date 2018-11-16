@@ -34,6 +34,15 @@ public class NotConditionImpl extends AbstractCondition implements NotCondition 
         buf.append(")");
     }
 
+    /**
+     * Inverting the contained condition is effectively free, so the weight of a "not" is the same as the weight of
+     * the contained condition.
+     */
+    @Override
+    public int weight() {
+        return _condition.weight();
+    }
+
     @Override
     public boolean equals(Object o) {
         return (this == o) || (o instanceof NotCondition) && _condition.equals(((NotCondition) o).getCondition());
