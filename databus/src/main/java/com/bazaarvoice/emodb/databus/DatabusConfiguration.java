@@ -96,6 +96,16 @@ public class DatabusConfiguration {
     @JsonProperty("kafka.resolverRetryQueueTopicConfiguration")
     private KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration = new KafkaTopicConfiguration("default-resolver-retry-queue");
 
+    @Valid
+    @NotNull
+    @JsonProperty("kafka.applicationId")
+    private String _applicationId = new String("default-application-id");
+
+    @Valid
+    @NotNull
+    @JsonProperty("kafka.numThreads")
+    private Integer _numThreads = new Integer(2);
+
 
     public CassandraConfiguration getCassandraConfiguration() {
         return _cassandraConfiguration;
@@ -170,6 +180,14 @@ public class DatabusConfiguration {
     public String getKafkaBootstrapServers() { return _kafkaBootstrapServers; }
 
     public void setKafkaBootstrapServers(String kafkaBootstrapServers) { _kafkaBootstrapServers = kafkaBootstrapServers; }
+
+    public String getApplicationId() { return _applicationId; }
+
+    public void setApplicationId(String applicationId) { _applicationId = applicationId; }
+
+    public Integer getNumThreads() { return _numThreads; }
+
+    public void setNumThreads(int numThreads) { _numThreads = numThreads; }
 
 
 

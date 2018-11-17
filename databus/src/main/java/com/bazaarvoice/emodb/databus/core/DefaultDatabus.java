@@ -11,9 +11,11 @@ import com.bazaarvoice.emodb.databus.KafkaEventProducerConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaMasterQueueTopicConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaResolvedEventProducerConfiguration;
 import com.bazaarvoice.emodb.databus.KafkaResolverRetryQueueTopicConfiguration;
+import com.bazaarvoice.emodb.databus.KafkaStreamsApplicationId;
 import com.bazaarvoice.emodb.databus.KafkaTestForceRetry;
 import com.bazaarvoice.emodb.databus.KafkaTestForceRetryToFail;
 import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
+import com.bazaarvoice.emodb.databus.NumKafkaStreamsThreads;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.ZookeeperURL;
@@ -206,6 +208,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final KafkaProducerConfiguration _resolvedEventProducerConfiguration;
     private final KafkaTopicConfiguration _masterQueueTopicConfiguration;
     private final KafkaTopicConfiguration _resolverRetryQueueTopicConfiguration;
+    private final Integer _numKafkaStreamsThreads;
+    private final String _kafkaStreamsApplicationId;
 
     private Boolean _kafkaEnabled;
     private Boolean _kafkaTestForceRetry;
@@ -240,6 +244,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                           @KafkaTestForceRetryToFail Boolean kafkaTestForceRetryToFail,
                           @ZookeeperURL String zookeeperUrl,
                           @KafkaBootstrapServers String kafkaBootstrapServers,
+                          @NumKafkaStreamsThreads Integer numKafkaStreamsThreads,
+                          @KafkaStreamsApplicationId String kafkaStreamsApplicationId,
                           @MasterFanoutPartitions int masterPartitions,
                           @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
@@ -276,6 +282,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _stressTestTopicWriteMeter = newEventMeter("stressTestTopicDocumentsWrittenCount", metricRegistry);
         _kafkaStreamsFanoutTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "DefaultDatabus", "kafkaStreamsFanoutTimer"));
         _kafkaStreamsDocumentResolutionTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "DefaultDatabus", "kafkaStreamsDocumentResolutionTimer"));
+        _numKafkaStreamsThreads = numKafkaStreamsThreads;
+        _kafkaStreamsApplicationId = kafkaStreamsApplicationId;
 
         _eventSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
@@ -329,11 +337,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             resolvedDocumentProducer = new KafkaProducer<>(_resolvedEventProducerConfiguration.getProps());
 
             Properties props = new Properties();
-            props.put(StreamsConfig.APPLICATION_ID_CONFIG, "emodb-databus-application");
+            props.put(StreamsConfig.APPLICATION_ID_CONFIG, _kafkaStreamsApplicationId);
             props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaBootstrapServers);
             props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.ByteBuffer().getClass());
-            props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 16);
+            props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, _numKafkaStreamsThreads);
 
             builder = new StreamsBuilder();
             KStream<String, ByteBuffer> eventStream = builder.stream(_masterQueueTopicConfiguration.getTopicName());

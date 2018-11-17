@@ -276,6 +276,14 @@ public class DatabusModule extends PrivateModule {
     @Provides @Singleton @KafkaBootstrapServers
     String provideKafkaBootstrapServers(DatabusConfiguration configuration) { return configuration.getKafkaBootstrapServers(); }
 
+    @Provides @Singleton @NumKafkaStreamsThreads
+    Integer provideNumKafkaStreamsThreads(DatabusConfiguration configuration) {
+        return configuration.getNumThreads();
+    }
+
+    @Provides @Singleton @KafkaStreamsApplicationId
+    String provideKafkaStreamsApplicationId(DatabusConfiguration configuration) { return configuration.getApplicationId(); }
+
     @Provides @Singleton @KafkaEventProducerConfiguration
     KafkaProducerConfiguration provideKafkaEventProducerConfiguration(DatabusConfiguration configuration) {
         return configuration.getEventProducerConfiguration();

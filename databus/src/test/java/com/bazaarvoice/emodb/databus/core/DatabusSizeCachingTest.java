@@ -50,7 +50,7 @@ public class DatabusSizeCachingTest {
                 mock(LifeCycleRegistry.class), mock(EventBus.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
                 mockEventStore, mock(SubscriptionEvaluator.class), mock(JobService.class), mock(JobHandlerRegistry.class),
                 mock(DatabusAuthorizer.class), "replication", Suppliers.ofInstance(Conditions.alwaysFalse()), mock(ExecutorService.class),
-                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaTopicConfiguration("master-queue"), new KafkaTopicConfiguration("resolver-retry-queue"), new Boolean(false), new Boolean(false), new Boolean(false), "localhost:2181", "localhost:9092", 1, key -> 0, mock(MetricRegistry.class), clock);
+                new KafkaProducerConfiguration(), new KafkaProducerConfiguration(), new KafkaTopicConfiguration("master-queue"), new KafkaTopicConfiguration("resolver-retry-queue"), new Boolean(false), new Boolean(false), new Boolean(false), "localhost:2181", "localhost:9092", 2, "default-application-id",1, key -> 0, mock(MetricRegistry.class), clock);
 
         // At limit=500, size estimate should be at 4800
         // At limit=50, size estimate should be at 5000

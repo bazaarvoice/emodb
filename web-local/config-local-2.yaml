@@ -123,6 +123,8 @@ databus:
   kafka.test.resolver.retry.forceRetryToFail: false
   zookeeper.url: "localhost:2181"
   kafka.bootstrapServers: "localhost:9092"
+  kafka.applicationId: "emodb-databus-application"
+  kafka.numThreads: 2
   kafka.eventProducerConfiguration:
       bootstrap.servers: localhost:9092
       acks: all
