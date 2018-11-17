@@ -54,6 +54,7 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
@@ -187,6 +188,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final Meter _documentResolvedMeter;
     private final Meter _stressTestTopicWriteMeter;
     private final Meter _resolverRetryMeter;
+    private final Timer _kafkaStreamsFanoutTimer;
+    private final Timer _kafkaStreamsDocumentResolutionTimer;
 
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _eventSizeCache;
     private final Supplier<Condition> _defaultJoinFilterCondition;
@@ -271,6 +274,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _documentResolvedMeter = newEventMeter("documentsResolvedCount", metricRegistry);
         _resolverRetryMeter = newEventMeter("retryDocumentResolutionCount", metricRegistry);
         _stressTestTopicWriteMeter = newEventMeter("stressTestTopicDocumentsWrittenCount", metricRegistry);
+        _kafkaStreamsFanoutTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "DefaultDatabus", "kafkaStreamsFanoutTimer"));
+        _kafkaStreamsDocumentResolutionTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "DefaultDatabus", "kafkaStreamsDocumentResolutionTimer"));
 
         _eventSizeCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(15, TimeUnit.SECONDS)
@@ -577,7 +582,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
             if (_kafkaEnabled) {
                 eventProducer.send(new ProducerRecord<>(_masterQueueTopicConfiguration.getTopicName(), UpdateRefSerializer.toByteBuffer(ref)));
-                _log.info("DefaultDataBus: sent event to Kafka master-queue topic: " + ref.toString());
+                _log.debug("DefaultDataBus: sent event to Kafka master-queue topic: " + ref.toString());
             }
         }
         _eventStore.addAll(eventIds.build());
@@ -834,124 +839,129 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
      */
     private int resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
                                             ResolvedItemSink sink) {
-        Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
-        List<String> eventIdsToDiscard = Lists.newArrayList();
-        List<String> recentUnknownEventIds = Lists.newArrayList();
-        int remaining = limit;
-        int itemsDiscarded = 0;
 
-        DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
-        Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
+        try (Timer.Context ignored = _kafkaStreamsDocumentResolutionTimer.time()) {
 
-        while (rawEventIterator.hasNext() && remaining != 0) {
-            Map.Entry<Coordinate, EventList> entry = rawEventIterator.next();
-            Coordinate coord = entry.getKey();
+            Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
+            List<String> eventIdsToDiscard = Lists.newArrayList();
+            List<String> recentUnknownEventIds = Lists.newArrayList();
+            int remaining = limit;
+            int itemsDiscarded = 0;
 
-            // Query the table/key pair.
-            try {
-                annotatedGet.add(coord.getTable(), coord.getId());
-                remaining -= 1;
-            } catch (UnknownTableException | UnknownPlacementException e) {
-                // It's likely the table or facade was dropped since the event was queued.  Discard the events.
-                EventList list = entry.getValue();
-                for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
-                    eventIdsToDiscard.add(pair.first());
+            DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
+            Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
+
+            while (rawEventIterator.hasNext() && remaining != 0) {
+                Map.Entry<Coordinate, EventList> entry = rawEventIterator.next();
+                Coordinate coord = entry.getKey();
+
+                // Query the table/key pair.
+                try {
+                    annotatedGet.add(coord.getTable(), coord.getId());
+                    remaining -= 1;
+                } catch (UnknownTableException | UnknownPlacementException e) {
+                    // It's likely the table or facade was dropped since the event was queued.  Discard the events.
+                    EventList list = entry.getValue();
+                    for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
+                        eventIdsToDiscard.add(pair.first());
+                    }
+                    _discardedMeter.mark(list.size());
                 }
-                _discardedMeter.mark(list.size());
+
+                // Keep track of the order in which we received the events from the EventStore.
+                eventOrder.put(coord, eventOrder.size());
             }
+            Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
 
-            // Keep track of the order in which we received the events from the EventStore.
-            eventOrder.put(coord, eventOrder.size());
-        }
-        Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
+            // Loop through the results of the data store query.
+            while (readResultIter.hasNext()) {
+                DataProvider.AnnotatedContent readResult = readResultIter.next();
 
-        // Loop through the results of the data store query.
-        while (readResultIter.hasNext()) {
-            DataProvider.AnnotatedContent readResult = readResultIter.next();
+                // Get the JSON System of Record entity for this piece of content
+                Map<String, Object> content = readResult.getContent();
 
-            // Get the JSON System of Record entity for this piece of content
-            Map<String, Object> content = readResult.getContent();
+                // Find the original event IDs that correspond to this piece of content
+                Coordinate coord = Coordinate.fromJson(content);
+                EventList eventList = rawEvents.get(coord);
 
-            // Find the original event IDs that correspond to this piece of content
-            Coordinate coord = Coordinate.fromJson(content);
-            EventList eventList = rawEvents.get(coord);
+                // Get all databus event tags for the original event(s) for this coordinate
+                List<List<String>> tags = eventList.getTags();
 
-            // Get all databus event tags for the original event(s) for this coordinate
-            List<List<String>> tags = eventList.getTags();
+                Item item = null;
 
-            Item item = null;
+                // If this function is called from the Kafka streaming application functions makeResolvedEventRecords() or
+                // RetryTransformer.transform(), there will be no eventId available because Kafka does not use the C* queues
+                // and so has no access to or need for slab IDs/indexIDs/channels etc. In this case, simply skip the book keeping
+                // operations that need the eventId and only return the resolved document, which is fine since Kafka streams do
+                // not require similar book keeping.
+                //
+                // Since this prototype does Kafka databus processing in parallel with the regular EmoDB C* databus the book keeping
+                // will still be done as part of that processing. When the actual code is change to remove the C* databus, we can
+                // modify this function to just do document resolution.
+                //
+                // TODO this logic is only for the combined C* / Kafka prototype
+                if (eventList.getEventAndChangeIds().get(0).first() != null) {
 
-            // If this function is called from the Kafka streaming application functions makeResolvedEventRecords() or
-            // RetryTransformer.transform(), there will be no eventId available because Kafka does not use the C* queues
-            // and so has no access to or need for slab IDs/indexIDs/channels etc. In this case, simply skip the book keeping
-            // operations that need the eventId and only return the resolved document, which is fine since Kafka streams do
-            // not require similar book keeping.
-            //
-            // Since this prototype does Kafka databus processing in parallel with the regular EmoDB C* databus the book keeping
-            // will still be done as part of that processing. When the actual code is change to remove the C* databus, we can
-            // modify this function to just do document resolution.
-            //
-            // TODO this logic is only for the combined C* / Kafka prototype
-            if (eventList.getEventAndChangeIds().get(0).first() != null) {
+                    // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
+                    for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
+                        String eventId = eventData.first();
+                        UUID changeId = eventData.second();
 
-                // Loop over the Databus events for this piece of content.  Usually there's just one, but not always...
-                for (Pair<String, UUID> eventData : eventList.getEventAndChangeIds()) {
-                    String eventId = eventData.first();
-                    UUID changeId = eventData.second();
-
-                    // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
-                    if (readResult.isChangeDeltaPending(changeId)) {
-                        if (isRecent(changeId)) {
-                            recentUnknownEventIds.add(eventId);
-                            _recentUnknownMeter.mark();
-                        } else {
-                            _staleUnknownMeter.mark();
+                        // Has the content replicated yet?  If not, abandon the event and we'll try again when the claim expires.
+                        if (readResult.isChangeDeltaPending(changeId)) {
+                            if (isRecent(changeId)) {
+                                recentUnknownEventIds.add(eventId);
+                                _recentUnknownMeter.mark();
+                            } else {
+                                _staleUnknownMeter.mark();
+                            }
+                            continue;
                         }
-                        continue;
+
+                        // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
+                        if (readResult.isChangeDeltaRedundant(changeId)) {
+                            eventIdsToDiscard.add(eventId);
+                            _redundantMeter.mark();
+                            continue;
+                        }
+
+                        Item eventItem = new Item(eventId, eventOrder.get(coord), content, tags);
+                        if (item == null) {
+                            item = eventItem;
+                        } else if (item.consolidateWith(eventItem)) {
+                            _consolidatedMeter.mark();
+                        } else {
+                            sink.accept(coord, item);
+                            item = eventItem;
+                        }
+
                     }
 
-                    // Is the change redundant?  If so, no need to fire databus events for it.  Ack it now.
-                    if (readResult.isChangeDeltaRedundant(changeId)) {
-                        eventIdsToDiscard.add(eventId);
-                        _redundantMeter.mark();
-                        continue;
-                    }
-
-                    Item eventItem = new Item(eventId, eventOrder.get(coord), content, tags);
-                    if (item == null) {
-                        item = eventItem;
-                    } else if (item.consolidateWith(eventItem)) {
-                        _consolidatedMeter.mark();
-                    } else {
-                        sink.accept(coord, item);
-                        item = eventItem;
-                    }
-
+                } else {
+                    item = new Item(null, eventOrder.get(coord), content, tags);
                 }
 
-            } else {
-                item = new Item(null, eventOrder.get(coord), content, tags);
+                if (item != null) {
+                    sink.accept(coord, item);
+                }
             }
 
-            if (item != null) {
-                sink.accept(coord, item);
+            // Reduce the claim length on recent unknown IDs so we look for them again soon.
+            if (!recentUnknownEventIds.isEmpty()) {
+                _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
             }
-        }
+            // Ack events we never again want to see.
+            if ((itemsDiscarded = eventIdsToDiscard.size()) != 0) {
+                _eventStore.delete(subscription, eventIdsToDiscard, true);
+            }
+            // Remove all coordinates from rawEvents which were processed by this method
+            for (Coordinate coord : eventOrder.keySet()) {
+                rawEvents.remove(coord);
+            }
 
-        // Reduce the claim length on recent unknown IDs so we look for them again soon.
-        if (!recentUnknownEventIds.isEmpty()) {
-            _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
-        }
-        // Ack events we never again want to see.
-        if ((itemsDiscarded = eventIdsToDiscard.size()) != 0) {
-            _eventStore.delete(subscription, eventIdsToDiscard, true);
-        }
-        // Remove all coordinates from rawEvents which were processed by this method
-        for (Coordinate coord : eventOrder.keySet()) {
-            rawEvents.remove(coord);
-        }
+            return itemsDiscarded;
 
-        return itemsDiscarded;
+        }
     }
 
     /**
@@ -1306,25 +1316,25 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     private ByteBuffer makeFannedOutEventRecord(ByteBuffer event) {
 
-        try {
+        try (Timer.Context ignored1 = _kafkaStreamsFanoutTimer.time()) {
 
             UpdateRef ref = UpdateRefSerializer.fromByteBuffer(event);
 
             _masterQueueReadMeter.mark();
-            _log.info("DefaultDatabus.doKafkaFanout: read event from master-queue: ==> (table: " + ref.getTable() + ", key: " + ref.getKey() + ", changeId: " + ref.getChangeId());
+            _log.debug("DefaultDatabus.doKafkaFanout: read event from master-queue: ==> (table: " + ref.getTable() + ", key: " + ref.getKey() + ", changeId: " + ref.getChangeId());
 
             // The idea of doing this every time is to catch new subscriptions created since last update was processed - is this necessary?
             Iterable<OwnedSubscription> subscriptions = _subscriptionDao.getAllSubscriptions();
 
-            _log.info("DefaultDatabus.doKafkaFanout: got list of subscriptions, first one = " + subscriptions.iterator().next().getName());
+            _log.debug("DefaultDatabus.doKafkaFanout: got list of subscriptions, first one = " + subscriptions.iterator().next().getName());
 
             SubscriptionEvaluator.MatchEventData matchEventData = _subscriptionEvaluator.getMatchEventData(ref);
 
-            _log.info("DefaultDatabus.doKafkaFanout: got matching event data (" + matchEventData.getTable() + "/" + matchEventData.getKey() + ")");
+            _log.debug("DefaultDatabus.doKafkaFanout: got matching event data (" + matchEventData.getTable() + "/" + matchEventData.getKey() + ")");
 
             Iterable<OwnedSubscription> matchingSubscriptions = _subscriptionEvaluator.matches(subscriptions, matchEventData);
 
-            _log.info("DefaultDatabus.doKafkaFanout: got list of matching subscriptions, first one = " + matchingSubscriptions.iterator().next().getName());
+            _log.debug("DefaultDatabus.doKafkaFanout: got list of matching subscriptions, first one = " + matchingSubscriptions.iterator().next().getName());
 
             Set<String> matchingSubscriptionNames = new HashSet<>();
             for (OwnedSubscription subscription : matchingSubscriptions) {
@@ -1334,7 +1344,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // If a polled event has subscribers
             if (!matchingSubscriptionNames.isEmpty()) {
 
-                _log.info("DefaultDatabus.doKafkaFanout: event had matching subscriptions " + matchingSubscriptionNames.toString());
+                _log.debug("DefaultDatabus.doKafkaFanout: event had matching subscriptions " + matchingSubscriptionNames.toString());
 
                 // Create new tuple for resolving
                 FannedOutUpdateRef fannedOutUpdateRef = new FannedOutUpdateRef(ref, matchingSubscriptionNames);
@@ -1366,7 +1376,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             _fanoutQueueReadMeter.mark();
 
-            _log.info("DefaultDatabus.makeResolvedEventRecords: read event from resolver-queue: ==> " + fannedOutUpdateRef.toString());
+            _log.debug("DefaultDatabus.makeResolvedEventRecords: read event from resolver-queue: ==> " + fannedOutUpdateRef.toString());
 
             // Try to resolve the update
             UpdateRef updateRef = fannedOutUpdateRef.getUpdateRef();
@@ -1381,7 +1391,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             String firstSubscriptionName = subscriptionNames.iterator().next();
 
-            _log.info("DefaultDatabus.makeResolvedEventRecords: variables set for resolve attempt");
+            _log.debug("DefaultDatabus.makeResolvedEventRecords: variables set for resolve attempt");
 
             // resolve document once, in this case for the first subscription
             final List<Item> items = Lists.newArrayList();
@@ -1392,14 +1402,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         // already de-duplicated by coordinate, so there is no need to maintain
                         // a coordinate-to-item uniqueness map.
                         if (_kafkaTestForceRetry) {
-                            _log.info("DefaultDatabus.makeResolvedEventRecords: running in test mode, forcing retries...");
+                            _log.debug("DefaultDatabus.makeResolvedEventRecords: running in test mode, forcing retries...");
                         } else {
                             items.add(item);
                         }
                     });
             } catch (Throwable t) {
-                _log.info("DefaultDatabus.makeResolvedEventRecords: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
-                _log.info("DefaultDatabus.makeResolvedEventRecords: exception stack trace: " + t.getStackTrace().toString());
+                _log.debug("DefaultDatabus.makeResolvedEventRecords: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
+                _log.debug("DefaultDatabus.makeResolvedEventRecords: exception stack trace: " + t.getStackTrace().toString());
             }
 
             // TODO use Clock per Bill's suggestion later
@@ -1409,7 +1419,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             if (!items.isEmpty()) {
                 // Now get JSON doc
                 String document = Json.encodeAsString(items.get(0)._content);
-                _log.info("DefaultDatabus.makeResolvedEventRecords: resolved document == " + document);
+                _log.debug("DefaultDatabus.makeResolvedEventRecords: resolved document == " + document);
 
                 _documentResolvedMeter.mark();
 
@@ -1426,7 +1436,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                 // send unresolved objects to the retry queue for processing
             } else {
-                _log.info("DefaultDatabus.doKafkaResolver: event " + fannedOutUpdateRef.toString() + " not resolved yet, sending to retry queue...");
+                _log.debug("DefaultDatabus.doKafkaResolver: event " + fannedOutUpdateRef.toString() + " not resolved yet, sending to retry queue...");
                 // Now create new list of K/V pairs keyed by subscription name
                 List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
                 for (String subscriptionName: subscriptionNames) {
@@ -1611,7 +1621,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             try {
 
-                _log.info("DefaultDatabus.RetryTransformer.transform: key == " + key);
+                _log.debug("DefaultDatabus.RetryTransformer.transform: key == " + key);
 
                 _resolverRetryMeter.mark();
 
@@ -1651,14 +1661,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                             // already de-duplicated by coordinate, so there is no need to maintain
                             // a coordinate-to-item uniqueness map.
                             if (_kafkaTestForceRetryToFail) {
-                                _log.info("DefaultDatabus.RetryTransformer.transform: running in test mode, forcing retries to fail...");
+                                _log.debug("DefaultDatabus.RetryTransformer.transform: running in test mode, forcing retries to fail...");
                             } else {
                                 items.add(item);
                             }
                     });
                 } catch (Throwable t) {
-                    _log.info("DefaultDatabus.RetryTransformer: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
-                    _log.info("DefaultDatabus.RetryTransformer: exception stack trace: " + t.getStackTrace().toString());
+                    _log.debug("DefaultDatabus.RetryTransformer: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
+                    _log.debug("DefaultDatabus.RetryTransformer: exception stack trace: " + t.getStackTrace().toString());
                 }
 
                 long currentResolveTime = System.currentTimeMillis();
@@ -1669,7 +1679,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                     // Now get JSON doc
                     String document = Json.encodeAsString(items.get(0)._content);
-                    _log.info("DefaultDatabus.RetryTransformer.transform: resolved document == " + document);
+                    _log.debug("DefaultDatabus.RetryTransformer.transform: resolved document == " + document);
 
                     // Explicitly create topic if it does not already exist
                     if (!AdminUtils.topicExists(zkUtils, subscriptionName)) {
@@ -1682,7 +1692,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                     // send unresolved objects to the retry queue for processing IF not too much time has elapsed!
                 } else {
 
-                    _log.info("DefaultDatabus.RetryTransformer.transform: document " + tableName + "/" + docKey + " change ID " + changeId.toString() + " not resolved yet...");
+                    _log.debug("DefaultDatabus.RetryTransformer.transform: document " + tableName + "/" + docKey + " change ID " + changeId.toString() + " not resolved yet...");
 
                     if (lastResolveTime - firstResolveTime < PHANTOM_UPDATE_TIMEOUT) {
 
@@ -1690,7 +1700,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                     } else {
 
-                        _log.warn("DefaultDatabus.RetryTransformer.transform: change ID " + changeId + "dropped as phantom update...");
+                        _log.warn("DefaultDatabus.RetryTransformer.transform: change ID " + changeId + " dropped as phantom update...");
 
                         ByteBuffer value = ByteBuffer.allocate(0);
 
@@ -1728,7 +1738,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             try {
 
-                _log.info("DefaultDatabus.KTableKeyTransformer.transform: key == " + key);
+                _log.debug("DefaultDatabus.KTableKeyTransformer.transform: key == " + key);
 
                 // Split the key at the semicolon to get the various parts
                 String[] splitKey = key.split(";");
@@ -1737,7 +1747,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 String docKey = splitKey[2];
                 String docCoord = tableName + "/" + docKey + "/" + subscriptionName;
 
-                _log.info("DefaultDatabus.KTableKeyTransformer.transform: new key == " + docCoord);
+                _log.debug("DefaultDatabus.KTableKeyTransformer.transform: new key == " + docCoord);
 
                 return new KeyValue<>(docCoord, byteBuffer);
 
@@ -1818,7 +1828,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     @Override
     public void finalize() {
-        _log.info("DefaultDatabus.finalize: Trying to shut down Kafka streams...");
+        _log.debug("DefaultDatabus.finalize: Trying to shut down Kafka streams...");
         kafkaStreams.close();
     }
 }
