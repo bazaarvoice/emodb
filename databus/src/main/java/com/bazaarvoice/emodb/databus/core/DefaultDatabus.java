@@ -352,14 +352,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 flatMap((key, value) -> makeResolvedEventRecords(value)).branch((key, value) -> value != null, (key, value) -> value == null);
 
             // Send resolved documents to subscription topic
-            branches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
+            branches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
             branches[1].to(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             // Process any initially unresolved documents, retrying as needed
             KStream<String, ByteBuffer>[] retryBranches = retryEventStream.transform(RetryTransformer::new).branch((key, value) -> value != null && value.array().length > 0, (key, value) -> value == null);
 
             // Published documents that resolved after retry to subscription topic
-            retryBranches[0].transform(KTableKeyTransformer::new).foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
+            retryBranches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
 
             // Send documents that did not resolve after retry back to the resolver retry topic
             retryBranches[1].to(_resolverRetryQueueTopicConfiguration.getTopicName());
@@ -1469,8 +1469,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private void publishDocumentToSubscription(String key, ByteBuffer document, KafkaProducer<String, String> resolvedDocumentProducer) {
 
         // Split the key at the semicolon to get the various parts
-        String[] splitKey = key.split("/");
-        String subscriptionName = splitKey[2];
+        // Split the key at the semicolon to get the various parts
+        String[] splitKey = key.split(";");
+        String subscriptionName = splitKey[0];
+        String tableName = splitKey[1];
+        String docKey = splitKey[2];
 
         // publish to topic
         if (subscriptionName.compareTo("stress-test") == 0) _stressTestTopicWriteMeter.mark();
@@ -1735,46 +1738,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         }
     }
 
-
-    private class KTableKeyTransformer implements Transformer<String, ByteBuffer, KeyValue<String, ByteBuffer>> {
-
-        @Override public void init(final ProcessorContext processorContext) {
-
-        }
-
-        @Override public KeyValue<String, ByteBuffer> transform(final String key, final ByteBuffer byteBuffer) {
-
-            try {
-
-                _log.debug("DefaultDatabus.KTableKeyTransformer.transform: key == " + key);
-
-                // Split the key at the semicolon to get the various parts
-                String[] splitKey = key.split(";");
-                String subscriptionName = splitKey[0];
-                String tableName = splitKey[1];
-                String docKey = splitKey[2];
-                String docCoord = tableName + "/" + docKey + "/" + subscriptionName;
-
-                _log.debug("DefaultDatabus.KTableKeyTransformer.transform: new key == " + docCoord);
-
-                return new KeyValue<>(docCoord, byteBuffer);
-
-            } catch (Throwable t) {
-                _log.error("DefaultDatabus.processRetryEventRecords: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
-            }
-
-            return null;
-        }
-
-        @Override public KeyValue<String, ByteBuffer> punctuate(final long l) {
-            return null;
-        }
-
-        @Override public void close() {
-
-        }
-    }
-
+    
     /**
      * Produces a list-of-lists for all unique tag sets for a given databus event.  <code>existingTags</code> must either
      * be null or the result of a previous call to {@link #sortedTagUnion(java.util.List, java.util.List)} or
