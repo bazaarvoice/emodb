@@ -53,6 +53,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.MoveTableTask;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
+import com.bazaarvoice.emodb.table.db.astyanax.PurgesBlocked;
 import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
 import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
@@ -137,6 +138,9 @@ public class BlobStoreModule extends PrivateModule {
 
     @Override
     protected void configure() {
+
+        bind(Boolean.class).annotatedWith(PurgesBlocked.class).toInstance(false);
+
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();

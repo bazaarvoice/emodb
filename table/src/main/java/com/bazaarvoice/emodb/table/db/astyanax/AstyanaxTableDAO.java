@@ -178,6 +178,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final CacheHandle _tableCacheHandle;
     private final Map<String, String> _placementsUnderMove;
     private CQLStashTableDAO _stashTableDao;
+    private final boolean _purgesBlocked;
     private Clock _clock;
 
     @Inject
@@ -196,6 +197,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                             @TableChangesEnabled ValueStore<Boolean> tableChangesEnabled,
                             @CachingTableDAORegistry CacheRegistry cacheRegistry,
                             @PlacementsUnderMove Map<String, String> placementsUnderMove,
+                            @PurgesBlocked boolean purgesBlocked,
                             @Nullable Clock clock) {
         _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
         _bootstrapTables = HashBiMap.create(checkNotNull(bootstrapTables, "bootstrapTables"));
@@ -211,6 +213,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         _tableChangesEnabled = checkNotNull(tableChangesEnabled, "tableChangesEnabled");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _purgesBlocked = purgesBlocked;
         _clock = clock != null ? clock : Clock.systemUTC();
 
         // There are two tables used to store metadata about all the other tables.
@@ -468,6 +471,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 return MaintenanceOp.forData("Drop:purge-" + iteration, iteration == 1 ? when1 : when2, dataCenter, new MaintenanceTask() {
                     @Override
                     public void run(Runnable progress) {
+
+                        if (_purgesBlocked) {
+                            throw new FullConsistencyException("It is unsafe to purge a table during delta migration.");
+                        }
+
                         // Delay the final purge until we're confident we'll catch everything.
                         if (iteration == 2) {
                             checkPlacementConsistent(storage.getPlacement(), droppedAt);

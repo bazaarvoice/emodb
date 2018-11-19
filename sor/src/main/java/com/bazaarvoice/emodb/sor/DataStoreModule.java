@@ -442,6 +442,11 @@ public class DataStoreModule extends PrivateModule {
                 .or(Conditions.alwaysFalse());
     }
 
+    @Provides @Singleton @PurgesBlocked
+    boolean providePurgesBlocked(DataStoreConfiguration configuration) {
+        return configuration.getMigrationPhase() == DeltaMigrationPhase.DOUBLE_WRITE_LEGACY_READ;
+    }
+
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {
         Map<String, ClusterInfo> clusterInfoMap = Maps.newLinkedHashMap();
         for (CassandraConfiguration config : configuration.getCassandraClusters().values()) {
