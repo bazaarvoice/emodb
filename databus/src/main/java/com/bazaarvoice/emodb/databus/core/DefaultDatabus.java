@@ -79,7 +79,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.sun.net.httpserver.Authenticator;
 import io.dropwizard.lifecycle.Managed;
 import kafka.admin.AdminUtils;
 import kafka.admin.RackAwareMode;
@@ -97,8 +96,6 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Transformer;
-import org.apache.kafka.streams.processor.ProcessorContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,7 +104,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -351,15 +347,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             KStream<String, ByteBuffer> retryEventStream = builder.stream(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             // Splits into two streams, one for documents which are resolved (branches[0]) and one for documents that did not resolve (branches[1])
-            KStream<String, ByteBuffer>[] branches = eventStream.mapValues(value -> makeFannedOutEventRecord(value)).
-                flatMap((key, value) -> resolveDocuments(value)).branch((key, value) -> key.startsWith("RESOLVED"), (key, value) -> key.startsWith("UNRESOLVED"));
+            KStream<String, ByteBuffer>[] branches = eventStream.mapValues(value -> fanoutEvent(value)).
+                flatMap((key, value) -> resolveDocument(value)).branch((key, value) -> key.startsWith("RESOLVED"), (key, value) -> key.startsWith("UNRESOLVED"));
 
             // Send resolved documents to subscription topic
             branches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
             branches[1].to(_resolverRetryQueueTopicConfiguration.getTopicName());
 
             // Process any initially unresolved documents, retrying as needed
-            KStream<String, ByteBuffer>[] retryBranches = retryEventStream.flatMap((key, value) -> resolveDocuments(value)).branch((key, value) -> key.startsWith("RESOLVED"), (key, value) -> key.startsWith("UNRESOLVED"));
+            KStream<String, ByteBuffer>[] retryBranches = retryEventStream.flatMap((key, value) -> resolveDocument(value)).branch((key, value) -> key.startsWith("RESOLVED"), (key, value) -> key.startsWith("UNRESOLVED"));
 
             // Published documents that resolved after retry to subscription topic
             retryBranches[0].foreach((key, value) -> publishDocumentToSubscription(key, value, resolvedDocumentProducer));
@@ -900,7 +896,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                 Item item = null;
 
-                // If this function is called from the Kafka streaming application functions resolveDocuments() or
+                // If this function is called from the Kafka streaming application functions resolveDocument() or
                 // RetryTransformer.transform(), there will be no eventId available because Kafka does not use the C* queues
                 // and so has no access to or need for slab IDs/indexIDs/channels etc. In this case, simply skip the book keeping
                 // operations that need the eventId and only return the resolved document, which is fine since Kafka streams do
@@ -1325,7 +1321,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         }
     }
 
-    private ByteBuffer makeFannedOutEventRecord(ByteBuffer event) {
+    private ByteBuffer fanoutEvent(ByteBuffer event) {
 
         try (Timer.Context ignored1 = _kafkaStreamsFanoutTimer.time()) {
 
@@ -1378,7 +1374,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
 
-    private List<KeyValue<String, ByteBuffer>> resolveDocuments(ByteBuffer event) {
+    private List<KeyValue<String, ByteBuffer>> resolveDocument(ByteBuffer event) {
 
         try {
 
@@ -1387,7 +1383,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             _fanoutQueueReadMeter.mark();
 
-            _log.debug("DefaultDatabus.resolveDocuments: read event from resolver-queue: ==> " + fannedOutUpdateRef.toString());
+            _log.debug("DefaultDatabus.resolveDocument: read event from resolver-queue: ==> " + fannedOutUpdateRef.toString());
 
             // Try to resolve the update
             UpdateRef updateRef = fannedOutUpdateRef.getUpdateRef();
@@ -1402,7 +1398,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             String firstSubscriptionName = subscriptionNames.iterator().next();
 
-            _log.debug("DefaultDatabus.resolveDocuments: variables set for resolve attempt");
+            _log.debug("DefaultDatabus.resolveDocument: variables set for resolve attempt");
 
             Long firstResolveTime = fannedOutUpdateRef.getFirstResolveTime();
             final Long lastResolveTime;
@@ -1428,21 +1424,21 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                         // already de-duplicated by coordinate, so there is no need to maintain
                         // a coordinate-to-item uniqueness map.
                         if ((_kafkaTestForceRetry && firstResolveAttempt) || _kafkaTestForceRetryToFail) {
-                            _log.debug("DefaultDatabus.resolveDocuments: running in test mode, forcing retries...");
+                            _log.debug("DefaultDatabus.resolveDocument: running in test mode, forcing retries...");
                         } else {
                             items.add(item);
                         }
                     });
             } catch (Throwable t) {
-                _log.error("DefaultDatabus.resolveDocuments: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
-                _log.error("DefaultDatabus.resolveDocuments: exception stack trace: " + ExceptionUtils.getFullStackTrace(t));
+                _log.error("DefaultDatabus.resolveDocument: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
+                _log.error("DefaultDatabus.resolveDocument: exception stack trace: " + ExceptionUtils.getFullStackTrace(t));
             }
 
             // An item may not have been resolved for various reasons, so check if it is available
             if (!items.isEmpty()) {
                 // Now get JSON doc
                 String document = Json.encodeAsString(items.get(0)._content);
-                _log.debug("DefaultDatabus.resolveDocuments: resolved document == " + document);
+                _log.debug("DefaultDatabus.resolveDocument: resolved document == " + document);
 
                 _documentResolvedMeter.mark();
 
@@ -1466,7 +1462,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                     _resolverRetryMeter.mark();
 
-                    _log.debug("DefaultDatabus.resolveDocuments: event " + fannedOutUpdateRef.toString() + " not resolved yet, sending to retry queue...");
+                    _log.debug("DefaultDatabus.resolveDocument: event " + fannedOutUpdateRef.toString() + " not resolved yet, sending to retry queue...");
 
                     resultList.add(new KeyValue("UNRESOLVED;"+fannedOutUpdateRef.getUpdateRef().getChangeId().toString()+";"+firstSubscriptionName, FannedOutUpdateRefSerializer.toByteBuffer(new FannedOutUpdateRef(fannedOutUpdateRef.getUpdateRef(), fannedOutUpdateRef.getSubscriptionNames(), firstResolveTime))));
 
@@ -1474,7 +1470,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                     _phantomUpdateMeter.mark();
 
-                    _log.warn("DefaultDatabus.resolveDocuments: change ID " + fannedOutUpdateRef.getUpdateRef().getChangeId() + " dropped as phantom update...");
+                    _log.warn("DefaultDatabus.resolveDocument: change ID " + fannedOutUpdateRef.getUpdateRef().getChangeId() + " dropped as phantom update...");
 
                     resultList.add(new KeyValue("PHANTOM_UPDATE;"+fannedOutUpdateRef.getUpdateRef().getChangeId().toString()+";"+firstSubscriptionName, null));
 
@@ -1485,114 +1481,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             }
 
         } catch (Throwable t) {
-            _log.error("DefaultDatabus.resolveDocuments: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
+            _log.error("DefaultDatabus.resolveDocument: Unexpected exception " + t.getClass().getName() + " for event: " + ExceptionUtils.getFullStackTrace(t));
             return null;
         }
 
     }
-
-
-//    private List<KeyValue<String, ByteBuffer>> retryResolveDocuments(ByteBuffer event) {
-//
-//        try {
-//
-//            // Deserialize the fanned out update
-//            RetryUpdateRef retryUpdateRef = RetryUpdateRefSerializer.fromByteBuffer(event);
-//
-//            _resolverRetryMeter.mark();
-//
-//            // TODO delay to allow document resolution and keep CPU from getting pinned
-//            Thread.sleep(5000);
-//
-//            _log.debug("DefaultDatabus.retryResolveDocuments: read event from resolver-retry-queue: ==> " + retryUpdateRef.toString());
-//
-//            // Try to resolve the update
-//            UpdateRef updateRef = retryUpdateRef.getFannedOutUpdateRef().getUpdateRef();
-//            Set<String> subscriptionNames = retryUpdateRef.getFannedOutUpdateRef().getSubscriptionNames();
-//
-//            EventList eventList = new EventList();
-//            eventList.add(null, updateRef.getChangeId(), updateRef.getTags());
-//
-//            Coordinate coord = Coordinate.of(updateRef.getTable(), updateRef.getKey());
-//            HashMap<Coordinate, EventList> eventMap = new HashMap<>();
-//            eventMap.put(coord, eventList);
-//
-//            String firstSubscriptionName = subscriptionNames.iterator().next();
-//
-//            Long firstResolveTime = retryUpdateRef.getFirstResolveTime();
-//
-//            _log.debug("DefaultDatabus.retryResolveDocuments: variables set for resolve attempt");
-//
-//            // resolve document once, in this case for the first subscription
-//            final List<Item> items = Lists.newArrayList();
-//            try {
-//                resolvePeekOrPollEvents(firstSubscriptionName, eventMap, 1,
-//                    (theCoord, item) -> {
-//                        // Unlike with the original batch the deferred batch's events are always
-//                        // already de-duplicated by coordinate, so there is no need to maintain
-//                        // a coordinate-to-item uniqueness map.
-//                        if (_kafkaTestForceRetry) {
-//                            _log.debug("DefaultDatabus.retryResolveDocuments: running in test mode, forcing retries...");
-//                        } else {
-//                            items.add(item);
-//                        }
-//                    });
-//            } catch (Throwable t) {
-//                _log.debug("DefaultDatabus.resolveDocuments: exception caught in resolution attempt: " + t.getClass().getName() + ", message = " + t.getMessage());
-//                _log.debug("DefaultDatabus.resolveDocuments: exception stack trace: " + t.getStackTrace().toString());
-//            }
-//
-//            // TODO use Clock per Bill's suggestion later
-//            Long lastResolveTime = System.currentTimeMillis();
-//
-//            // An item may not have been resolved for various reasons, so check if it is available
-//            if (!items.isEmpty()) {
-//                // Now get JSON doc
-//                String document = Json.encodeAsString(items.get(0)._content);
-//                _log.debug("DefaultDatabus.retryResolveDocuments: resolved document == " + document);
-//
-//                _documentResolvedMeter.mark();
-//
-//                // Now create new list of K/V pairs keyed by subscription name
-//                List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
-//                for (String subscriptionName: subscriptionNames) {
-//                    // TODO this call might be too expensive to make every time, we should cache results by keeping a map of subscription names -> boolean, TRUE if Kafka topic with same name exists false otherwise
-//                    if (AdminUtils.topicExists(zkUtils, subscriptionName)) {
-//                        resultList.add(new KeyValue("RESOLVED;"+retryUpdateRef.getFannedOutUpdateRef().getUpdateRef().getChangeId().toString()+";"+subscriptionName, ByteBuffer.wrap(document.getBytes(Charsets.UTF_8))));
-//                    }
-//                }
-//
-//                return resultList;
-//
-//                // send unresolved objects to the retry queue for processing
-//            } else {
-//
-//                List<KeyValue<String,ByteBuffer>> resultList = new LinkedList<>();
-//
-//                if (lastResolveTime - firstResolveTime < PHANTOM_UPDATE_TIMEOUT) {
-//
-//                    _log.debug("DefaultDatabus.retryResolveDocuments: event " + retryUpdateRef.toString() + " not resolved yet, sending to retry queue...");
-//
-//                    resultList.add(new KeyValue("UNRESOLVED;"+retryUpdateRef.getFannedOutUpdateRef().getUpdateRef().getChangeId().toString()+";"+firstSubscriptionName, event));
-//
-//                } else {
-//
-//                    _log.warn("DefaultDatabus.retryResolveDocuments: change ID " + retryUpdateRef.getFannedOutUpdateRef().getUpdateRef().getChangeId() + " dropped as phantom update...");
-//
-//                    resultList.add(new KeyValue("PHANTOM_UPDATE;"+retryUpdateRef.getFannedOutUpdateRef().getUpdateRef().getChangeId().toString()+";"+firstSubscriptionName, null));
-//
-//                }
-//
-//                return resultList;
-//
-//            }
-//
-//        } catch (Throwable t) {
-//            _log.error("DefaultDatabus.resolveDocuments: Unexpected exception " + t.getClass().getName() + " for event: ");
-//            return null;
-//        }
-//
-//    }
 
 
     private void publishDocumentToSubscription(String key, ByteBuffer document, KafkaProducer<String, String> resolvedDocumentProducer) {
