@@ -106,7 +106,7 @@ public class DefaultFanoutManager implements FanoutManager {
 
         PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
                 _curator, ZKPaths.makePath("/leader/fanout", "partitioned-" + name),
-                _selfId, "PartitionedLeaderSelector-" + name, partitions, 1,  1, TimeUnit.MINUTES,
+                _selfId, "PartitionedLeaderSelector-" + name, partitions, 1,  1, TimeUnit.MILLISECONDS,
                 partition -> new DefaultFanout(name, "partition-" + partition,
                         eventSourceSupplier.createEventSourceForPartition(partition),
                         eventSink, outboundPartitionSelector, sleepWhenIdle, subscriptionsSupplier, _dataCenters.getSelf(),
