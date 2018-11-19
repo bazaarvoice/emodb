@@ -336,3 +336,4 @@ logging:
     "org.apache.zookeeper": OFF
     "org.apache.curator": WARN
     "com.bazaarvoice.emodb.web.ddl.CassandraThriftFacade": WARN
+    "com.bazaarvoice.emodb.databus.core.DefaultDatabus": DEBUG

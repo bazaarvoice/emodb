@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.model.Composite;
+import com.netflix.astyanax.serializers.LongSerializer;
 import com.netflix.astyanax.serializers.SetSerializer;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
@@ -22,16 +23,19 @@ public class FannedOutUpdateRefSerializer {
     private static final List<Serializer<?>> _serializers = ImmutableList.<Serializer<?>>of(
         StringSerializer.get(),
         StringSerializer.get(),
+        LongSerializer.get(),
         TimeUUIDSerializer.get());
     private static final List<String> _comparators = ImmutableList.of(
         StringSerializer.get().getComparatorType().getTypeName(),
         StringSerializer.get().getComparatorType().getTypeName(),
+        LongSerializer.get().getComparatorType().getTypeName(),
         TimeUUIDSerializer.get().getComparatorType().getTypeName());
 
     public static ByteBuffer toByteBuffer(FannedOutUpdateRef ref) {
         Composite composite = newComposite();
         composite.add(ref.getUpdateRef().getTable());
         composite.add(ref.getUpdateRef().getKey());
+        composite.add(ref.getFirstResolveTime());
         composite.add(ref.getUpdateRef().getChangeId());
         composite.add(_setSerializer.toByteBuffer(ref.getSubscriptionNames()).array());
         if (!ref.getUpdateRef().getTags().isEmpty()) {
@@ -46,14 +50,15 @@ public class FannedOutUpdateRefSerializer {
 
         String table = (String) composite.get(0);
         String key = (String) composite.get(1);
-        UUID changeId = (UUID) composite.get(2);
+        Long firstResolveTime = (Long)composite.get(2);
+        UUID changeId = (UUID) composite.get(3);
         Set<String> subscriptionNames = ImmutableSet.of();
-        subscriptionNames = _setSerializer.fromByteBuffer((ByteBuffer) composite.get(3));
+        subscriptionNames = _setSerializer.fromByteBuffer((ByteBuffer) composite.get(4));
         Set<String> tags = ImmutableSet.of();
-        if (composite.size() == 5) {
-            tags = _setSerializer.fromByteBuffer((ByteBuffer) composite.get(4));
+        if (composite.size() == 6) {
+            tags = _setSerializer.fromByteBuffer((ByteBuffer) composite.get(5));
         }
-        return new FannedOutUpdateRef(new UpdateRef(table, key, changeId, tags), subscriptionNames);
+        return new FannedOutUpdateRef(new UpdateRef(table, key, changeId, tags), subscriptionNames, firstResolveTime);
     }
 
     private static Composite newComposite() {
