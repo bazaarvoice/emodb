@@ -94,7 +94,12 @@ public class MinSplitSizeTest {
         // Number of tokens should be 2^5 + 1 = 33, as 33 consecutive tokens can form 32 ranges.
         assertEquals(astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 5).size(), 33);
 
+        List<Token> unsplitTokens = astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 0);
+
         // Number of tokens should be 2^0 + 1 = 2, as 2 consecutive tokens can form 1 range.
-        assertEquals(astyanaxDataReaderDAO.resplitLocally(BOP20Partitioner.MINIMUM, BOP20Partitioner.MAXIMUM, 0).size(), 2);
+        assertEquals(unsplitTokens.size(), 2);
+        assertEquals(unsplitTokens.get(0).toString(), BOP20Partitioner.MINIMUM);
+        assertEquals(unsplitTokens.get(1).toString(), BOP20Partitioner.MAXIMUM);
+
     }
 }
