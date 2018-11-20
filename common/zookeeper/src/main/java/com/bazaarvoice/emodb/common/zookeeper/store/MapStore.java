@@ -12,8 +12,6 @@ public interface MapStore<T> {
 
     Set<String> keySet();
 
-    String getZkPath();
-
     @Nullable
     T get(String key);
 

@@ -27,6 +27,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.RateLimiter;
+import java.util.concurrent.TimeoutException;
+import org.apache.cassandra.dht.ByteOrderedPartitioner;
+import org.apache.cassandra.dht.Token;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
 
@@ -180,17 +183,24 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     @Override
-    public List<String> getSplits(Table table, int desiredRecordsPerSplit) {
+    public List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException {
+
         List<String> splits = Lists.newArrayList();
         String start = "";
         int count = 0;
+        int splitSize = recordsPerSplit / ((int) Math.pow(2, localResplits));
         for (String key : safeGet(_contentChanges, table.getName()).keySet()) {
-            if (++count == desiredRecordsPerSplit) {
+            if (++count == splitSize) {
                 splits.add(encodeSplit(start, key));
                 start = key;
+                count = 0;
             }
         }
-        splits.add(encodeSplit(start, ""));
+
+        if (count > 0) {
+            splits.add(encodeSplit(start, ""));
+        }
+
         return splits;
     }
 

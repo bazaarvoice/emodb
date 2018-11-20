@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryMapStore;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.table.db.TableDAO;
@@ -18,6 +19,7 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.net.URI;
+import java.time.Clock;
 
 /**
  * Wrapper around a set of {@link DataStore} instances that replicate to each other,
@@ -62,12 +64,12 @@ public class MultiDCDataStores {
             if (asyncCompacter) {
                 _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new DatabusEventWriterRegistry(), _tableDao,
                         _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
-                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter());
+                        Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter(), new InMemoryMapStore<>(), Clock.systemUTC());
             } else {
                 _stores[i] = new DefaultDataStore(new DatabusEventWriterRegistry(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
                         _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _historyStores[i],
                         Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
-                        new DiscardingAuditWriter(), metricRegistry);
+                        new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
             }
         }
     }

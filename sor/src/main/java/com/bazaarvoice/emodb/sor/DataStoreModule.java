@@ -166,6 +166,10 @@ public class DataStoreModule extends PrivateModule {
             bind(ClusterHintsPoller.class).asEagerSingleton();
         }
 
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.dataStore_web)) {
+            bind(MinSplitSizeCleanupMonitor.class).asEagerSingleton();
+        }
+
         // The web servers are responsible for performing background table background_table_maintenance.
         // Enable background table background_table_maintenance if specified.
         if (_serviceMode.specifies(EmoServiceMode.Aspect.background_table_maintenance)) {
@@ -421,6 +425,12 @@ public class DataStoreModule extends PrivateModule {
     @Provides @Singleton @Maintenance
     RateLimiterCache provideRateLimiterCache(@Maintenance MapStore<Double> rateLimits) {
         return new RateLimiterCache(rateLimits, 1000);
+    }
+
+    @Provides @Singleton @MinSplitSizeMap
+    MapStore<DataStoreMinSplitSize> provideMinSplitSizeMap(@DataStoreZooKeeper CuratorFramework curator,
+                                                LifeCycleRegistry lifeCycle) {
+        return lifeCycle.manage(new ZkMapStore<>(curator, "min-split-size", new ZKDataStoreMinSplitSizeSerializer()));
     }
 
     @Provides @Singleton @StashRoot
