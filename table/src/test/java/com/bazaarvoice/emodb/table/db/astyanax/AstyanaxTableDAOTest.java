@@ -116,7 +116,7 @@ public class AstyanaxTableDAOTest {
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
-                ImmutableMap.<String, String>of(), mock(Clock.class));
+                ImmutableMap.<String, String>of(), false, mock(Clock.class));
 
         TableBackingStore tableBackingStore = mock(TableBackingStore.class);
         Map<String, Object> tableMap = JsonHelper.fromJson(_tableMetaData, new TypeReference<Map<String, Object>>() {});

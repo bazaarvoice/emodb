@@ -2169,7 +2169,7 @@ public class TableLifeCycleTest {
                 placementFactory, new PlacementCache(placementFactory),
                 dataCenter, mock(RateLimiterCache.class), dataCopyDAO, dataPurgeDAO,
                 fullConsistencyTimeProvider, tableChangesEnabled, cacheRegistry,
-                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ), clock);
+                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ), false, clock);
         tableDAO.setBackingStore(backingStore);
         return tableDAO;
     }
