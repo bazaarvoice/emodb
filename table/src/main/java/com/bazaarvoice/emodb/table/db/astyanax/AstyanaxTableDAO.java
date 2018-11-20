@@ -473,7 +473,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                     public void run(Runnable progress) {
 
                         if (_purgesBlocked) {
-                            throw new FullConsistencyException("It is unsafe to purge a table during delta migration.");
+                            throw new IllegalStateException("It is unsafe to purge a table during delta migration.");
                         }
 
                         // Delay the final purge until we're confident we'll catch everything.
