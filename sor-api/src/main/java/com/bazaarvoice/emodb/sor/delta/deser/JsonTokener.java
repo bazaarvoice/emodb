@@ -15,14 +15,11 @@ limitations under the License.
 */
 package com.bazaarvoice.emodb.sor.delta.deser;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * A JsonTokener parses JSON strings.
@@ -67,7 +64,9 @@ public class JsonTokener {
      * the next number or identifier.
      */
     public void back() {
-        checkState(myIndex > 0);
+        if (myIndex <= 0) {
+            throw new IllegalStateException();
+        }
         this.myIndex -= 1;
     }
 
@@ -301,7 +300,7 @@ public class JsonTokener {
     }
 
     public List<Object> nextArray() {
-        List<Object> list = Lists.newArrayList();
+        List<Object> list = new ArrayList<>();
         if (startArgs('[', ']')) {
             do {
                 list.add(nextValue());
@@ -311,7 +310,7 @@ public class JsonTokener {
     }
 
     public Map<String, Object> nextObject() {
-        Map<String, Object> map = Maps.newLinkedHashMap();
+        Map<String, Object> map = new LinkedHashMap<>();
         if (startArgs('{', '}')) {
             do {
                 // The key must be a quoted string.

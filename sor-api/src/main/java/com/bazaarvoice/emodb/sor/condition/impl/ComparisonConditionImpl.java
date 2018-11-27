@@ -4,15 +4,10 @@ import com.bazaarvoice.emodb.sor.condition.Comparison;
 import com.bazaarvoice.emodb.sor.condition.ComparisonCondition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Objects;
-import com.google.common.io.CharStreams;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.Writer;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Objects;
 
 public class ComparisonConditionImpl extends AbstractCondition implements ComparisonCondition {
 
@@ -20,9 +15,17 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
     private final Object _value;
 
     public ComparisonConditionImpl(Comparison comparison, Object value) {
-        _comparison = checkNotNull(comparison, "comparison");
-        _value = checkNotNull(value, "value");
-        checkArgument(value instanceof Number || value instanceof String, "%s only supports numbers and strings", comparison.getDeltaFunction());
+        if (comparison == null) {
+            throw new NullPointerException("comparison");
+        }
+        if (value == null) {
+            throw new NullPointerException("value");
+        }
+        _comparison = comparison;
+        _value = value;
+        if (!(value instanceof Number || value instanceof String)) {
+            throw new IllegalArgumentException(String.format("%s only supports numbers and strings", comparison.getDeltaFunction()));
+        }
     }
 
     @Override
@@ -38,12 +41,10 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
     @Override
     public void appendTo(Appendable buf)
             throws IOException {
-        // Use a writer so the value can be correctly converted to json using DeltaJson.
-        Writer out = CharStreams.asWriter(buf);
-        out.write(_comparison.getDeltaFunction());
-        out.write("(");
-        DeltaJson.write(out, _value);
-        out.write(")");
+        buf.append(_comparison.getDeltaFunction());
+        buf.append("(");
+        DeltaJson.append(buf, _value);
+        buf.append(")");
     }
 
     @Override
@@ -147,6 +148,6 @@ public class ComparisonConditionImpl extends AbstractCondition implements Compar
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_comparison, _value);
+        return Objects.hash(_comparison, _value);
     }
 }

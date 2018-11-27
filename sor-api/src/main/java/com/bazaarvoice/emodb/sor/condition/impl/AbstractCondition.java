@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.sor.condition.impl;
 
 import com.bazaarvoice.emodb.sor.condition.Condition;
-import com.google.common.base.Throwables;
 
 import java.io.IOException;
 
@@ -13,7 +12,7 @@ public abstract class AbstractCondition implements Condition {
         try {
             appendTo(buf);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
         return buf.toString();
     }

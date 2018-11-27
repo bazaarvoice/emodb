@@ -17,11 +17,10 @@ import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
-import com.google.common.collect.Sets;
 
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Partial implementation of a condition evaluator to determine if two conditions are distinct.  This is true if for all
@@ -72,7 +71,7 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
     }
     
     static boolean areDistinct(Condition left, Condition right) {
-        return new DistinctEvaluator().checkAreDistinct(checkNotNull(left, "left"), checkNotNull(right, "right"));
+        return new DistinctEvaluator().checkAreDistinct(requireNonNull(left, "left"), requireNonNull(right, "right"));
     }
 
     private boolean checkAreDistinct(Condition left, Condition right) {
@@ -244,14 +243,12 @@ class DistinctEvaluator implements ConditionVisitor<Condition, Boolean> {
         LeftResolvedVisitor<MapCondition> visitor = new LeftResolvedVisitor<MapCondition>(left) {
             @Override
             protected boolean visit(MapCondition right) {
-                Map<String, Condition> leftMap = _left.getEntries();
-                Map<String, Condition> rightMap = right.getEntries();
-                for (String key : Sets.intersection(leftMap.keySet(), rightMap.keySet())) {
-                    if (checkAreDistinct(leftMap.get(key), rightMap.get(key))) {
-                        return true;
-                    }
-                }
-                return false;
+                final Map<String, Condition> leftMap = _left.getEntries();
+                final Map<String, Condition> rightMap = right.getEntries();
+
+                return leftMap.keySet().stream()
+                        .filter(rightMap::containsKey)
+                        .anyMatch(key -> checkAreDistinct(leftMap.get(key), rightMap.get(key)));
             }
         };
 

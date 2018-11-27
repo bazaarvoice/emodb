@@ -1,13 +1,11 @@
 package com.bazaarvoice.emodb.databus.api;
 
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Result returned from {@link Databus#poll(String, Duration, int)}.  The result contains to attributes:
@@ -35,16 +33,30 @@ public class PollResult {
     private final List<Event> _events;
     private final boolean _moreEvents;
 
-    public PollResult(Iterator<Event> eventIterator, int approximateSize, boolean moreEvents) {
-        checkNotNull(eventIterator, "eventIterator");
-        _events = Lists.newArrayListWithCapacity(approximateSize);
+    public PollResult(final Iterator<Event> eventIterator, int approximateSize, boolean moreEvents) {
+        requireNonNull(eventIterator, "eventIterator");
+        _events = new ArrayList<>(approximateSize);
         _moreEvents = moreEvents;
 
         // Wrap the event iterator such that each event returned is appended to the event list
-        _eventIterator = Iterators.transform(eventIterator, event -> {
-            _events.add(event);
-            return event;
-        });
+        _eventIterator = new Iterator<Event>() {
+            @Override
+            public boolean hasNext() {
+                return eventIterator.hasNext();
+            }
+
+            @Override
+            public Event next() {
+                Event event = eventIterator.next();
+                _events.add(event);
+                return event;
+            }
+
+            @Override
+            public void remove() {
+                _eventIterator.remove();
+            }
+        };
     }
 
     public Iterator<Event> getEventIterator() {

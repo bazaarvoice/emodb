@@ -2,18 +2,16 @@ package com.bazaarvoice.emodb.sor.api.report;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
+import java.util.Collections;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 public class LongStatistics extends Statistics<Long> {
 
     private final long _sum;
 
     public LongStatistics() {
-        this(null, null, null, null, 0, ImmutableList.<Long>of());
+        this(null, null, null, null, 0, Collections.emptyList());
     }
 
     @JsonCreator
@@ -22,7 +20,9 @@ public class LongStatistics extends Statistics<Long> {
             @JsonProperty ("mean") Long mean, @JsonProperty ("stdev") double stdev,
             @JsonProperty ("sample") List<Long> sample) {
         super(min, max, mean, stdev, sample);
-        checkArgument((sum == null) == (min == null), "Inconsistent null value for sum");
+        if ((sum == null) != (min == null)) {
+            throw new IllegalArgumentException("Inconsistent null value for sum");
+        }
         _sum = sum;
     }
 

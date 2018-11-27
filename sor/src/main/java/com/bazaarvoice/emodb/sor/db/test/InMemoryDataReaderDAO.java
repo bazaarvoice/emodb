@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
@@ -132,8 +133,8 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
         String table = key.getTable().getName();
 
-        Ordering<UUID> ordering = reversed ? TimeUUIDs.ordering().reverse() : TimeUUIDs.ordering();
-        NavigableMap<UUID, Change> map = Maps.newTreeMap(ordering);
+        Comparator<UUID> comparator = reversed ? TimeUUIDs.comparator().reversed() : TimeUUIDs.comparator();
+        NavigableMap<UUID, Change> map = Maps.newTreeMap(comparator);
         if (includeContentData) {
             map.putAll(safeGet(_contentChanges, table, key.getKey()));
         }

@@ -1,17 +1,18 @@
 package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.io.Closeables;
+import com.bazaarvoice.emodb.streaming.AbstractSpliterator;
+import com.bazaarvoice.emodb.streaming.SpliteratorIterator;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Spliterator;
 
 /**
  * Closeable iterator for Stash scans.
  */
-class StashScanIterator extends AbstractIterator<Map<String, Object>> implements StashRowIterator {
+class StashScanIterator extends SpliteratorIterator<Map<String, Object>> implements StashRowIterator {
     private final AmazonS3 _s3;
     private final String _bucket;
     private final String _rootPath;
@@ -43,27 +44,32 @@ class StashScanIterator extends AbstractIterator<Map<String, Object>> implements
     private void closeCurrentSplit() {
         if (_currentIterator != null) {
             try {
-                Closeables.close(_currentIterator, true);
-            } catch (IOException e) {
-                // Already logged and caught
+                _currentIterator.close();
+            } catch (IOException ignore) {
+                // ignored
             }
             _currentIterator = null;
         }
     }
 
     @Override
-    protected Map<String, Object> computeNext() {
-        while (_currentIterator != null) {
-            // Return the next row from the current split if available
-            if (_currentIterator.hasNext()) {
-                return _currentIterator.next();
+    protected Spliterator<Map<String, Object>> getSpliterator() {
+        return new AbstractSpliterator<Map<String, Object>>() {
+            @Override
+            protected Map<String, Object> computeNext() {
+                while (_currentIterator != null) {
+                    // Return the next row from the current split if available
+                    if (_currentIterator.hasNext()) {
+                        return _currentIterator.next();
+                    }
+
+                    // Move the the next split and try again
+                    moveToNextSplit();
+                }
+
+                return endOfStream();
             }
-
-            // Move the the next split and try again
-            moveToNextSplit();
-        }
-
-        return endOfData();
+        };
     }
 
     @Override

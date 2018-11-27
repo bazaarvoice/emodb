@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class TableReportEntry {
     private final String _tableName;
@@ -14,8 +14,8 @@ public class TableReportEntry {
     @JsonCreator
     public TableReportEntry(
             @JsonProperty ("tableName") String tableName, @JsonProperty ("tables") List<TableReportEntryTable> tables) {
-        _tableName = checkNotNull(tableName, "tableName");
-        _tables = checkNotNull(tables, "tables");
+        _tableName = requireNonNull(tableName, "tableName");
+        _tables = requireNonNull(tables, "tables");
     }
 
     public String getTableName() {

@@ -10,19 +10,17 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.base.Throwables;
 
+import javax.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.text.ParseException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Provides basic access to Stashed tables and content from a rotating top-level directory.  New stash content is
@@ -38,9 +36,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class StandardStashReader extends StashReader {
     // Refresh the latest available stash every 2 minutes
-    private static final long REFRESH_LATEST_MS = TimeUnit.MINUTES.toMillis(2);
+    private static final Duration DEFAULT_REFRESH_LATEST_DURATION = Duration.ofMinutes(2);
 
-    private final Supplier<String> _latestRootSupplier;
+    private String _cachedLatest;
+    private Duration _refreshLatestDuration;
+    private Instant _refreshLatestTime = Instant.MIN;
     private String _lockedLatest;
 
     public static StandardStashReader getInstance(URI stashRoot) {
@@ -67,27 +67,28 @@ public class StandardStashReader extends StashReader {
     }
 
     public static StandardStashReader getInstance(URI stashRoot, AmazonS3 s3) {
-        return new StandardStashReader(stashRoot, s3, REFRESH_LATEST_MS);
+        return new StandardStashReader(stashRoot, s3, DEFAULT_REFRESH_LATEST_DURATION);
     }
 
-    @VisibleForTesting
-    StandardStashReader(URI stashRoot, AmazonS3 s3, long refreshLatestMs) {
+    //VisibleForTesting
+    StandardStashReader(URI stashRoot, AmazonS3 s3, @Nullable Duration refreshLatestDuration) {
         super(stashRoot, s3);
 
-        Supplier<String> s3LatestRootSupplier = new Supplier<String>() {
-            @Override
-            public String get() {
-                String latest = readLatestStash();
-                return String.format("%s/%s", _rootPath, latest);
-            }
-        };
-
-        if (refreshLatestMs > 0) {
+        if (refreshLatestDuration != null && refreshLatestDuration.toMillis() > 0) {
             // Cache the latest stash directory and periodically recheck
-            _latestRootSupplier = Suppliers.memoizeWithExpiration(s3LatestRootSupplier, refreshLatestMs, TimeUnit.MILLISECONDS);
+            _refreshLatestDuration = refreshLatestDuration;
         } else {
-            _latestRootSupplier = s3LatestRootSupplier;
+            _refreshLatestDuration = Duration.ZERO;
         }
+    }
+
+    private String getCachedLatest() {
+        if (Instant.now().compareTo(_refreshLatestTime) >= 0) {
+            String latest = readLatestStash();
+            _cachedLatest = String.format("%s/%s", _rootPath, latest);
+            _refreshLatestTime = Instant.now().plus(_refreshLatestDuration);
+        }
+        return _cachedLatest;
     }
 
     /**
@@ -100,7 +101,7 @@ public class StandardStashReader extends StashReader {
         if (_lockedLatest != null) {
             return _lockedLatest;
         }
-        return _latestRootSupplier.get();
+        return getCachedLatest();
     }
 
     /**
@@ -147,10 +148,10 @@ public class StandardStashReader extends StashReader {
             throw e;
         }
 
-        try (BufferedReader in = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), Charsets.UTF_8))) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(s3Object.getObjectContent(), Charset.forName("UTF-8")))) {
             return in.readLine();
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -161,7 +162,7 @@ public class StandardStashReader extends StashReader {
      * then be disabled by subsequently calling {@link #unlock()}.
      */
     public String lockToLatest() {
-        _lockedLatest = _latestRootSupplier.get();
+        _lockedLatest = getCachedLatest();
         return _lockedLatest;
     }
 

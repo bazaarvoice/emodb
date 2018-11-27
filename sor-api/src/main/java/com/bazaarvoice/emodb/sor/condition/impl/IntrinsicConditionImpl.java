@@ -8,17 +8,14 @@ import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Joiner;
-import com.google.common.io.CharStreams;
+import com.bazaarvoice.emodb.streaming.AppendableJoiner;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.Collection;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class IntrinsicConditionImpl extends AbstractCondition implements IntrinsicCondition {
 
@@ -26,10 +23,11 @@ public class IntrinsicConditionImpl extends AbstractCondition implements Intrins
     private final Condition _condition;
 
     public IntrinsicConditionImpl(String name, Condition condition) {
-        _name = checkNotNull(name, "name");
-        _condition = checkNotNull(condition, "condition");
-        checkArgument(Intrinsic.DATA_FIELDS.contains(name), name);
-        checkArgument(!Intrinsic.VERSION.equals(name), name);
+        _name = requireNonNull(name, "name");
+        _condition = requireNonNull(condition, "condition");
+        if (!Intrinsic.DATA_FIELDS.contains(name) || Intrinsic.VERSION.equals(name)) {
+            throw new IllegalArgumentException(name);
+        }
     }
 
     @Override
@@ -50,23 +48,17 @@ public class IntrinsicConditionImpl extends AbstractCondition implements Intrins
     @Override
     public void appendTo(Appendable buf) throws IOException {
         buf.append("intrinsic(");
-        Writer out = CharStreams.asWriter(buf);
-        DeltaJson.write(out, _name);
+        DeltaJson.append(buf, _name);
         buf.append(':');
         // The syntax allows a comma-separated list of conditions that are implicitly wrapped in an OrCondition.
         // If _condition is an InCondition or OrCondition we can print them without the "in(...)" and "or(...)"
         // wrappers to result in a cleaner string format that the parser can parse back into InCondition/OrCondition.
         if (_condition instanceof InCondition) {
             Set<Object> values = ((InCondition) _condition).getValues();
-            Joiner.on(',').appendTo(buf, OrderedJson.orderedStrings(values));
+            OrderedJson.orderedStrings(values).stream().collect(AppendableJoiner.joining(buf, ","));
         } else if (_condition instanceof OrCondition) {
             Collection<Condition> conditions = ((OrCondition) _condition).getConditions();
-            String sep = "";
-            for (Condition condition : conditions) {
-                buf.append(sep);
-                condition.appendTo(buf);
-                sep = ",";
-            }
+            conditions.stream().collect(AppendableJoiner.joining(buf, ",", (app, cond) -> cond.appendTo(app)));
         } else {
             _condition.appendTo(buf);
         }

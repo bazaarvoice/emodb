@@ -2,14 +2,13 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.regions.Regions;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
-import com.google.common.collect.BiMap;
-import com.google.common.collect.ImmutableBiMap;
 
-import java.time.Instant;
 import java.text.ParseException;
+import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,8 +26,12 @@ public class StashUtil {
      * Since all EmoDB tables cannot have upper-case characters they make a dense substitution without
      * possibility of collision.
      */
-    private static final BiMap<Character, Character> TABLE_CHAR_REPLACEMENTS =
-            ImmutableBiMap.of(':', '~');
+    private static final Map<Character, Character> TABLE_CHAR_REPLACEMENTS = new HashMap<>();
+    private static final Map<Character, Character> TABLE_CHAR_REPLACEMENTS_INVERTED = new HashMap<>();
+    static {
+        TABLE_CHAR_REPLACEMENTS.put(':', '~');
+        TABLE_CHAR_REPLACEMENTS.entrySet().forEach(e -> TABLE_CHAR_REPLACEMENTS_INVERTED.put(e.getValue(), e.getKey()));
+    }
 
     // Prevent instantiation
     private StashUtil() {
@@ -40,7 +43,7 @@ public class StashUtil {
     }
 
     public static String decodeStashTable(String table) {
-        return transformStashTable(table, TABLE_CHAR_REPLACEMENTS.inverse());
+        return transformStashTable(table, TABLE_CHAR_REPLACEMENTS_INVERTED);
     }
 
     private static String transformStashTable(String table, Map<Character, Character> transformCharMap) {

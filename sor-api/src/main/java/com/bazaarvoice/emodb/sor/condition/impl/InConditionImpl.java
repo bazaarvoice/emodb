@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.common.json.JsonValidator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
-import com.google.common.base.Joiner;
+import com.bazaarvoice.emodb.streaming.AppendableJoiner;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -33,9 +33,7 @@ public class InConditionImpl extends AbstractCondition implements InCondition {
 
     @Override
     public void appendTo(Appendable buf) throws IOException {
-        buf.append("in(");
-        Joiner.on(',').appendTo(buf, OrderedJson.orderedStrings(_values));
-        buf.append(")");
+        OrderedJson.orderedStrings(_values).stream().collect(AppendableJoiner.joining(buf, ",", "in(", ")"));
     }
 
     @Override

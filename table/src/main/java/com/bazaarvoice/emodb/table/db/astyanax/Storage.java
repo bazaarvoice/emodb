@@ -7,6 +7,7 @@ import com.google.common.collect.Ordering;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -243,7 +244,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
         return ComparisonChain.start()
                 .compareTrueFirst(isConsistent(), o.isConsistent())  // Primaries *must* be consistent.
                 .compareTrueFirst(_masterPrimary, o._masterPrimary)  // Master primary sorts first
-                .compare(o.getPromotionId(), getPromotionId(), TimeUUIDs.ordering().nullsLast())  // Facade primary sorts first
+                .compare(o.getPromotionId(), getPromotionId(), Comparator.nullsLast(TimeUUIDs.comparator()))  // Facade primary sorts first
                 .compare(_uuid, o._uuid)  // Break ties in a way that's compatible with equals()
                 .result();
     }

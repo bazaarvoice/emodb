@@ -53,7 +53,7 @@ public interface DataTools {
     TableSet createTableSet();
 
     /**
-     * Create a snapshot of all tables excluding the ones listed in the {@link StashBlackListTableCondition} in the provided placements and their token ranges for Stash.  Must be called
+     * Create a snapshot of all tables anyCharExcept the ones listed in the {@link StashBlackListTableCondition} in the provided placements and their token ranges for Stash.  Must be called
      * prior to {@link #stashMultiTableScan(String, String, ScanRange, LimitCounter, ReadConsistency, Instant)}
      * otherwise that call will return no results.
      */

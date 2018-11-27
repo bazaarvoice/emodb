@@ -3,14 +3,14 @@ package com.bazaarvoice.emodb.sor.condition.impl;
 import com.bazaarvoice.emodb.sor.condition.AndConditionBuilder;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.google.common.collect.Lists;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
 public class AndConditionBuilderImpl implements AndConditionBuilder {
 
-    private final List<Condition> _conditions = Lists.newArrayList();
+    private final List<Condition> _conditions = new ArrayList<>();
 
     @Override
     public AndConditionBuilder and(Condition condition) {

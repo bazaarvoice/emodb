@@ -4,30 +4,32 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.delta.ConditionalDeltaBuilder;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ConditionalDeltaBuilderImpl implements ConditionalDeltaBuilder {
 
-    private final List<Map.Entry<Condition, Delta>> _clauses = Lists.newArrayList();
+    private final List<Map.Entry<Condition, Delta>> _clauses = new ArrayList<>();
     private Delta _otherwise;
 
     @Override
     public ConditionalDeltaBuilder add(Condition condition, Delta delta) {
-        _clauses.add(Maps.immutableEntry(checkNotNull(condition, "condition"), checkNotNull(delta, "delta")));
+        _clauses.add(new AbstractMap.SimpleImmutableEntry<>(
+                requireNonNull(condition, "condition"), requireNonNull(delta, "delta")));
         return this;
     }
 
     @Override
     public ConditionalDeltaBuilder otherwise(Delta delta) {
-        checkArgument(_otherwise == null, "Multiple otherwise deltas.");
-        _otherwise = checkNotNull(delta);
+        if (_otherwise != null) {
+            throw new IllegalArgumentException("Multiple otherwise deltas.");
+        }
+        _otherwise = requireNonNull(delta);
         return this;
     }
 

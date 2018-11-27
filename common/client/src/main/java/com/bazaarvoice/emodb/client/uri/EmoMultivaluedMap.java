@@ -1,24 +1,20 @@
 package com.bazaarvoice.emodb.client.uri;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 import javax.ws.rs.core.MultivaluedMap;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Implementation of MultivaludedMap that has no dependencies on Jersey.
+ * Implementation of MultivaludedMap that has no dependencies outside native Java.
  */
 public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
 
-    private final ListMultimap<K, V> _map;
+    private final Map<K, List<V>> _map;
 
     public static <K, V> EmoMultivaluedMap<K, V> create() {
         return new EmoMultivaluedMap<>();
@@ -33,23 +29,30 @@ public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
     }
 
     private EmoMultivaluedMap() {
-        _map = ArrayListMultimap.create();
+        _map = new HashMap<>();
     }
 
     @Override
     public void putSingle(K key, V value) {
-        _map.replaceValues(key, ImmutableList.of(value));
+        List<V> values = new ArrayList<>(2);
+        values.add(value);
+        _map.put(key, values);
     }
 
     @Override
     public void add(K key, V value) {
-        _map.put(key, value);
+        List<V> list = _map.get(key);
+        if (list != null) {
+            list.add(value);
+        } else {
+            putSingle(key, value);
+        }
     }
 
     @Override
     public V getFirst(K key) {
         List<V> values = _map.get(key);
-        if (values.isEmpty()) {
+        if (values == null || values.isEmpty()) {
             return null;
         }
         return values.get(0);
@@ -72,7 +75,7 @@ public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
 
     @Override
     public boolean containsValue(Object value) {
-        return _map.containsValue(value);
+        return _map.values().stream().anyMatch(value::equals);
     }
 
     @Override
@@ -87,20 +90,20 @@ public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
 
     @Override
     public List<V> put(K key, List<V> value) {
-        List<V> previous = _map.removeAll(key);
-        _map.putAll(key, value);
-        return previous.isEmpty() ? null : previous;
+        List<V> previous = _map.remove(key);
+        _map.put(key, new ArrayList<>(value));
+        return previous;
     }
 
     @Override
     public List<V> remove(Object key) {
-        return _map.removeAll(key);
+        return _map.remove(key);
     }
 
     @Override
     public void putAll(Map<? extends K, ? extends List<V>> m) {
         for (K key : m.keySet()) {
-            _map.putAll(key, m.get(key));
+            put(key, m.get(key));
         }
     }
 
@@ -116,18 +119,18 @@ public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
 
     @Override
     public Collection<List<V>> values() {
-        List<List<V>> values = Lists.newArrayList();
-        for (Map.Entry<K, Collection<V>> entry :_map.asMap().entrySet()) {
-            values.add((List<V>) entry.getValue());
+        List<List<V>> values = new ArrayList<>();
+        for (Map.Entry<K, List<V>> entry :_map.entrySet()) {
+            values.add(entry.getValue());
         }
         return values;
     }
 
     @Override
     public Set<Entry<K, List<V>>> entrySet() {
-        Set<Entry<K, List<V>>> entrySet = Sets.newLinkedHashSet();
-        for (Map.Entry<K, Collection<V>> entry :_map.asMap().entrySet()) {
-            entrySet.add(Maps.immutableEntry(entry.getKey(), (List<V>) entry.getValue()));
+        Set<Entry<K, List<V>>> entrySet = new LinkedHashSet<>();
+        for (Map.Entry<K, List<V>> entry :_map.entrySet()) {
+            entrySet.add(entry);
         }
         return entrySet;
     }

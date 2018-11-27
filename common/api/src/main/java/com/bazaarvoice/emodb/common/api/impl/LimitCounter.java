@@ -1,12 +1,9 @@
 package com.bazaarvoice.emodb.common.api.impl;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Iterators;
-
+import java.util.Collections;
 import java.util.Iterator;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 /**
  * A mutable limit value.  At any given time the {@link #remaining()} method will return the remaining number of records
@@ -23,31 +20,33 @@ public class LimitCounter {
     }
 
     public LimitCounter(long initialValue) {
-        checkArgument(initialValue > 0, "Limit must be >0");
+        if (initialValue <= 0) {
+            throw new IllegalArgumentException("Limit must be >0");
+        }
         _remaining = initialValue;
     }
 
     public long remaining() {
-        checkState(_remaining > 0);  // The Iterator never computes iter.hasNext() when _remaining <= 0.
+        if (_remaining < 0) {
+            throw new IllegalStateException("Negative remaining value");
+        }
         return _remaining;
     }
 
     /**
-     * Similar to {@link Iterators#limit(Iterator, int)} except that it updates this limit counter object so other
+     * Similar to Guava's <code>Iterators.limit()</code> except that it updates this limit counter object so other
      * code can track how many items are remaining before the limit is reached.  This is useful when the underlying
      * iterator queries in batch because it can adjust its batch sizes to avoid going too far past the limit.
      */
     public <T> Iterator<T> limit(final Iterator<T> iter) {
-        return new AbstractIterator<T>() {
-            @Override
-            protected T computeNext() {
-                if (_remaining > 0 && iter.hasNext()) {
-                    _remaining--;
-                    return iter.next();
-                }
-                return endOfData();
-            }
-        };
+        final long remaining = _remaining;
+        if (remaining == 0) {
+            return Collections.<T>emptyList().iterator();
+        }
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(iter, 0), false)
+                .limit(remaining)
+                .peek(ignore -> _remaining -= 1)
+                .iterator();
     }
 
     @Override

@@ -15,11 +15,4 @@
 
     <name>EmoDB Authentication Client</name>
 
-    <!-- 3rd-party dependencies -->
-    <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-        </dependency>
-    </dependencies>
 </project>

@@ -5,10 +5,6 @@ import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.delta.DeltaVisitor;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Throwables;
-import com.google.common.io.CharStreams;
-import com.google.common.primitives.Doubles;
-import com.google.common.primitives.Longs;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -45,7 +41,7 @@ public class LiteralImpl extends AbstractDelta implements Literal {
     public void appendTo(Appendable buf) throws IOException {
         // nested content is sorted so toString() is deterministic.  this is valuable in tests and for
         // comparing hashes of deltas for equality.
-        DeltaJson.write(CharStreams.asWriter(buf), OrderedJson.ordered(_value));
+        DeltaJson.append(buf, OrderedJson.ordered(_value));
     }
 
     @SuppressWarnings("unchecked")
@@ -104,9 +100,9 @@ public class LiteralImpl extends AbstractDelta implements Literal {
             // If both values are numeric then use numeric comparison regardless of the underlying type (int, double, and so on)
             if (isNumber(thisClass) && isNumber(thatClass)) {
                 if (isDouble((Class<? extends Number>) thisClass) || isDouble((Class<? extends Number>) thatClass)) {
-                    return Doubles.compare(((Number) _value).doubleValue(), ((Number) that).doubleValue());
+                    return Double.compare(((Number) _value).doubleValue(), ((Number) that).doubleValue());
                 } else {
-                    return Longs.compare(((Number) _value).longValue(), ((Number) that).longValue());
+                    return Long.compare(((Number) _value).longValue(), ((Number) that).longValue());
                 }
             }
 
@@ -127,7 +123,7 @@ public class LiteralImpl extends AbstractDelta implements Literal {
             return thisStr.toString().compareTo(thatStr.toString());
         } catch (IOException e) {
             // Should never happen
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
 
     }

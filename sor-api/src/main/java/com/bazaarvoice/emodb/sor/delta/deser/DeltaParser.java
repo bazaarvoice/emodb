@@ -11,19 +11,17 @@ import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.bazaarvoice.emodb.sor.delta.SetDeltaBuilder;
-import com.google.common.base.Function;
-import com.google.common.base.Joiner;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
-import javax.annotation.Nullable;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 /**
  * Parses {@link Delta} objects from strings.
@@ -32,7 +30,7 @@ import java.util.Map;
  */
 public class DeltaParser {
 
-    private static final Map<String, State> _stateMap = Maps.newLinkedHashMap();
+    private static final Map<String, State> _stateMap = new LinkedHashMap<>();
     static {
         for (State state : State.values()) {
             _stateMap.put(state.name().toLowerCase(), state);
@@ -63,12 +61,9 @@ public class DeltaParser {
     }
 
     public static Iterator<Delta> parseStream(Reader in) {
-        return Iterators.transform(new DeltaStreamSplitter(in), new Function<String, Delta>() {
-            @Override
-            public Delta apply(@Nullable String string) {
-                return parse(string);
-            }
-        });
+        return StreamSupport.stream(new DeltaStreamSplitter(in), false)
+                .map(DeltaParser::parse)
+                .iterator();
     }
 
     private DeltaParser(JsonTokener t) {
@@ -283,7 +278,7 @@ public class DeltaParser {
     }
 
     private List<Condition> parseConditionArgs(String function) {
-        List<Condition> conditions = Lists.newArrayList();
+        List<Condition> conditions = new ArrayList<>();
         if (_t.startArgs('(', ')', function)) {
             do {
                 conditions.add(parseCondition());
@@ -293,7 +288,7 @@ public class DeltaParser {
     }
 
     private Condition parseInCondition() {
-        List<Object> values = Lists.newArrayList();
+        List<Object> values = new ArrayList<>();
         if (_t.startArgs('(', ')', "in")) {
             do {
                 values.add(_t.nextValue());
@@ -306,7 +301,7 @@ public class DeltaParser {
         _t.nextClean('(');
         String name = _t.nextString();
         _t.nextClean(':');
-        List<Condition> conditions = Lists.newArrayList();
+        List<Condition> conditions = new ArrayList<>();
         do {
             conditions.add(parseCondition());
         } while (_t.nextArg(',', ')'));
@@ -338,7 +333,7 @@ public class DeltaParser {
             return builder.build();
         } else {
             // Equality test against a map literal.
-            Map<String, Object> map = Maps.newLinkedHashMap();
+            Map<String, Object> map = new LinkedHashMap<>();
             do {
                 String key = _t.nextString();
                 _t.nextClean(':');
@@ -366,7 +361,7 @@ public class DeltaParser {
     }
 
     private Condition parseContainsCondition(ContainsCondition.Containment containment) {
-        List<Object> values = Lists.newArrayList();
+        List<Object> values = new ArrayList<>();
         if (_t.startArgs('(', ')', "contains" + containment.getSuffix())) {
             do {
                 values.add(_t.nextValue());
@@ -406,7 +401,7 @@ public class DeltaParser {
     private State stateFromToken(String token) {
         State state = _stateMap.get(token);
         if (state == null) {
-            throw _t.syntaxError("Expected one of " + Joiner.on(", ").join(_stateMap.keySet()) + ")");
+            throw _t.syntaxError("Expected one of " + _stateMap.keySet().stream().collect(Collectors.joining(",")) + ")");
         }
         return state;
     }

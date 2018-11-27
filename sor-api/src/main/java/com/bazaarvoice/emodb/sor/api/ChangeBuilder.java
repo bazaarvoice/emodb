@@ -5,8 +5,6 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 /**
  * Helper for constructing instances of {@link Change}.
  */
@@ -18,7 +16,9 @@ public final class ChangeBuilder {
     private History _history;
 
     public static Change merge(Change change1, Change change2) {
-        checkArgument(change1 != null || change2 != null);
+        if (change1 == null && change2 == null) {
+            throw new IllegalArgumentException("At least one change is required");
+        }
         if (change1 == null) {
             return change2;
         } else if (change2 == null) {
@@ -39,7 +39,9 @@ public final class ChangeBuilder {
         if (change == null) {
             return this;
         }
-        checkArgument(_changeId.equals(change.getId()));
+        if (!_changeId.equals(change.getId())) {
+            throw new IllegalArgumentException("Non-matching change ID");
+        }
         if (change.getDelta() != null) {
             _delta = change.getDelta();
         }

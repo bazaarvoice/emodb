@@ -52,7 +52,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.io.InputSupplier;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -77,7 +76,6 @@ import javax.validation.Validation;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -262,12 +260,7 @@ public class CasBlobStoreTest {
 
     private void verifyPutAndGet(String blobId, final byte[] blobData, Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
-        _store.put(TABLE, blobId, new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                return new ByteArrayInputStream(blobData);
-            }
-        }, attributes, ttl);
+        _store.put(TABLE, blobId, () -> new ByteArrayInputStream(blobData), attributes, ttl);
 
         // verify that we can get what we put
         Blob blob = _store.get(TABLE, blobId);

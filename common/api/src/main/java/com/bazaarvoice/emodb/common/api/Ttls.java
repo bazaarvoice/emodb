@@ -1,20 +1,23 @@
 package com.bazaarvoice.emodb.common.api;
 
 import java.time.Duration;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.concurrent.TimeUnit;
 
 public class Ttls {
 
+    private static final long MILLIS_PER_SECOND = TimeUnit.SECONDS.toMillis(1);
 
     public static Integer toSeconds(Duration ttl, int minimum, Integer forever) {
         if (ttl == null) {
             return forever;
         }
-        checkArgument(ttl.compareTo(Duration.ZERO) >= 0, "Ttl may not be negative: {}", ttl);
+        long millis = ttl.toMillis();
+        if (millis < 0) {
+            throw new IllegalArgumentException("Ttl may not be negative: " + ttl);
+        }
 
         // Convert to seconds, rounding up.
-        long seconds = ttl.plusSeconds(1).minusMillis(1).getSeconds();
+        long seconds = (millis + MILLIS_PER_SECOND - 1) / MILLIS_PER_SECOND;
 
         // No support for really large numbers, convert to forever.
         if (seconds > Integer.MAX_VALUE) {

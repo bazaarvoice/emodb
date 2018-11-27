@@ -40,7 +40,7 @@ public enum DefaultRoles {
             Permissions.createSorTable(NON_SYSTEM_TABLE),
             Permissions.setSorTableAttributes(NON_SYSTEM_TABLE)),
 
-    // sor_standard with excluding pii tables/placements.
+    // sor_standard with anyCharExcept pii tables/placements.
     // Pii tables contain personally identifiable information, so in a way they are special compared to the rest of the sor tables.
     // this role can be used where we would like to give standard permissions to all sor tables except the pii & system tables.
     sor_standard_without_pii (

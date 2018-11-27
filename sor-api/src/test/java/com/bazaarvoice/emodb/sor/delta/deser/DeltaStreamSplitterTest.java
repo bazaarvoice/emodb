@@ -9,6 +9,7 @@ import java.io.StringReader;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -108,6 +109,6 @@ public class DeltaStreamSplitterTest {
     }
 
     private Iterator<String> splitter(String string) {
-        return new DeltaStreamSplitter(new StringReader(string));
+        return StreamSupport.stream(new DeltaStreamSplitter(new StringReader(string)), false).iterator();
     }
 }

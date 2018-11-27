@@ -1,17 +1,18 @@
 package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Base class for all non-trivial calls to {@link UserAccessControl}.
  */
 abstract public class UserAccessControlRequest {
 
-    private Multimap<String, String> _customRequestParameters = ArrayListMultimap.create();
+    private Map<String, Collection<String>> _customRequestParameters = new HashMap<>();
 
     /**
      * Sets custom request parameters.  Custom parameters may include new features not yet officially supported or
@@ -19,11 +20,15 @@ abstract public class UserAccessControlRequest {
      * used by most clients.  Furthermore, adding additional parameters may cause the request to fail.
      */
     public void setCustomRequestParameter(String param, String... values) {
-        _customRequestParameters.putAll(param, Arrays.asList(values));
+        if (_customRequestParameters.get(param) == null) {
+            _customRequestParameters.put(param, Arrays.asList(values));
+        } else {
+            _customRequestParameters.get(param).addAll(Arrays.asList(values));
+        }
     }
 
     @JsonIgnore
-    public Multimap<String, String> getCustomRequestParameters() {
+    public Map<String, Collection<String>> getCustomRequestParameters() {
         return _customRequestParameters;
     }
 

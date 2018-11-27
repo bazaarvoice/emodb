@@ -64,7 +64,7 @@ public class StashReaderTest {
         });
 
         // Get the latest
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         assertEquals("2015-01-01-00-00-00", reader.getLatest());
         assertEquals(reader.getLatestCreationTime(), new ISO8601DateFormat().parse("2015-01-01T00:00:00Z"));
 
@@ -111,7 +111,7 @@ public class StashReaderTest {
         });
 
         // Get the stash start timestamp
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         assertEquals(reader.getStashCreationTime(), startTime, "Actual stash start timestamp");
     }
 
@@ -136,7 +136,7 @@ public class StashReaderTest {
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/", null))))
                 .thenReturn(listing);
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         List<StashTable> tables = ImmutableList.copyOf(reader.listTables());
 
         assertEquals(tables, ImmutableList.of(
@@ -203,7 +203,7 @@ public class StashReaderTest {
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/", listing.getMarker()))))
                 .thenReturn(listing);
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         List<StashTableMetadata> tables = ImmutableList.copyOf(reader.listTableMetadata());
         assertEquals(tables.size(), 100);
 
@@ -245,7 +245,7 @@ public class StashReaderTest {
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/test~table/", null))))
                 .thenAnswer(objectListingAnswer(null, "test~table-split0.gz", "test~table-split1.gz", "test~table-split2.gz"));
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         StashTableMetadata tableMetadata = reader.getTableMetadata("test:table");
 
         assertEquals(tableMetadata.getBucket(), "stash-bucket");
@@ -282,7 +282,7 @@ public class StashReaderTest {
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/test~table/", "marker1"))))
                 .thenAnswer(objectListingAnswer(null, "split2.gz", "split3.gz"));
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         List<StashSplit> splits = reader.getSplits("test:table");
         assertEquals(splits.size(), 4);
 
@@ -339,7 +339,7 @@ public class StashReaderTest {
 
         StashSplit stashSplit = new StashSplit("test:table", "2015-01-01-00-00-00/test-table/split0.gz", splitOut.size());
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         StashRowIterator contentIter = reader.getSplit(stashSplit);
 
         List<Map<String, Object>> content = ImmutableList.copyOf(contentIter);
@@ -371,7 +371,7 @@ public class StashReaderTest {
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-02-00-00-00/", null))))
                 .thenReturn(listing);
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         assertEquals(reader.getLatest(), "2015-01-02-00-00-00");
 
         // Create a locked view
@@ -499,7 +499,7 @@ public class StashReaderTest {
 
         StashSplit stashSplit = new StashSplit("test:table", "2015-01-01-00-00-00/test-table/split0.gz", splitOut.size());
 
-        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
+        StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, Duration.ZERO);
         try (StashRowIterator rowIter = reader.getSplit(stashSplit)) {
             assertTrue(rowIter.hasNext());
             Map<String, Object> row = rowIter.next();

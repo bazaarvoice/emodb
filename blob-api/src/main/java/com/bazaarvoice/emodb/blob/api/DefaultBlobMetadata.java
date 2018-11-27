@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultBlobMetadata implements BlobMetadata {
     private final String _id;
@@ -26,12 +26,12 @@ public class DefaultBlobMetadata implements BlobMetadata {
                                @JsonProperty("length") long length,
                                @JsonProperty("md5") String md5, @JsonProperty("sha1") String sha1,
                                @JsonProperty("attributes") Map<String, String> attributes) {
-        _id = checkNotNull(id, "id");
-        _timestamp = checkNotNull(timestamp, "timestamp");
+        _id = requireNonNull(id, "id");
+        _timestamp = requireNonNull(timestamp, "timestamp");
         _length = length;
         _md5 = md5;
         _sha1 = sha1;
-        _attributes = checkNotNull(attributes, "attributes");
+        _attributes = requireNonNull(attributes, "attributes");
     }
 
     @Override

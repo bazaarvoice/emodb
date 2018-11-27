@@ -26,7 +26,7 @@ import java.util.UUID;
 public class InMemoryQueueDAO implements QueueDAO {
     private final Table<String, UUID, String> _manifest = HashBasedTable.create();
     private final TreeMultimap<UUID, ByteBuffer> _records =
-            TreeMultimap.create(TimeUUIDs.ordering(), ByteBufferOrdering.INSTANCE);
+            TreeMultimap.create(TimeUUIDs.comparator(), ByteBufferOrdering.INSTANCE);
     private long _numSegmentWrites;
     private long _numSegmentDeletes;
     private long _numRecordWrites;

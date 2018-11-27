@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Collections;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class TableReportEntryTable {
     private final String _id;
@@ -28,9 +28,9 @@ public class TableReportEntryTable {
             @JsonProperty ("sizeStatistics") LongStatistics sizeStatistics,
             @JsonProperty ("updateTimeStatistics") DateStatistics updateTimeStatistics) {
 
-        _id = checkNotNull(id, "id");
-        _placement = checkNotNull(placement, "placement");
-        _shardIds = Collections.unmodifiableList(checkNotNull(shardIds, "shardIds"));
+        _id = requireNonNull(id, "id");
+        _placement = requireNonNull(placement, "placement");
+        _shardIds = Collections.unmodifiableList(requireNonNull(shardIds, "shardIds"));
         _dropped = dropped;
         _facade = facade;
         _rowCount = rowCount;

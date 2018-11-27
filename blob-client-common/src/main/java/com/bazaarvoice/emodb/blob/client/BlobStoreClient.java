@@ -54,6 +54,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -480,7 +481,7 @@ public class BlobStoreClient implements AuthBlobStore {
     }
 
     @Override
-    public void put(String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in,
+    public void put(String apiKey, String table, String blobId, Supplier<? extends InputStream> in,
                     Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
         checkNotNull(table, "table");
@@ -502,7 +503,7 @@ public class BlobStoreClient implements AuthBlobStore {
             // Upload the object
             request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.getInput());
+                    .put(in.get());
         } catch (EmoClientException e) {
             throw convertException(e);
         }

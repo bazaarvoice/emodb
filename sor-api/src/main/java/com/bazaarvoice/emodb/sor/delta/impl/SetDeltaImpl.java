@@ -3,16 +3,18 @@ package com.bazaarvoice.emodb.sor.delta.impl;
 import com.bazaarvoice.emodb.sor.delta.DeltaVisitor;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.SetDelta;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSortedSet;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
@@ -23,8 +25,8 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     public SetDeltaImpl(boolean removeRest, Collection<Literal> addedValues, Collection<Literal> removedValues, boolean deleteIfEmpty) {
         _removeRest = removeRest;
-        _addedValues = sorted(checkNotNull(addedValues, "addedValues"));
-        _removedValues = sorted(checkNotNull(removedValues, "removedValues"));
+        _addedValues = sorted(requireNonNull(addedValues, "addedValues"));
+        _removedValues = sorted(requireNonNull(removedValues, "removedValues"));
         _deleteIfEmpty = deleteIfEmpty;
     }
 
@@ -83,12 +85,13 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
         // Optimize the simple cases
         switch (literals.size()) {
             case 0:
-                return ImmutableSet.of();
+                return Collections.emptySet();
             case 1:
-                return ImmutableSet.of(literals.iterator().next());
+                return Collections.unmodifiableSet(new LinkedHashSet<>(literals));
         }
 
-        return ImmutableSortedSet.copyOf(literals);
+        Set<Literal> sortedSet = literals.stream().sorted().collect(Collectors.toCollection(TreeSet::new));
+        return Collections.unmodifiableSet(sortedSet);
     }
 
     private String appendLiterals(Appendable buf, Set<Literal> literals, String sep, String prefix)
@@ -125,6 +128,6 @@ public class SetDeltaImpl extends AbstractDelta implements SetDelta {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
+        return Objects.hash(9532, _removeRest, _addedValues, _removedValues, _deleteIfEmpty);
     }
 }

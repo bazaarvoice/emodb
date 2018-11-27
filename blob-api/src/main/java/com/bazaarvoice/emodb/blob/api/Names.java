@@ -1,16 +1,19 @@
 package com.bazaarvoice.emodb.blob.api;
 
-import com.google.common.base.CharMatcher;
+import java.util.BitSet;
+
+import static com.bazaarvoice.emodb.common.api.Names.anyCharExcept;
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInRange;
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInString;
 
 public abstract class Names {
 
     /** Prevent instantiation. */
     private Names() {}
 
-    private static final CharMatcher BLOB_ID_ALLOWED = CharMatcher
-            .inRange('\u0021', '\u007e')          // excludes whitespace, control chars, non-ascii
-            .and(CharMatcher.noneOf("\\/*?\"'<>|,#"))
-            .precomputed();
+    private static final BitSet BLOB_ID_ALLOWED = anyCharExcept(
+            anyCharInRange('\u0021', '\u007e'),          // excludes whitespace, control chars, non-ascii
+            anyCharInString("\\/*?\"'<>|,#"));
 
     public static boolean isLegalTableName(String table) {
         return com.bazaarvoice.emodb.common.api.Names.isLegalTableName(table);
@@ -22,6 +25,6 @@ public abstract class Names {
      */
     public static boolean isLegalBlobId(String blobId) {
         return blobId != null && blobId.length() > 0 && blobId.length() <= 255 &&
-                BLOB_ID_ALLOWED.matchesAllOf(blobId);
+                blobId.chars().allMatch(BLOB_ID_ALLOWED::get);
     }
 }

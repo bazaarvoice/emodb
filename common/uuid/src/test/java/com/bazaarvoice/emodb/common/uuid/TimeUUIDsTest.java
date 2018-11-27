@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.common.uuid;
 
-import com.google.common.base.Throwables;
 import org.testng.annotations.Test;
 
 import java.text.ParseException;
@@ -185,15 +184,15 @@ public class TimeUUIDsTest {
 
     private void assertLessThan(UUID uuid0, UUID uuid1) {
         // Compare in both directions (a < b, b > a) to make sure the comparator is symmetric
-        assertTrue(TimeUUIDs.ordering().compare(uuid0, uuid1) < 0, uuid0 + " should be < " + uuid1);
-        assertTrue(TimeUUIDs.ordering().compare(uuid1, uuid0) > 0, uuid1 + " should be > " + uuid0);
+        assertTrue(TimeUUIDs.comparator().compare(uuid0, uuid1) < 0, uuid0 + " should be < " + uuid1);
+        assertTrue(TimeUUIDs.comparator().compare(uuid1, uuid0) > 0, uuid1 + " should be > " + uuid0);
     }
 
     private static Date parseTimestamp(String string) {
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS z").parse(string);
         } catch (ParseException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 }

@@ -34,8 +34,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -251,8 +250,10 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                     .build();
             EmoResource resource = _client.resource(uri);
 
-            for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
-                resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
+            for (Map.Entry<String, Collection<String>> customQueryParams : request.getCustomRequestParameters().entrySet()) {
+                for (String customQueryParamValue : Optional.ofNullable(customQueryParams.getValue()).orElse(Collections.emptySet())) {
+                    resource = resource.queryParam(customQueryParams.getKey(), customQueryParamValue);
+                }
             }
 
             return resource
@@ -307,8 +308,10 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
             EmoResource resource = _client.resource(uri);
 
-            for (Map.Entry<String, String> customQueryParam : request.getCustomRequestParameters().entries()) {
-                resource = resource.queryParam(customQueryParam.getKey(), customQueryParam.getValue());
+            for (Map.Entry<String, Collection<String>> customQueryParams : request.getCustomRequestParameters().entrySet()) {
+                for (String customQueryParamValue : Optional.of(customQueryParams.getValue()).orElse(Collections.emptySet())) {
+                    resource = resource.queryParam(customQueryParams.getKey(), customQueryParamValue);
+                }
             }
 
             CreateEmoApiKeyResponse response = resource

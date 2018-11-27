@@ -10,16 +10,15 @@ import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDelta;
 import com.bazaarvoice.emodb.sor.delta.NoopDelta;
 import com.bazaarvoice.emodb.sor.delta.SetDelta;
-import com.google.common.collect.ImmutableSortedSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 /**
  * Applies a sequence of {@link Delta} operations to JSON object.
@@ -66,7 +65,7 @@ public class DeltaEvaluator implements DeltaVisitor<Object, Object> {
         if (json instanceof Map) {
             //noinspection unchecked
             Map<String, ?> map = (Map<String, ?>) json;
-            result = Maps.newHashMapWithExpectedSize(map.size() + delta.getEntries().size());
+            result = new HashMap<>(map.size() + delta.getEntries().size());
 
             // Copy key/values from the old map to the new map, applying deltas as we go
             for (Map.Entry<String, ?> entry : map.entrySet()) {
@@ -90,7 +89,7 @@ public class DeltaEvaluator implements DeltaVisitor<Object, Object> {
 
         } else {
             // Optimize for the case where there's no source map
-            result = Maps.newHashMapWithExpectedSize(delta.getEntries().size());
+            result = new HashMap<>(delta.getEntries().size());
             for (Map.Entry<String, Delta> entry : delta.getEntries().entrySet()) {
                 update(result, entry.getKey(), UNDEFINED, entry.getValue());
             }
@@ -113,9 +112,9 @@ public class DeltaEvaluator implements DeltaVisitor<Object, Object> {
 
         // JSON can only represent sets as lists
         if (!delta.getRemoveRest() && json instanceof List) {
-            ImmutableSortedSet.Builder<Literal> builder = ImmutableSortedSet.orderedBy(Ordering.<Literal>natural());
+            resultSet = new TreeSet<>();
             // Add all added values
-            builder.addAll(delta.getAddedValues());
+            resultSet.addAll(delta.getAddedValues());
 
             // Copy over existing values that weren't explicitly removed
             Set<Literal> removed = delta.getRemovedValues();
@@ -123,21 +122,19 @@ public class DeltaEvaluator implements DeltaVisitor<Object, Object> {
             for (Object existing : (List<Object>) json) {
                 Literal literal = Deltas.literal(existing);
                 if (!removed.contains(literal)) {
-                    builder.add(literal);
+                    resultSet.add(literal);
                 }
             }
-
-            resultSet = builder.build();
         } else {
             // Existing value is undefined, not a list or "remove rest" was set.  Create the set from all added values
-            resultSet = ImmutableSortedSet.copyOf(delta.getAddedValues());
+            resultSet = new TreeSet<>(delta.getAddedValues());
         }
 
         if (delta.getDeleteIfEmpty() && resultSet.isEmpty()) {
             return UNDEFINED;
         }
 
-        List<Object> result = Lists.newArrayListWithCapacity(resultSet.size());
+        List<Object> result = new ArrayList<>(resultSet.size());
         for (Literal literal : resultSet) {
             result.add(literal.getValue());
         }

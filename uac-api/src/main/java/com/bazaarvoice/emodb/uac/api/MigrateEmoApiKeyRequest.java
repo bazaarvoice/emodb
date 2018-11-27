@@ -2,9 +2,7 @@ package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.google.common.base.Strings;
 
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Request object for migrating API keys.  In most cases only the single required attribute, "id", should be set.
@@ -23,7 +21,9 @@ public class MigrateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public MigrateEmoApiKeyRequest setId(String id) {
-        checkArgument(!Strings.isNullOrEmpty(id), "id");
+        if (id == null || id.isEmpty()) {
+            throw new IllegalArgumentException(("Id must not be null nor empty"));
+        }
         _id = id;
         return this;
     }

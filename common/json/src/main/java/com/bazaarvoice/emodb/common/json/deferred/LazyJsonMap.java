@@ -9,18 +9,15 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * This object takes a string which contains a JSON object and lazily provides a Map&lt;String, Object&gt; interface
@@ -66,7 +63,14 @@ public class LazyJsonMap implements Map<String, Object> {
 
     @JsonCreator
     public LazyJsonMap(String json) {
-        this(new DeserializationState(checkNotNull(json, "json")));
+        this(new DeserializationState(checkJsonNotNull(json)));
+    }
+
+    private static String checkJsonNotNull(String json) {
+        if (json == null) {
+            throw new NullPointerException("JSON string is required");
+        }
+        return json;
     }
 
     private LazyJsonMap(DeserializationState deserState) {
@@ -90,7 +94,7 @@ public class LazyJsonMap implements Map<String, Object> {
 
         DeserializationState(String json) {
             this.json = json;
-            this.overrides = Maps.newHashMap();
+            this.overrides = new HashMap<>();
             this.deserialized = null;
         }
 
@@ -107,7 +111,7 @@ public class LazyJsonMap implements Map<String, Object> {
         DeserializationState copy() {
             DeserializationState copy;
             if (deserialized != null) {
-                copy = new DeserializationState(Maps.newHashMap(deserialized));
+                copy = new DeserializationState(new HashMap<>(deserialized));
             } else {
                 copy = new DeserializationState(json);
                 copy.overrides.putAll(overrides);
@@ -210,7 +214,7 @@ public class LazyJsonMap implements Map<String, Object> {
     @Override
     public void clear() {
         // No need to deserialize if not already deserialized
-        _deserState.set(new DeserializationState(Maps.newHashMap()));
+        _deserState.set(new DeserializationState(new HashMap<>()));
     }
 
     @Override
@@ -268,7 +272,9 @@ public class LazyJsonMap implements Map<String, Object> {
         }
 
         JsonParser parser = codec.getFactory().createParser(deserState.json);
-        checkState(parser.nextToken() == JsonToken.START_OBJECT, "JSON did not contain an object");
+        if (parser.nextToken() != JsonToken.START_OBJECT) {
+            throw new IllegalStateException("JSON did not contain an object");
+        }
         generator.writeStartObject();
 
         // Typically the JSON string has been pre-sorted.  Insert the overrides in order.  If it turns out the

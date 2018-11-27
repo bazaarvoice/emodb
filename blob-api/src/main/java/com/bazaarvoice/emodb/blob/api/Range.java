@@ -1,8 +1,6 @@
 package com.bazaarvoice.emodb.blob.api;
 
-import com.google.common.base.Objects;
-
-import static com.google.common.base.Preconditions.checkArgument;
+import java.util.Objects;
 
 public final class Range {
     private final long _offset;
@@ -16,8 +14,12 @@ public final class Range {
     }
 
     public Range(long offset, long length) {
-        checkArgument(offset >= 0, "Offset must be >=0");
-        checkArgument(length >= 0, "Length must be >=0");
+        if (offset < 0) {
+            throw new IllegalArgumentException("Offset must be >=0");
+        }
+        if (length < 0) {
+            throw new IllegalArgumentException("Length must be >=0");
+        }
         _offset = offset;
         _length = length;
     }
@@ -44,7 +46,7 @@ public final class Range {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_offset, _length);
+        return Objects.hash(_offset, _length);
     }
 
     @Override

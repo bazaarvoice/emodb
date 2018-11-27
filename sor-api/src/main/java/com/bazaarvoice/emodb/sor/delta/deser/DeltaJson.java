@@ -36,4 +36,72 @@ public abstract class DeltaJson {
         gen.writeString(string);
         gen.close();
     }
+
+    public static Appendable append(Appendable appendable, Object value) {
+        try {
+            write(asWriter(appendable), value);
+        } catch (IOException e) {
+            // Not expected writing to appendable
+            throw new RuntimeException(e);
+        }
+        return appendable;
+    }
+
+    public static Appendable append(Appendable appendable, String string) {
+        try {
+            write(asWriter(appendable), string);
+        } catch (IOException e) {
+            // Not expected writing to appendable
+            throw new RuntimeException(e);
+        }
+        return appendable;
+    }
+
+    private static Writer asWriter(final Appendable appendable) {
+        return new Writer() {
+            @Override
+            public void write(char[] cbuf, int off, int len) throws IOException {
+                for (int i=0; i < len; i++) {
+                    appendable.append(cbuf[off+i]);
+                }
+            }
+
+            @Override
+            public void write(String str) throws IOException {
+                appendable.append(str);
+            }
+
+            @Override
+            public void write(String str, int off, int len) throws IOException {
+                appendable.append(str.substring(off, off+len));
+            }
+
+            @Override
+            public Writer append(CharSequence chars) throws IOException {
+                appendable.append(chars);
+                return this;
+            }
+
+            @Override
+            public Writer append(CharSequence chars, int start, int end) throws IOException {
+                appendable.append(chars, start, end);
+                return this;
+            }
+
+            @Override
+            public Writer append(char c) throws IOException {
+                return super.append(c);
+            }
+
+            @Override
+            public void flush() throws IOException {
+                // No-op
+            }
+
+            @Override
+            public void close() throws IOException {
+                // No-op
+            }
+        };
+    }
 }

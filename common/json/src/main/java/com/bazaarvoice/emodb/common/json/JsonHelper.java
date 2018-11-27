@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.ISO8601Utils;
-import com.google.common.base.Throwables;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -33,7 +32,7 @@ public abstract class JsonHelper {
             return writer.writeValueAsString(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -47,7 +46,7 @@ public abstract class JsonHelper {
             return writer.writeValueAsBytes(value);
         } catch (IOException e) {
             // Shouldn't get I/O errors writing to a string.
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -116,7 +115,7 @@ public abstract class JsonHelper {
                 date = ISO8601Utils.parse(string, new ParsePosition(0));
             }
         } catch (ParseException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
         return date;
     }

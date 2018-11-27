@@ -1,6 +1,10 @@
 package com.bazaarvoice.emodb.databus.api;
 
-import com.google.common.base.CharMatcher;
+import java.util.BitSet;
+
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInRange;
+import static com.bazaarvoice.emodb.common.api.Names.anyCharInString;
+import static com.bazaarvoice.emodb.common.api.Names.anyOf;
 
 public abstract class Names {
 
@@ -8,11 +12,10 @@ public abstract class Names {
     private Names() {}
 
     // Exclude whitespace, control chars, non-ascii, upper-case, most punctuation.
-    private static final CharMatcher SUBSCRIPTION_NAME_ALLOWED =
-            CharMatcher.inRange('a', 'z')
-                    .or(CharMatcher.inRange('0', '9'))
-                    .or(CharMatcher.anyOf("-.:@_"))
-                    .precomputed();
+    private static final BitSet SUBSCRIPTION_NAME_ALLOWED = anyOf(
+            anyCharInRange('a', 'z'),
+            anyCharInRange('0', '9'),
+            anyCharInString("-.:@_"));
 
     /**
      * Subscription names must be lowercase ASCII strings. between 1 and 255 characters in length.  Whitespace, ISO
@@ -26,6 +29,6 @@ public abstract class Names {
                 subscription.length() > 0 && subscription.length() <= 255 &&
                 !(subscription.charAt(0) == '_' && !subscription.startsWith("__")) &&
                 !(subscription.charAt(0) == '.' && (".".equals(subscription) || "..".equals(subscription))) &&
-                SUBSCRIPTION_NAME_ALLOWED.matchesAllOf(subscription);
+                subscription.chars().allMatch(SUBSCRIPTION_NAME_ALLOWED::get);
     }
 }

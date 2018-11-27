@@ -8,15 +8,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Request object for updating an existing API key.  The request can update the key's owner, description, roles
@@ -37,8 +34,8 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     private boolean _ownerPresent;
     private String _description;
     private boolean _descriptionPresent;
-    private Set<EmoRoleKey> _assignedRoles = Sets.newHashSet();
-    private Set<EmoRoleKey> _unassignedRoles = Sets.newHashSet();
+    private Set<EmoRoleKey> _assignedRoles = new HashSet<>();
+    private Set<EmoRoleKey> _unassignedRoles = new HashSet<>();
     private boolean _unassignOtherRoles;
 
     @JsonCreator
@@ -51,7 +48,9 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoApiKeyRequest setId(String id) {
-        checkArgument(!Strings.isNullOrEmpty(id), "id");
+        if (id == null || id.isEmpty()) {
+            throw new IllegalArgumentException(("Id must not be null nor empty"));
+        }
         _id = id;
         return this;
     }
@@ -90,7 +89,7 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public Set<EmoRoleKey> getAssignedRoles() {
-        return ImmutableSet.copyOf(_assignedRoles);
+        return new HashSet<>(_assignedRoles);
     }
 
     @JsonProperty("assignRoles")
@@ -100,15 +99,16 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoApiKeyRequest assignRoles(Set<EmoRoleKey> addedRoles) {
-        checkNotNull(addedRoles, "roles");
-        checkArgument(Sets.intersection(addedRoles, _unassignedRoles).isEmpty(),
-                "Cannot both assign and unassign the same role");
+        requireNonNull(addedRoles, "roles");
+        if (addedRoles.stream().anyMatch(_unassignedRoles::contains)) {
+            throw new IllegalArgumentException("Cannot both assign and unassign the same role");
+        }
         _assignedRoles.addAll(addedRoles);
         return this;
     }
 
     public Set<EmoRoleKey> getUnassignedRoles() {
-        return ImmutableSet.copyOf(_unassignedRoles);
+        return Collections.unmodifiableSet(new HashSet<>(_unassignedRoles));
     }
 
     @JsonProperty("unassignRoles")
@@ -118,9 +118,10 @@ public class UpdateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public UpdateEmoApiKeyRequest unassignRoles(Set<EmoRoleKey> unassignedRoles) {
-        checkNotNull(unassignedRoles, "roles");
-        checkArgument(Sets.intersection(unassignedRoles, _assignedRoles).isEmpty(),
-                "Cannot both assign and unassign the same role");
+        requireNonNull(unassignedRoles, "roles");
+        if (unassignedRoles.stream().anyMatch(_assignedRoles::contains)) {
+            throw new IllegalArgumentException("Cannot both assign and unassign the same role");
+        }
         _unassignedRoles.addAll(unassignedRoles);
         return this;
     }

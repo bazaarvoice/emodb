@@ -2,15 +2,15 @@ package com.bazaarvoice.emodb.sor.api.report;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableList;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
 public class DateStatistics extends Statistics<Date> {
 
     public DateStatistics() {
-        this(null, null, null, 0, ImmutableList.<Date>of());
+        this(null, null, null, 0, Collections.emptyList());
     }
 
     @JsonCreator

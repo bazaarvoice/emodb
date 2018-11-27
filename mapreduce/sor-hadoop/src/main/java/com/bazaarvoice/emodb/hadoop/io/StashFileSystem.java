@@ -372,7 +372,7 @@ public class StashFileSystem extends FileSystem implements EmoInputSplittable {
          */
         private InputStream getInputStream() {
             if (_in == null) {
-                InputStream stashIn = _stashReader.getRawSplitPart(_stashSplit, Range.closedOpen(_seekStart, _stashSplit.getSize()));
+                InputStream stashIn = _stashReader.getRawSplitPart(_stashSplit, _seekStart, _stashSplit.getSize());
                 _in = new BufferedInputStream(stashIn, _bufferSize);
             }
             return _in;
@@ -443,7 +443,7 @@ public class StashFileSystem extends FileSystem implements EmoInputSplittable {
         @Override
         public int read(long position, byte[] buffer, int offset, int length)
                 throws IOException {
-            try (InputStream in = _stashReader.getRawSplitPart(_stashSplit, Range.closedOpen(position, position + length))) {
+            try (InputStream in = _stashReader.getRawSplitPart(_stashSplit, position, position + length)) {
                 return ByteStreams.read(in, buffer, offset, length);
             }
         }
@@ -451,7 +451,7 @@ public class StashFileSystem extends FileSystem implements EmoInputSplittable {
         @Override
         public void readFully(long position, byte[] buffer, int offset, int length)
                 throws IOException {
-            try (InputStream in = _stashReader.getRawSplitPart(_stashSplit, Range.closedOpen(position, position + length))) {
+            try (InputStream in = _stashReader.getRawSplitPart(_stashSplit, position, position + length)) {
                 ByteStreams.readFully(in, buffer, offset, length);
             }
         }
