@@ -354,11 +354,11 @@ public class ConditionEvaluatorTest {
             when(intrinsics.getTable()).thenReturn("mytable");
             when(intrinsics.getId()).thenReturn("doc" + i);
             for (int t=1; t <= 64; t++) {
-                if (t == expected.get(i)) {
-                    assertTrue(eval(Conditions.partition(64, Conditions.equal(t)), null, intrinsics));
-                } else {
-                    assertFalse(eval(Conditions.partition(64, Conditions.equal(t)), null, intrinsics));
-                }
+                boolean matches = t == expected.get(i);
+                assertEquals(eval(Conditions.partition(64, t), null, intrinsics), matches);
+                // When testing "in" convenience method just need to chose a partition which is not in the "expected" set
+                assertEquals(eval(Conditions.partition(64, t, 2), null, intrinsics), matches);
+                assertEquals(eval(Conditions.partition(64, Conditions.equal(t)), null, intrinsics), matches);
             }
         }
     }
