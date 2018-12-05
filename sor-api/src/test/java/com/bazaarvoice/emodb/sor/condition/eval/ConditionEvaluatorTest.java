@@ -1,21 +1,25 @@
 package com.bazaarvoice.emodb.sor.condition.eval;
 
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.condition.AndCondition;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
-import com.bazaarvoice.emodb.sor.condition.IsCondition;
+import com.bazaarvoice.emodb.sor.condition.MapCondition;
+import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.condition.impl.LikeConditionImpl;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.testng.annotations.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -337,6 +341,108 @@ public class ConditionEvaluatorTest {
         assertFalse(eval(Conditions.like("*"), 23));
         assertFalse(eval(Conditions.like("*"), true));
         assertFalse(eval(Conditions.like("*"), ImmutableMap.<String, Object>of("key", "value")));
+    }
+
+    @Test
+    public void testAndConditionOrdering() {
+        // Create an "and" condition with weights out of order
+        Condition cheapest = Conditions.mapBuilder()
+                .contains("echo", "echo")
+                .build();
+        Condition middle = Conditions.mapBuilder()
+                .contains("how", "now")
+                .contains("brown", "cow")
+                .build();
+        Condition priciest = Conditions.mapBuilder()
+                .contains("a", 1)
+                .contains("b", 2)
+                .contains("c", 3)
+                .build();
+
+        Condition andCondition = Conditions.and(middle, priciest, cheapest);
+
+        // Verify condition order doesn't affect equality
+        assertEquals(andCondition, Conditions.and(cheapest, middle, priciest));
+        assertEquals(andCondition, Conditions.and(priciest, cheapest, middle));
+        // Verify condition serializes in original order
+        assertEquals(andCondition.toString(), "and({..,\"brown\":\"cow\",\"how\":\"now\"},{..,\"a\":1,\"b\":2,\"c\":3},{..,\"echo\":\"echo\"})");
+        // Verify conditions are returned in increasing weight
+        Iterator<Condition> conditions = ((AndCondition)andCondition).getConditions().iterator();
+        assertEquals(conditions.next(), cheapest);
+        assertEquals(conditions.next(), middle);
+        assertEquals(conditions.next(), priciest);
+        assertFalse(conditions.hasNext());
+    }
+
+    @Test
+    public void testOrConditionOrdering() {
+        // Create an "or" condition with weights out of order
+        Condition cheapest = Conditions.mapBuilder()
+                .contains("echo", "echo")
+                .build();
+        Condition middle = Conditions.mapBuilder()
+                .contains("how", "now")
+                .contains("brown", "cow")
+                .build();
+        Condition priciest = Conditions.mapBuilder()
+                .contains("a", 1)
+                .contains("b", 2)
+                .contains("c", 3)
+                .build();
+
+        Condition orCondition = Conditions.or(middle, priciest, cheapest);
+
+        // Verify condition order doesn't affect equality
+        assertEquals(orCondition, Conditions.or(cheapest, middle, priciest));
+        assertEquals(orCondition, Conditions.or(priciest, cheapest, middle));
+        // Verify condition serializes in original order
+        assertEquals(orCondition.toString(), "or({..,\"brown\":\"cow\",\"how\":\"now\"},{..,\"a\":1,\"b\":2,\"c\":3},{..,\"echo\":\"echo\"})");
+        // Verify conditions are returned in increasing weight
+        Iterator<Condition> conditions = ((OrCondition)orCondition).getConditions().iterator();
+        assertEquals(conditions.next(), cheapest);
+        assertEquals(conditions.next(), middle);
+        assertEquals(conditions.next(), priciest);
+        assertFalse(conditions.hasNext());
+    }
+
+    @Test
+    public void testMapConditionOrdering() {
+        // Create a "map" condition with weights out of order
+        Condition cheapest = Conditions.mapBuilder()
+                .contains("echo", "echo")
+                .build();
+        Condition middle = Conditions.mapBuilder()
+                .contains("how", "now")
+                .contains("brown", "cow")
+                .build();
+        Condition priciest = Conditions.mapBuilder()
+                .contains("a", 1)
+                .contains("b", 2)
+                .contains("c", 3)
+                .build();
+
+        Condition mapCondition = Conditions.mapBuilder()
+                .matches("k0", priciest)
+                .matches("k1", cheapest)
+                .matches("k2", middle)
+                .build();
+
+        // Verify condition order doesn't affect equality
+        assertEquals(mapCondition,
+                Conditions.mapBuilder()
+                        .matches("k1", cheapest)
+                        .matches("k0", priciest)
+                        .matches("k2", middle)
+                        .build());
+
+        // Verify condition serializes in natural order by key
+        assertEquals(mapCondition.toString(), "{..,\"k0\":{..,\"a\":1,\"b\":2,\"c\":3},\"k1\":{..,\"echo\":\"echo\"},\"k2\":{..,\"brown\":\"cow\",\"how\":\"now\"}}");
+        // Verify conditions are returned in increasing weight
+        Iterator<Map.Entry<String, Condition>> conditions = ((MapCondition)mapCondition).getEntries().entrySet().iterator();
+        assertEquals(conditions.next(), Maps.immutableEntry("k1", cheapest));
+        assertEquals(conditions.next(), Maps.immutableEntry("k2", middle));
+        assertEquals(conditions.next(), Maps.immutableEntry("k0", priciest));
+        assertFalse(conditions.hasNext());
     }
 
     private boolean eval(Condition condition, @Nullable Object root) {

@@ -464,5 +464,13 @@ abstract public class LikeConditionImpl extends AbstractCondition implements Lik
                     Joiner.on(substitute).join(_innerSubstrings) +
                     substitute + _suffix;
         }
+
+        /**
+         * Of all of the "like" condition variants the complex implementation is slightly more expensive to compute.
+         */
+        @Override
+        public int weight() {
+            return 2;
+        }
     }
 }
