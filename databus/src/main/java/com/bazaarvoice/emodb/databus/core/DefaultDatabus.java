@@ -341,7 +341,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         checkNotNull(tableFilter, "tableFilter");
         checkArgument(subscriptionTtl.compareTo(Duration.ZERO) > 0, "SubscriptionTtl must be >0");
         checkArgument(eventTtl.compareTo(Duration.ZERO) > 0, "EventTtl must be >0");
-        TableFilterValidator.checkAllowed(tableFilter);
+        SubscriptionConditionValidator.checkAllowed(tableFilter);
 
         if (includeDefaultJoinFilter) {
             // If the default join filter condition is set (that is, isn't "alwaysTrue()") then add it to the filter

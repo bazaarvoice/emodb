@@ -154,6 +154,23 @@ public class ConditionParserTest {
         doTest("like(\"const\")", "\"const\"", Conditions.equal("const"));
     }
 
+    @Test
+    public void testPartition() {
+        doTest("partition(8 : 1)", "partition(8:1)", Conditions.partition(8, Conditions.equal(1)));
+        doTest("partition(8 : 2,4,6)", "partition(8:2,4,6)", Conditions.partition(8, Conditions.or(
+                Conditions.equal(2), Conditions.equal(4), Conditions.equal(6)
+        )));
+        doTest("partition(4 : ge(2))", "partition(4:ge(2))", Conditions.partition(4, Conditions.ge(2)));
+        doTestException("partition(4:0)", "Partition must be between 1 and 4");
+        doTestException("partition(4:5)", "Partition must be between 1 and 4");
+        doTestException("partition(4:not(6))", "Partition must be between 1 and 4");
+        doTestException("partition(4:or(1,2,6))", "Partition must be between 1 and 4");
+        doTestException("partition(4:\"1\")", "Partition value must be an integer");
+        doTestException("partition(4:1.5)", "Partition value must be an integer");
+        doTestException("partition(4:contains(1))", "Invalid comparison of partition to array");
+        doTestException("partition(4:{..,\"partition\":1})", "Invalid comparison of partition to object");
+    }
+
     private void doTest(String input, String expectedString, Condition expected) {
         Condition actual = Conditions.fromString(input);
         assertEquals(actual, expected, "ConditionParser returned unexpected results:\nGiven   : " + input);

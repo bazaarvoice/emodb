@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -19,8 +20,10 @@ import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.bazaarvoice.emodb.sor.delta.eval.DeltaEvaluator;
 import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
+import com.google.common.base.Charsets;
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
+import com.google.common.hash.Hashing;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 
@@ -256,6 +259,20 @@ public class ConditionEvaluator implements ConditionVisitor<Object, Boolean> {
             }
         }
         return true;
+    }
+
+    @Nullable
+    @Override
+    public Boolean visit(PartitionCondition condition, @Nullable Object ignore) {
+        checkNotNull(_intrinsics, "May not reference intrinsic values from this context.");
+        int modulo = Math.abs(
+                Hashing.murmur3_32().newHasher()
+                    .putString(_intrinsics.getTable(), Charsets.UTF_8)
+                    .putString(_intrinsics.getId(), Charsets.UTF_8)
+                    .hash()
+                    .asInt()) % condition.getNumPartitions() + 1;
+
+        return condition.getCondition().visit(this, modulo);
     }
 
     private Object get(Map<?, ?> map, String key) {

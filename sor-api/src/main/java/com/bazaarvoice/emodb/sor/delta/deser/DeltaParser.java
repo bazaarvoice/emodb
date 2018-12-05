@@ -276,6 +276,9 @@ public class DeltaParser {
 
             } else if ("containsOnly".equals(token)) {
                 return parseContainsCondition(ContainsCondition.Containment.ONLY);
+
+            } else if ("partition".equals(token)) {
+                return parsePartitionCondition();
             }
         }
 
@@ -388,6 +391,17 @@ public class DeltaParser {
         String pattern = _t.nextString();
         _t.nextClean(')');
         return Conditions.like(pattern);
+    }
+
+    private Condition parsePartitionCondition() {
+        _t.nextClean('(');
+        int numPartitions = ((Number)_t.nextValue()).intValue();
+        _t.nextClean(':');
+        List<Condition> conditions = Lists.newArrayList();
+        do {
+            conditions.add(parseCondition());
+        } while (_t.nextArg(',', ')'));
+        return Conditions.partition(numPartitions, Conditions.or(conditions));
     }
 
     private <T extends Collection<?>> T checkArgCount(String function, int numArgs, T arguments) {

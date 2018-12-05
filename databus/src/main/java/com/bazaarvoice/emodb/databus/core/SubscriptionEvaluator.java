@@ -68,7 +68,7 @@ public class SubscriptionEvaluator {
                 json = Maps.newHashMap(table.getAttributes());
                 json.put(UpdateRef.TAGS_NAME, eventData.getTags());
             }
-            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new TableFilterIntrinsics(table)) &&
+            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new SubscriptionIntrinsics(table, eventData.getKey())) &&
                     subscriberHasPermission(subscription, table);
         } catch (Exception e) {
             _rateLimitedLog.error(e, "Unable to evaluate condition for subscription " + subscription.getName() +
