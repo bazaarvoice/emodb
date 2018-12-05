@@ -208,7 +208,7 @@ public abstract class Conditions {
         return partition(numPartitions, equal(partition));
     }
 
-    public static Condition partition(int numPartitions, int... partitions) {
+    public static Condition partition(int numPartitions, Integer... partitions) {
         return partition(numPartitions, in(Arrays.asList(partitions)));
     }
 
