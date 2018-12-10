@@ -22,20 +22,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * A service that checks the stash times, updates the metrics and deletes the expired entries.
  */
-public class CompactionControlMonitor extends AbstractScheduledService {
+class CompactionControlMonitor extends AbstractScheduledService {
     private static final Logger _log = LoggerFactory.getLogger(CompactionControlMonitor.class);
+    private static final String COMPACTION_CONTROL_TIME_LAG_METRIC = MetricRegistry.name("bv.emodb.scan", "ScanUploader", "compaction-control-time-lag");
 
-    @VisibleForTesting
-    protected static final Duration POLL_INTERVAL = Duration.ofMinutes(5);
+    private static final Duration POLL_INTERVAL = Duration.ofMinutes(5);
 
     private final CompactionControlSource _compactionControlSource;
     private final Clock _clock;
+    private final MetricRegistry _metricRegistry;
     private volatile long _lag;
 
-    public CompactionControlMonitor(CompactionControlSource compactionControlSource, Clock clock, MetricRegistry metricRegistry) {
+    CompactionControlMonitor(CompactionControlSource compactionControlSource, Clock clock, MetricRegistry metricRegistry) {
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
         _clock = checkNotNull(clock, "clock");
-        checkNotNull(metricRegistry, "metricRegistry").register(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "compaction-control-time-lag"), (Gauge<Long>) () -> _lag);
+        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
+    }
+
+    @Override
+    protected void startUp() {
+        _metricRegistry.register(COMPACTION_CONTROL_TIME_LAG_METRIC, (Gauge<Long>) () -> _lag);
+        _log.debug("CompactionControlMonitor has been started");
     }
 
     @Override
@@ -45,6 +52,8 @@ public class CompactionControlMonitor extends AbstractScheduledService {
 
     @Override
     protected void shutDown() {
+        _metricRegistry.remove(COMPACTION_CONTROL_TIME_LAG_METRIC);
+        _log.debug("CompactionControlMonitor has been shut down");
     }
 
     @Override
@@ -71,7 +80,7 @@ public class CompactionControlMonitor extends AbstractScheduledService {
     }
 
     @VisibleForTesting
-    protected void deleteExpiredStashTimes(long currentTimeInMillis) {
+    void deleteExpiredStashTimes(long currentTimeInMillis) {
         try {
             _log.debug("Checking for expired stash times at {}", currentTimeInMillis);
             Map<StashTimeKey, StashRunTimeInfo> expiredStashTimes = _compactionControlSource.getAllStashTimes().entrySet().stream()

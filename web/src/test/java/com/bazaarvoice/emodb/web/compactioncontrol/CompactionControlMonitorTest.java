@@ -36,16 +36,15 @@ public class CompactionControlMonitorTest {
         compactionControlMonitor.deleteExpiredStashTimes(timestamp1 + Duration.ofMinutes(10).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 3);
         StashTimeKey stashTimeKey = StashTimeKey.of("id-1", "us-east-1");
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), true);
+        Assert.assertTrue(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey));
 
         compactionControlMonitor.deleteExpiredStashTimes(expiredTimestamp1 + Duration.ofMinutes(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 2);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
+        Assert.assertFalse(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey));
 
         compactionControlMonitor.deleteExpiredStashTimes(expiredTimestamp3 + Duration.ofMinutes(1).toMillis());
         Assert.assertEquals(compactionControlSource.getAllStashTimes().size(), 0);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
-        Assert.assertEquals(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey), false);
+        Assert.assertFalse(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey));
+        Assert.assertFalse(compactionControlSource.getAllStashTimes().containsKey(stashTimeKey));
     }
-
 }
