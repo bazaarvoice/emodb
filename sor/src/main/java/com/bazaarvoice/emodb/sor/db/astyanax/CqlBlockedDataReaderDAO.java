@@ -189,7 +189,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
 
     /**
      * Synchronously executes the provided statement.  The statement must query the delta table as returned from
-     * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getDeltaTableDDL()}
+     * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getBlockedDeltaTableDDL()}
      */
     private Iterator<Iterable<Row>> deltaQuery(DeltaPlacement placement, Statement statement, boolean singleRow,
                                                String errorContext, Object... errorContextArgs) {
@@ -199,7 +199,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     /**
      * Asynchronously executes the provided statement.  Although the iterator is returned immediately the actual results
      * may still be loading in the background.  The statement must query the delta table as returned from
-     * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getDeltaTableDDL()}
+     * {@link com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacement#getBlockedDeltaTableDDL()}
      */
     private Iterator<Iterable<Row>> deltaQueryAsync(DeltaPlacement placement, Statement statement, boolean singleRow,
                                                     String errorContext, Object... errorContextArgs) {
@@ -723,7 +723,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         @Override
         protected ResultSet queryRowGroupRowsAfter(Row row) {
             Range<RangeTimeUUID> columnRange = Range.greaterThan(new RangeTimeUUID(getChangeId(row)));
-            return columnScan(_placement, _placement.getDeltaTableDDL(), getKey(row),
+            return columnScan(_placement, _placement.getBlockedDeltaTableDDL(), getKey(row),
                     columnRange, true, _consistency);
         }
     }
@@ -735,7 +735,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     private ResultSet columnScan(DeltaPlacement placement, TableDDL tableDDL, ByteBuffer rowKey, Range<RangeTimeUUID> columnRange,
                                  boolean ascending, ConsistencyLevel consistency) {
 
-        Select.Where where = (tableDDL == placement.getDeltaTableDDL() ? selectDeltaFrom(placement.getBlockedDeltaTableDDL()) : selectFrom(tableDDL))
+        Select.Where where = (tableDDL == placement.getBlockedDeltaTableDDL() ? selectDeltaFrom(placement.getBlockedDeltaTableDDL()) : selectFrom(tableDDL))
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey));
 
         if (columnRange.hasLowerBound()) {
@@ -785,7 +785,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         // Read Delta and Compaction objects
         Iterator<Change> deltas = Iterators.emptyIterator();
         if (includeContentData) {
-            TableDDL deltaDDL = placement.getDeltaTableDDL();
+            TableDDL deltaDDL = placement.getBlockedDeltaTableDDL();
             ProtocolVersion protocolVersion = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
             CodecRegistry codecRegistry = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getCodecRegistry();
 
