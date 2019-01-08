@@ -112,29 +112,38 @@ public class DeltaBlockingTest {
         String delta = generateLargeDelta();
         String encodedDelta = StringUtils.repeat('0', _prefixLength) + delta;
         List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
-        List<TestRow> rows = Lists.newArrayListWithCapacity(blocks.size() / 2 + 1);
+        List<TestRow> rows = Lists.newArrayList();
         UUID changeId = UUID.randomUUID();
         for (int i = 0; i < blocks.size() - 1; i++) {
             rows.add(new TestRow(i, changeId, blocks.get(i)));
         }
-        rows.add(new TestRow(0, UUID.randomUUID(), ByteBuffer.wrap("0001D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes())));
+
+        UUID secondDeltaUUID = UUID.randomUUID();
+
+        List<ByteBuffer> secondDeltaBlocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap("0000D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes()));
+
+        for (int i = 0; i < secondDeltaBlocks.size(); i++) {
+            rows.add(new TestRow(i, secondDeltaUUID, secondDeltaBlocks.get(i)));
+        }
 
         Iterator<ByteBuffer> iterator = new ListDeltaIterator(rows.iterator(), false, _prefixLength);
         assertEquals(iterator.hasNext(), true);
-        assertEquals("0001D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}", StringSerializer.get().fromByteBuffer(iterator.next()));
+        assertEquals("000AD3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}", StringSerializer.get().fromByteBuffer(iterator.next()));
         assertEquals(iterator.hasNext(), false);
 
-        rows.clear();
-
-        rows.add(new TestRow(0, UUID.randomUUID(), ByteBuffer.wrap("0001D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes())));
+        rows = Lists.newArrayList();
 
         for (int i = blocks.size() - 1; i >= 1; i--) {
             rows.add(new TestRow(i, changeId, blocks.get(i)));
         }
 
+        for (int i = secondDeltaBlocks.size() - 1; i >= 0; i--) {
+            rows.add(new TestRow(i, secondDeltaUUID, secondDeltaBlocks.get(i)));
+        }
+
         Iterator<ByteBuffer> reversedIterator = new ListDeltaIterator(rows.iterator(), true, _prefixLength);
         assertEquals(reversedIterator.hasNext(), true);
-        assertEquals("0001D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}", StringSerializer.get().fromByteBuffer(reversedIterator.next()));
+        assertEquals("000AD3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}", StringSerializer.get().fromByteBuffer(reversedIterator.next()));
         assertEquals(reversedIterator.hasNext(), false);
     }
 }
