@@ -56,6 +56,9 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
 
         // delta is fragmented if the first block is not zero. In this case, we skip it.
         if (getBlock(_list.get(0)) != 0) {
+            // We must also clear the list of the fragmented delta blocks to avoid them being stitched in with
+            // the next delta, which will cause a buffer overflow
+            _list.clear();
             return null;
         }
 
@@ -90,6 +93,10 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                     contentSize += getValue(_next).remaining();
                 } else {
                     // fragmented delta encountered, we must skip over it
+
+                    // We must also clear the list of the fragmented delta blocks to avoid them being stitched in with
+                    // the next delta, which will cause a buffer overflow
+                    _list.clear();
                     return null;
                 }
             } else {
