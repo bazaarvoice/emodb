@@ -103,7 +103,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                 }
             } else {
                 // fragmented delta and no other deltas to skip to
-                throw new DeltaStitchingException(_rowKey, getChangeId(_next).toString());
+                throw new DeltaStitchingException(_rowKey, getChangeId(_next).toString(), numBlocks, i - 1);
             }
         }
 
