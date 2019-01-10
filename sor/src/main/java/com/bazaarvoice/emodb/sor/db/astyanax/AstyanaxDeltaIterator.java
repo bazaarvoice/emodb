@@ -8,8 +8,8 @@ import java.util.Iterator;
 import java.util.UUID;
 
 public class AstyanaxDeltaIterator extends DeltaIterator<Column<DeltaKey>, Column<UUID>> {
-    public AstyanaxDeltaIterator(Iterator<Column<DeltaKey>> iterator, boolean reversed, int prefixLength) {
-        super(iterator, reversed, prefixLength);
+    public AstyanaxDeltaIterator(Iterator<Column<DeltaKey>> iterator, boolean reversed, int prefixLength, String rowKey) {
+        super(iterator, reversed, prefixLength, rowKey);
     }
 
     @Override

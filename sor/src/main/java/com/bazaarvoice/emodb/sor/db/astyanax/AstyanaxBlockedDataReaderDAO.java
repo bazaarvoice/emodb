@@ -71,6 +71,7 @@ import com.netflix.astyanax.model.ColumnList;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.model.Row;
 import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.AbstractKeyspaceOperationImpl;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
@@ -303,7 +304,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getBlockedDeltaColumnFamily();
             DeltaKey deltaStart = start != null ? new DeltaKey(start, 0) : null;
             DeltaKey deltaEnd = end != null ? new DeltaKey(end, Integer.MAX_VALUE) : null;
-            deltas = decodeDeltaColumns(new LimitCounter(limit).limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength)));
+            deltas = decodeDeltaColumns(new LimitCounter(limit).limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength, StringSerializer.get().fromByteBuffer(rowKey))));
 
         }
 
@@ -1238,9 +1239,9 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
                     getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength));
-        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength));
-        Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength));
+        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength, StringSerializer.get().fromByteBuffer(rowKey)));
+        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength, StringSerializer.get().fromByteBuffer(rowKey)));
+        Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength, StringSerializer.get().fromByteBuffer(rowKey)));
 
         return new RecordImpl(key, deltaCompactionIter, deltaChangeIter, deltaRawMetadataIter);
     }

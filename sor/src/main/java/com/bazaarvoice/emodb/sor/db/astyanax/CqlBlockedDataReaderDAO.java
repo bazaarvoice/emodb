@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
+import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -184,7 +185,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         }
 
         // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
-        return newRecordFromCql(key, rows, placement);
+        return newRecordFromCql(key, rows, placement, StringSerializer.get().fromByteBuffer(rowKey));
     }
 
     /**
@@ -245,14 +246,14 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
      * in other words, it is expected that row.getBytesUnsafe(ROW_KEY_RESULT_SET_COLUMN) returns the same value for
      * each row in rows.
      */
-    private Record newRecordFromCql(Key key, Iterable<Row> rows, Placement placement) {
+    private Record newRecordFromCql(Key key, Iterable<Row> rows, Placement placement, String rowKey) {
         Session session = placement.getKeyspace().getCqlSession();
         ProtocolVersion protocolVersion = session.getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
         CodecRegistry codecRegistry = session.getCluster().getConfiguration().getCodecRegistry();
 
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
-        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry));
+        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
+        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
+        Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
     }
@@ -357,7 +358,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
                     ByteBuffer keyBytes = getRawKeyFromRowGroup(rows);
                     Key key = rawKeyMap.remove(keyBytes);
                     assert key != null : "Query returned row with a key out of bound";
-                    return newRecordFromCql(key, rows, placement);
+                    return newRecordFromCql(key, rows, placement, StringSerializer.get().fromByteBuffer(keyBytes));
                 }),
                 // Second iterator returns an empty Record for each key queried but not found.
                 new AbstractIterator<Record>() {
@@ -548,7 +549,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table, Placement placement) {
         return Iterators.transform(rowGroups, rowGroup -> {
             String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
-            return newRecordFromCql(new Key(table, key), rowGroup, placement);
+            return newRecordFromCql(new Key(table, key), rowGroup, placement, StringSerializer.get().fromByteBuffer(getRawKeyFromRowGroupOrNull(rowGroup)));
         });
     }
 
@@ -635,7 +636,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), filteredRows, placement);
+                    Record record = newRecordFromCql(new Key(_table, key), filteredRows, placement, StringSerializer.get().fromByteBuffer(rowKey));
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
@@ -789,7 +790,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
             ProtocolVersion protocolVersion = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
             CodecRegistry codecRegistry = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getCodecRegistry();
 
-            deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry), scaledLimit));
+            deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry, StringSerializer.get().fromByteBuffer(rowKey)), scaledLimit));
         }
 
         // Read History objects

@@ -22,8 +22,8 @@ public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
     private final int _contentIndex;
 
     public CqlDeltaIterator(Iterator<Row> iterator, final int blockIndex, final int changeIdIndex, final int contentIndex, boolean reversed, int prefixLength,
-                            ProtocolVersion protocolVersion, CodecRegistry codecRegistry) {
-        super(iterator, reversed, prefixLength);
+                            ProtocolVersion protocolVersion, CodecRegistry codecRegistry, String rowKey) {
+        super(iterator, reversed, prefixLength, rowKey);
         _blockIndex = blockIndex;
         _changeIdIndex = changeIdIndex;
         _contentIndex = contentIndex;
