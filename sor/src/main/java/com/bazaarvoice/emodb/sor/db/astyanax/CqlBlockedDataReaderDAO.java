@@ -185,7 +185,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         }
 
         // Convert the results into a Record object, lazily fetching the rest of the columns as necessary.
-        return newRecordFromCql(key, rows, placement, StringSerializer.get().fromByteBuffer(rowKey));
+        return newRecordFromCql(key, rows, placement, ByteBufferUtil.bytesToHex(rowKey));
     }
 
     /**
@@ -358,7 +358,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
                     ByteBuffer keyBytes = getRawKeyFromRowGroup(rows);
                     Key key = rawKeyMap.remove(keyBytes);
                     assert key != null : "Query returned row with a key out of bound";
-                    return newRecordFromCql(key, rows, placement, StringSerializer.get().fromByteBuffer(keyBytes));
+                    return newRecordFromCql(key, rows, placement, ByteBufferUtil.bytesToHex(keyBytes));
                 }),
                 // Second iterator returns an empty Record for each key queried but not found.
                 new AbstractIterator<Record>() {
@@ -549,7 +549,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     private Iterator<Record> decodeRows(Iterator<Iterable<Row>> rowGroups, final AstyanaxTable table, Placement placement) {
         return Iterators.transform(rowGroups, rowGroup -> {
             String key = AstyanaxStorage.getContentKey(getRawKeyFromRowGroup(rowGroup));
-            return newRecordFromCql(new Key(table, key), rowGroup, placement, StringSerializer.get().fromByteBuffer(getRawKeyFromRowGroupOrNull(rowGroup)));
+            return newRecordFromCql(new Key(table, key), rowGroup, placement, ByteBufferUtil.bytesToHex(getRawKeyFromRowGroupOrNull(rowGroup)));
         });
     }
 
@@ -636,7 +636,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
 
                     int shardId = AstyanaxStorage.getShardId(rowKey);
                     String key = AstyanaxStorage.getContentKey(rowKey);
-                    Record record = newRecordFromCql(new Key(_table, key), filteredRows, placement, StringSerializer.get().fromByteBuffer(rowKey));
+                    Record record = newRecordFromCql(new Key(_table, key), filteredRows, placement, ByteBufferUtil.bytesToHex(rowKey));
                     return new MultiTableScanResult(rowKey, shardId, tableUuid, _droppedTable, record);
                 }
 
@@ -790,7 +790,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
             ProtocolVersion protocolVersion = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
             CodecRegistry codecRegistry = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getCodecRegistry();
 
-            deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry, StringSerializer.get().fromByteBuffer(rowKey)), scaledLimit));
+            deltas = decodeDeltaColumns(Iterators.limit(new CqlDeltaIterator(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, consistency).iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, reversed, _deltaPrefixLength, protocolVersion, codecRegistry, ByteBufferUtil.bytesToHex(rowKey)), scaledLimit));
         }
 
         // Read History objects
