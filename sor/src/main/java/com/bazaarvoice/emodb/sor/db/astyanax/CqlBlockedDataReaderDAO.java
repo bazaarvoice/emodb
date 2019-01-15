@@ -726,7 +726,6 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
                     .and(gte(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName(), getChangeId(row)))
                     .and(gt(_placement.getBlockedDeltaTableDDL().getBlockColumnName(), getBlock(row)))
                     .orderBy(asc(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName()))
-                    .orderBy(asc(_placement.getBlockedDeltaTableDDL().getBlockColumnName()))
                     .setConsistencyLevel(_consistency);
 
             return AdaptiveResultSet.executeAdaptiveQuery(_placement.getKeyspace().getCqlSession(), statement, _driverConfig.getSingleRowFetchSize());
