@@ -723,8 +723,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         protected ResultSet queryRowGroupRowsAfter(Row row) {
             Statement statement = selectDeltaFrom(_placement.getBlockedDeltaTableDDL())
                     .where(eq(_placement.getBlockedDeltaTableDDL().getRowKeyColumnName(), getKey(row)))
-                    .and(gte(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName(), getChangeId(row)))
-                    .and(gt(_placement.getBlockedDeltaTableDDL().getBlockColumnName(), getBlock(row)))
+                    .and(gt(ImmutableList.of(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName(), _placement.getBlockedDeltaTableDDL().getBlockColumnName()),
+                            ImmutableList.of(getChangeId(row), getBlock(row))))
                     .orderBy(asc(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName()))
                     .setConsistencyLevel(_consistency);
 
