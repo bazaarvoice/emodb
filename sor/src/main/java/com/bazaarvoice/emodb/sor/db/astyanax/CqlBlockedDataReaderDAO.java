@@ -17,7 +17,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
 import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
-import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -36,7 +35,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
-import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -723,9 +721,15 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
 
         @Override
         protected ResultSet queryRowGroupRowsAfter(Row row) {
-            Range<RangeTimeUUID> columnRange = Range.greaterThan(new RangeTimeUUID(getChangeId(row)));
-            return columnScan(_placement, _placement.getBlockedDeltaTableDDL(), getKey(row),
-                    columnRange, true, _consistency);
+            Statement statement = selectDeltaFrom(_placement.getBlockedDeltaTableDDL())
+                    .where(eq(_placement.getBlockedDeltaTableDDL().getRowKeyColumnName(), getKey(row)))
+                    .and(gte(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName(), getChangeId(row)))
+                    .and(gt(_placement.getBlockedDeltaTableDDL().getBlockColumnName(), getBlock(row)))
+                    .orderBy(asc(_placement.getBlockedDeltaTableDDL().getChangeIdColumnName()))
+                    .orderBy(asc(_placement.getBlockedDeltaTableDDL().getBlockColumnName()))
+                    .setConsistencyLevel(_consistency);
+
+            return AdaptiveResultSet.executeAdaptiveQuery(_placement.getKeyspace().getCqlSession(), statement, _driverConfig.getSingleRowFetchSize());
         }
     }
 
