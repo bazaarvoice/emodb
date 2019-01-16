@@ -304,7 +304,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
             ColumnFamily<ByteBuffer, DeltaKey> cf = placement.getBlockedDeltaColumnFamily();
             DeltaKey deltaStart = start != null ? new DeltaKey(start, 0) : null;
             DeltaKey deltaEnd = end != null ? new DeltaKey(end, Integer.MAX_VALUE) : null;
-            deltas = decodeDeltaColumns(new LimitCounter(limit).limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
+            deltas = decodeDeltaColumns(new LimitCounter(limit).limit(new AstyanaxDeltaIterator(columnScan(rowKey, placement, cf, deltaStart, deltaEnd, reversed, _deltaKeyInc, Long.MAX_VALUE, 0, consistency), reversed, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey)))));
 
         }
 
@@ -1239,9 +1239,9 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
                     getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey)));
-        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey)));
-        Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey)));
+        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
+        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
+        Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
 
         return new RecordImpl(key, deltaCompactionIter, deltaChangeIter, deltaRawMetadataIter);
     }
