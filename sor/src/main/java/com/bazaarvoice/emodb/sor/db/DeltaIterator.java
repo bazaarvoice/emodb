@@ -24,12 +24,14 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private final boolean _reverse;
     private final int _prefixLength;
     private boolean _firstIteration;
+    private String _rowKey;
 
-    public DeltaIterator(Iterator<R> iterator, boolean reverse, int prefixLength) {
+    public DeltaIterator(Iterator<R> iterator, boolean reverse, int prefixLength, String rowKey) {
         _iterator = iterator;
         _reverse = reverse;
         _prefixLength = prefixLength;
         _firstIteration = true;
+        _rowKey = rowKey;
     }
 
     // stitch delta together in reverse
@@ -101,7 +103,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                 }
             } else {
                 // fragmented delta and no other deltas to skip to
-                throw new DeltaStitchingException();
+                throw new DeltaStitchingException(_rowKey, getChangeId(_next).toString(), numBlocks, i - 1);
             }
         }
 

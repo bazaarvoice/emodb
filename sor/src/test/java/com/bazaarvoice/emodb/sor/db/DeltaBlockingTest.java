@@ -150,7 +150,7 @@ public class DeltaBlockingTest {
 
 class ListDeltaIterator extends DeltaIterator<TestRow, ByteBuffer> {
     public ListDeltaIterator(Iterator<TestRow> iterator, boolean reverse, int prefixLength) {
-        super(iterator, reverse, prefixLength);
+        super(iterator, reverse, prefixLength, "<row key placeholder>");
     }
 
     @Override

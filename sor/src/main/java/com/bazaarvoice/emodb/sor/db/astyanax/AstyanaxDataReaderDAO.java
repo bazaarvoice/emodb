@@ -1296,6 +1296,6 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         if (cutoffTime == null) {
             return columnIter;
         }
-        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getUUIDValue()) < cutoffTime.toEpochMilli()));
+        return Iterators.filter(columnIter, column -> (TimeUUIDs.getTimeMillis(column.getName()) < cutoffTime.toEpochMilli()));
     }
 }
