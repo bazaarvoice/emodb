@@ -103,7 +103,7 @@ public class MultiScanCutoffTimeTest {
 
     private Column<UUID> astyanaxColumn(UUID uuidValue, String value) {
         Column<UUID> column = mock(Column.class);
-        when(column.getUUIDValue()).thenReturn(uuidValue);
+        when(column.getName()).thenReturn(uuidValue);
         when(column.getStringValue()).thenReturn(value);
 
         return column;
