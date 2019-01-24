@@ -12,6 +12,8 @@ import java.util.Objects;
 import static com.bazaarvoice.emodb.databus.api.Names.isLegalSubscriptionName;
 
 public final class DefaultSubscription implements Subscription {
+    // Currently, by default, subscription event ttl limit is set to 365 days,
+    // but that could be changed in future
     private final static Duration EVENT_TTL_LIMIT = Duration.ofDays(365);
 
     private final String _name;

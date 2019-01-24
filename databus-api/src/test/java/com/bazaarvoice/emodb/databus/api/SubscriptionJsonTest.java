@@ -47,4 +47,34 @@ public class SubscriptionJsonTest {
         assertEquals(actual.getExpiresAt(), expected.getExpiresAt());
         assertEquals(actual.getEventTtl(), expected.getEventTtl());
     }
+
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl duration should be within 365 days .*")
+    public void testSubscriptionJsonWithEventTttGreaterThat365Days() throws Exception {
+        Date now = new Date();
+        String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());
+
+        String subscriptionJsonString = "{" +
+                "\"name\":\"test-subscription\"," +
+                "\"tableFilter\":\"intrinsic(\\\"~table\\\":\\\"review:testcustomer\\\")\"," +
+                "\"expiresAt\":\"" + nowString + "\"," +
+                "\"eventTtl\":31622400000" +
+                "}";
+
+        JsonHelper.fromJson(subscriptionJsonString, Subscription.class);
+    }
+
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl must be >0 .*")
+    public void testSubscriptionJsonWithNegativeEventTtl() throws Exception {
+        Date now = new Date();
+        String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());
+
+        String subscriptionJsonString = "{" +
+                "\"name\":\"test-subscription\"," +
+                "\"tableFilter\":\"intrinsic(\\\"~table\\\":\\\"review:testcustomer\\\")\"," +
+                "\"expiresAt\":\"" + nowString + "\"," +
+                "\"eventTtl\":-1" +
+                "}";
+
+        JsonHelper.fromJson(subscriptionJsonString, Subscription.class);
+    }
 }
