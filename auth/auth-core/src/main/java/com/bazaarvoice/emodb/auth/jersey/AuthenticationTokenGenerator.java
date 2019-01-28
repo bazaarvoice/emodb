@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.identity.AuthIdentity;
-import com.sun.jersey.api.core.HttpRequestContext;
+import javax.ws.rs.container.ContainerRequestContext;
 import org.apache.shiro.authc.AuthenticationToken;
 
 /**
@@ -16,5 +16,5 @@ public interface AuthenticationTokenGenerator<T extends AuthIdentity> {
      * @param context The request context
      * @return The authentication token, or null if one could not be generated
      */
-    AuthenticationToken createToken(HttpRequestContext context);
+    AuthenticationToken createToken(ContainerRequestContext context);
 }

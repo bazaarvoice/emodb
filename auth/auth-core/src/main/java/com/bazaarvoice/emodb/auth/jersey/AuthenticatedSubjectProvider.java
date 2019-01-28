@@ -1,14 +1,14 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
-import com.sun.jersey.api.model.Parameter;
-import com.sun.jersey.core.spi.component.ComponentContext;
-import com.sun.jersey.core.spi.component.ComponentScope;
-import com.sun.jersey.spi.inject.Injectable;
-import com.sun.jersey.spi.inject.InjectableProvider;
+import javax.inject.Inject;
 import org.apache.shiro.mgt.SecurityManager;
-import org.apache.shiro.util.ThreadContext;
 
 import javax.ws.rs.ext.Provider;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.api.ServiceLocator;
+import org.glassfish.jersey.server.internal.inject.AbstractValueFactoryProvider;
+import org.glassfish.jersey.server.internal.inject.MultivaluedParameterExtractorProvider;
+import org.glassfish.jersey.server.model.Parameter;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -17,27 +17,25 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * The subject can then be used to perform finer resource restrictions then can be performed through annotations alone.
  */
 @Provider
-public class AuthenticatedSubjectProvider implements InjectableProvider<Authenticated, Parameter> {
+public class AuthenticatedSubjectProvider extends AbstractValueFactoryProvider {
 
-    private final SecurityManager _securityManager;
+    private final AuthenticatedSubjectFactory _authenticatedSubjectFactory;
 
-    public AuthenticatedSubjectProvider(SecurityManager securityManager) {
-        _securityManager = checkNotNull(securityManager, "securityManager");
+    @Inject
+    public AuthenticatedSubjectProvider(MultivaluedParameterExtractorProvider mpep, ServiceLocator locator,
+                                        AuthenticatedSubjectFactory authenticatedSubjectFactory) {
+        super(mpep, locator, Parameter.Source.UNKNOWN);
+        _authenticatedSubjectFactory = checkNotNull(authenticatedSubjectFactory);
     }
 
     @Override
-    public ComponentScope getScope() {
-        return ComponentScope.PerRequest;
-    }
+    protected Factory<?> createValueFactory(Parameter parameter) {
+        Class<?> paramType = parameter.getRawType();
+        Authenticated annotation = parameter.getAnnotation(Authenticated.class);
+        if (annotation != null && paramType.isAssignableFrom(Subject.class)) {
+            return _authenticatedSubjectFactory;
+        }
 
-    @Override
-    public Injectable getInjectable(ComponentContext componentContext, Authenticated authenticated, Parameter parameter) {
-        return new Injectable() {
-            @Override
-            public Object getValue() {
-                return new Subject(_securityManager, ThreadContext.getSubject().getPrincipals());
-            }
-        };
+        return null;
     }
 }
-

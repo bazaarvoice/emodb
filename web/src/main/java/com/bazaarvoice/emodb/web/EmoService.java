@@ -383,12 +383,10 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Add a resource factory that creates throttling related Resource Filters for appropriate resource methods
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getResourceFilterFactories().add(new ThrottlingFilterFactory(_environment.metrics()));
+        _environment.jersey().getResourceConfig().register(new ThrottlingFilterFactory(_environment.metrics()));
 
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getContainerRequestFilters().add(adHocThrottleFilter);
-        //noinspection unchecked
-        _environment.jersey().getResourceConfig().getContainerResponseFilters().add(adHocThrottleFilter);
+        _environment.jersey().getResourceConfig().register(adHocThrottleFilter);
     }
 
     private void evaluateSecurity() {
