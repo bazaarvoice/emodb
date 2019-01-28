@@ -197,7 +197,7 @@ public class PartitionedLeaderServiceTest {
 
         for (Integer partition : partitionedLeaderService.getLeadingPartitions()) {
             // Don't just take the service's word for it; double check that the service is actually in the execution body
-            Service uncastDelegate = partitionedLeaderService.getPartitionLeaderServices().get(partition).getCurrentDelegateService().orNull();
+            Service uncastDelegate = partitionedLeaderService.getPartitionLeaderServices().get(partition).getCurrentDelegateService().orElse(null);
             TestLeaderService delegate = uncastDelegate != null && uncastDelegate instanceof TestLeaderService ?
                     (TestLeaderService) uncastDelegate : null;
             if (delegate != null && delegate.inBody) {

@@ -71,7 +71,7 @@ public class LeaderServiceTask extends Task {
                 continue;
             }
 
-            Service actualService = leaderService.getCurrentDelegateService().orNull();
+            Service actualService = leaderService.getCurrentDelegateService().orElse(null);
             if (actualService == null || !actualService.isRunning()) {
                 out.printf("Process is not currently elected leader: %s%n", name);
                 continue;
@@ -79,7 +79,7 @@ public class LeaderServiceTask extends Task {
 
             _log.warn("Temporarily releasing leadership for process: {}", name);
             out.printf("Temporarily releasing leadership for process: %s, cluster will elect a new leader.%n", name);
-            actualService.stopAndWait();
+            actualService.stopAsync().awaitTerminated();
         }
 
         // The 'terminate' argument tells a server to give up leadership permanently (or until the server restarts).
@@ -92,7 +92,7 @@ public class LeaderServiceTask extends Task {
 
             _log.warn("Terminating leader process for: {}", name);
             out.printf("Terminating leader process for: %s. Restart the server to restart the leader process.%n", name);
-            leaderService.stopAndWait();
+            leaderService.stopAsync().awaitTerminated();
         }
 
         // Print current status.
