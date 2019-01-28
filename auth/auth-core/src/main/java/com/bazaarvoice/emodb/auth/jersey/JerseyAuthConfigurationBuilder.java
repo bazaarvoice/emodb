@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationTokenGenerator;
 import com.google.common.collect.ImmutableList;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 import org.apache.shiro.mgt.SecurityManager;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -13,7 +12,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * @{@link org.apache.shiro.authz.annotation.RequiresPermissions} annotations.  It is up to the caller to apply
  * the returned values to a Jersey server.
  */
- public class JerseyAuthConfigurationBuilder {
+public class JerseyAuthConfigurationBuilder {
 
     private JerseyAuthConfigurationBuilder() {
         // empty
@@ -28,9 +27,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
                         AuthenticationExceptionHandler.class,
                         AuthorizationExceptionHandler.class,
                         UnauthorizedExceptionMapper.class,
-                        new AuthenticatedSubjectProvider(securityManager)
+                        new AuthenticatedSubjectFeature(securityManager)
                 ),
-                ImmutableList.<ResourceFilterFactory>of(new AuthResourceFilterFactory(securityManager, tokenGenerator))
+                ImmutableList.of(new AuthDynamicFeature(securityManager, tokenGenerator))
         );
     }
 }
