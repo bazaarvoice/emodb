@@ -49,7 +49,7 @@ public class SubscriptionJsonTest {
     }
 
     @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl duration should be within 365 days .*")
-    public void testSubscriptionJsonWithEventTttGreaterThat365Days() throws Exception {
+    public void testSubscriptionJsonWithEventTtlGreaterThan365Days() throws Exception {
         Date now = new Date();
         String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());
 
