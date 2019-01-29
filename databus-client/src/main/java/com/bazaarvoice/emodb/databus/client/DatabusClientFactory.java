@@ -2,34 +2,18 @@ package com.bazaarvoice.emodb.databus.client;
 
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Predicates;
-import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
-import io.dropwizard.client.HttpClientBuilder;
-import io.dropwizard.client.HttpClientConfiguration;
-import io.dropwizard.jackson.Jackson;
-import io.dropwizard.jersey.jackson.JacksonMessageBodyProvider;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.util.Duration;
-import org.apache.http.client.HttpClient;
-
-import javax.validation.Validation;
-import javax.validation.ValidatorFactory;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
 
 public class DatabusClientFactory extends AbstractDatabusClientFactory {
 
-    private static ValidatorFactory _validatorFactory = Validation.buildDefaultValidatorFactory();
-
     public static DatabusClientFactory forCluster(String clusterName, MetricRegistry metricRegistry) {
-        HttpClientConfiguration httpClientConfiguration = new HttpClientConfiguration();
-        httpClientConfiguration.setKeepAlive(Duration.seconds(1));
-        return new DatabusClientFactory(clusterName, createDefaultJerseyClient(httpClientConfiguration, metricRegistry, getServiceName(clusterName)));
+        JerseyClientConfiguration jerseyClientConfiguration = new JerseyClientConfiguration();
+        jerseyClientConfiguration.setKeepAlive(Duration.seconds(1));
+        return new DatabusClientFactory(clusterName, createDefaultJerseyClient(jerseyClientConfiguration, metricRegistry, getServiceName(clusterName)));
     }
 
     /**
@@ -40,7 +24,7 @@ public class DatabusClientFactory extends AbstractDatabusClientFactory {
         return new DatabusClientFactory(clusterName, client);
     }
 
-    public static DatabusClientFactory forClusterAndHttpConfiguration(String clusterName, HttpClientConfiguration configuration, MetricRegistry metricRegistry) {
+    public static DatabusClientFactory forClusterAndHttpConfiguration(String clusterName, JerseyClientConfiguration configuration, MetricRegistry metricRegistry) {
         return new DatabusClientFactory(clusterName, createDefaultJerseyClient(configuration, metricRegistry, getServiceName(clusterName)));
     }
 
@@ -48,19 +32,15 @@ public class DatabusClientFactory extends AbstractDatabusClientFactory {
         super(clusterName, new JerseyEmoClient(jerseyClient));
     }
 
-    private static ApacheHttpClient4 createDefaultJerseyClient(HttpClientConfiguration configuration, MetricRegistry metricRegistry, String serviceName) {
-        HttpClient httpClient = new HttpClientBuilder(metricRegistry).using(configuration).build(serviceName);
-        ApacheHttpClient4Handler handler = new ApacheHttpClient4Handler(httpClient, null, true);
-        ApacheHttpClient4Config config = new DefaultApacheHttpClient4Config();
-        config.getSingletons().add(new JacksonMessageBodyProvider(Jackson.newObjectMapper(), _validatorFactory.getValidator()));
-        return new ApacheHttpClient4(handler, config);
+    private static Client createDefaultJerseyClient(JerseyClientConfiguration configuration, MetricRegistry metricRegistry, String serviceName) {
+        return new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
     }
 
     @Override
     public boolean isRetriableException(Exception e) {
+        // TODO: explore if the removal of ClientHandlerException is acceptable
         return super.isRetriableException(e) ||
-                (e instanceof UniformInterfaceException &&
-                ((UniformInterfaceException) e).getResponse().getStatus() >= 500) ||
-                Iterables.any(Throwables.getCausalChain(e), Predicates.instanceOf(ClientHandlerException.class));
+                (e instanceof WebApplicationException &&
+                        ((WebApplicationException) e).getResponse().getStatus() >= 500);
     }
 }
