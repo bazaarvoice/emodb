@@ -11,7 +11,6 @@ import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.metrics.ReporterFactory;
-import org.coursera.metrics.datadog.model.DatadogCounter;
 import org.coursera.metrics.datadog.model.DatadogGauge;
 import org.coursera.metrics.datadog.transport.AbstractTransportFactory;
 import org.coursera.metrics.datadog.transport.Transport;
@@ -84,16 +83,16 @@ public class DatadogMetricFilterTest {
         reporter.report();
 
         // Verify only the desired metrics were sent
-        verify(_request).addCounter(argThat(hasCounter("test.counter", 10)));
-        verify(_request).addCounter(argThat(hasCounter("test.histogram.count", 3)));
+        verify(_request).addGauge(argThat(hasGauge("test.counter", 10)));
+        verify(_request).addGauge(argThat(hasGauge("test.histogram.count", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.min", 1)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.max", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.p95", 3.0)));
-        verify(_request).addCounter(argThat(hasCounter("test.timer.count", 3)));
+        verify(_request).addGauge(argThat(hasGauge("test.timer.count", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.timer.min", 1000f)));
         verify(_request).addGauge(argThat(hasGauge("test.timer.max", 3000f)));
         verify(_request).addGauge(argThat(hasGauge("test.timer.p95", 3000f)));
-        verify(_request).addCounter(argThat(hasCounter("test.meter.count", 100)));
+        verify(_request).addGauge(argThat(hasGauge("test.meter.count", 100)));
         verify(_request).addGauge(argThat(hasGauge("test.gauge", 50)));
 
         // Send was called exactly once
@@ -127,10 +126,10 @@ public class DatadogMetricFilterTest {
         reporter.report();
 
         // Verify only the desired metrics were sent.  Notably min, max, and the nth percentiles should be absent.
-        verify(_request).addCounter(argThat(hasCounter("test.histogram.count", 3)));
+        verify(_request).addGauge(argThat(hasGauge("test.histogram.count", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.mean", 2)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.median", 2)));
-        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 1.0)));
+        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 0.816496580927726)));
 
         // Send was called exactly once
         verify(_request).send();
@@ -158,21 +157,6 @@ public class DatadogMetricFilterTest {
 
         // Build the reporter
         return datadogReporterFactory.build(_metricRegistry);
-    }
-
-    private Matcher<DatadogCounter> hasCounter(final String metricName, final Number value) {
-        return new BaseMatcher<DatadogCounter>() {
-            @Override
-            public boolean matches(Object item) {
-                DatadogCounter counter = (DatadogCounter) item;
-                return metricName.equals(counter.getMetric()) && value.floatValue() == counter.getPoints().get(0).get(1).floatValue();
-            }
-
-            @Override
-            public void describeTo(Description description) {
-                description.appendText("metric ").appendText(metricName).appendText(" has value ").appendValue(value);
-            }
-        };
     }
 
     private Matcher<DatadogGauge> hasGauge(final String metricName, final Number value) {

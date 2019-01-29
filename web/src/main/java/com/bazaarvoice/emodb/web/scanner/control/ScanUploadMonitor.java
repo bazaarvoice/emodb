@@ -16,9 +16,7 @@ import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Supplier;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -40,13 +38,8 @@ public class ScanUploadMonitor extends LeaderService {
                              final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                              MetricRegistry metricRegistry, @DelegateCompactionControl CompactionControlSource compactionControlSource, DataCenters dataCenters) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                new Supplier<Service>() {
-                    @Override
-                    public Service get() {
-                        return new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
-                                scanWriterGenerator, stashStateListener, scanCountListener, dataTools, compactionControlSource, dataCenters);
-                    }
-                });
+                () -> new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
+                        scanWriterGenerator, stashStateListener, scanCountListener, dataTools, compactionControlSource, dataCenters));
 
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);

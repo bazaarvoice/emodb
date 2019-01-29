@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.web.throttling;
 
-import com.sun.jersey.spi.container.ContainerRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 
 /**
- * Defines how throttling should be applied to a {@link ContainerRequest}.
+ * Defines how throttling should be applied to a {@link java.awt.Container}.
  */
 public interface ConcurrentRequestRegulator {
 
@@ -12,12 +12,12 @@ public interface ConcurrentRequestRegulator {
      * reflects that the throttle has been applied.  If the request is not throttled this method should return
      * normally to allow continued request processing.
      */
-    void throttle(ContainerRequest request);
+    void throttle(ContainerRequestContext request);
 
     /**
-     * Every request which was throttled by {@link #throttle(ContainerRequest)} must be followed by a subsequent call
+     * Every request which was throttled by {@link #throttle(ContainerRequestContext)} must be followed by a subsequent call
      * to this method once the request is complete.  If this method receives a request which was not throttled it
      * should return normally.
      */
-    void release(ContainerRequest request);
+    void release(ContainerRequestContext request);
 }
