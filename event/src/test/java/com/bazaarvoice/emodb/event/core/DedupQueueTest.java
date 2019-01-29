@@ -37,7 +37,7 @@ public class DedupQueueTest {
         DedupQueue q = new DedupQueue("test-queue", "read", "write",
                 mock(QueueDAO.class), eventStore, Suppliers.ofInstance(true), mock(ScheduledExecutorService.class), getPersistentSortedQueueFactory(),
                 mock(MetricRegistry.class));
-        q.startAndWait();
+        q.startAsync().awaitRunning();
 
         // The first poll checks the read channel, find it empty, checks the write channel.
         q.poll(Duration.ofSeconds(30), new SimpleEventSink(10));
@@ -60,7 +60,7 @@ public class DedupQueueTest {
         DedupQueue q = new DedupQueue("test-queue", "read", "write",
                 mock(QueueDAO.class), eventStore, Suppliers.ofInstance(true), mock(ScheduledExecutorService.class), getPersistentSortedQueueFactory(),
                 mock(MetricRegistry.class));
-        q.startAndWait();
+        q.startAsync().awaitRunning();
 
         // The first peek checks the read channel, find it empty, checks the write channel.
         q.peek(new SimpleEventSink(10));
