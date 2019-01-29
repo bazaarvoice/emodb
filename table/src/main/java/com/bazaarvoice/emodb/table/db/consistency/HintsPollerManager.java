@@ -96,12 +96,7 @@ public class HintsPollerManager implements Managed {
             String threadName = "Leader-HintsPoller-" + clusterName;
             LeaderService leaderService = new LeaderService(
                     curator, zkLeaderPath, serverId, threadName, 1, TimeUnit.MINUTES,
-                    new Supplier<Service>() {
-                        @Override
-                        public Service get() {
-                            return new HintsPollerService(clusterName, timestampCache.get(clusterName), session, clusterHintsPoller, metricRegistry);
-                        }
-                    });
+                    () -> new HintsPollerService(clusterName, timestampCache.get(clusterName), session, clusterHintsPoller, metricRegistry));
             ServiceFailureListener.listenTo(leaderService, metricRegistry);
             dropwizardTask.register("hints-" + clusterName, leaderService);
             _leaderServiceList.add(leaderService);
