@@ -11,8 +11,8 @@ public class TimeUUIDParam extends AbstractParam<UUID> {
     }
 
     @Override
-    protected String errorMessage(String input, Exception e) {
-        return "Invalid uuid parameter (must be a RFC 4122 version 1 time-based uuid): " + input;
+    protected String errorMessage(Exception e) {
+        return "Invalid uuid parameter (must be a RFC 4122 version 1 time-based uuid)";
     }
 
     @Override

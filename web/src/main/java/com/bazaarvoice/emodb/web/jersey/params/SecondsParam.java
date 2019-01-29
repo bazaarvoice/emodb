@@ -11,8 +11,8 @@ public class SecondsParam extends AbstractParam<Duration> {
     }
 
     @Override
-    protected String errorMessage(String input, Exception e) {
-        return '"' + input + "\" is not a number.";
+    protected String errorMessage(Exception e) {
+        return "Input is not a number.";
     }
 
     @Override

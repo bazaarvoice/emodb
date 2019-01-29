@@ -12,9 +12,9 @@ public class AuditParam extends AbstractParam<Audit> {
     }
 
     @Override
-    protected String errorMessage(String input, Exception e) {
+    protected String errorMessage(Exception e) {
         return "Invalid O-Rison parameter (as described at http://mjtemplate.org/examples/rison.html)" +
-                (Strings.isNullOrEmpty(e.getMessage()) ? "" : ", " + e.getMessage()) + ": " + input;
+                (Strings.isNullOrEmpty(e.getMessage()) ? "" : ", " + e.getMessage());
     }
 
     @Override

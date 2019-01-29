@@ -75,6 +75,7 @@ import com.google.inject.TypeLiteral;
 import io.dropwizard.Application;
 import io.dropwizard.configuration.ConfigurationException;
 import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.lifecycle.ServerLifecycleListener;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
@@ -467,7 +468,7 @@ public class EmoService extends Application<EmoConfiguration> {
             throws IOException, ConfigurationException {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
-        ConfigurationFactory<EmoConfiguration> configurationFactory = new ConfigurationFactory(EmoConfiguration.class, validator, mapper, "dw");
+        ConfigurationFactory<EmoConfiguration> configurationFactory = new YamlConfigurationFactory<>(EmoConfiguration.class, validator, mapper, "dw");
         return configurationFactory.build(configFile);
     }
 }
