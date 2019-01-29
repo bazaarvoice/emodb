@@ -13,13 +13,14 @@ import com.datastax.driver.core.ConsistencyLevel;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.TableMetadata;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.delete;
@@ -27,7 +28,6 @@ import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.insertInto;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.select;
 import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class CqlSubscriptionDAO implements SubscriptionDAO {
 
@@ -44,27 +44,36 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
 
     @Inject
     public CqlSubscriptionDAO(CassandraKeyspace keyspace, Clock clock) {
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _clock = checkNotNull(clock, "clock");
+        _keyspace = Objects.requireNonNull(keyspace, "keyspace");
+        _clock = Objects.requireNonNull(clock, "clock");
     }
 
     @Timed(name = "bv.emodb.databus.CqlSubscriptionDAO.insertSubscription", absolute = true)
     @Override
-    public void insertSubscription(String ownerId, String subscription, Condition tableFilter,
-                                   Duration subscriptionTtl, Duration eventTtl) {
-        Map<String, Object> json = ImmutableMap.<String, Object>builder()
-                .put("filter", tableFilter.toString())
-                .put("expiresAt", _clock.millis() + subscriptionTtl.toMillis())
-                .put("eventTtl", Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE))
-                .put("ownerId", ownerId)
-                .build();
+    public void insertSubscription(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
+        insertSubscription(new DefaultOwnedSubscription(
+                subscription,
+                tableFilter,
+                new Date(_clock.millis() + subscriptionTtl.toMillis()),
+                Duration.ofSeconds(Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE)),
+                ownerId)
+        );
+    }
+
+    private void insertSubscription(OwnedSubscription subscription) {
+        Map<String, Object> json = new HashMap<String, Object>() {{
+            put("filter", subscription.getTableFilter().toString());
+            put("expiresAt", subscription.getExpiresAt().getTime());
+            put("eventTtl", subscription.getEventTtl().getSeconds());
+            put("ownerId", subscription.getOwnerId());
+        }};
 
         _keyspace.getCqlSession().execute(
                 insertInto(CF_NAME)
                         .value(rowkeyColumn(), ROW_KEY)
-                        .value(subscriptionNameColumn(), subscription)
+                        .value(subscriptionNameColumn(), subscription.getName())
                         .value(subscriptionColumn(), JsonHelper.asJson(json))
-                        .using(ttl(Ttls.toSeconds(subscriptionTtl, 1, Integer.MAX_VALUE)))
+                        .using(ttl(Math.toIntExact(subscription.getEventTtl().getSeconds())))
                         .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
     }
 
@@ -114,9 +123,9 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
     private OwnedSubscription rowToOwnedSubscription(Row row) {
         String name = row.getString(0);
         Map<?, ?> json = JsonHelper.fromJson(row.getString(1), Map.class);
-        Condition tableFilter = Conditions.fromString((String) checkNotNull(json.get("filter"), "filter"));
-        Date expiresAt = new Date(((Number) checkNotNull(json.get("expiresAt"), "expiresAt")).longValue());
-        Duration eventTtl = Duration.ofSeconds(((Number) checkNotNull(json.get("eventTtl"), "eventTtl")).intValue());
+        Condition tableFilter = Conditions.fromString((String) Objects.requireNonNull(json.get("filter"), "filter"));
+        Date expiresAt = new Date(((Number) Objects.requireNonNull(json.get("expiresAt"), "expiresAt")).longValue());
+        Duration eventTtl = Duration.ofSeconds(((Number) Objects.requireNonNull(json.get("eventTtl"), "eventTtl")).intValue());
         // TODO:  Once API keys are fully integrated enforce non-null
         String ownerId = (String) json.get("ownerId");
         return new DefaultOwnedSubscription(name, tableFilter, expiresAt, eventTtl, ownerId);
