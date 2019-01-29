@@ -12,11 +12,11 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.google.common.collect.ImmutableMap;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.client.WebTarget;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.glassfish.jersey.client.ClientResponse;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -125,7 +125,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithMissingIdentity(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
@@ -145,7 +145,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testGetWithNonExistentIdentity(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
@@ -168,7 +168,7 @@ public class ResourcePermissionsTest {
         _authIdentityDAO.createIdentity("testkey", new ApiKeyModification().addRoles("testrole"));
         _permissionDAO.updatePermissions("testrole", new PermissionUpdateRequest().permit("country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
@@ -192,8 +192,8 @@ public class ResourcePermissionsTest {
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
-        assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        assertEquals(response.readEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
@@ -216,8 +216,8 @@ public class ResourcePermissionsTest {
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|*", "country|*|*"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
-        assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        assertEquals(response.readEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
@@ -240,7 +240,7 @@ public class ResourcePermissionsTest {
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|*|Portugal"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", "testkey");
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
@@ -264,8 +264,8 @@ public class ResourcePermissionsTest {
         _permissionDAO.updatePermissions(PermissionIDs.forRole("testrole"),
                 new PermissionUpdateRequest().permit("city|get|Pipe\\|Town", "country|get|Star\\*Nation"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Star*Nation", "Pipe|Town", "testkey");
-        assertEquals(response.getEntity(String.class), "Welcome to Pipe|Town, Star*Nation");
+        Response response = getCountryAndCity(permissionCheck, "Star*Nation", "Pipe|Town", "testkey");
+        assertEquals(response.readEntity(String.class), "Welcome to Pipe|Town, Star*Nation");
     }
 
     @Test
@@ -288,8 +288,8 @@ public class ResourcePermissionsTest {
         _permissionDAO.updatePermissions(PermissionIDs.forRole("anonrole"),
                 new PermissionUpdateRequest().permit("city|get|Madrid", "country|get|Spain"));
 
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
-        assertEquals(response.getEntity(String.class), "Welcome to Madrid, Spain");
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+        assertEquals(response.readEntity(String.class), "Welcome to Madrid, Spain");
     }
 
     @Test
@@ -308,7 +308,7 @@ public class ResourcePermissionsTest {
     }
 
     private void testAnonymousWithoutPermission(PermissionCheck permissionCheck) throws Exception {
-        ClientResponse response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
+        Response response = getCountryAndCity(permissionCheck, "Spain", "Madrid", null);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
@@ -317,13 +317,13 @@ public class ResourcePermissionsTest {
             PermissionCheck.PATH, "/path/country/%s/city/%s",
             PermissionCheck.QUERY, "/query/welcome?country=%s&city=%s");
 
-    private ClientResponse getCountryAndCity(PermissionCheck permissionCheck, String country, String city, String apiKey)
+    private Response getCountryAndCity(PermissionCheck permissionCheck, String country, String city, String apiKey)
             throws Exception {
         String uri = format(_uriFormatMap.get(permissionCheck), URLEncoder.encode(country, "UTF-8"), URLEncoder.encode(city, "UTF-8"));
-        WebResource resource = _resourceTestRule.client().resource(uri);
+        WebTarget resource = _resourceTestRule.client().target(uri);
         if (apiKey != null) {
-            return resource.header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get(ClientResponse.class);
+            return resource.request().header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get();
         }
-        return resource.get(ClientResponse.class);
+        return resource.request().get();
     }
 }

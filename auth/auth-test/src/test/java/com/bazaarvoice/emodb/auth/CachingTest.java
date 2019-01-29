@@ -21,10 +21,10 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.core.DefaultCacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.codahale.metrics.MetricRegistry;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.client.WebTarget;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
+import org.glassfish.jersey.client.ClientResponse;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -201,22 +201,22 @@ public class CachingTest {
     }
 
     private void testGetWithMatchingPermissions(String key, String country, String city) throws Exception {
-        ClientResponse response = getCountryAndCity(country, city, key);
+        Response response = getCountryAndCity(country, city, key);
         assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
-        assertEquals(response.getEntity(String.class), "Welcome to " + city + ", " + country);
+        assertEquals(response.readEntity(String.class), "Welcome to " + city + ", " + country);
     }
 
     private void testGetWithMissingPermissions(String key, String country, String city) throws Exception {
-        ClientResponse response = getCountryAndCity(country, city, key);
+        Response response = getCountryAndCity(country, city, key);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
-    private ClientResponse getCountryAndCity(String country, String city, String apiKey) {
+    private Response getCountryAndCity(String country, String city, String apiKey) {
         String uri = format("/explicit/country/%s/city/%s", country, city);
-        WebResource resource = _resourceTestRule.client().resource(uri);
+        WebTarget resource = _resourceTestRule.client().target(uri);
         if (apiKey != null) {
-            return resource.header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get(ClientResponse.class);
+            return resource.request().header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get();
         }
-        return resource.get(ClientResponse.class);
+        return resource.request().get();
     }
 }

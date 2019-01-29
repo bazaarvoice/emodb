@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 
 /**
  * SOA factory for Jersey clients to use Compaction control resources.
