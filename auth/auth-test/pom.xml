@@ -53,12 +53,12 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.auth</groupId>
-            <artifactId>jersey-hmac-auth-client</artifactId>
-            <version>0.13</version>
+            <artifactId>jersey-hmac-auth-client2</artifactId>
+            <version>1.0</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
-                    <groupId>com.sun.jersey</groupId>
+                    <groupId>org.glassfish.jersey.core</groupId>
                     <artifactId>jersey-client</artifactId>
                 </exclusion>
             </exclusions>

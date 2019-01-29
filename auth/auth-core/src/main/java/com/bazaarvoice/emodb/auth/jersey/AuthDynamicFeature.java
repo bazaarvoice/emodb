@@ -36,14 +36,14 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * \@Path ("resource/{id}")
  * \@RequiresPermissions("resource|get|{id}")
  * \@GET
- * public ClientResponse get(@PathParam("id") String id) {
+ * public Response get(@PathParam("id") String id) {
  *     ...
  * }
  *
  * \@Path ("resource/transfer")
  * \@RequiresPermissions({"resource|update|{?from}", "resource|update|{?to}"})
  * \@POST
- * public ClientResponse transfer(@QueryParam("from") String from, @QueryParam("to") to) {
+ * public Response transfer(@QueryParam("from") String from, @QueryParam("to") to) {
  *     ...
  * }
  * </code>
