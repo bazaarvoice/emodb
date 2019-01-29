@@ -30,9 +30,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.io.InputSupplier;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.function.Supplier;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 
@@ -480,7 +480,7 @@ public class BlobStoreClient implements AuthBlobStore {
     }
 
     @Override
-    public void put(String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in,
+    public void put(String apiKey, String table, String blobId, Supplier<? extends InputStream> in,
                     Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
         checkNotNull(table, "table");
@@ -502,7 +502,7 @@ public class BlobStoreClient implements AuthBlobStore {
             // Upload the object
             request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.getInput());
+                    .put(in.get());
         } catch (EmoClientException e) {
             throw convertException(e);
         }
