@@ -140,7 +140,7 @@ public class EmoService extends Application<EmoConfiguration> {
         Namespace result = parser.parseArgs(first3Args);
 
         // Remove config-ddl arg
-        new EmoService(result.getString("config-ddl"), new File(result.getString("emo-config")))
+        new EmoService(result.getString("config_ddl"), new File(result.getString("emo_config")))
                 .run((String[]) ArrayUtils.remove(args, 2));
     }
 
@@ -198,7 +198,7 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Configure support for streaming JSON responses without long delays due to buffering
         //noinspection unchecked
-        environment.jersey().getResourceConfig().register(new UnbufferedStreamDynamicFeature());
+        environment.jersey().getResourceConfig().register(UnbufferedStreamDynamicFeature.class);
         environment.getApplicationContext().addFilter(new FilterHolder(new UnbufferedStreamFilter()), "/*", EnumSet.of(DispatcherType.REQUEST));
 
         // Create all the major EmoDB components using Guice.  Note: This code is organized such that almost all

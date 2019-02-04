@@ -19,12 +19,10 @@ public class DatabusConfiguration {
     private CassandraConfiguration _cassandraConfiguration;
 
     @Valid
-    @NotNull
     @JsonProperty("longPollKeepAliveThreadCount")
     private Optional<Integer> _longPollKeepAliveThreadCount = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty("longPollPollingThreadCount")
     private Optional<Integer> _longPollPollingThreadCount = Optional.absent();
 

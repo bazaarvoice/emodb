@@ -310,7 +310,7 @@ public class EmoStartMojo extends AbstractEmoMojo {
                         .queryParam("APIKey", adminApiKey)
                         .request()
                         .post(Entity.entity(JsonHelper.asJson(entity),
-                                new MediaType("application", "x.json-create-api-key")), String.class);
+                                new MediaType("application", "x.json-create-role")), String.class);
 
                 getLog().info("Response to create role " + name);
                 getLog().info(response);

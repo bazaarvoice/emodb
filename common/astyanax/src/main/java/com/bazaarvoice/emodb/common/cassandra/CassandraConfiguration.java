@@ -338,10 +338,13 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
             _loadBalancingPolicy = Objects.firstNonNull(_loadBalancingPolicy, Policies.defaultLoadBalancingPolicy());
             _retryPolicy = Objects.firstNonNull(_retryPolicy, Policies.defaultRetryPolicy());
 
+            //TODO: find a way to add jmx reporting back that is compatible with current client version
+
             com.datastax.driver.core.Cluster cluster = newCqlDriverBuilder(poolConfig, _metricRegistry)
                     .withClusterName(_cluster)
                     .withLoadBalancingPolicy(_loadBalancingPolicy)
                     .withRetryPolicy(_retryPolicy)
+                    .withoutJMXReporting()
                     .build();
 
             if (_disableClusterMetrics) {
