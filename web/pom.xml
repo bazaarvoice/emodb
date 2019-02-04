@@ -16,7 +16,7 @@
     <name>EmoDB RESTful Web Server</name>
 
     <properties>
-        <swagger.version>1.5.8</swagger.version>
+        <swagger.version>1.5.21</swagger.version>
     </properties>
 
     <dependencies>
@@ -217,9 +217,20 @@
             <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.10</version>
+        </dependency>
+        <dependency>
             <groupId>io.swagger</groupId>
             <artifactId>swagger-jaxrs</artifactId>
             <version>${swagger.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.reflections</groupId>
+                    <artifactId>reflections</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Test dependencies -->

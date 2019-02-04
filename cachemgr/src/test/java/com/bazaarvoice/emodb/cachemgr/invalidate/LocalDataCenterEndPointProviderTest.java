@@ -41,6 +41,7 @@ public class LocalDataCenterEndPointProviderTest {
 
     @BeforeMethod
     private void setup() throws Exception {
+        System.setProperty("zookeeper.admin.enableServer", "false");
         _zooKeeperServer = new TestingServer();
         _curator = CuratorFrameworkFactory.newClient(_zooKeeperServer.getConnectString(),
                 new BoundedExponentialBackoffRetry(100, 1000, 5));

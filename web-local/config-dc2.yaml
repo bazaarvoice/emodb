@@ -222,5 +222,5 @@ httpClient:
 logging:
   level: INFO
   loggers:
-    "org.apache.zookeeper": OFF
+    "org.apache.zookeeper": "OFF"
     "org.apache.curator": WARN

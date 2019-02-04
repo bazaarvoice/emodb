@@ -27,7 +27,6 @@ public class ScannerConfiguration {
 
     // If using EmoDB queues, the API key to use
     @Valid
-    @NotNull
     @JsonProperty ("scannerApiKey")
     private Optional<String> _scannerApiKey = Optional.absent();
 
@@ -63,13 +62,11 @@ public class ScannerConfiguration {
 
     // Optional URI for the S3 proxy host
     @Valid
-    @NotNull
     @JsonProperty ("s3Proxy")
     private Optional<String> _s3Proxy = Optional.absent();
 
     // If using S3, optionally assume the provided role
     @Valid
-    @NotNull
     @JsonProperty ("s3AssumeRole")
     private Optional<String> _s3AssumeRole = Optional.absent();
     @Valid
@@ -83,12 +80,10 @@ public class ScannerConfiguration {
     private Map<String, ScheduledScanConfiguration> _scheduledScans = Maps.newHashMap();
 
     @Valid
-    @NotNull
     @JsonProperty ("pendingScanRangeQueueName")
     private Optional<String> _pendingScanRangeQueueName = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty ("completeScanRangeQueueName")
     private Optional<String> _completeScanRangeQueueName = Optional.absent();
 
