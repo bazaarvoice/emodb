@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.RowGroupResultSetIterator;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -282,8 +283,8 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
      * each row in rows.
      */
     private Record newRecordFromCql(Key key, Iterable<Row> rows) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(rows.iterator());
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(rows.iterator());
+        Iterator<Map.Entry<DeltaClusteringKey, Change>> changeIter = decodeChangesFromCql(rows.iterator());
+        Iterator<Map.Entry<DeltaClusteringKey, Compaction>> compactionIter = decodeCompactionsFromCql(rows.iterator());
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(rows.iterator());
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
@@ -292,23 +293,23 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     /**
      * Converts a list of rows into Change instances.
      */
-    private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
+    private Iterator<Map.Entry<DeltaClusteringKey, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
+                Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row)), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
     }
 
     /**
      * Like {@link #decodeChangesFromCql(java.util.Iterator)} except filtered to only include compactions.
      */
-    private Iterator<Map.Entry<UUID, Compaction>> decodeCompactionsFromCql(final Iterator<Row> iter) {
-        return new AbstractIterator<Map.Entry<UUID, Compaction>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Compaction>> decodeCompactionsFromCql(final Iterator<Row> iter) {
+        return new AbstractIterator<Map.Entry<DeltaClusteringKey, Compaction>>() {
             @Override
-            protected Map.Entry<UUID, Compaction> computeNext() {
+            protected Map.Entry<DeltaClusteringKey, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Row row = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(getValue(row));
                     if (compaction != null) {
-                        return Maps.immutableEntry(getChangeId(row), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row)), compaction);
                     }
                 }
                 return endOfData();
@@ -901,9 +902,9 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
      */
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
-                Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
-                Iterators.<RecordEntryRawMetadata>emptyIterator());
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator());
     }
 
     @VisibleForTesting

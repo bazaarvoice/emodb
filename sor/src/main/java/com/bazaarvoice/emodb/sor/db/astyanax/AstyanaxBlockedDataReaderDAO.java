@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -1239,8 +1240,8 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
                     getFilteredColumnIter(columnScan(rowKey, placement, columnFamily, lastColumn, null, false, _deltaKeyInc, Long.MAX_VALUE, 1, consistency), cutoffTime));
         }
 
-        Iterator<Map.Entry<UUID, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
-        Iterator<Map.Entry<UUID, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
+        Iterator<Map.Entry<DeltaClusteringKey, Change>> deltaChangeIter = decodeChanges(new AstyanaxDeltaIterator(changeIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
+        Iterator<Map.Entry<DeltaClusteringKey, Compaction>> deltaCompactionIter = decodeCompactions(new AstyanaxDeltaIterator(compactionIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
         Iterator<RecordEntryRawMetadata> deltaRawMetadataIter = rawMetadata(new AstyanaxDeltaIterator(rawMetadataIter, false, _deltaPrefixLength, ByteBufferUtil.bytesToHex((rowKey))));
 
         return new RecordImpl(key, deltaCompactionIter, deltaChangeIter, deltaRawMetadataIter);
@@ -1248,38 +1249,38 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
 
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
-                Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
-                Iterators.<RecordEntryRawMetadata>emptyIterator());
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator());
     }
 
     private Iterator<Change> decodeColumns(Iterator<Column<UUID>> iter) {
         return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue()));
     }
 
-    private Iterator<Change> decodeDeltaColumns(Iterator<Column<UUID>> iter) {
+    private Iterator<Change> decodeDeltaColumns(Iterator<StitchedColumn> iter) {
         return Iterators.transform(iter, column -> _changeEncoder.decodeChange(column.getName(), _daoUtils.skipPrefix(column.getByteBufferValue())));
     }
 
-    private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Change>> decodeChanges(final Iterator<StitchedColumn> iter) {
+        return Iterators.transform(iter, new Function<StitchedColumn, Map.Entry<DeltaClusteringKey, Change>>() {
             @Override
-            public Map.Entry<UUID, Change> apply(Column<UUID> column) {
+            public Map.Entry<DeltaClusteringKey, Change> apply(StitchedColumn column) {
                 Change change = _changeEncoder.decodeChange(column.getName(), _daoUtils.skipPrefix(column.getByteBufferValue()));
-                return Maps.immutableEntry(column.getName(), change);
+                return Maps.immutableEntry(new DeltaClusteringKey(column.getName(), column.getNumBlocks()), change);
             }
         });
     }
 
-    private Iterator<Map.Entry<UUID, Compaction>> decodeCompactions(final Iterator<Column<UUID>> iter) {
-        return new AbstractIterator<Map.Entry<UUID, Compaction>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Compaction>> decodeCompactions(final Iterator<StitchedColumn> iter) {
+        return new AbstractIterator<Map.Entry<DeltaClusteringKey, Compaction>>() {
             @Override
-            protected Map.Entry<UUID, Compaction> computeNext() {
+            protected Map.Entry<DeltaClusteringKey, Compaction> computeNext() {
                 while (iter.hasNext()) {
-                    Column<UUID> column = iter.next();
+                    StitchedColumn column = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.skipPrefix(column.getByteBufferValue()));
                     if (compaction != null) {
-                        return Maps.immutableEntry(column.getName(), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(column.getName(), column.getNumBlocks()), compaction);
                     }
                 }
                 return endOfData();
@@ -1287,7 +1288,7 @@ public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyDAO,
         };
     }
 
-    private Iterator<RecordEntryRawMetadata> rawMetadata(final Iterator<Column<UUID>> iter) {
+    private Iterator<RecordEntryRawMetadata> rawMetadata(final Iterator<StitchedColumn> iter) {
         return Iterators.transform(iter, new Function<Column<UUID>, RecordEntryRawMetadata>() {
             @Override
             public RecordEntryRawMetadata apply(Column<UUID> column) {

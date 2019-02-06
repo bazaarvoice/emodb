@@ -21,6 +21,7 @@ import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryMapStore;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
@@ -260,15 +261,15 @@ public class RedundantDeltaTest {
         assertTrue(legacyCompaction.getLastTags().isEmpty(), "Legacy compaction should have empty last tags");
 
         UUID uuid0 = TimeUUIDs.newUUID();
-        final List<Map.Entry<UUID, Compaction>> compactions = ImmutableList.of(
-                Maps.immutableEntry(uuid0, legacyCompaction));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(uuid0, 1), legacyCompaction));
         UUID uuid1 = TimeUUIDs.newUUID();
-        final List<Map.Entry<UUID,Change>> deltas = ImmutableList.of(
-                Maps.immutableEntry(uuid0, ChangeBuilder.just(uuid0, legacyCompaction)),
-                Maps.immutableEntry(uuid1, ChangeBuilder.just(uuid1, Deltas.fromString("{..,\"name\":\"Bob\"}")))); // uuid1 is redundant
-        final List<Map.Entry<UUID,Change>> deltas2 = ImmutableList.of(
-                Maps.immutableEntry(uuid0, ChangeBuilder.just(uuid0, legacyCompaction)),
-                Maps.immutableEntry(uuid1, ChangeBuilder.just(uuid1,
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(uuid0, 1), ChangeBuilder.just(uuid0, legacyCompaction)),
+                Maps.immutableEntry(new DeltaClusteringKey(uuid1, 1), ChangeBuilder.just(uuid1, Deltas.fromString("{..,\"name\":\"Bob\"}")))); // uuid1 is redundant
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(uuid0, 1),ChangeBuilder.just(uuid0, legacyCompaction)),
+                Maps.immutableEntry(new DeltaClusteringKey(uuid1, 1), ChangeBuilder.just(uuid1,
                         Deltas.fromString("{..,\"name\":\"Bob\", \"~tags\":[\"tag0\"]}"), ImmutableSet.of("tag0")))); // uuid1 is different
 
         Key key = mock(Key.class);
@@ -310,15 +311,15 @@ public class RedundantDeltaTest {
         dataDao.setFullConsistencyTimestamp(1408977300000L);
 
         // Create an update where there are no redundant deltas
-        UUID unique0 = TimeUUIDs.uuidForTimeMillis(1408977310000L);
-        UUID unique1 = TimeUUIDs.uuidForTimeMillis(1408977320000L);
-        UUID unique2 = TimeUUIDs.uuidForTimeMillis(1408977330000L);
-        UUID unique3 = TimeUUIDs.uuidForTimeMillis(1408977340000L);
+        DeltaClusteringKey unique0 = new DeltaClusteringKey(TimeUUIDs.uuidForTimeMillis(1408977310000L), 1);
+        DeltaClusteringKey unique1 = new DeltaClusteringKey(TimeUUIDs.uuidForTimeMillis(1408977320000L), 1);
+        DeltaClusteringKey unique2 = new DeltaClusteringKey(TimeUUIDs.uuidForTimeMillis(1408977330000L), 1);
+        DeltaClusteringKey unique3 = new DeltaClusteringKey(TimeUUIDs.uuidForTimeMillis(1408977340000L), 1);
 
-        store.update(TABLE, KEY, unique0, Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
-        store.update(TABLE, KEY, unique1, Deltas.fromString("{\"name\":\"Carol\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
-        store.update(TABLE, KEY, unique2, Deltas.fromString("{\"name\":\"Ted\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
-        store.update(TABLE, KEY, unique3, Deltas.fromString("{\"name\":\"Alice\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
+        store.update(TABLE, KEY, unique0.getChangeId(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        store.update(TABLE, KEY, unique1.getChangeId(), Deltas.fromString("{\"name\":\"Carol\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
+        store.update(TABLE, KEY, unique2.getChangeId(), Deltas.fromString("{\"name\":\"Ted\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
+        store.update(TABLE, KEY, unique3.getChangeId(), Deltas.fromString("{\"name\":\"Alice\"}"), newAudit("resubmit"), WriteConsistency.STRONG);
 
         // Set the full consistency timestamp such that no compaction will take place
         dataDao.setFullConsistencyTimestamp(1408977300000L);
@@ -326,23 +327,23 @@ public class RedundantDeltaTest {
 
         Record record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
         assertFalse(record.passOneIterator().hasNext());
-        assertEquals(ImmutableList.of(unique0, unique1, unique2, unique3), toChangeIds(record.passTwoIterator()));
+        assertEquals(ImmutableList.of(unique0, unique1, unique2, unique3), toClusteringKeys(record.passTwoIterator()));
 
         // Set the full consistency timestamp so that only the first records are compacted
         dataDao.setFullConsistencyTimestamp(1408977325000L);
         store.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
-        Map.Entry<UUID, Compaction> compactionEntry = Iterators.getOnlyElement(record.passOneIterator());
+        Map.Entry<DeltaClusteringKey, Compaction> compactionEntry = Iterators.getOnlyElement(record.passOneIterator());
         Compaction compaction = compactionEntry.getValue();
-        assertEquals(unique0, compaction.getFirst());
-        assertEquals(unique1, compaction.getCutoff());
-        assertEquals(unique1, compaction.getLastMutation());
+        assertEquals(unique0.getChangeId(), compaction.getFirst());
+        assertEquals(unique1.getChangeId(), compaction.getCutoff());
+        assertEquals(unique1.getChangeId(), compaction.getLastMutation());
         // Deltas will not get deleted since compaction is still out of FCT. For this test, we don't need the deltas to be deleted.
-        assertEquals(toChangeIds(record.passTwoIterator()), ImmutableList.of(unique0, unique1, unique2, unique3, compactionEntry.getKey()));
+        assertEquals(toClusteringKeys(record.passTwoIterator()), ImmutableList.of(unique0, unique1, unique2, unique3, compactionEntry.getKey()));
 
         // Repeat again such that all deltas are compacted
-        dataDao.setFullConsistencyTimestamp(TimeUUIDs.getTimeMillis(TimeUUIDs.getNext(compactionEntry.getKey())) + 2000L);
+        dataDao.setFullConsistencyTimestamp(TimeUUIDs.getTimeMillis(TimeUUIDs.getNext(compactionEntry.getKey().getChangeId())) + 2000L);
         store.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
@@ -351,16 +352,16 @@ public class RedundantDeltaTest {
         int numOfCompactions = Iterators.advance(record.passOneIterator(), 10);
         assertEquals(numOfCompactions, 2, "Expect 2 compactions. The more recent is the effective one, " +
                 "but we defer the owned compaction until later");
-        UUID oldCompactionKey = compactionEntry.getKey();
+        DeltaClusteringKey oldCompactionKey = compactionEntry.getKey();
         record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
 
-        Map.Entry<UUID, Compaction> latestCompactionEntry = Iterators.getOnlyElement(
+        Map.Entry<DeltaClusteringKey, Compaction> latestCompactionEntry = Iterators.getOnlyElement(
                 Iterators.filter(record.passOneIterator(), input -> !input.getKey().equals(oldCompactionKey)));
         compaction = latestCompactionEntry.getValue();
-        assertEquals(unique0, compaction.getFirst());
-        assertEquals(unique3, compaction.getCutoff());
-        assertEquals(unique3, compaction.getLastMutation());
-        assertEquals(toChangeIds(record.passTwoIterator()), ImmutableList.of(unique2, unique3, oldCompactionKey, latestCompactionEntry.getKey()),
+        assertEquals(unique0.getChangeId(), compaction.getFirst());
+        assertEquals(unique3.getChangeId(), compaction.getCutoff());
+        assertEquals(unique3.getChangeId(), compaction.getLastMutation());
+        assertEquals(toClusteringKeys(record.passTwoIterator()), ImmutableList.of(unique2, unique3, oldCompactionKey, latestCompactionEntry.getKey()),
                 "Expecting unique2, and unique3 deltas");
     }
 
@@ -409,12 +410,12 @@ public class RedundantDeltaTest {
         store.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
-        Map.Entry<UUID, Compaction> compactionEntry = Iterators.getOnlyElement(record.passOneIterator());
+        Map.Entry<DeltaClusteringKey, Compaction> compactionEntry = Iterators.getOnlyElement(record.passOneIterator());
         Compaction compaction = compactionEntry.getValue();
         assertEquals(unique0, compaction.getFirst());
         assertEquals(redund1, compaction.getCutoff());
         assertEquals(unique1, compaction.getLastMutation());
-        assertEquals(ImmutableList.of(unique0, unique1, redund0, redund1, redund2, redund3, compactionEntry.getKey()), toChangeIds(record.passTwoIterator()));
+        assertEquals(ImmutableList.of(unique0, unique1, redund0, redund1, redund2, redund3, compactionEntry.getKey().getChangeId()), toChangeIds(record.passTwoIterator()));
 
         assertRedundantDelta(store, TABLE, KEY, redund0);
         assertRedundantDelta(store, TABLE, KEY, redund1);
@@ -422,7 +423,7 @@ public class RedundantDeltaTest {
         assertRedundantDelta(store, TABLE, KEY, redund3);
 
         // Repeat again such that all deltas are compacted
-        dataDao.setFullConsistencyTimestamp(TimeUUIDs.getTimeMillis(TimeUUIDs.getNext(compactionEntry.getKey())) + 2000L);
+        dataDao.setFullConsistencyTimestamp(TimeUUIDs.getTimeMillis(TimeUUIDs.getNext(compactionEntry.getKey().getChangeId())) + 2000L);
         store.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         record = dataDao.read(new Key(table, KEY), ReadConsistency.STRONG);
@@ -431,14 +432,14 @@ public class RedundantDeltaTest {
         int numOfCompactions = Iterators.advance(record.passOneIterator(), 10);
         assertEquals(numOfCompactions, 2, "Expect 2 compactions. The more recent is the effective one, " +
                 "but we defer the owned compaction until later");
-        UUID oldCompactionKey = compactionEntry.getKey();
-        Map.Entry<UUID, Compaction> latestCompactionEntry = Iterators.getOnlyElement(
-                Iterators.filter(record.passOneIterator(), input -> !input.getKey().equals(oldCompactionKey)));
+        UUID oldCompactionKey = compactionEntry.getKey().getChangeId();
+        Map.Entry<DeltaClusteringKey, Compaction> latestCompactionEntry = Iterators.getOnlyElement(
+                Iterators.filter(record.passOneIterator(), input -> !input.getKey().getChangeId().equals(oldCompactionKey)));
         compaction = latestCompactionEntry.getValue();
         assertEquals(unique0, compaction.getFirst());
         assertEquals(redund3, compaction.getCutoff());
         assertEquals(unique1, compaction.getLastMutation());
-        assertEquals(ImmutableList.of(redund2, redund3, oldCompactionKey, latestCompactionEntry.getKey()), toChangeIds(record.passTwoIterator()));
+        assertEquals(ImmutableList.of(redund2, redund3, oldCompactionKey, latestCompactionEntry.getKey().getChangeId()), toChangeIds(record.passTwoIterator()));
 
         assertRedundantDelta(store, TABLE, KEY, redund0);
         assertRedundantDelta(store, TABLE, KEY, redund1);
@@ -480,7 +481,12 @@ public class RedundantDeltaTest {
                 build();
     }
 
-    private List<UUID> toChangeIds(Iterator<Map.Entry<UUID, Change>> iterator) {
+    private List<UUID> toChangeIds(Iterator<Map.Entry<DeltaClusteringKey, Change>> iterator) {
+        return ImmutableList.copyOf(
+                Iterators.transform(iterator, entry -> entry.getKey().getChangeId()));
+    }
+
+    private List<DeltaClusteringKey> toClusteringKeys(Iterator<Map.Entry<DeltaClusteringKey, Change>> iterator) {
         return ImmutableList.copyOf(
                 Iterators.transform(iterator, entry -> entry.getKey()));
     }

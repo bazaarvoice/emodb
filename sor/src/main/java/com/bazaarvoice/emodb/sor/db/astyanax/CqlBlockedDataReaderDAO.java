@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.*;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -249,8 +250,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         ProtocolVersion protocolVersion = session.getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
         CodecRegistry codecRegistry = session.getCluster().getConfiguration().getCodecRegistry();
 
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
+        Iterator<Map.Entry<DeltaClusteringKey, Change>> changeIter = decodeChangesFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
+        Iterator<Map.Entry<DeltaClusteringKey, Compaction>> compactionIter = decodeCompactionsFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadataFromCql(new CqlDeltaIterator(rows.iterator(), BLOCK_RESULT_SET_COLUMN, CHANGE_ID_RESULT_SET_COLUMN, VALUE_RESULT_SET_COLUMN, false, _deltaPrefixLength, protocolVersion, codecRegistry, rowKey));
 
         return new RecordImpl(key, compactionIter, changeIter, rawMetadataIter);
@@ -259,23 +260,23 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     /**
      * Converts a list of rows into Change instances.
      */
-    private Iterator<Map.Entry<UUID, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
+    private Iterator<Map.Entry<DeltaClusteringKey, Change>> decodeChangesFromCql(final Iterator<StitchedRow> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(getChangeId(row), _changeEncoder.decodeChange(getChangeId(row), _daoUtils.skipPrefix(getValue(row)))));
+                Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row), row.getNumBlocks()), _changeEncoder.decodeChange(getChangeId(row), _daoUtils.skipPrefix(getValue(row)))));
     }
 
     /**
      * Like {@link #decodeChangesFromCql(java.util.Iterator)} except filtered to only include compactions.
      */
-    private Iterator<Map.Entry<UUID, Compaction>> decodeCompactionsFromCql(final Iterator<Row> iter) {
-        return new AbstractIterator<Map.Entry<UUID, Compaction>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Compaction>> decodeCompactionsFromCql(final Iterator<StitchedRow> iter) {
+        return new AbstractIterator<Map.Entry<DeltaClusteringKey, Compaction>>() {
             @Override
-            protected Map.Entry<UUID, Compaction> computeNext() {
+            protected Map.Entry<DeltaClusteringKey, Compaction> computeNext() {
                 while (iter.hasNext()) {
-                    Row row = iter.next();
+                    StitchedRow row = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(_daoUtils.skipPrefix(getValue(row)));
                     if (compaction != null) {
-                        return Maps.immutableEntry(getChangeId(row), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row),row.getNumBlocks()), compaction);
                     }
                 }
                 return endOfData();
@@ -286,7 +287,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     /**
      * Converts the rows from the provided iterator into raw metadata.
      */
-    private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<Row> iter) {
+    private Iterator<RecordEntryRawMetadata> rawMetadataFromCql(final Iterator<StitchedRow> iter) {
         return Iterators.transform(iter, row -> new RecordEntryRawMetadata()
                 .withTimestamp(TimeUUIDs.getTimeMillis(getChangeId(row)))
                 .withSize(_daoUtils.skipPrefix(getValue(row)).remaining()));
@@ -823,7 +824,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), getValue(row)));
     }
 
-    private Iterator<Change> decodeDeltaColumns(Iterator<Row> iter) {
+    private Iterator<Change> decodeDeltaColumns(Iterator<StitchedRow> iter) {
         return Iterators.transform(iter, row -> _changeEncoder.decodeChange(getChangeId(row), _daoUtils.skipPrefix(getValue(row))));
     }
 
@@ -892,9 +893,9 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
      */
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
-                Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
-                Iterators.<RecordEntryRawMetadata>emptyIterator());
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator());
     }
 
     @VisibleForTesting

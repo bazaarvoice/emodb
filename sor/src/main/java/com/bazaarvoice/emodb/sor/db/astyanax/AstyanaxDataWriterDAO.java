@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Literal;
 import com.bazaarvoice.emodb.sor.delta.MapDelta;
@@ -308,7 +309,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     @Timed(name = "bv.emodb.sor.AstyanaxDataWriterDAO.compact", absolute = true)
     @Override
     public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId,
-                        Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                        Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         // delegate to CQL Writer for double compaction writing
         _cqlWriterDAO.compact(tbl, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);
     }

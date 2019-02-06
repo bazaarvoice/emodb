@@ -35,9 +35,10 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     }
 
     // stitch delta together in reverse
-    private ByteBuffer reverseCompute() {
+    private BlockedDelta reverseCompute() {
         int contentSize = getValue(_next).remaining();
         UUID correctChangeId = getChangeId(_next);
+        int numBlocks = 1;
 
         if (_list == null) {
             _list = Lists.newArrayListWithCapacity(3);
@@ -49,6 +50,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
         _oldDelta = _next;
 
         while (_iterator.hasNext() && getChangeId(_next = _iterator.next()).equals(correctChangeId)) {
+            numBlocks++;
             _list.add(_next);
             contentSize += getValue(_next).remaining();
             _next = null;
@@ -64,18 +66,18 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
             return null;
         }
 
-        int numBlocks = getNumBlocks(_list.get(0));
+        int expectedBlocks = getNumBlocks(_list.get(0));
 
-        while (numBlocks != _list.size()) {
+        while (expectedBlocks != _list.size()) {
             contentSize -= getValue(_list.remove(_list.size() - 1)).remaining();
         }
 
-        return stitchContent(contentSize);
+        return new BlockedDelta(numBlocks, stitchContent(contentSize));
 
     }
 
     // stitch delta together and return it as one bytebuffer
-    private ByteBuffer compute(int numBlocks) {
+    private BlockedDelta compute(int numBlocks) {
 
         int contentSize = getValue(_next).remaining();
         _oldDelta = _next;
@@ -107,9 +109,9 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
             }
         }
 
-        skipForward();
+        numBlocks += skipForward();
 
-        return stitchContent(contentSize);
+        return new BlockedDelta(numBlocks, stitchContent(contentSize));
     }
 
     @Override
@@ -128,46 +130,58 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
                 return endOfData();
             }
 
-            ByteBuffer content;
+            BlockedDelta blockedDelta;
 
             if (!_reverse) {
+
+                // Ensure that the block we are looking at is truly the first block in the sequence. It not,
+                // we should skip over it.
+                // TODO: add a metric here so that we know if this is happening. The only case where this should be
+                // permissable is when a delta is overwritten by another with the same changeid. Ideally, we will rid
+                // ourselves of this possiblility entirely, and fail the request if the condition below is ever satisfied
+                if (getBlock(_next) != 0) {
+                    skipForward();
+                }
 
                 int numBlocks = getNumBlocks(_next);
 
                 if (numBlocks == 1) {
-                    T ret = convertDelta(_next);
-                    skipForward();
-                    return ret;
+                    R delta = _next;
+                    numBlocks += skipForward();
+                    return convertDelta(delta, new BlockedDelta(numBlocks, getValue(delta)));
                 }
 
-                content = compute(numBlocks);
+                blockedDelta = compute(numBlocks);
 
             } else {
                 if (getBlock(_next) == 0) {
                     if (getNumBlocks(_next) != 1) {
                         continue;
                     }
-                    T ret = convertDelta(_next);
+                    T ret = convertDelta(_next, new BlockedDelta(1, getValue(_next)));
                     _next = _iterator.hasNext() ? _iterator.next() : null;
                     return ret;
                 }
 
-                content = reverseCompute();
+                blockedDelta = reverseCompute();
             }
 
-            if (content != null) {
-                return convertDelta(_oldDelta, content);
+            if (blockedDelta != null) {
+                return convertDelta(_oldDelta, blockedDelta);
             }
 
         }
     }
 
     // This handles the edge case in which a client has explicity specified a changeId when writing and overwrote an exisiting delta.
-    private void skipForward() {
+    private int skipForward() {
+        int numSkips = 0;
         _next = null;
         while (_iterator.hasNext() && getBlock(_next = _iterator.next()) != 0) {
+            numSkips++;
             _next = null;
         }
+        return numSkips;
     }
 
     // converts utf-8 encoded hex to int by building it digit by digit.
@@ -194,11 +208,26 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
         return content;
     }
 
-    // transforms delta from the provided type to return type
-    abstract protected T convertDelta(R delta);
+    protected static class BlockedDelta {
+        private final int _numBlocks;
+        private final ByteBuffer _content;
+
+        public BlockedDelta(int numBlocks, ByteBuffer content) {
+            _numBlocks = numBlocks;
+            _content = content;
+        }
+
+        public int getNumBlocks() {
+            return _numBlocks;
+        }
+
+        public ByteBuffer getContent() {
+            return _content;
+        }
+    }
 
     // transforms delta from the provided type to the return type, while also changing content to be the parameter provided
-    abstract protected T convertDelta(R delta, ByteBuffer content);
+    abstract protected T convertDelta(R delta, BlockedDelta blockedDelta);
 
     // get block number from delta
     abstract protected int getBlock(R delta);

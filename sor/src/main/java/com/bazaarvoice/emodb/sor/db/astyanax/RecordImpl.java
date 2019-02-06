@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
 
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.UUID;
@@ -14,13 +15,13 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 class RecordImpl implements Record {
     private final Key _key;
-    private Iterator<Map.Entry<UUID, Compaction>> _passOneIterator;
-    private Iterator<Map.Entry<UUID, Change>> _passTwoIterator;
+    private Iterator<Map.Entry<DeltaClusteringKey, Compaction>> _passOneIterator;
+    private Iterator<Map.Entry<DeltaClusteringKey, Change>> _passTwoIterator;
     private Iterator<RecordEntryRawMetadata> _rawMetadataIterator;
 
     RecordImpl(Key key,
-               Iterator<Map.Entry<UUID, Compaction>> passOneIterator,
-               Iterator<Map.Entry<UUID, Change>> passTwoIterator,
+               Iterator<Map.Entry<DeltaClusteringKey, Compaction>> passOneIterator,
+               Iterator<Map.Entry<DeltaClusteringKey, Change>> passTwoIterator,
                Iterator<RecordEntryRawMetadata> rawMetadataIterator) {
         _key = key;
         _passOneIterator = passOneIterator;
@@ -34,15 +35,15 @@ class RecordImpl implements Record {
     }
 
     @Override
-    public Iterator<Map.Entry<UUID, Compaction>> passOneIterator() {
-        Iterator<Map.Entry<UUID, Compaction>> result = checkNotNull(_passOneIterator, "Already consumed.");
+    public Iterator<Map.Entry<DeltaClusteringKey, Compaction>> passOneIterator() {
+        Iterator<Map.Entry<DeltaClusteringKey, Compaction>> result = checkNotNull(_passOneIterator, "Already consumed.");
         _passOneIterator = null;
         return result;
     }
 
     @Override
-    public Iterator<Map.Entry<UUID, Change>> passTwoIterator() {
-        Iterator<Map.Entry<UUID, Change>> result = checkNotNull(_passTwoIterator, "Already consumed.");
+    public Iterator<Map.Entry<DeltaClusteringKey, Change>> passTwoIterator() {
+        Iterator<Map.Entry<DeltaClusteringKey, Change>> result = checkNotNull(_passTwoIterator, "Already consumed.");
         _passTwoIterator = null;
         return result;
     }

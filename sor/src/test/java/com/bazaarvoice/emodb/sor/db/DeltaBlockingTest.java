@@ -154,13 +154,8 @@ class ListDeltaIterator extends DeltaIterator<TestRow, ByteBuffer> {
     }
 
     @Override
-    protected ByteBuffer convertDelta(TestRow delta) {
-        return delta.getContent();
-    }
-
-    @Override
-    protected ByteBuffer convertDelta(TestRow delta, ByteBuffer content) {
-        return content;
+    protected ByteBuffer convertDelta(TestRow delta, BlockedDelta blockedDelta) {
+        return blockedDelta.getContent();
     }
 
     @Override

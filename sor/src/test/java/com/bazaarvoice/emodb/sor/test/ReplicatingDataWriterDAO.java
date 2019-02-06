@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.ImmutableList;
@@ -69,7 +70,7 @@ public class ReplicatingDataWriterDAO implements DataWriterDAO {
 
     @Override
     public void compact(Table table, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta,
-                        Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                        Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         _local.compact(table, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);
         for (DataWriterDAO remote : _remotes) {
             remote.compact(table, key, compactionKey, compaction, changeId, delta, changesToDelete, historyList, consistency);

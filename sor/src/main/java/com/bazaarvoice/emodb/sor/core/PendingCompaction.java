@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import com.bazaarvoice.emodb.sor.api.Compaction;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 
 import javax.annotation.Nullable;
@@ -23,12 +24,12 @@ public class PendingCompaction {
     private final UUID _initialCutoffId;
     private final Delta _delta;
     private final Delta _startingDelta;
-    private final List<UUID> _keysToDelete;
-    private final List<UUID> _compactionKeysToDelete;
+    private final List<DeltaClusteringKey> _keysToDelete;
+    private final List<DeltaClusteringKey> _compactionKeysToDelete;
     private final List<Map.Entry<UUID, Delta>> _deltasToArchive;
 
-    public PendingCompaction(UUID compactionKey, Compaction compaction, UUID changeId, UUID initialCutoffId, Delta delta, Delta startingDelta, List<UUID> keysToDelete,
-                             List<UUID> compactionKeysToDelete, List<Map.Entry<UUID, Delta>> deltasToArchive) {
+    public PendingCompaction(UUID compactionKey, Compaction compaction, UUID changeId, UUID initialCutoffId, Delta delta, Delta startingDelta, List<DeltaClusteringKey> keysToDelete,
+                             List<DeltaClusteringKey> compactionKeysToDelete, List<Map.Entry<UUID, Delta>> deltasToArchive) {
         _compactionKey = compactionKey;
         _compaction = compaction;
         _changeId = changeId;
@@ -62,11 +63,11 @@ public class PendingCompaction {
         return _startingDelta;
     }
 
-    public List<UUID> getKeysToDelete() {
+    public List<DeltaClusteringKey> getKeysToDelete() {
         return _keysToDelete;
     }
 
-    public List<UUID> getCompactionKeysToDelete() {
+    public List<DeltaClusteringKey> getCompactionKeysToDelete() {
         return _compactionKeysToDelete;
     }
 

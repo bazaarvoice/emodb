@@ -7,17 +7,19 @@ import java.nio.ByteBuffer;
 
 public class StitchedRow extends AbstractGettableData implements Row {
 
-    private ByteBuffer _content;
-    private Row _oldRow;
-    private int _contentIndex;
-    private CodecRegistry _codecRegistry;
+    private final ByteBuffer _content;
+    private final Row _oldRow;
+    private final int _contentIndex;
+    private final CodecRegistry _codecRegistry;
+    private final int _numBlocks;
 
-    public StitchedRow(ProtocolVersion protocolVersion, CodecRegistry codecRegistry, Row oldRow, ByteBuffer content, int contentIndex) {
+    public StitchedRow(ProtocolVersion protocolVersion, CodecRegistry codecRegistry, Row oldRow, ByteBuffer content, int contentIndex, int numBlocks) {
         super(protocolVersion);
         _codecRegistry = codecRegistry;
         _oldRow = oldRow;
         _content = content;
         _contentIndex = contentIndex;
+        _numBlocks = numBlocks;
     }
 
     @Override
@@ -61,6 +63,10 @@ public class StitchedRow extends AbstractGettableData implements Row {
     @Override
     public Token getPartitionKeyToken() {
         return _oldRow.getPartitionKeyToken();
+    }
+
+    public int getNumBlocks() {
+        return _numBlocks;
     }
 
     /**

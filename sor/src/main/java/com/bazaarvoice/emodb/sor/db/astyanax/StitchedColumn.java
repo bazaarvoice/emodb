@@ -12,16 +12,19 @@ import java.util.UUID;
 public class StitchedColumn extends AbstractColumnImpl<UUID> {
     private Column<DeltaKey> _oldColumn;
     private ByteBuffer _content;
+    private int _numBlocks;
 
-    public StitchedColumn(Column<DeltaKey> oldColumn, ByteBuffer content) {
+    public StitchedColumn(Column<DeltaKey> oldColumn, ByteBuffer content, int numBlocks) {
         super(oldColumn.getName().getChangeId());
         _oldColumn = oldColumn;
         _content = content;
+        _numBlocks = numBlocks;
     }
 
     public StitchedColumn(Column<DeltaKey> oldColumn) {
         super(oldColumn.getName().getChangeId());
         _oldColumn = oldColumn;
+        _numBlocks = 1;
     }
 
     @Override
@@ -48,5 +51,9 @@ public class StitchedColumn extends AbstractColumnImpl<UUID> {
     @Override
     public boolean hasValue() {
         return _oldColumn.hasValue();
+    }
+
+    public int getNumBlocks() {
+        return _numBlocks;
     }
 }

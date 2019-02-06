@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.core;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
@@ -52,11 +53,11 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
      */
     protected Expanded doExpand(Record record, long fullConsistencyTimestamp, long compactionConsistencyTimeStamp, long compactionControlTimestamp, MutableIntrinsics intrinsics, boolean ignoreRecent)
             throws RestartException {
-        List<UUID> keysToDelete = Lists.newArrayList();
+        List<DeltaClusteringKey> keysToDelete = Lists.newArrayList();
         DeltasArchive deltasArchive = new DeltasArchive();
 
         // Loop through the compaction records and find the one that is most up-to-date.  Obsolete ones may be deleted.
-        Map.Entry<UUID, Compaction> compactionEntry = findEffectiveCompaction(record.passOneIterator(), keysToDelete, compactionConsistencyTimeStamp);
+        Map.Entry<DeltaClusteringKey, Compaction> compactionEntry = findEffectiveCompaction(record.passOneIterator(), keysToDelete, compactionConsistencyTimeStamp);
 
         // Check to see if this is a legacy compaction
         if (compactionEntry != null && !compactionEntry.getValue().hasCompactedDelta()) {
@@ -65,9 +66,9 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         }
 
         // Save the number of collected compaction Ids to delete in the pending compaction
-        List<UUID> compactionKeysToDelete = Lists.newArrayList(keysToDelete.iterator());
+        List<DeltaClusteringKey> compactionKeysToDelete = Lists.newArrayList(keysToDelete.iterator());
 
-        PeekingIterator<Map.Entry<UUID, DeltaTagPair>> deltaIterator = Iterators.peekingIterator(
+        PeekingIterator<Map.Entry<DeltaClusteringKey, DeltaTagPair>> deltaIterator = Iterators.peekingIterator(
                 deltaIterator(record.passTwoIterator(), compactionEntry));
 
         UUID compactionKey = null;
@@ -93,10 +94,10 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         if (compactionEntry == null) {
             resolver = new DefaultResolver(intrinsics);
         } else {
-            deleteDeltasForCompaction = TimeUUIDs.getTimeMillis(compactionEntry.getKey()) < compactionConsistencyTimeStamp;
+            deleteDeltasForCompaction = TimeUUIDs.getTimeMillis(compactionEntry.getKey().getChangeId()) < compactionConsistencyTimeStamp;
             createNewCompaction = deleteDeltasForCompaction;
 
-            compactionKey = compactionEntry.getKey();
+            compactionKey = compactionEntry.getKey().getChangeId();
             compaction = compactionEntry.getValue();
             numDeletedDeltas = compaction.getCount();
 
@@ -106,12 +107,12 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             // Also, safe-delete: We need to make sure that compaction is fully consistent before we delete any deltas
             cutoffId = compaction.getCutoff();
             initialCutoff = compaction.getCutoff();
-            while (deltaIterator.hasNext() && TimeUUIDs.compare(deltaIterator.peek().getKey(), cutoffId) <= 0) {
+            while (deltaIterator.hasNext() && TimeUUIDs.compare(deltaIterator.peek().getKey().getChangeId(), cutoffId) <= 0) {
                 if (!deleteDeltasForCompaction) {
                     deltaIterator.next();
                     continue;
                 }
-                Map.Entry<UUID, DeltaTagPair> deltaEntry = deltaIterator.next();
+                Map.Entry<DeltaClusteringKey, DeltaTagPair> deltaEntry = deltaIterator.next();
                 keysToDelete.add(deltaEntry.getKey());
                 numPersistentDeltas++;
             }
@@ -123,14 +124,14 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
             initialCutoffDelta = compaction.getCompactedDelta();
         }
 
-        List<UUID> compactibleChangeIds = Lists.newArrayList();
-        while (createNewCompaction && deltaIterator.hasNext() && TimeUUIDs.getTimeMillis(deltaIterator.peek().getKey()) < fullConsistencyTimestamp) {
-            Map.Entry<UUID, DeltaTagPair> entry = deltaIterator.next();
-            resolver.update(entry.getKey(), entry.getValue().delta, entry.getValue().tags);
+        List<DeltaClusteringKey> compactibleChangeIds = Lists.newArrayList();
+        while (createNewCompaction && deltaIterator.hasNext() && TimeUUIDs.getTimeMillis(deltaIterator.peek().getKey().getChangeId()) < fullConsistencyTimestamp) {
+            Map.Entry<DeltaClusteringKey, DeltaTagPair> entry = deltaIterator.next();
+            resolver.update(entry.getKey().getChangeId(), entry.getValue().delta, entry.getValue().tags);
             compactibleChangeIds.add(entry.getKey());
             // We would like to keep these deltas in pending compaction object in memory so we don't have to
             // go to C* to get them.
-            deltasArchive.addDeltaArchive(entry.getKey(), entry.getValue().delta);
+            deltasArchive.addDeltaArchive(entry.getKey().getChangeId(), entry.getValue().delta);
             numPersistentDeltas++;
         }
         if (!compactibleChangeIds.isEmpty()) {
@@ -163,8 +164,8 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
         // consider compactionControlTimestamp here (one case could be that there is a stash run in progress) and not include those Ids.
         // With this, we are halting the deletion of these deltas in this run.
         // We could have not included these Ids at the first place in the top section, but just to be cleaner and for better separation, excluding these Ids here.
-        keysToDelete = keysToDelete.stream().filter(keyToDelete -> (TimeUUIDs.getTimeMillis(keyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
-        compactionKeysToDelete = compactionKeysToDelete.stream().filter(compactionKeyToDelete -> (TimeUUIDs.getTimeMillis(compactionKeyToDelete) > compactionControlTimestamp)).collect(Collectors.toList());
+        keysToDelete = keysToDelete.stream().filter(keyToDelete -> (TimeUUIDs.getTimeMillis(keyToDelete.getChangeId()) > compactionControlTimestamp)).collect(Collectors.toList());
+        compactionKeysToDelete = compactionKeysToDelete.stream().filter(compactionKeyToDelete -> (TimeUUIDs.getTimeMillis(compactionKeyToDelete.getChangeId()) > compactionControlTimestamp)).collect(Collectors.toList());
 
         // Persist the compaction, and keys-to-delete.  We must write compaction and delete synchronously to
         // be sure that eventually consistent readers don't see the result of the deletions w/o also
@@ -184,11 +185,11 @@ public class DistributedCompactor extends AbstractCompactor implements Compactor
 
         // Resolve recent deltas.
         while (deltaIterator.hasNext()) {
-            Map.Entry<UUID, DeltaTagPair> entry = deltaIterator.next();
-            if (ignoreRecent && TimeUUIDs.getTimeMillis(entry.getKey()) >= fullConsistencyTimestamp) {
+            Map.Entry<DeltaClusteringKey, DeltaTagPair> entry = deltaIterator.next();
+            if (ignoreRecent && TimeUUIDs.getTimeMillis(entry.getKey().getChangeId()) >= fullConsistencyTimestamp) {
                 break;
             }
-            resolver.update(entry.getKey(), entry.getValue().delta, entry.getValue().tags);
+            resolver.update(entry.getKey().getChangeId(), entry.getValue().delta, entry.getValue().tags);
             numPersistentDeltas++;
         }
 

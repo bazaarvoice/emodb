@@ -19,6 +19,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.Iterables;
@@ -260,7 +261,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
     @Override
     public synchronized void compact(Table table, String key, UUID compactionKey, Compaction compaction,
-                                     UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                     UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -283,7 +284,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     public synchronized void deleteDeltasOnly(Table table, String key, UUID compactionKey, Compaction compaction,
-                                              UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                              UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -300,7 +301,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
     }
 
     public synchronized void addCompactionOnly(Table table, String key, UUID compactionKey, Compaction compaction,
-                                               UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                               UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -325,9 +326,9 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
         changes.put(compactionKey, ChangeBuilder.just(compactionKey, compaction));
     }
 
-    protected void deleteDeltas(Collection<UUID> changesToDelete, Map<UUID, Change> changes) {
-        for (UUID change : changesToDelete) {
-            changes.remove(change);
+    protected void deleteDeltas(Collection<DeltaClusteringKey> changesToDelete, Map<UUID, Change> changes) {
+        for (DeltaClusteringKey change : changesToDelete) {
+            changes.remove(change.getChangeId());
         }
     }
 
@@ -379,7 +380,7 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
             }
 
             @Override
-            public Iterator<Map.Entry<UUID, Compaction>> passOneIterator() {
+            public Iterator<Map.Entry<DeltaClusteringKey, Compaction>> passOneIterator() {
                 return FluentIterable.from(getChangeIterable())
                         .transform(new Function<Map.Entry<UUID, Change>, Change>() {
                             @Override
@@ -393,18 +394,18 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
                                 return change.getCompaction() != null;
                             }
                         })
-                        .transform(new Function<Change, Map.Entry<UUID, Compaction>>() {
+                        .transform(new Function<Change, Map.Entry<DeltaClusteringKey, Compaction>>() {
                             @Override
-                            public Map.Entry<UUID, Compaction> apply(Change change) {
-                                return Maps.immutableEntry(change.getId(), change.getCompaction());
+                            public Map.Entry<DeltaClusteringKey, Compaction> apply(Change change) {
+                                return Maps.immutableEntry(new DeltaClusteringKey(change.getId(), 1), change.getCompaction());
                             }
                         })
                         .iterator();
             }
 
             @Override
-            public Iterator<Map.Entry<UUID, Change>> passTwoIterator() {
-                return getChangeIterable().iterator();
+            public Iterator<Map.Entry<DeltaClusteringKey, Change>> passTwoIterator() {
+                return Iterators.transform(getChangeIterable().iterator(), entry -> Maps.immutableEntry(new DeltaClusteringKey(entry.getKey(), 1), entry.getValue()));
             }
 
             @Override

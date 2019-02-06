@@ -19,6 +19,7 @@ import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
@@ -1163,8 +1164,8 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
     }
 
     private Record newRecord(Key key, ByteBuffer rowKey, ColumnList<UUID> columns, int largeRowThreshold, ReadConsistency consistency, @Nullable final Instant cutoffTime) {
-        Iterator<Map.Entry<UUID, Change>> changeIter = decodeChanges(getFilteredColumnIter(columns.iterator(), cutoffTime));
-        Iterator<Map.Entry<UUID, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(columns.iterator(), cutoffTime));
+        Iterator<Map.Entry<DeltaClusteringKey, Change>> changeIter = decodeChanges(getFilteredColumnIter(columns.iterator(), cutoffTime));
+        Iterator<Map.Entry<DeltaClusteringKey, Compaction>> compactionIter = decodeCompactions(getFilteredColumnIter(columns.iterator(), cutoffTime));
         Iterator<RecordEntryRawMetadata> rawMetadataIter = rawMetadata(getFilteredColumnIter(columns.iterator(), cutoffTime));
 
         if (columns.size() >= largeRowThreshold) {
@@ -1195,9 +1196,9 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.<Map.Entry<UUID, Compaction>>emptyIterator(),
-                Iterators.<Map.Entry<UUID, Change>>emptyIterator(),
-                Iterators.<RecordEntryRawMetadata>emptyIterator());
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator(),
+                Iterators.emptyIterator());
     }
 
     private Iterator<Change> decodeColumns(Iterator<Column<UUID>> iter) {
@@ -1210,25 +1211,25 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
                 });
     }
 
-    private Iterator<Map.Entry<UUID, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
-        return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<UUID, Change>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Change>> decodeChanges(final Iterator<Column<UUID>> iter) {
+        return Iterators.transform(iter, new Function<Column<UUID>, Map.Entry<DeltaClusteringKey, Change>>() {
             @Override
-            public Map.Entry<UUID, Change> apply(Column<UUID> column) {
+            public Map.Entry<DeltaClusteringKey, Change> apply(Column<UUID> column) {
                 Change change = _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue());
-                return Maps.immutableEntry(column.getName(), change);
+                return Maps.immutableEntry(new DeltaClusteringKey(column.getName()), change);
             }
         });
     }
 
-    private Iterator<Map.Entry<UUID, Compaction>> decodeCompactions(final Iterator<Column<UUID>> iter) {
-        return new AbstractIterator<Map.Entry<UUID, Compaction>>() {
+    private Iterator<Map.Entry<DeltaClusteringKey, Compaction>> decodeCompactions(final Iterator<Column<UUID>> iter) {
+        return new AbstractIterator<Map.Entry<DeltaClusteringKey, Compaction>>() {
             @Override
-            protected Map.Entry<UUID, Compaction> computeNext() {
+            protected Map.Entry<DeltaClusteringKey, Compaction> computeNext() {
                 while (iter.hasNext()) {
                     Column<UUID> column = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(column.getByteBufferValue());
                     if (compaction != null) {
-                        return Maps.immutableEntry(column.getName(), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(column.getName()), compaction);
                     }
                 }
                 return endOfData();

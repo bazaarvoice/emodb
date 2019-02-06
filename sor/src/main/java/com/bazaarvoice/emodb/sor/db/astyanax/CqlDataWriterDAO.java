@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
@@ -104,7 +105,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+    public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(tbl, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -195,8 +196,17 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                 .setConsistencyLevel(consistencyLevel);
     }
 
+    private Statement blockedDeleteStatement(BlockedDeltaTableDDL tableDDL, ByteBuffer rowKey, UUID changeId, int block, ConsistencyLevel consistencyLevel) {
+        return QueryBuilder.delete()
+                .from(tableDDL.getTableMetadata())
+                .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
+                .and(eq(tableDDL.getChangeIdColumnName(), changeId))
+                .and(eq(tableDDL.getBlockColumnName(), block))
+                .setConsistencyLevel(consistencyLevel);
+    }
+
     private void deleteCompactedDeltas(ByteBuffer rowKey, WriteConsistency consistency, DeltaPlacement placement,
-                                       CassandraKeyspace keyspace, Collection<UUID> changesToDelete,
+                                       CassandraKeyspace keyspace, Collection<DeltaClusteringKey> changesToDelete,
                                        List<History> historyList) {
 
         Session session = keyspace.getCqlSession();
@@ -217,16 +227,23 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         // delete the old deltas & compaction records
         if (_writeToLegacyDeltaTable) {
             BatchStatement legacyTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (UUID change : changesToDelete) {
-                legacyTableStatement.add(deleteStatement(placement.getDeltaTableDDL(), rowKey, change, consistencyLevel));
+            for (DeltaClusteringKey change : changesToDelete) {
+                legacyTableStatement.add(deleteStatement(placement.getDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
             }
             legacyTableFuture = session.executeAsync(legacyTableStatement);
         }
 
         if (_writeToBlockedDeltaTable) {
             BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (UUID change : changesToDelete) {
-                newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change, consistencyLevel));
+            for (DeltaClusteringKey change : changesToDelete) {
+                if (change.hasNumBlocks() && change.getNumBlocks() < 2) {
+                    for (int i = 0; i < change.getNumBlocks(); i++) {
+                        newTableStatement.add(blockedDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
+                    }
+                }
+                else {
+                    newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
+                }
             }
             session.execute(newTableStatement);
         }
