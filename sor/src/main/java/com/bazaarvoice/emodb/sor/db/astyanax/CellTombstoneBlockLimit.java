@@ -9,8 +9,8 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation for identifying the minimum number of blocks in a delta for it to be compacted using a
- * range tombstone rather than a cell tombstone.
+ * Guice binding annotation for identifying the maximum number of blocks in a delta for it to be compacted using cell
+ * tombstones rather than a single range tombstone.
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
