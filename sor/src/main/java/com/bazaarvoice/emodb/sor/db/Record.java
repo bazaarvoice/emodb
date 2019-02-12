@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * A record read from the DAO layer.

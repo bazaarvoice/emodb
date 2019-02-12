@@ -9,7 +9,6 @@ import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
 import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

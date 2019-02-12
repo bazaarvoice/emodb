@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.sor.db.DeltaIterator;
-import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.netflix.astyanax.model.Column;
 
 import java.nio.ByteBuffer;
