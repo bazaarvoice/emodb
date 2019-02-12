@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -150,10 +151,10 @@ public class MultiDCCompactionTest {
         Compaction c2 = new Compaction(4, t1, t1, signature, null, null, delta);
         Compaction c3 = new Compaction(3, t1, t1, signature, null, null, delta);
 
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList(
-                Maps.immutableEntry(t1, c1),
-                Maps.immutableEntry(t2, c2),
-                Maps.immutableEntry(t3, c3)
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList(
+                Maps.immutableEntry(new DeltaClusteringKey(t1, 1), c1),
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), c2),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), c3)
                 );
 
         Record record = mock(Record.class);
@@ -171,10 +172,10 @@ public class MultiDCCompactionTest {
 
         // Change the FCT such that the winning compaction (c2) is before FCT
         expand = compactor.expand(record, fctAfterT2, fctAfterT2, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
-        List<UUID> deletedCompactions = expand.getPendingCompaction().getCompactionKeysToDelete();
+        List<DeltaClusteringKey> deletedCompactions = expand.getPendingCompaction().getCompactionKeysToDelete();
         // Verify that compactions other than c2, are deleted
-        Assert.assertTrue(deletedCompactions.contains(t1));
-        Assert.assertTrue(deletedCompactions.contains(t3));
+        Assert.assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t1, 1)));
+        Assert.assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t3, 1)));
     }
 
     private Audit newAudit(String comment) {

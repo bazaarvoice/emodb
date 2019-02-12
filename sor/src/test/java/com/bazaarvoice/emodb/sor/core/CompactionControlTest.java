@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.codahale.metrics.Counter;
@@ -24,6 +25,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
@@ -47,15 +49,15 @@ public class CompactionControlTest {
         Delta delta2 = Deltas.literal(ImmutableMap.of("key2", "value2"));
         Delta delta3 = Deltas.mapBuilder().put("key3", "change").build();
 
-        final List<Map.Entry<UUID, Change>> deltas = ImmutableList.of(
-                Maps.immutableEntry(t1, ChangeBuilder.just(t1, delta1)),
-                Maps.immutableEntry(t2, ChangeBuilder.just(t2, delta2)),
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t1, 1), ChangeBuilder.just(t1, delta1)),
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), ChangeBuilder.just(t2, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta3)));
 
         Record record = mock(Record.class);
         final Key key = mock(Key.class);
         when(record.getKey()).thenReturn(key);
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList();
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList();
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -73,7 +75,7 @@ public class CompactionControlTest {
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().isEmpty());
         // Add the compactions to the compaction list
         UUID compactionTimestamp = TimeUUIDs.uuidForTimeMillis(nowInTimeMillis + 35 * 1000); // altering this instead of "expanded.getPendingCompaction().getChangeId()"
-        compactions.add(Maps.immutableEntry(compactionTimestamp, expanded.getPendingCompaction().getCompaction()));
+        compactions.add(Maps.immutableEntry(new DeltaClusteringKey(compactionTimestamp, 1), expanded.getPendingCompaction().getCompaction()));
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -102,15 +104,15 @@ public class CompactionControlTest {
         Delta delta2 = Deltas.literal(ImmutableMap.of("key2", "value2"));
         Delta delta3 = Deltas.mapBuilder().put("key3", "change").build();
 
-        final List<Map.Entry<UUID, Change>> deltas = ImmutableList.of(
-                Maps.immutableEntry(t1, ChangeBuilder.just(t1, delta1)),
-                Maps.immutableEntry(t2, ChangeBuilder.just(t2, delta2)),
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t1, 1), ChangeBuilder.just(t1, delta1)),
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), ChangeBuilder.just(t2, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta3)));
 
         Record record = mock(Record.class);
         final Key key = mock(Key.class);
         when(record.getKey()).thenReturn(key);
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList();
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList();
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -128,7 +130,7 @@ public class CompactionControlTest {
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().isEmpty());
         // Add the compactions to the compaction list
         UUID compactionTimestamp = TimeUUIDs.uuidForTimeMillis(nowInTimeMillis + 35 * 1000); // altering this instead of "expanded.getPendingCompaction().getChangeId()"
-        compactions.add(Maps.immutableEntry(compactionTimestamp, expanded.getPendingCompaction().getCompaction()));
+        compactions.add(Maps.immutableEntry(new DeltaClusteringKey(compactionTimestamp, 1), expanded.getPendingCompaction().getCompaction()));
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -137,7 +139,7 @@ public class CompactionControlTest {
         // Verify that there are all 3 keys for deletion.
         // In the DistributedCompactor, at first 3 keys will be selected for deletion, and later no keys get filtered out from the deletionList based on the compactionControlTimestamp.
         assertTrue(expanded.getPendingCompaction() != null);
-        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t1, t2, t3)));
+        assertEquals(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()), (ImmutableSet.of(new DeltaClusteringKey(t1, 1), new DeltaClusteringKey(t2, 1), new DeltaClusteringKey(t3, 1))));
     }
 
     @Test
@@ -159,15 +161,15 @@ public class CompactionControlTest {
         Delta delta2 = Deltas.literal(ImmutableMap.of("key2", "value2"));
         Delta delta3 = Deltas.mapBuilder().put("key3", "change").build();
 
-        final List<Map.Entry<UUID, Change>> deltas = ImmutableList.of(
-                Maps.immutableEntry(t1, ChangeBuilder.just(t1, delta1)),
-                Maps.immutableEntry(t2, ChangeBuilder.just(t2, delta2)),
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t1, 1), ChangeBuilder.just(t1, delta1)),
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), ChangeBuilder.just(t2, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta3)));
 
         Record record = mock(Record.class);
         final Key key = mock(Key.class);
         when(record.getKey()).thenReturn(key);
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList();
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList();
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -185,7 +187,7 @@ public class CompactionControlTest {
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().isEmpty());
         // Add the compactions to the compaction list
         UUID compactionTimestamp = TimeUUIDs.uuidForTimeMillis(nowInTimeMillis + 35 * 1000); // altering this instead of "expanded.getPendingCompaction().getChangeId()"
-        compactions.add(Maps.immutableEntry(compactionTimestamp, expanded.getPendingCompaction().getCompaction()));
+        compactions.add(Maps.immutableEntry(new DeltaClusteringKey(compactionTimestamp, 1), expanded.getPendingCompaction().getCompaction()));
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas.iterator());
 
@@ -194,6 +196,6 @@ public class CompactionControlTest {
         // Verify that there is exactly 1 key to be deleted
         // In the DistributedCompactor, at first 3 keys will be selected for deletion, and later 2 keys get filtered out based on the compactionControlTimestamp.
         assertTrue(expanded.getPendingCompaction() != null);
-        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t3)));
+        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(new DeltaClusteringKey(t3, 1))));
     }
 }

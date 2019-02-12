@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -75,12 +76,12 @@ public class CompactorTest {
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
         // Old style compaction
         Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3, t3);
-        final List<Map.Entry<UUID, Compaction>> compactions2 = ImmutableList.of(
-                Maps.immutableEntry(t5, compaction2));
-        final List<Map.Entry<UUID,Change>> deltas2 = ImmutableList.of(
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta2)),
-                Maps.immutableEntry(t5, ChangeBuilder.just(t5, compaction2)),
-                Maps.immutableEntry(t6, ChangeBuilder.just(t6, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t5 ,1), compaction2));
+        final List<Map.Entry<DeltaClusteringKey,Change>> deltas2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t5, 1), ChangeBuilder.just(t5, compaction2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t6, 1), ChangeBuilder.just(t6, delta3)));
 
         // This record will make it to LegacyCompactor, but will not "double-dip" in Cassandra as it has already found
         // compaction.
@@ -130,10 +131,10 @@ public class CompactorTest {
         assertNotNull(expanded.getPendingCompaction().getCompaction().getCompactedDelta(), "Not a new version of compaction");
 
         Compaction newCompaction = expanded.getPendingCompaction().getCompaction();
-        final List<Map.Entry<UUID, Compaction>> compactions3 = ImmutableList.of(
-                Maps.immutableEntry(t7, newCompaction));
-        final List<Map.Entry<UUID,Change>> deltas3 = ImmutableList.of(
-                Maps.immutableEntry(t7, ChangeBuilder.just(t7, newCompaction)));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions3 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t7, 1), newCompaction));
+        final List<Map.Entry<DeltaClusteringKey,Change>> deltas3 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t7, 1), ChangeBuilder.just(t7, newCompaction)));
 
         Record record3 = mock(Record.class);
         when(record3.getKey()).thenReturn(key);
@@ -179,19 +180,19 @@ public class CompactorTest {
 
         // Compaction records after the first compaction
         Compaction compaction1 = new Compaction(2, t1, t2, "0123456789abcdef", t2, t2);
-        final List<Map.Entry<UUID, Compaction>> compactions1 = ImmutableList.of(
-                Maps.immutableEntry(t4, compaction1));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions1 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t4, 1), compaction1));
 
         // Compaction and delta records after the second compaction
         Delta delta2 = Deltas.literal(ImmutableMap.of("key", "value"));
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
         Compaction compaction2 = new Compaction(2, t1, t3, "abcdef0123456789", t3, t3);
-        final List<Map.Entry<UUID, Compaction>> compactions2 = ImmutableList.of(
-                Maps.immutableEntry(t5, compaction2));
-        final List<Map.Entry<UUID,Change>> deltas2 = ImmutableList.of(
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta2)),
-                Maps.immutableEntry(t5, ChangeBuilder.just(t5, compaction2)),
-                Maps.immutableEntry(t6, ChangeBuilder.just(t6, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t5, 1), compaction2));
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t5, 1), ChangeBuilder.just(t5, compaction2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t6, 1), ChangeBuilder.just(t6, delta3)));
 
         // First try will delegate to legacy compactor and fail because compaction record 1 is not present in the 2nd sequence of deltas
         Record record1 = mock(Record.class);
@@ -252,11 +253,11 @@ public class CompactorTest {
 
         Delta delta2 = Deltas.literal(ImmutableMap.of("key", "value"));
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList();
-        final List<Map.Entry<UUID, Change>> deltas2 = ImmutableList.of(
-                Maps.immutableEntry(t1, ChangeBuilder.just(t1, delta2)),
-                Maps.immutableEntry(t2, ChangeBuilder.just(t2, delta2)),
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList();
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas2 = ImmutableList.of(
+                Maps.immutableEntry(new DeltaClusteringKey(t1, 1), ChangeBuilder.just(t1, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), ChangeBuilder.just(t2, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta3)));
 
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
@@ -332,11 +333,11 @@ public class CompactorTest {
 
         Delta delta2 = Deltas.literal(ImmutableMap.of("key", "value"));
         Delta delta3 = Deltas.mapBuilder().put("key2", "change").build();
-        final List<Map.Entry<UUID, Compaction>> compactions = Lists.newArrayList();
-        Map.Entry<UUID, Change> firstDelta = Maps.immutableEntry(t1, ChangeBuilder.just(t1, delta2));
-        final List<Map.Entry<UUID, Change>> deltas2 = Lists.newArrayList(firstDelta,
-                Maps.immutableEntry(t2, ChangeBuilder.just(t2, delta2)),
-                Maps.immutableEntry(t3, ChangeBuilder.just(t3, delta3)));
+        final List<Map.Entry<DeltaClusteringKey, Compaction>> compactions = Lists.newArrayList();
+        Map.Entry<DeltaClusteringKey, Change> firstDelta = Maps.immutableEntry(new DeltaClusteringKey(t1, 1), ChangeBuilder.just(t1, delta2));
+        final List<Map.Entry<DeltaClusteringKey, Change>> deltas2 = Lists.newArrayList(firstDelta,
+                Maps.immutableEntry(new DeltaClusteringKey(t2, 1), ChangeBuilder.just(t2, delta2)),
+                Maps.immutableEntry(new DeltaClusteringKey(t3, 1), ChangeBuilder.just(t3, delta3)));
 
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
@@ -359,7 +360,7 @@ public class CompactorTest {
         // Do not delete deltas just yet
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().isEmpty());
         // Add the compactions to the compaction list
-        compactions.add(Maps.immutableEntry(expanded.getPendingCompaction().getChangeId(), expanded.getPendingCompaction().getCompaction()));
+        compactions.add(Maps.immutableEntry(new DeltaClusteringKey(expanded.getPendingCompaction().getChangeId(), 1), expanded.getPendingCompaction().getCompaction()));
         // Resetting now
         SystemClock.tick();
         now = System.currentTimeMillis();
@@ -370,7 +371,7 @@ public class CompactorTest {
         expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // Verify that our deltas are going to be deleted now
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 3, "All 3 deltas should be up for deletion");
-        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t1, t2, t3)));
+        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(new DeltaClusteringKey(t1, 1), new DeltaClusteringKey(t2, 1), new DeltaClusteringKey(t3, 1))));
 
         // Finally, let's assume only one delta really got deleted, and two of these deltas
         // "resurrected" themselves due to no tombstones in Cassandra
@@ -382,7 +383,7 @@ public class CompactorTest {
 
         expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().size() == 2, "The 2 'resurrected' deltas are simply deleted again");
-        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(t2, t3)));
+        assertTrue(ImmutableSet.copyOf(expanded.getPendingCompaction().getKeysToDelete()).equals(ImmutableSet.of(new DeltaClusteringKey(t2, 1), new DeltaClusteringKey(t3, 1))));
         expectedContent = ImmutableMap.of("key", "value", "key2", "change");
         assertEquals(expanded.getResolved().getContent(), expectedContent);
 
@@ -403,21 +404,21 @@ public class CompactorTest {
         // Add a new delta so we can discard the old compaction, and then resurrect compaction again for our test
         UUID t4 = TimeUUIDs.newUUID();
         Delta delta4 = Deltas.mapBuilder().put("key4", "change4").build();
-        deltas2.add(Maps.immutableEntry(t4, ChangeBuilder.just(t4, delta4)));
+        deltas2.add(Maps.immutableEntry(new DeltaClusteringKey(t4, 1), ChangeBuilder.just(t4, delta4)));
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
 
         expanded = compactor.expand(record, now, now, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         // The above should create a new compaction
         assertTrue(expanded.getPendingCompaction().getCompaction() != null);
-        UUID toBeResurrectedCompaction = compactions.get(0).getKey();
+        DeltaClusteringKey toBeResurrectedCompaction = compactions.get(0).getKey();
         // Make sure the old compaction is getting deleted
         assertTrue(expanded.getPendingCompaction().getKeysToDelete().contains(toBeResurrectedCompaction));
         expectedContent = ImmutableMap.of("key", "value", "key2", "change", "key4", "change4");
         assertEquals(expanded.getResolved().getContent(), expectedContent);
 
         // Add the newest compaction to our list of compaction, but do not delete the old one simulating resurrection
-        compactions.add(Maps.immutableEntry(expanded.getPendingCompaction().getChangeId(), expanded.getPendingCompaction().getCompaction()));
+        compactions.add(Maps.immutableEntry(new DeltaClusteringKey(expanded.getPendingCompaction().getChangeId(), 1), expanded.getPendingCompaction().getCompaction()));
         // Let's fetch the record again, and see if the existing old compaction affect anything
         when(record.passOneIterator()).thenReturn(compactions.iterator());
         when(record.passTwoIterator()).thenReturn(deltas2.iterator());
@@ -443,7 +444,7 @@ public class CompactorTest {
         InMemoryDataReaderDAO dataDAO = new InMemoryDataReaderDAO() {
             @Override
             public void compact(Table table, String key, UUID compactionKey, Compaction compaction,
-                                UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+                                UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
                 checkNotNull(table, "table");
                 checkNotNull(key, "key");
                 checkNotNull(compactionKey, "compactionKey");

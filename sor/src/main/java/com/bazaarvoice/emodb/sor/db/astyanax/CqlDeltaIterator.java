@@ -13,7 +13,7 @@ import java.util.UUID;
 * CQL implementation of DeltaIterator.
 * Used to stitch blocked deltas back together on read.
  */
-public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
+public class CqlDeltaIterator extends DeltaIterator<Row, StitchedRow> {
 
     private final ProtocolVersion _protocolVersion;
     private final CodecRegistry _codecRegistry;
@@ -32,13 +32,8 @@ public class CqlDeltaIterator extends DeltaIterator<Row, Row> {
     }
 
     @Override
-    protected Row convertDelta(Row row) {
-        return row;
-    }
-
-    @Override
-    protected Row convertDelta(Row row, ByteBuffer content) {
-        return new StitchedRow(_protocolVersion, _codecRegistry, row, content, _contentIndex);
+    protected StitchedRow convertDelta(Row row, BlockedDelta blockedDelta) {
+        return new StitchedRow(_protocolVersion, _codecRegistry, row, blockedDelta.getContent(), _contentIndex, blockedDelta.getNumBlocks());
     }
 
     @Override

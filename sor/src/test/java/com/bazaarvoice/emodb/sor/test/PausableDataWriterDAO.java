@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.DataWriterDAO;
 import com.bazaarvoice.emodb.sor.db.RecordUpdate;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -50,7 +51,7 @@ public class PausableDataWriterDAO implements DataWriterDAO {
 
     @Override
     public void compact(final Table table, final String key, @Nullable final UUID compactionKey, @Nullable final Compaction compaction, @Nullable final UUID changeId, @Nullable final Delta delta,
-                        final Collection<UUID> changesToDelete, final List<History> historyList, final WriteConsistency consistency) {
+                        final Collection<DeltaClusteringKey> changesToDelete, final List<History> historyList, final WriteConsistency consistency) {
         if (_onlyReplicateDeletesUponCompaction) {
             ((InMemoryDataReaderDAO)_delegate).deleteDeltasOnly(table, key, compactionKey, compaction, changeId, delta,
                     changesToDelete, historyList, consistency);

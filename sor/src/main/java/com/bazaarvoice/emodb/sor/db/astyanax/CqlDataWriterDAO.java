@@ -9,6 +9,7 @@ import com.bazaarvoice.emodb.sor.core.HistoryBatchPersister;
 import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
@@ -52,6 +53,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final DAOUtils _daoUtils;
     private final boolean _writeToLegacyDeltaTable;
     private final boolean _writeToBlockedDeltaTable;
+    private final boolean _cellTombstoneCompactionEnabled;
+    private final int _cellTombstoneBlockLimit;
 
     private final DataWriterDAO _astyanaxWriterDAO;
     private final ChangeEncoder _changeEncoder;
@@ -66,7 +69,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                             PlacementCache placementCache, HistoryStore historyStore,
                             ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                             DAOUtils daoUtils, @PrefixLength int deltaPrefixLength,
-                            @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
+                            @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable,
+                            @CellTombstoneCompactionEnabled boolean cellTombstoneCompactionEnabled, @CellTombstoneBlockLimit int cellTombstoneBlockLimit) {
 
         checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
 
@@ -82,6 +86,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         _deltaPrefixLength = deltaPrefixLength;
         _writeToLegacyDeltaTable = writeToLegacyDeltaTable;
         _writeToBlockedDeltaTable = writeToBlockedDeltaTable;
+        _cellTombstoneCompactionEnabled = cellTombstoneCompactionEnabled;
+        _cellTombstoneBlockLimit = cellTombstoneBlockLimit;
     }
 
     private String getMetricName(String name) {
@@ -104,7 +110,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     }
 
     @Override
-    public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency) {
+    public void compact(Table tbl, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta, Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency) {
         checkNotNull(tbl, "table");
         checkNotNull(key, "key");
         checkNotNull(compactionKey, "compactionKey");
@@ -195,8 +201,23 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                 .setConsistencyLevel(consistencyLevel);
     }
 
+    /**
+     * This method returns a delete statement for a single block, rather than the delta as whole. In order to delete an
+     * entire delta using this method, it should be called once for each block. In cases in which there are relatively
+     * few blocks in a delta, this method can be more efficient than {@link #deleteStatement(TableDDL, ByteBuffer, UUID, ConsistencyLevel)},
+     * as the cell tombstones created by this method are more efficient than range tombstones
+     */
+    private Statement blockDeleteStatement(BlockedDeltaTableDDL tableDDL, ByteBuffer rowKey, UUID changeId, int block, ConsistencyLevel consistencyLevel) {
+        return QueryBuilder.delete()
+                .from(tableDDL.getTableMetadata())
+                .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
+                .and(eq(tableDDL.getChangeIdColumnName(), changeId))
+                .and(eq(tableDDL.getBlockColumnName(), block))
+                .setConsistencyLevel(consistencyLevel);
+    }
+
     private void deleteCompactedDeltas(ByteBuffer rowKey, WriteConsistency consistency, DeltaPlacement placement,
-                                       CassandraKeyspace keyspace, Collection<UUID> changesToDelete,
+                                       CassandraKeyspace keyspace, Collection<DeltaClusteringKey> changesToDelete,
                                        List<History> historyList) {
 
         Session session = keyspace.getCqlSession();
@@ -217,16 +238,23 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         // delete the old deltas & compaction records
         if (_writeToLegacyDeltaTable) {
             BatchStatement legacyTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (UUID change : changesToDelete) {
-                legacyTableStatement.add(deleteStatement(placement.getDeltaTableDDL(), rowKey, change, consistencyLevel));
+            for (DeltaClusteringKey change : changesToDelete) {
+                legacyTableStatement.add(deleteStatement(placement.getDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
             }
             legacyTableFuture = session.executeAsync(legacyTableStatement);
         }
 
         if (_writeToBlockedDeltaTable) {
             BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (UUID change : changesToDelete) {
-                newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change, consistencyLevel));
+            for (DeltaClusteringKey change : changesToDelete) {
+                if (change.hasNumBlocks() && _cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
+                    for (int i = 0; i < change.getNumBlocks(); i++) {
+                        newTableStatement.add(blockDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
+                    }
+                }
+                else {
+                    newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
+                }
             }
             session.execute(newTableStatement);
         }
