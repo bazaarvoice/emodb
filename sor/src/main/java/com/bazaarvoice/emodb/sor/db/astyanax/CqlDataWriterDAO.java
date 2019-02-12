@@ -53,6 +53,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
     private final DAOUtils _daoUtils;
     private final boolean _writeToLegacyDeltaTable;
     private final boolean _writeToBlockedDeltaTable;
+    private final boolean _cellTombstoneCompactionEnabled;
+    private final int _cellTombstoneBlockLimit;
 
     private final DataWriterDAO _astyanaxWriterDAO;
     private final ChangeEncoder _changeEncoder;
@@ -67,7 +69,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                             PlacementCache placementCache, HistoryStore historyStore,
                             ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                             DAOUtils daoUtils, @PrefixLength int deltaPrefixLength,
-                            @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
+                            @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable,
+                            @CellTombstoneCompactionEnabled boolean cellTombstoneCompactionEnabled, @CellTombstoneBlockLimit int cellTombstoneBlockLimit) {
 
         checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
 
@@ -83,6 +86,8 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         _deltaPrefixLength = deltaPrefixLength;
         _writeToLegacyDeltaTable = writeToLegacyDeltaTable;
         _writeToBlockedDeltaTable = writeToBlockedDeltaTable;
+        _cellTombstoneCompactionEnabled = cellTombstoneCompactionEnabled;
+        _cellTombstoneBlockLimit = cellTombstoneBlockLimit;
     }
 
     private String getMetricName(String name) {
@@ -196,7 +201,13 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
                 .setConsistencyLevel(consistencyLevel);
     }
 
-    private Statement blockedDeleteStatement(BlockedDeltaTableDDL tableDDL, ByteBuffer rowKey, UUID changeId, int block, ConsistencyLevel consistencyLevel) {
+    /**
+     * This method returns a delete statement for a single block, rather than the delta as whole. In order to delete an
+     * entire delta using this method, it should be called once for each block. In cases in which there are relatively
+     * few blocks in a delta, this method can be more efficient than {@link #deleteStatement(TableDDL, ByteBuffer, UUID, ConsistencyLevel)},
+     * as the cell tombstones created by this method are more efficient than range tombstones
+     */
+    private Statement blockDeleteStatement(BlockedDeltaTableDDL tableDDL, ByteBuffer rowKey, UUID changeId, int block, ConsistencyLevel consistencyLevel) {
         return QueryBuilder.delete()
                 .from(tableDDL.getTableMetadata())
                 .where(eq(tableDDL.getRowKeyColumnName(), rowKey))
@@ -236,9 +247,9 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         if (_writeToBlockedDeltaTable) {
             BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
             for (DeltaClusteringKey change : changesToDelete) {
-                if (change.hasNumBlocks() && change.getNumBlocks() < 2) {
+                if (change.hasNumBlocks() && _cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
                     for (int i = 0; i < change.getNumBlocks(); i++) {
-                        newTableStatement.add(blockedDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
+                        newTableStatement.add(blockDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
                     }
                 }
                 else {

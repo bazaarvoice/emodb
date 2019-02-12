@@ -112,6 +112,22 @@ public class DAOModule extends PrivateModule {
         return configuration.getDeltaBlockSizeInKb() * 1024;
     }
 
+    @Provides
+    @Singleton
+    @CellTombstoneBlockLimit
+    int provideCellTombstoneBlockLimit(DataStoreConfiguration configuration) {
+        return configuration.getCellTombstoneBlockLimit();
+    }
+
+    @Provides
+    @Singleton
+    @CellTombstoneCompactionEnabled
+    boolean provideCellTombstoneCompactionEnabled(DataStoreConfiguration configuration) {
+        return configuration.isCellTombstoneCompactionEnabled();
+    }
+
+
+
 
 
 

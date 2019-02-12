@@ -68,7 +68,15 @@ public class DataStoreConfiguration {
     @Valid
     @NotNull
     @JsonProperty("deltaBlockSizeInKb")
-    private int _deltaBlockSizeInKb = 64;
+    private int _deltaBlockSizeInKb = 16;
+
+    @Valid
+    @JsonProperty("cellTombstoneCompactionEnabled")
+    private boolean _cellTombstoneCompactionEnabled = true;
+
+    @Valid
+    @JsonProperty("cellTombstoneBlockLimit")
+    private int _cellTombstoneBlockLimit = 2;
 
     @Valid
     @NotNull
@@ -171,6 +179,14 @@ public class DataStoreConfiguration {
 
     public int getDeltaBlockSizeInKb() {
         return _deltaBlockSizeInKb;
+    }
+
+    public boolean isCellTombstoneCompactionEnabled() {
+        return _cellTombstoneCompactionEnabled;
+    }
+
+    public int getCellTombstoneBlockLimit() {
+        return _cellTombstoneBlockLimit;
     }
 
     public AuditWriterConfiguration getAuditWriterConfiguration() {
