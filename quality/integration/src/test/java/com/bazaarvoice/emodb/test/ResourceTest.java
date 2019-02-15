@@ -20,13 +20,12 @@ import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
-import com.sun.jersey.api.core.ResourceConfig;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import java.util.function.Consumer;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.ClientProperties;
+import org.glassfish.jersey.test.inmemory.InMemoryTestContainerFactory;
 import test.integration.databus.DatabusJerseyTest;
 
 import javax.annotation.Nullable;
@@ -92,28 +91,15 @@ public abstract class ResourceTest {
             resourceTestRuleBuilder.addResource(resource);
         }
 
-        List<ResourceFilterFactory> resourceFilterFactories = Lists.newArrayList();
-        List<ContainerRequestFilter> containerRequestFilters = Lists.newArrayList();
-        List<ContainerResponseFilter> containerResponseFilters = Lists.newArrayList();
-
         for (Object filter : filters) {
-            if (filter instanceof ResourceFilterFactory) {
-                resourceFilterFactories.add((ResourceFilterFactory) filter);
-            }
-            if (filter instanceof ContainerRequestFilter) {
-                containerRequestFilters.add((ContainerRequestFilter) filter);
-            }
-            if (filter instanceof ContainerResponseFilter) {
-                containerResponseFilters.add((ContainerResponseFilter) filter);
-            }
+            resourceTestRuleBuilder.addProvider(filter);
         }
 
-        resourceTestRuleBuilder.addProperty(ResourceConfig.PROPERTY_RESOURCE_FILTER_FACTORIES, resourceFilterFactories);
-        resourceTestRuleBuilder.addProperty(ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS, containerRequestFilters);
-        resourceTestRuleBuilder.addProperty(ResourceConfig.PROPERTY_CONTAINER_RESPONSE_FILTERS, containerResponseFilters);
+        resourceTestRuleBuilder.setClientConfigurator(clientConfig -> clientConfig.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true));
 
-        // Jersey tests don't inject Context parameters, so create an injector to provide a mock instance.
-        resourceTestRuleBuilder.addProvider(new DatabusJerseyTest.ContextInjectableProvider<>(HttpServletRequest.class, mock(HttpServletRequest.class)));
+//        // Jersey tests don't inject Context parameters, so create an injector to provide a mock instance.
+        resourceTestRuleBuilder.addProvider(new DatabusJerseyTest.InjectableContextBinder<>(mock(HttpServletRequest.class)));
+
 
         ResourceTestAuthUtil.setUpResources(resourceTestRuleBuilder, SecurityManagerBuilder.create()
                 .withAuthIdentityReader(authIdentityManager)

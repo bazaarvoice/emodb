@@ -39,8 +39,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.sun.jersey.spi.container.ContainerRequest;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.container.ContainerRequestContext;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -121,6 +121,7 @@ public class AdHocThrottleTest extends ResourceTest {
 
     @BeforeClass
     public static void startZookeeper() throws Exception {
+        System.setProperty("zookeeper.admin.enableServer", "false");
         _testingServer = new TestingServer();
         _rootCurator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())
@@ -142,7 +143,7 @@ public class AdHocThrottleTest extends ResourceTest {
         _zkNamespace = "emodb/test" + (_nextBaseIndex++);
         _curator = _rootCurator.usingNamespace(_zkNamespace);
 
-        _mapStore = new ZkMapStore<>(_curator, "adhoc-throttle", new ZkAdHocThrottleSerializer());
+        _mapStore = new ZkMapStore<>(_curator, "/adhoc-throttle", new ZkAdHocThrottleSerializer());
         _mapStore.start();
 
         _adHocThrottleManager = new AdHocThrottleManager(_mapStore);
@@ -150,11 +151,11 @@ public class AdHocThrottleTest extends ResourceTest {
         // Set up the regulator supplier provided to Jersey to defer an instance created specifically for this test.
         final AdHocConcurrentRequestRegulatorSupplier regulatorSupplier =
                 new AdHocConcurrentRequestRegulatorSupplier(_adHocThrottleManager, new MetricRegistry());
-        when(_deferringRegulatorSupplier.forRequest(any(ContainerRequest.class))).thenAnswer(
+        when(_deferringRegulatorSupplier.forRequest(any(ContainerRequestContext.class))).thenAnswer(
                 new Answer<ConcurrentRequestRegulator>() {
                     @Override
                     public ConcurrentRequestRegulator answer(InvocationOnMock invocation) throws Throwable {
-                        ContainerRequest request = (ContainerRequest) invocation.getArguments()[0];
+                        ContainerRequestContext request = (ContainerRequestContext) invocation.getArguments()[0];
                         return regulatorSupplier.forRequest(request);
                     }
                 });

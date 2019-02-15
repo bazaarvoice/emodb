@@ -110,6 +110,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
 
     @BeforeClass
     public static void startZookeeper() throws Exception {
+        System.setProperty("zookeeper.admin.enableServer", "false");
         _testingServer = new TestingServer();
         _rootCurator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())
@@ -131,7 +132,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
         _zkNamespace = "emodb/test" + UUID.randomUUID();
         _curator = _rootCurator.usingNamespace(_zkNamespace);
 
-        _mapStore = new ZkMapStore<>(_curator, "sor-update-throttle", new ZkDataStoreUpdateThrottleSerializer());
+        _mapStore = new ZkMapStore<>(_curator, "/sor-update-throttle", new ZkDataStoreUpdateThrottleSerializer());
         _mapStore.start();
 
         Clock clock = mock(Clock.class);

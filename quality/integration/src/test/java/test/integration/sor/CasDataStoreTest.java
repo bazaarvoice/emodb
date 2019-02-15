@@ -66,10 +66,12 @@ import io.dropwizard.jackson.Jackson;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
+import javax.ws.rs.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -113,6 +115,7 @@ public class CasDataStoreTest {
         _healthChecks = mock(HealthCheckRegistry.class);
 
         // Start test instance of ZooKeeper in the current JVM
+        System.setProperty("zookeeper.admin.enableServer", "false");
         TestingServer testingServer = new TestingServer();
         _lifeCycle.manage(testingServer);
 
@@ -181,6 +184,8 @@ public class CasDataStoreTest {
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
                         new MetricRegistry(), ClassLoader.getSystemClassLoader()));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());

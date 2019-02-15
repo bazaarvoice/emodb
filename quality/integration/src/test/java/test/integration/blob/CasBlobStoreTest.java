@@ -52,7 +52,6 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.io.InputSupplier;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -61,11 +60,13 @@ import io.dropwizard.jackson.Jackson;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
+import javax.ws.rs.client.Client;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -109,6 +110,7 @@ public class CasBlobStoreTest {
         _healthChecks = mock(HealthCheckRegistry.class);
 
         // Start test instance of ZooKeeper in the current JVM
+        System.setProperty("zookeeper.admin.enableServer", "false");
         TestingServer testingServer = new TestingServer();
         _lifeCycle.manage(testingServer);
 
@@ -179,6 +181,8 @@ public class CasBlobStoreTest {
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
                 bind(Environment.class).toInstance(mock(Environment.class));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());
@@ -262,9 +266,9 @@ public class CasBlobStoreTest {
 
     private void verifyPutAndGet(String blobId, final byte[] blobData, Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
-        _store.put(TABLE, blobId, new InputSupplier<InputStream>() {
+        _store.put(TABLE, blobId, new java.util.function.Supplier<InputStream>() {
             @Override
-            public InputStream getInput() throws IOException {
+            public InputStream get() {
                 return new ByteArrayInputStream(blobData);
             }
         }, attributes, ttl);
