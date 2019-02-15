@@ -25,7 +25,6 @@ public class EmoServiceObjectMapperFactory {
 
     public static ObjectMapper configure(ObjectMapper mapper) {
         return CustomJsonObjectMapperFactory.configure(mapper)
-                // TODO: ensure it is safe to remove LogbackModule
                 .setDateFormat(new ISO8601DateFormat())
                 .setPropertyNamingStrategy(new AnnotationSensitivePropertyNamingStrategy())
                 .setSubtypeResolver(new DiscoverableSubtypeResolver());
