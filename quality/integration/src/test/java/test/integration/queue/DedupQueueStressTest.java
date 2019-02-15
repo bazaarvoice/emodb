@@ -12,11 +12,17 @@ import com.bazaarvoice.ostrich.pool.ServiceCachingPolicyBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
+import io.dropwizard.logging.DefaultLoggingFactory;
 import io.dropwizard.logging.LoggingFactory;
+import java.util.concurrent.ExecutorService;
+import javax.ws.rs.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -185,7 +191,7 @@ public class DedupQueueStressTest {
         final String DROPWIZARD_PROPERTY_PREFIX = "dw";
 
         // Load the config.yaml file specified as the first argument.
-        ConfigurationFactory<EmoConfiguration> configFactory = new ConfigurationFactory(
+        ConfigurationFactory<EmoConfiguration> configFactory = new YamlConfigurationFactory<>(
                 EmoConfiguration.class, Validation.buildDefaultValidatorFactory().getValidator(), Jackson.newObjectMapper(), DROPWIZARD_PROPERTY_PREFIX);
         EmoConfiguration configuration = configFactory.build(new File(args[0]));
         int numWriterThreads = Integer.parseInt(args[1]);
@@ -194,13 +200,16 @@ public class DedupQueueStressTest {
         String adminApiKey = configuration.getAuthorizationConfiguration().getAdminApiKey();
 
         MetricRegistry metricRegistry = new MetricRegistry();
-        new LoggingFactory().configure(metricRegistry, "stress");
+        new DefaultLoggingFactory().configure(metricRegistry, "stress");
 
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DedupQueueClientFactory queueFactory = DedupQueueClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        DedupQueueClientFactory queueFactory = DedupQueueClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDedupQueueService secureQueueService = ServicePoolBuilder.create(AuthDedupQueueService.class)
                 .withServiceFactory(queueFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, queueFactory.getServiceName(), metricRegistry))

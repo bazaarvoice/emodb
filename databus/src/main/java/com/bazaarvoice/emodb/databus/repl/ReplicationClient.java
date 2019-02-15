@@ -61,10 +61,14 @@ public class ReplicationClient implements ReplicationSource {
             URI uri = _replicationSource.clone()
                     .segment(channel, "ack")
                     .build();
-            _client.target(uri)
+            Response response = _client.target(uri)
                     .request()
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, _apiKey)
                     .post(Entity.entity(eventIds, MediaType.APPLICATION_JSON_TYPE));
+
+            if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+                throw new WebApplicationException(response);
+            }
         } catch (WebApplicationException e) {
             throw convertException(e);
         }

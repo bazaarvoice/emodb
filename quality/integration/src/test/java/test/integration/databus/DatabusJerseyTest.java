@@ -43,11 +43,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
-import com.sun.jersey.api.client.GenericType;
-import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
+import io.dropwizard.testing.junit.DropwizardAppRule;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.servlet.WriteListener;
+import javax.ws.rs.core.GenericType;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.glassfish.hk2.api.Factory;
+import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -177,7 +179,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
@@ -458,8 +460,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
-            actual = _resourceTestRule.client().resource("/bus/1/queue-name/peek")
+            actual = _resourceTestRule.client().target("/bus/1/queue-name/peek")
                     .queryParam("limit", "123")
+                    .request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_DATABUS)
                     .get(new GenericType<List<Event>>() {});
@@ -510,9 +513,10 @@ public class DatabusJerseyTest extends ResourceTest {
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
-            actual = _resourceTestRule.client().resource("/bus/1/queue-name/poll")
+            actual = _resourceTestRule.client().target("/bus/1/queue-name/poll")
                     .queryParam("limit", "123")
                     .queryParam("ttl", "15")
+                    .request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_DATABUS)
                     .get(new GenericType<List<Event>>() {});
@@ -550,7 +554,7 @@ public class DatabusJerseyTest extends ResourceTest {
                     new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
             //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenReturn(new PollResult(pollResults.iterator(), 2, true));
 
             List<Event> expected;
@@ -649,7 +653,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();
@@ -689,6 +693,16 @@ public class DatabusJerseyTest extends ResourceTest {
             @Override
             public void write(int b) throws IOException {
                 out.write(b);
+            }
+
+            @Override
+            public boolean isReady() {
+                return true;
+            }
+
+            @Override
+            public void setWriteListener(WriteListener writeListener) {
+                // No-Op as isReady() will always return true
             }
         };
 
@@ -947,9 +961,37 @@ public class DatabusJerseyTest extends ResourceTest {
         assertEquals(actual.getEventTtl(), expected.getEventTtl());
     }
 
-    public static class ContextInjectableProvider<T> extends SingletonTypeInjectableProvider<Context, T> {
-        public ContextInjectableProvider(Type type, T instance) {
-            super(type, instance);
+    public static class InjectableContextBinder<T> extends AbstractBinder {
+
+        private final T _instance;
+
+        public InjectableContextBinder(T instance) {
+            _instance = instance;
+        }
+
+
+        @Override
+        protected void configure() {
+            bindFactory(new InjectableContextFactory<T>(_instance));
+        }
+
+        private class InjectableContextFactory<T> implements Factory<T> {
+
+            private final T _instance1;
+
+            InjectableContextFactory(T instance) {
+                _instance1 = instance;
+            }
+
+            @Override
+            public T provide() {
+                return _instance1;
+            }
+
+            @Override
+            public void dispose(T instance) {
+            }
         }
     }
+
 }
