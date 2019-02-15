@@ -5,9 +5,13 @@ import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.google.common.base.Objects;
+import com.google.common.base.Predicates;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Iterables;
 import com.google.common.net.HttpHeaders;
 
 import java.net.URI;
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 
@@ -61,9 +65,9 @@ public class ReplicationClientFactory implements MultiThreadedServiceFactory<Rep
 
     @Override
     public boolean isRetriableException(Exception e) {
-        // TODO: explore if the removal of ClientHandlerException is acceptable
         return (e instanceof WebApplicationException &&
-                ((WebApplicationException) e).getResponse().getStatus() >= 500);
+                        ((WebApplicationException) e).getResponse().getStatus() >= 500) ||
+                Iterables.any(Throwables.getCausalChain(e), Predicates.instanceOf(ProcessingException.class));
     }
 
     @Override
