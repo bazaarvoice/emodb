@@ -14,12 +14,19 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.reflect.AbstractInvocationHandler;
 import io.dropwizard.client.HttpClientConfiguration;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.util.Duration;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import javax.ws.rs.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,12 +169,16 @@ public class HadoopDataStoreManager {
      * Creates a ServiceFactory for a cluster with reasonable configurations.
      */
     private MultiThreadedServiceFactory<AuthDataStore> createDataStoreServiceFactory(String cluster, MetricRegistry metricRegistry) {
-        HttpClientConfiguration clientConfig = new HttpClientConfiguration();
+        JerseyClientConfiguration clientConfig = new JerseyClientConfiguration();
         clientConfig.setKeepAlive(Duration.seconds(1));
         clientConfig.setConnectionTimeout(Duration.seconds(10));
         clientConfig.setTimeout(Duration.minutes(5));
 
-        return DataStoreClientFactory.forClusterAndHttpConfiguration(cluster, clientConfig, metricRegistry);
+        ExecutorService executorService = Executors.newFixedThreadPool(50);
+        Client client = new JerseyClientBuilder(metricRegistry).using(clientConfig).using(executorService, new ObjectMapper()).build("dw");
+
+
+        return DataStoreClientFactory.forClusterAndHttpClient(cluster, client);
     }
 
     /**
