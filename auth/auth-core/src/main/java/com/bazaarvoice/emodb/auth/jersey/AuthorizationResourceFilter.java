@@ -89,4 +89,3 @@ public class AuthorizationResourceFilter implements ContainerRequestFilter {
         return permissions;
     }
 }
-
