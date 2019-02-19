@@ -10,14 +10,14 @@ import org.glassfish.hk2.api.TypeLiteral;
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.spi.internal.ValueFactoryProvider;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class AuthenticatedSubjectFeature implements Feature {
 
     private final SecurityManager _securityManager;
 
     public AuthenticatedSubjectFeature(SecurityManager securityManager) {
-        _securityManager = checkNotNull(securityManager);
+        _securityManager = requireNonNull(securityManager);
     }
 
     @Override
