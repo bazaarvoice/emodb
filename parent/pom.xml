@@ -37,7 +37,7 @@
         <guice.version>4.0</guice.version>
         <jackson.version>2.9.8</jackson.version>
         <metrics.version>4.0.2</metrics.version>
-        <ostrich.version>2.0.0</ostrich.version>
+        <ostrich.version>2.0.1</ostrich.version>
         <rison.version>2.9.4</rison.version>
         <slf4j.version>1.7.4</slf4j.version>
         <commons-io.version>2.1</commons-io.version>
