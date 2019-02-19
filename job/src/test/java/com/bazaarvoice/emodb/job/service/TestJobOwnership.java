@@ -102,7 +102,6 @@ public class TestJobOwnership {
         }).when(_queueService).acknowledge(eq("testqueue"), anyListOf(String.class));
 
         _jobStatusDAO = new InMemoryJobStatusDAO();
-        System.setProperty("zookeeper.admin.enableServer", "false");
         _testingServer = new TestingServer();
         _curator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())

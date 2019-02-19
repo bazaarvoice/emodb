@@ -87,7 +87,6 @@ public class DedupQueueShadedClientTest extends ResourceTest {
 
     @Test
     public void testHostDiscovery() throws Exception {
-        System.setProperty("zookeeper.admin.enableServer", "false");
         TestingServer server = new TestingServer();
 
         try (CuratorFramework curator = CuratorFrameworkFactory.newClient(

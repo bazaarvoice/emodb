@@ -110,7 +110,6 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
 
     @BeforeClass
     public static void startZookeeper() throws Exception {
-        System.setProperty("zookeeper.admin.enableServer", "false");
         _testingServer = new TestingServer();
         _rootCurator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())

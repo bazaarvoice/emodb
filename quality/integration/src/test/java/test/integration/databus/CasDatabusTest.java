@@ -97,7 +97,6 @@ public class CasDatabusTest {
         _healthChecks = mock(HealthCheckRegistry.class);
 
         // Start test instance of ZooKeeper in the current JVM
-        System.setProperty("zookeeper.admin.enableServer", "false");
         TestingServer testingServer = new TestingServer();
         _lifeCycle.manage(testingServer);
 
