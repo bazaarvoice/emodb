@@ -132,8 +132,8 @@ public class EmoService extends Application<EmoConfiguration> {
 
         ArgumentParser parser = ArgumentParsers.newArgumentParser("emoparser");
         parser.addArgument("server").required(true).help("server");
-        parser.addArgument("emo-config").required(true).help("config.yaml");
-        parser.addArgument("config-ddl").required(true).help("config-ddl.yaml");
+        parser.addArgument("emo_config").required(true).help("config.yaml");
+        parser.addArgument("config_ddl").required(true).help("config-ddl.yaml");
 
         // Get the path to config-ddl
         String[] first3Args = (String[]) ArrayUtils.subarray(args, 0, Math.min(args.length, 3));
