@@ -10,7 +10,7 @@ import org.glassfish.jersey.server.internal.inject.AbstractValueFactoryProvider;
 import org.glassfish.jersey.server.internal.inject.MultivaluedParameterExtractorProvider;
 import org.glassfish.jersey.server.model.Parameter;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Provider to inject a {@link Subject} as a parameter to a request that requires authentication or authorization.
@@ -25,7 +25,7 @@ public class AuthenticatedSubjectProvider extends AbstractValueFactoryProvider {
     public AuthenticatedSubjectProvider(MultivaluedParameterExtractorProvider mpep, ServiceLocator locator,
                                         AuthenticatedSubjectFactory authenticatedSubjectFactory) {
         super(mpep, locator, Parameter.Source.UNKNOWN);
-        _authenticatedSubjectFactory = checkNotNull(authenticatedSubjectFactory);
+        _authenticatedSubjectFactory = requireNonNull(authenticatedSubjectFactory);
     }
 
     @Override

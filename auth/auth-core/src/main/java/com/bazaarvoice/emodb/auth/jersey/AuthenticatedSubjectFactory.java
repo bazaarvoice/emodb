@@ -5,7 +5,7 @@ import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.util.ThreadContext;
 import org.glassfish.jersey.server.internal.inject.AbstractContainerRequestValueFactory;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class AuthenticatedSubjectFactory extends AbstractContainerRequestValueFactory<Subject> {
 
@@ -13,7 +13,7 @@ public class AuthenticatedSubjectFactory extends AbstractContainerRequestValueFa
 
     @Inject
     public AuthenticatedSubjectFactory(SecurityManager securityManager) {
-        _securityManager = checkNotNull(securityManager);
+        _securityManager = requireNonNull(securityManager);
     }
 
     @Override

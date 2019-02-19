@@ -1,4 +1,3 @@
-
 package com.bazaarvoice.emodb.auth.jersey;
 
 import com.google.common.base.Function;

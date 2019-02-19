@@ -1,14 +1,9 @@
 package com.bazaarvoice.emodb.blob.client;
 
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import io.dropwizard.client.HttpClientBuilder;
-import io.dropwizard.client.JerseyClientBuilder;
-import io.dropwizard.client.JerseyClientConfiguration;
-import io.dropwizard.util.Duration;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
