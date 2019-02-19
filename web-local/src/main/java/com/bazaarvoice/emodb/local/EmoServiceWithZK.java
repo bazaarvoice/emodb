@@ -165,8 +165,6 @@ public class EmoServiceWithZK {
         // ZooKeeper is too noisy by default.
         ((Logger) LoggerFactory.getLogger("org.apache.zookeeper")).setLevel(Level.ERROR);
 
-        System.setProperty("zookeeper.admin.enableServer", "false");
-
         // Start the testing server.
         TestingServer zooKeeperServer = new TestingServer(2181);
 

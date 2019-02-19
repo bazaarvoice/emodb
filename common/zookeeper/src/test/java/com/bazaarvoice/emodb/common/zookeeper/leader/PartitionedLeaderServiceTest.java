@@ -30,7 +30,6 @@ public class PartitionedLeaderServiceTest {
 
     @BeforeClass
     private void setupZookeeper() throws Exception {
-        System.setProperty("zookeeper.admin.enableServer", "false");
         _zookeeper = new TestingServer();
     }
 

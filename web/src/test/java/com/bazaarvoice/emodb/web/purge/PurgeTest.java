@@ -72,7 +72,6 @@ public class PurgeTest {
         _queueService = mock(QueueService.class);
         _jobHandlerRegistry = new DefaultJobHandlerRegistry();
         _jobStatusDAO = new InMemoryJobStatusDAO();
-        System.setProperty("zookeeper.admin.enableServer", "false");
         _testingServer = new TestingServer();
         _curator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())

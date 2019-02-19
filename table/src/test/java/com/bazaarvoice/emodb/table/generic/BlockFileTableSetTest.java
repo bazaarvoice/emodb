@@ -198,7 +198,6 @@ public class BlockFileTableSetTest {
 
     @Test
     public void testDistributed() throws Exception {
-        System.setProperty("zookeeper.admin.enableServer", "false");
         try (
                 TestingServer zookeeper = new TestingServer();
                 CuratorFramework curator0 = CuratorFrameworkFactory.newClient(zookeeper.getConnectString(),
