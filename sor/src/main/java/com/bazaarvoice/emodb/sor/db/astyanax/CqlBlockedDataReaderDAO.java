@@ -798,9 +798,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Collections.emptyIterator();
         TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
-        deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
+        Iterator<Change> deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
 
         return touch(MergeIterator.merge(deltas, deltaHistory, reversed));
     }

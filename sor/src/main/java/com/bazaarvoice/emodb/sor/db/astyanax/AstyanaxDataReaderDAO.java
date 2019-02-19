@@ -298,9 +298,8 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Collections.emptyIterator();
         ColumnFamily<ByteBuffer, UUID> deltaHistoryCf = placement.getDeltaHistoryColumnFamily();
-        deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, limit, 0, consistency));
+        Iterator<Change> deltaHistory = decodeColumns(columnScan(rowKey, placement, deltaHistoryCf, start, end, reversed, limit, 0, consistency));
 
         return touch(MergeIterator.merge(deltas, deltaHistory, reversed));
     }

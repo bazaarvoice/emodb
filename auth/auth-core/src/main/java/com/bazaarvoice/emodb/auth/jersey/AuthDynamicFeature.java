@@ -22,7 +22,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * {@link DynamicFeature} that places filters on the request for authentication and authorization based
@@ -58,8 +58,8 @@ public class AuthDynamicFeature implements DynamicFeature {
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
 
     public AuthDynamicFeature(SecurityManager securityManager, AuthenticationTokenGenerator<?> tokenGenerator) {
-        _securityManager = checkNotNull(securityManager, "securityManager");
-        _tokenGenerator = checkNotNull(tokenGenerator, "tokenGenerator");
+        _securityManager = requireNonNull(securityManager, "securityManager");
+        _tokenGenerator = requireNonNull(tokenGenerator, "tokenGenerator");
     }
 
     @Override
@@ -97,7 +97,7 @@ public class AuthDynamicFeature implements DynamicFeature {
 
     }
 
-    private Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(RequiresPermissions permAnnotation, ResourceInfo resourceInfo) {
+    private static Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(RequiresPermissions permAnnotation, ResourceInfo resourceInfo) {
         return createSubstitutionMap(permAnnotation.value(), resourceInfo);
     }
 
@@ -105,7 +105,7 @@ public class AuthDynamicFeature implements DynamicFeature {
      * Returns a mapping from permissions found in the annotations to functions which can perform any necessary
      * substitutions based on actual values in the request.
      */
-    private Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(String[] permissions, ResourceInfo resourceInfo) {
+    private static Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(String[] permissions, ResourceInfo resourceInfo) {
         Map<String, Function<ContainerRequestContext, String>> map = Maps.newLinkedHashMap();
 
         for (String permission : permissions) {
@@ -136,7 +136,7 @@ public class AuthDynamicFeature implements DynamicFeature {
      * Creates a substitution function for path values, such as
      * <code>@RequiresPermission("resource|update|{id}")</code>
      */
-    private Function<ContainerRequestContext, String> createPathSubstitution(final String param, final ResourceInfo resourceInfo) {
+    private static Function<ContainerRequestContext, String> createPathSubstitution(final String param, final ResourceInfo resourceInfo) {
         int from = 0;
         int segment = -1;
 
@@ -177,7 +177,7 @@ public class AuthDynamicFeature implements DynamicFeature {
      * assert(getSubstitutionIndex("id", "resource/{id}/move") == 1)
      * assert(getSubstitutionIndex("not_found", "path/with/four/segments") == -4)
      */
-    private int getSubstitutionIndex(String param, String path) {
+    private static int getSubstitutionIndex(String param, String path) {
         final String match = String.format("{%s}", param);
 
         if (path.startsWith("/")) {
@@ -201,7 +201,7 @@ public class AuthDynamicFeature implements DynamicFeature {
      * Creates a substitution function for query param values, such as
      * <code>@RequiresPermission("resource|update|{?id}")</code>
      */
-    private Function<ContainerRequestContext, String> createQuerySubstitution(final String param) {
+    private static Function<ContainerRequestContext, String> createQuerySubstitution(final String param) {
         return new Function<ContainerRequestContext, String>() {
             @Override
             public String apply(ContainerRequestContext request) {
@@ -223,7 +223,7 @@ public class AuthDynamicFeature implements DynamicFeature {
         private final int _priority;
 
         public PrioritizedContainerRequestFilter(ContainerRequestFilter filter, int priority) {
-            _filter = checkNotNull(filter);
+            _filter = requireNonNull(filter);
             _priority = priority;
         }
 

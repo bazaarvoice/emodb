@@ -22,10 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import io.dropwizard.testing.junit.ResourceTestRule;
-import java.util.function.Consumer;
-import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
-import org.glassfish.jersey.test.inmemory.InMemoryTestContainerFactory;
 import test.integration.databus.DatabusJerseyTest;
 
 import javax.annotation.Nullable;
