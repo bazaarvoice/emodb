@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Metrics;
 import com.datastax.driver.core.Session;
@@ -53,6 +54,13 @@ public class CqlCluster extends AbstractCassandraCluster<Session> implements Man
         }
 
         Metrics metrics = _cluster.getMetrics();
+
+        JmxReporter reporter =
+                JmxReporter.forRegistry(_cluster.getMetrics().getRegistry())
+                        .inDomain(_cluster.getClusterName() + "-metrics")
+                        .build();
+
+        reporter.start();
 
         _metricRegistry.register(
                 MetricRegistry.name("bv.emodb.cql", _metricName, "ConnectionPool", "connected-to-hosts"),

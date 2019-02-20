@@ -339,13 +339,13 @@ public class BlobStoreModule extends PrivateModule {
     @Provides @Singleton @TableChangesEnabled
     ValueStore<Boolean> provideTableChangesEnabled(@BlobStoreZooKeeper CuratorFramework curator,
                                                    LifeCycleRegistry lifeCycle) {
-        return lifeCycle.manage(new ZkValueStore<>(curator, "settings/table-changes-enabled", new ZkBooleanSerializer(), true));
+        return lifeCycle.manage(new ZkValueStore<>(curator, "/settings/table-changes-enabled", new ZkBooleanSerializer(), true));
     }
 
     @Provides @Singleton @Maintenance
     MapStore<Double> provideRateLimiterSettings(@BlobStoreZooKeeper CuratorFramework curator,
                                                 LifeCycleRegistry lifeCycle) {
-        return lifeCycle.manage(new ZkMapStore<>(curator, "maintenance-rate-limits", new ZkDoubleSerializer()));
+        return lifeCycle.manage(new ZkMapStore<>(curator, "/maintenance-rate-limits", new ZkDoubleSerializer()));
     }
 
     @Provides @Singleton @Maintenance

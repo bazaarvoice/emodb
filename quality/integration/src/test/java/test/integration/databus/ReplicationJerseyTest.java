@@ -1,26 +1,18 @@
 package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;
-import com.bazaarvoice.emodb.auth.permissions.InMemoryPermissionManager;
-import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
-import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
-import com.bazaarvoice.emodb.auth.role.RoleManager;
-import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationClient;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
-import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.DefaultRoles;
-import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.databus.ReplicationResource1;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -90,8 +82,8 @@ public class ReplicationJerseyTest extends ResourceTest {
         try {
             replicationClient(APIKEY_UNAUTHORIZED).delete("channel", ids);
             fail();
-        } catch (UniformInterfaceException e) {
-            if (e.getResponse().getClientResponseStatus() != ClientResponse.Status.FORBIDDEN) {
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }
         }
@@ -107,8 +99,8 @@ public class ReplicationJerseyTest extends ResourceTest {
         try {
             replicationClient("completely-unknown-key").delete("channel", ids);
             fail();
-        } catch (UniformInterfaceException e) {
-            if (e.getResponse().getClientResponseStatus() != ClientResponse.Status.FORBIDDEN) {
+        } catch (WebApplicationException e) {
+            if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }
         }

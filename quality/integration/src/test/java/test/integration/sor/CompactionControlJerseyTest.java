@@ -20,8 +20,8 @@ import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.core.Response;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -130,7 +130,7 @@ public class CompactionControlJerseyTest extends ResourceTest {
             compactionControlClient(APIKEY_UNAUTHORIZED).deleteStashTime("1", "datacenter");
             fail();
         } catch (EmoClientException e) {
-            if (e.getResponse().getStatus() != ClientResponse.Status.FORBIDDEN.getStatusCode()) {
+            if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }
         }
@@ -146,7 +146,7 @@ public class CompactionControlJerseyTest extends ResourceTest {
             compactionControlClient("completely-unknown-key").deleteStashTime("1", "datacenter");
             fail();
         } catch (EmoClientException e) {
-            if (e.getResponse().getStatus() != ClientResponse.Status.FORBIDDEN.getStatusCode()) {
+            if (e.getResponse().getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
                 throw e;
             }
         }

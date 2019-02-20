@@ -24,12 +24,11 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.io.InputSupplier;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import java.util.function.Supplier;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
@@ -318,7 +317,7 @@ public class BlobStoreResource1 {
         if (range == null) {
             response.header(HttpHeaders.CONTENT_LENGTH, metadata.getLength());
         } else {
-            response.status(ClientResponse.Status.PARTIAL_CONTENT);
+            response.status(Response.Status.PARTIAL_CONTENT);
             response.header(HttpHeaders.CONTENT_LENGTH, range.getLength());
             response.header("Content-Range", "bytes " + range.getOffset() + "-" +
                     (range.getOffset() + range.getLength() - 1) + "/" + metadata.getLength());
@@ -459,11 +458,11 @@ public class BlobStoreResource1 {
      * Returns an InputSupplier that throws an exception if the caller attempts to consume the input stream
      * multiple times.
      */
-    private InputSupplier<InputStream> onceOnlySupplier(final InputStream in) {
+    private Supplier<InputStream> onceOnlySupplier(final InputStream in) {
         final AtomicBoolean once = new AtomicBoolean();
-        return new InputSupplier<InputStream>() {
+        return new Supplier<InputStream>() {
             @Override
-            public InputStream getInput() throws IOException {
+            public InputStream get() {
                 if (!once.compareAndSet(false, true)) {
                     throw new IllegalStateException("Input stream may be consumed only once per BlobStore call.");
                 }

@@ -20,8 +20,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.UncheckedExecutionException;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.core.Response;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -179,20 +179,21 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
     }
 
     private <T> T callException(String path, int expectedStatus, Class<? extends Exception> expectedException, Class<T> entityType) {
-        ClientResponse response = _resourceTestRule.client()
-                .resource("/exception/" + path)
-                .get(ClientResponse.class);
+        Response response = _resourceTestRule.client()
+                .target("/exception/" + path)
+                .request()
+                .get();
 
         assertEquals(expectedStatus, response.getStatus());
         assertEquals(expectedException.getName(), response.getHeaders().getFirst("X-BV-Exception"));
 
         if (String.class.equals(entityType)) {
-            assertEquals(MediaType.TEXT_PLAIN_TYPE, response.getType());
+            assertEquals(MediaType.TEXT_PLAIN_TYPE, response.getMediaType());
         } else {
-            assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+            assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getMediaType());
         }
 
-        return response.getEntity(entityType);
+        return response.readEntity(entityType);
 
     }
 

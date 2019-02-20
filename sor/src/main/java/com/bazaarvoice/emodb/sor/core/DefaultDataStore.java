@@ -359,7 +359,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
             @Override
             public Iterator<AnnotatedContent> execute() {
                 if (_keys.isEmpty()) {
-                    return Iterators.emptyIterator();
+                    return Collections.emptyIterator();
                 }
                 // Limit memory usage using an iterator such that only one row's change list is in memory at a time.
                 Iterator<Record> recordIterator = _dataReaderDao.readAll(_keys, consistency);

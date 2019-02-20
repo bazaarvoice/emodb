@@ -25,15 +25,21 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
+import io.dropwizard.logging.DefaultLoggingFactory;
 import io.dropwizard.logging.LoggingFactory;
+import java.util.concurrent.ExecutorService;
+import javax.ws.rs.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -192,7 +198,7 @@ public class SorStressTest  {
         final String DROPWIZARD_PROPERTY_PREFIX = "dw";
 
         // Load the config.yaml file specified as the first argument.
-        ConfigurationFactory<EmoConfiguration> configFactory = new ConfigurationFactory(
+        ConfigurationFactory<EmoConfiguration> configFactory = new YamlConfigurationFactory<>(
                 EmoConfiguration.class, Validation.buildDefaultValidatorFactory().getValidator(), Jackson.newObjectMapper(), DROPWIZARD_PROPERTY_PREFIX);
         EmoConfiguration configuration = configFactory.build(new File(args[0]));
         int numWriterThreads = Integer.parseInt(args[1]);
@@ -200,13 +206,16 @@ public class SorStressTest  {
         String apiKey = configuration.getAuthorizationConfiguration().getAdminApiKey();
 
         MetricRegistry metricRegistry = new MetricRegistry();
-        new LoggingFactory().configure(metricRegistry, "stress");
+        new DefaultLoggingFactory().configure(metricRegistry, "stress");
 
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDataStore authDataStore = ServicePoolBuilder.create(AuthDataStore.class)
                 .withServiceFactory(dataStoreFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
@@ -215,8 +224,8 @@ public class SorStressTest  {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
         DataStore dataStore = DataStoreAuthenticator.proxied(authDataStore).usingCredentials(apiKey);
 
-        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDatabus authDatabus = ServicePoolBuilder.create(AuthDatabus.class)
                 .withServiceFactory(databusFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, databusFactory.getServiceName(), metricRegistry))

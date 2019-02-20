@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.web.resources;
 import com.google.common.base.Splitter;
 import com.google.common.hash.Hashing;
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.spi.resource.Singleton;
 
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;

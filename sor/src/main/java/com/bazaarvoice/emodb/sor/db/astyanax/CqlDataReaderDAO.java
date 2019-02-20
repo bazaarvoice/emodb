@@ -521,7 +521,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         ByteBufferRange keyRange = storage.getSplitRange(splitRange, fromKeyExclusive, split);
         // The fromKeyExclusive might be equal to the end token of the split.  If so, there's nothing to return.
         if (keyRange.getStart().equals(keyRange.getEnd())) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         return recordScan(placement, table, keyRange, consistency);
@@ -695,7 +695,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Iterable<Row>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }
@@ -804,14 +804,14 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         ConsistencyLevel consistency = SorConsistencies.toCql(readConsistency);
 
         // Read Delta and Compaction objects
-        Iterator<Change> deltas = Iterators.emptyIterator();
+        Iterator<Change> deltas = Collections.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
             deltas = decodeColumns(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Iterators.emptyIterator();
+        Iterator<Change> deltaHistory = Collections.emptyIterator();
         TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
         deltaHistory = decodeColumns(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
 
@@ -902,9 +902,9 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
      */
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator());
+                Collections.emptyIterator(),
+                Collections.emptyIterator(),
+                Collections.emptyIterator());
     }
 
     @VisibleForTesting

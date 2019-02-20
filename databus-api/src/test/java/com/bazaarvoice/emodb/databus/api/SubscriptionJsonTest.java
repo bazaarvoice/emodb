@@ -48,7 +48,7 @@ public class SubscriptionJsonTest {
         assertEquals(actual.getEventTtl(), expected.getEventTtl());
     }
 
-    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl duration should be within 365 days .*")
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".*EventTtl duration should be within 365 days(?s).*")
     public void testSubscriptionJsonWithEventTtlGreaterThan365Days() throws Exception {
         Date now = new Date();
         String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());
@@ -63,7 +63,7 @@ public class SubscriptionJsonTest {
         JsonHelper.fromJson(subscriptionJsonString, Subscription.class);
     }
 
-    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl must be >0 .*")
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp=".* EventTtl must be >0(?s).*")
     public void testSubscriptionJsonWithNegativeEventTtl() throws Exception {
         Date now = new Date();
         String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());

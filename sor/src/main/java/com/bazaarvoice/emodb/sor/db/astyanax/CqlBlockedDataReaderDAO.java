@@ -501,7 +501,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         ByteBufferRange keyRange = storage.getSplitRange(splitRange, fromKeyExclusive, split);
         // The fromKeyExclusive might be equal to the end token of the split.  If so, there's nothing to return.
         if (keyRange.getStart().equals(keyRange.getEnd())) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         return recordScan(placement, table, keyRange, consistency);
@@ -675,7 +675,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Iterable<Row>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }
@@ -788,7 +788,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         ConsistencyLevel consistency = SorConsistencies.toCql(readConsistency);
 
         // Read Delta and Compaction objects
-        Iterator<Change> deltas = Iterators.emptyIterator();
+        Iterator<Change> deltas = Collections.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getBlockedDeltaTableDDL();
             ProtocolVersion protocolVersion = placement.getKeyspace().getCqlSession().getCluster().getConfiguration().getProtocolOptions().getProtocolVersion();
@@ -798,9 +798,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Iterators.emptyIterator();
         TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
-        deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
+        Iterator<Change> deltaHistory = decodeColumns(Iterators.limit(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, consistency).iterator(), scaledLimit));
 
         return touch(MergeIterator.merge(deltas, deltaHistory, reversed));
     }
@@ -893,9 +892,9 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
      */
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator());
+                Collections.emptyIterator(),
+                Collections.emptyIterator(),
+                Collections.emptyIterator());
     }
 
     @VisibleForTesting

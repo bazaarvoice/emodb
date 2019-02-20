@@ -131,7 +131,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
         _zkNamespace = "emodb/test" + UUID.randomUUID();
         _curator = _rootCurator.usingNamespace(_zkNamespace);
 
-        _mapStore = new ZkMapStore<>(_curator, "sor-update-throttle", new ZkDataStoreUpdateThrottleSerializer());
+        _mapStore = new ZkMapStore<>(_curator, "/sor-update-throttle", new ZkDataStoreUpdateThrottleSerializer());
         _mapStore.start();
 
         Clock clock = mock(Clock.class);
