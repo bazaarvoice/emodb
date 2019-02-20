@@ -77,7 +77,7 @@ public class EmoServiceWithZK {
         parser.addArgument("server").required(true).help("server");
         parser.addArgument("emo_config").required(true).help("config.yaml - EmoDB's config file");
         parser.addArgument("emo_config-ddl").required(true).help("config-ddl.yaml - EmoDB's cassandra schema file");
-        parser.addArgument("cassandra)yaml").nargs("?").help("cassandra.yaml - Cassandra configuration file to start an" +
+        parser.addArgument("cassandra_yaml").nargs("?").help("cassandra.yaml - Cassandra configuration file to start an" +
                 " in memory embedded Cassandra.");
         parser.addArgument("-z","--zookeeper").dest("zookeeper").action(Arguments.storeTrue()).help("Starts zookeeper");
         parser.addArgument("-p","--permissions-yaml").dest("permissions").nargs("*").help("Permissions file(s)");
