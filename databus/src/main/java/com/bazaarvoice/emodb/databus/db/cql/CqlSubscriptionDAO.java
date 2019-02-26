@@ -36,6 +36,10 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
 
     private static final String CF_NAME = "subscription";
 
+    // Currently, by default, subscription ttl limit is set to 365 days (in seconds),
+    // but that could be changed in future
+    private final static int SUBSCRIPTION_TTL_LIMIT = Math.toIntExact(Duration.ofDays(365).getSeconds());
+
     private final CassandraKeyspace _keyspace;
     private final Clock _clock;
     private String _rowkeyColumn;
@@ -52,15 +56,17 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
     @Override
     public void insertSubscription(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
         insertSubscription(new DefaultOwnedSubscription(
-                subscription,
-                tableFilter,
-                new Date(_clock.millis() + subscriptionTtl.toMillis()),
-                Duration.ofSeconds(Ttls.toSeconds(eventTtl, 1, Integer.MAX_VALUE)),
-                ownerId)
+                        subscription,
+                        tableFilter,
+                        new Date(_clock.millis() + subscriptionTtl.toMillis()),
+                        Duration.ofSeconds(Ttls.toSeconds(eventTtl, 1, SUBSCRIPTION_TTL_LIMIT)),
+                        ownerId
+                ),
+                Ttls.toSeconds(subscriptionTtl, 1, SUBSCRIPTION_TTL_LIMIT)
         );
     }
 
-    private void insertSubscription(OwnedSubscription subscription) {
+    private void insertSubscription(OwnedSubscription subscription, int ttl) {
         Map<String, Object> json = new HashMap<String, Object>() {{
             put("filter", subscription.getTableFilter().toString());
             put("expiresAt", subscription.getExpiresAt().getTime());
@@ -73,7 +79,7 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
                         .value(rowkeyColumn(), ROW_KEY)
                         .value(subscriptionNameColumn(), subscription.getName())
                         .value(subscriptionColumn(), JsonHelper.asJson(json))
-                        .using(ttl(Math.toIntExact(subscription.getEventTtl().getSeconds())))
+                        .using(ttl(ttl))
                         .setConsistencyLevel(ConsistencyLevel.LOCAL_QUORUM));
     }
 
