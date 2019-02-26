@@ -38,7 +38,7 @@ public class CqlSubscriptionDAO implements SubscriptionDAO {
 
     // Currently, by default, subscription ttl limit is set to 365 days (in seconds),
     // but that could be changed in future
-    private final static int SUBSCRIPTION_TTL_LIMIT = Math.toIntExact(Duration.ofDays(365).getSeconds());
+    private static final int SUBSCRIPTION_TTL_LIMIT = Math.toIntExact(Duration.ofDays(365).getSeconds());
 
     private final CassandraKeyspace _keyspace;
     private final Clock _clock;
