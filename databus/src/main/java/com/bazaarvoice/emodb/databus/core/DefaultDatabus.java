@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
+import com.bazaarvoice.emodb.databus.api.DefaultSubscription;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Names;
@@ -339,8 +340,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         checkLegalSubscriptionName(subscription);
         checkSubscriptionOwner(ownerId, subscription);
         checkNotNull(tableFilter, "tableFilter");
-        checkArgument(subscriptionTtl.compareTo(Duration.ZERO) > 0, "SubscriptionTtl must be >0");
-        checkArgument(eventTtl.compareTo(Duration.ZERO) > 0, "EventTtl must be >0");
+
+        DefaultSubscription.validateSubscriptionTtl(subscriptionTtl);
+        DefaultSubscription.validateEventTtl(eventTtl);
+
         SubscriptionConditionValidator.checkAllowed(tableFilter);
 
         if (includeDefaultJoinFilter) {

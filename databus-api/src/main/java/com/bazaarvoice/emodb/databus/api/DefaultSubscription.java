@@ -12,9 +12,13 @@ import java.util.Objects;
 import static com.bazaarvoice.emodb.databus.api.Names.isLegalSubscriptionName;
 
 public final class DefaultSubscription implements Subscription {
-    // Currently, by default, subscription event ttl limit is set to 365 days,
+    // Currently, by default, event ttl limit is set to 365 days,
     // but that could be changed in future
-    private final static Duration EVENT_TTL_LIMIT = Duration.ofDays(365);
+    private static final Duration EVENT_TTL_LIMIT = Duration.ofDays(365);
+
+    // Currently, by default, subscription ttl limit is set to 365 days,
+    // but that could be changed in future
+    private static final Duration SUBSCRIPTION_TTL_LIMIT = Duration.ofDays(365);
 
     private final String _name;
     private final Condition _tableFilter;
@@ -23,7 +27,7 @@ public final class DefaultSubscription implements Subscription {
 
     public DefaultSubscription(String name, Condition tableFilter, Date expiresAt, Duration eventTtl) {
         _name = validateName(name);
-        _tableFilter = tableFilter;
+        _tableFilter = Objects.requireNonNull(tableFilter);
         _expiresAt =  Objects.requireNonNull(expiresAt);
         _eventTtl = validateEventTtl(eventTtl);
     }
@@ -40,15 +44,23 @@ public final class DefaultSubscription implements Subscription {
         return name;
     }
 
-    private static Duration validateEventTtl(final Duration eventTtl) {
+    public static Duration validateEventTtl(final Duration eventTtl) {
+        return validateTtl(eventTtl, Duration.ZERO, EVENT_TTL_LIMIT, "Event");
+    }
+
+    public static Duration validateSubscriptionTtl(final Duration eventTtl) {
+        return validateTtl(eventTtl, Duration.ZERO, SUBSCRIPTION_TTL_LIMIT, "Subscription");
+    }
+
+    private static Duration validateTtl(final Duration eventTtl, final Duration lowerBound, final Duration upperBound, String type) {
         Objects.requireNonNull(eventTtl);
 
-        if (eventTtl.compareTo(Duration.ZERO) < 0) {
-            throw new IllegalArgumentException("EventTtl must be >0");
+        if (eventTtl.compareTo(lowerBound) < 0) {
+            throw new IllegalArgumentException(String.format("%sTtl must be >0", type));
         }
 
-        if (eventTtl.compareTo(EVENT_TTL_LIMIT) > 0) {
-            throw new IllegalArgumentException(String.format("EventTtl duration should be within %s days", EVENT_TTL_LIMIT.toDays()));
+        if (eventTtl.compareTo(upperBound) > 0) {
+            throw new IllegalArgumentException(String.format("%sTtl duration should be within %s days", type, upperBound.toDays()));
         }
         return eventTtl;
     }

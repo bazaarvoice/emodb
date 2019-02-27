@@ -90,25 +90,69 @@ public class DefaultDatabusTest {
                 mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
                 1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
         Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
-        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(5),
                 Duration.ofDays(7));
         // Skip databus events tagged with "re-etl"
         Condition skipIgnoreTags = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build());
         Condition expectedConditionToSkipIgnore = Conditions.and(originalCondition, skipIgnoreTags);
         verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", expectedConditionToSkipIgnore,
-                Duration.ofDays(7), Duration.ofDays(7));
+                Duration.ofDays(5), Duration.ofDays(7));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
 
         // reset mocked subscription DAO so it doesn't carry information about old interactions
         reset(mockSubscriptionDao);
         // Test condition is unchanged if includeDefaultJoinFilter is set to false
-        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
-                Duration.ofDays(7), false);
-        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.ofDays(7),
-                Duration.ofDays(7));
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(4),
+                Duration.ofDays(3), false);
+        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.ofDays(4),
+                Duration.ofDays(3));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
+    }
+
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp="SubscriptionTtl duration should be within 365 days")
+    public void testSubscriptionCreationWithSubscriptionTtlMoreThanOneYear() {
+        // Currently, by default, includeDefaultJoinFilter is set to true,
+        // which means that we append the skipIgnored tags condition to the original table filter
+        // unless the caller explicitly sets the includeDefaultJoinFilter to false.
+        // This is just an interim setup to be backwards compatible. Soon we will deprecate the
+        // includeDefaultJoinFilter flag.
+
+        Supplier<Condition> ignoreReEtl = Suppliers.ofInstance(
+                Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build()));
+        SubscriptionDAO mockSubscriptionDao = mock(SubscriptionDAO.class);
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mockSubscriptionDao,
+                mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
+                1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
+        Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(366),
+                Duration.ofDays(7));
+
+    }
+
+    @Test(expectedExceptions=IllegalArgumentException.class, expectedExceptionsMessageRegExp="EventTtl duration should be within 365 days")
+    public void testSubscriptionCreationWithEventTtlMoreThanOneYear() {
+        // Currently, by default, includeDefaultJoinFilter is set to true,
+        // which means that we append the skipIgnored tags condition to the original table filter
+        // unless the caller explicitly sets the includeDefaultJoinFilter to false.
+        // This is just an interim setup to be backwards compatible. Soon we will deprecate the
+        // includeDefaultJoinFilter flag.
+
+        Supplier<Condition> ignoreReEtl = Suppliers.ofInstance(
+                Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build()));
+        SubscriptionDAO mockSubscriptionDao = mock(SubscriptionDAO.class);
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mockSubscriptionDao,
+                mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
+                1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
+        Condition originalCondition = Conditions.mapBuilder().contains("foo", "bar").build();
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(5),
+                Duration.ofDays(366));
+
     }
 
     @Test

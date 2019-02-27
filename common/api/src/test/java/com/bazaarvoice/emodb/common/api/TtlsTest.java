@@ -21,6 +21,13 @@ public class TtlsTest {
     }
 
     @Test
+    public void testOneYearLimit() {
+        int oneYear = Math.toIntExact(Duration.ofDays(365).getSeconds());
+        assertEquals(Ttls.toSeconds(Duration.ofMillis(1), 1, oneYear), (Integer) 1);
+        assertEquals(Ttls.toSeconds(Duration.ofDays(366), 1, oneYear), (Integer) oneYear);
+    }
+
+    @Test
     public void testLarge() {
         assertEquals(Ttls.toSeconds(Duration.ofSeconds(Integer.MAX_VALUE), 0, null), (Integer) Integer.MAX_VALUE);
         assertEquals(Ttls.toSeconds(Duration.ofSeconds(Integer.MAX_VALUE + 1L), 0, null), null);
