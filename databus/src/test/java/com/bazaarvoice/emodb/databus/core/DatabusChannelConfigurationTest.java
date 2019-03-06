@@ -19,7 +19,7 @@ public class DatabusChannelConfigurationTest {
     @Test
     public void testGetTTLForReplay() {
         OwnedSubscription replaySubscription = new DefaultOwnedSubscription(ChannelNames.getMasterReplayChannel(),
-                Conditions.alwaysTrue(), Date.from(Instant.now().plus(Duration.ofDays(364))),
+                Conditions.alwaysTrue(), Date.from(Instant.now().plus(Duration.ofDays(3650))),
                 DatabusChannelConfiguration.REPLAY_TTL, "id");
         SubscriptionDAO mockSubscriptionDao = mock(SubscriptionDAO.class);
         when(mockSubscriptionDao.getSubscription(ChannelNames.getMasterReplayChannel())).thenReturn(replaySubscription);
