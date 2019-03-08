@@ -1,26 +1,25 @@
 package com.bazaarvoice.emodb.databus.db.generic;
 
-import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
 import com.bazaarvoice.emodb.databus.model.DefaultOwnedSubscription;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Date;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 /**
  * Generic in-memory implementation of SubscriptionDAO.  Useful for unit testing.
  */
 public class InMemorySubscriptionDAO implements SubscriptionDAO {
 
-    private final ConcurrentMap<String, OwnedSubscription> _subscriptions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, OwnedSubscription> _subscriptions = Maps.newConcurrentMap();
     private final Clock _clock;
 
     public InMemorySubscriptionDAO() {
@@ -33,12 +32,8 @@ public class InMemorySubscriptionDAO implements SubscriptionDAO {
 
     @Override
     public void insertSubscription(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl) {
-        insertSubscription(new DefaultOwnedSubscription(subscription, tableFilter,
+        _subscriptions.put(subscription, new DefaultOwnedSubscription(subscription, tableFilter,
                 new Date(_clock.millis() + subscriptionTtl.toMillis()), eventTtl, ownerId));
-    }
-
-    private void insertSubscription(OwnedSubscription subscription) {
-        _subscriptions.put(subscription.getName(), subscription);
     }
 
     @Override
@@ -66,8 +61,6 @@ public class InMemorySubscriptionDAO implements SubscriptionDAO {
 
     @Override
     public Iterable<String> getAllSubscriptionNames() {
-        return StreamSupport.stream(getAllSubscriptions().spliterator(), false)
-                .map(Subscription::getName)
-                .collect(Collectors.toList());
+        return Iterables.transform(getAllSubscriptions(), OwnedSubscription::getName);
     }
 }

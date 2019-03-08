@@ -276,7 +276,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     private void createDatabusReplaySubscription() {
         // Create a master databus replay subscription where the events expire every 50 hours (2 days + 2 hours)
         subscribe(_systemOwnerId, ChannelNames.getMasterReplayChannel(), Conditions.alwaysTrue(),
-                Duration.ofDays(365), DatabusChannelConfiguration.REPLAY_TTL, false);
+                Duration.ofDays(3650), DatabusChannelConfiguration.REPLAY_TTL, false);
     }
 
     private Meter newEventMeter(String name, MetricRegistry metricRegistry) {
