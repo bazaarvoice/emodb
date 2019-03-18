@@ -247,7 +247,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
         if (_writeToBlockedDeltaTable) {
             BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
             for (DeltaClusteringKey change : changesToDelete) {
-                if (change.hasNumBlocks() && _cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
+                if (_cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
                     for (int i = 0; i < change.getNumBlocks(); i++) {
                         newTableStatement.add(blockDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
                     }

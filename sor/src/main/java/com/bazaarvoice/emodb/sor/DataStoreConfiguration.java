@@ -61,14 +61,11 @@ public class DataStoreConfiguration {
     @JsonProperty("migrationPhase")
     private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
 
-
-    /*
-    Only temporarily configurable during the migration period
-    */
-    @Valid
-    @NotNull
-    @JsonProperty("deltaBlockSizeInKb")
-    private int _deltaBlockSizeInKb = 16;
+//    TODO: uncomment this out and make this configurable after the delta migration is complete
+//    @Valid
+//    @NotNull
+//    @JsonProperty("deltaBlockSizeInKb")
+//    private int _deltaBlockSizeInKb = 16;
 
     @Valid
     @JsonProperty("cellTombstoneCompactionEnabled")
@@ -177,8 +174,12 @@ public class DataStoreConfiguration {
         return _migrationPhase;
     }
 
+    /**
+     * This temporarily set to a static 16 kilobytes because it is unsafe for this to be configurable during the migration
+     * period
+     */
     public int getDeltaBlockSizeInKb() {
-        return _deltaBlockSizeInKb;
+        return 16;
     }
 
     public boolean isCellTombstoneCompactionEnabled() {

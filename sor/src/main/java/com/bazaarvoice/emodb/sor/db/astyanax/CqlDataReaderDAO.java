@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
@@ -112,6 +113,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     private final ChangeEncoder _changeEncoder;
     private final PlacementCache _placementCache;
     private final CqlDriverConfiguration _driverConfig;
+    private final DAOUtils _daoUtils;
     private final Meter _randomReadMeter;
     private final Timer _readBatchTimer;
 
@@ -122,11 +124,12 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
     @Inject
     public CqlDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
                             CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
-                            MetricRegistry metricRegistry) {
+                            DAOUtils daoUtils, MetricRegistry metricRegistry) {
         _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
-        _placementCache = placementCache;
-        _driverConfig = driverConfig;
-        _changeEncoder = changeEncoder;
+        _placementCache = checkNotNull(placementCache, "placementCache");
+        _driverConfig = checkNotNull(driverConfig, "driverConfig");
+        _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _daoUtils = checkNotNull(daoUtils, "daoUtils");
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
     }
@@ -295,7 +298,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
      */
     private Iterator<Map.Entry<DeltaClusteringKey, Change>> decodeChangesFromCql(final Iterator<Row> iter) {
         return Iterators.transform(iter, row ->
-                Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row)), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
+                Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row), _daoUtils.getNumDeltaBlocks(getValue(row))), _changeEncoder.decodeChange(getChangeId(row), getValue(row))));
     }
 
     /**
@@ -309,7 +312,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
                     Row row = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(getValue(row));
                     if (compaction != null) {
-                        return Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row)), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(getChangeId(row), _daoUtils.getNumDeltaBlocks(getValue(row))), compaction);
                     }
                 }
                 return endOfData();

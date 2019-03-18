@@ -44,6 +44,7 @@ public class DeltaBlockingTest {
         List<TestRow> rows = Lists.newArrayListWithCapacity(deltas.length * 5); // lazy guess at future size
         for (String encodedDelta : encodedDeltas) {
             List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
+            assertEquals(blocks.size(), _daoUtils.getNumDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes())));
             UUID changeId = UUID.randomUUID();
             for (int i = 0; i < blocks.size(); i++) {
                 rows.add(new TestRow(i, changeId, blocks.get(i)));
@@ -91,6 +92,7 @@ public class DeltaBlockingTest {
         String delta = generateLargeDelta();
         String encodedDelta = StringUtils.repeat('0', _prefixLength) + delta;
         List<ByteBuffer> blocks = daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
+        assertEquals(blocks.size(), daoUtils.getNumDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes())));
         List<TestRow> rows = Lists.newArrayListWithCapacity(blocks.size());
         UUID changeId = UUID.randomUUID();
         for (int i = 0; i < blocks.size(); i++) {
@@ -114,6 +116,7 @@ public class DeltaBlockingTest {
         String delta = generateLargeDelta();
         String encodedDelta = StringUtils.repeat('0', _prefixLength) + delta;
         List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
+        assertEquals(blocks.size(), _daoUtils.getNumDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes())));
         List<TestRow> rows = Lists.newArrayList();
         UUID changeId = UUID.randomUUID();
         for (int i = 0; i < blocks.size() - 1; i++) {
@@ -123,6 +126,7 @@ public class DeltaBlockingTest {
         UUID secondDeltaUUID = UUID.randomUUID();
 
         List<ByteBuffer> secondDeltaBlocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap("0000D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes()));
+        assertEquals(secondDeltaBlocks.size(), _daoUtils.getNumDeltaBlocks(ByteBuffer.wrap("0000D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes())));
 
         for (int i = 0; i < secondDeltaBlocks.size(); i++) {
             rows.add(new TestRow(i, secondDeltaUUID, secondDeltaBlocks.get(i)));
@@ -158,6 +162,8 @@ public class DeltaBlockingTest {
         String delta = generateLargeDelta();
         String encodedDelta = StringUtils.repeat('0', _prefixLength) + delta;
         List<ByteBuffer> blocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes()));
+        assertEquals(blocks.size(), _daoUtils.getNumDeltaBlocks(ByteBuffer.wrap(encodedDelta.getBytes())));
+
         List<TestRow> rows = Lists.newArrayList();
         UUID changeId = UUID.randomUUID();
         for (int i = 0; i < blocks.size(); i++) {
@@ -173,6 +179,7 @@ public class DeltaBlockingTest {
         UUID secondDeltaUUID = UUID.randomUUID();
 
         List<ByteBuffer> secondDeltaBlocks = _daoUtils.getDeltaBlocks(ByteBuffer.wrap("0000D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes()));
+        assertEquals(secondDeltaBlocks.size(), _daoUtils.getNumDeltaBlocks(ByteBuffer.wrap("0000D3:[]:0:{..,\"name\":\"bobåååååຄຄຄຄຄຄຄຄຄຄ\"}".getBytes())));
 
         for (int i = 0; i < secondDeltaBlocks.size(); i++) {
             rows.add(new TestRow(i, secondDeltaUUID, secondDeltaBlocks.get(i)));

@@ -56,7 +56,7 @@ dataCenter:
 
 
 systemOfRecord:
-  migrationPhase: PRE_MIGRATION
+  migrationPhase: DOUBLE_WRITE_LEGACY_READ
   deltaBlockSizeInKb: 16
   cellTombstoneCompactionEnabled: true
   cellTombstoneBlockLimit: 2

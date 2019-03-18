@@ -17,26 +17,13 @@ public class DeltaClusteringKey {
         _numBlocks = numBlocks;
     }
 
-    public DeltaClusteringKey(UUID changeId) {
-        _changeId = checkNotNull(changeId);
-        _numBlocks = 0;
-    }
-
     public UUID getChangeId() {
         return _changeId;
     }
 
     public int getNumBlocks() {
-        if (_numBlocks == 0) {
-            throw new IllegalStateException(String.format("ChangeId %s does not have blocking data.", _changeId));
-        }
         return _numBlocks;
     }
-
-    public boolean hasNumBlocks() {
-        return _numBlocks != 0;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
