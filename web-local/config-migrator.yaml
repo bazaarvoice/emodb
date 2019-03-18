@@ -40,7 +40,7 @@ dataCenter:
 
 systemOfRecord:
   migrationPhase: DOUBLE_WRITE_LEGACY_READ
-  deltaBlockSizeInKb: 8
+  deltaBlockSizeInKb: 16
   stashRoot: s3://emodb-us-east-1/stash/ci
 
   # How long should we retain historical deltas? To disable, use PT0S

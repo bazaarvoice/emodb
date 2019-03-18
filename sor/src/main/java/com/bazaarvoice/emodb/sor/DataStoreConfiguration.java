@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class DataStoreConfiguration {
 
     @Valid
@@ -61,11 +63,10 @@ public class DataStoreConfiguration {
     @JsonProperty("migrationPhase")
     private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
 
-//    TODO: uncomment this out and make this configurable after the delta migration is complete
-//    @Valid
-//    @NotNull
-//    @JsonProperty("deltaBlockSizeInKb")
-//    private int _deltaBlockSizeInKb = 16;
+    @Valid
+    @NotNull
+    @JsonProperty("deltaBlockSizeInKb")
+    private int _deltaBlockSizeInKb = 16;
 
     @Valid
     @JsonProperty("cellTombstoneCompactionEnabled")
@@ -175,11 +176,12 @@ public class DataStoreConfiguration {
     }
 
     /**
-     * This temporarily set to a static 16 kilobytes because it is unsafe for this to be configurable during the migration
+     * This temporarily locked to a static 16 kilobytes because it is unsafe for this to be configurable during the migration
      * period
      */
     public int getDeltaBlockSizeInKb() {
-        return 16;
+        checkArgument(_deltaBlockSizeInKb == 16);
+        return _deltaBlockSizeInKb;
     }
 
     public boolean isCellTombstoneCompactionEnabled() {
