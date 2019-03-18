@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AbstractBatchReader;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
@@ -120,6 +121,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
     private final ChangeEncoder _changeEncoder;
     private final PlacementCache _placementCache;
+    private final DAOUtils _daoUtils;
     private final Timer _readBatchTimer;
     private final Timer _scanBatchTimer;
     private final Meter _randomReadMeter;
@@ -128,9 +130,11 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
     private final Meter _copyMeter;
 
     @Inject
-    public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder, MetricRegistry metricRegistry) {
-        _placementCache = placementCache;
-        _changeEncoder = changeEncoder;
+    public AstyanaxDataReaderDAO(PlacementCache placementCache, ChangeEncoder changeEncoder,
+                                 DAOUtils daoUtils, MetricRegistry metricRegistry) {
+        _placementCache = checkNotNull(placementCache, "placementCache");
+        _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
+        _daoUtils = checkNotNull(daoUtils, "daoUtils");
         _readBatchTimer = metricRegistry.timer(getMetricName("readBatch"));
         _scanBatchTimer = metricRegistry.timer(getMetricName("scanBatch"));
         _randomReadMeter = metricRegistry.meter(getMetricName("random-reads"));
@@ -1216,7 +1220,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
             @Override
             public Map.Entry<DeltaClusteringKey, Change> apply(Column<UUID> column) {
                 Change change = _changeEncoder.decodeChange(column.getName(), column.getByteBufferValue());
-                return Maps.immutableEntry(new DeltaClusteringKey(column.getName()), change);
+                return Maps.immutableEntry(new DeltaClusteringKey(column.getName(), _daoUtils.getNumDeltaBlocks(column.getByteBufferValue())), change);
             }
         });
     }
@@ -1229,7 +1233,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
                     Column<UUID> column = iter.next();
                     Compaction compaction = _changeEncoder.decodeCompaction(column.getByteBufferValue());
                     if (compaction != null) {
-                        return Maps.immutableEntry(new DeltaClusteringKey(column.getName()), compaction);
+                        return Maps.immutableEntry(new DeltaClusteringKey(column.getName(), _daoUtils.getNumDeltaBlocks(column.getByteBufferValue())), compaction);
                     }
                 }
                 return endOfData();

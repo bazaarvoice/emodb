@@ -20,7 +20,7 @@ public class DAOUtils {
     @Inject
     public DAOUtils(@PrefixLength  int prefixLength, @BlockSize int deltaBlockSize) {
         checkArgument(prefixLength > 0, "Prefix length must be greater than 0");
-        checkArgument(deltaBlockSize > 0, "Delta block size must be greater than 0");
+        checkArgument(deltaBlockSize > prefixLength, "Delta block size must be greater than prefix length");
 
         _prefixLength = prefixLength;
         _deltaBlockSize = deltaBlockSize;
@@ -40,7 +40,7 @@ public class DAOUtils {
 
         while (currentPosition < originalLimit) {
             ByteBuffer split = encodedDelta.duplicate();
-            int limit= Math.min(currentPosition + _deltaBlockSize, split.limit());
+            int limit = Math.min(currentPosition + _deltaBlockSize, split.limit());
             if (limit < split.limit()) {
                 // if current limit is in the middle of the utf-8 character, then backtrack to the beginning of said character
                 while ((encodedDelta.get(limit) & 0x80) != 0 && (encodedDelta.get(limit) & 0x40) == 0) {
@@ -61,6 +61,25 @@ public class DAOUtils {
             encodedDelta.put(encodedDelta.position() + i, blockBytes[i]);
         }
         return blocks;
+    }
+
+    public int getNumDeltaBlocks(ByteBuffer encodedDelta) {
+        int numBlocks = 0;
+        int currentPosition = encodedDelta.position();
+
+        while (currentPosition < encodedDelta.limit()) {
+            currentPosition += _deltaBlockSize;
+            if (currentPosition < encodedDelta.limit()) {
+                while ((encodedDelta.get(currentPosition) & 0x80) != 0 && (encodedDelta.get(currentPosition) & 0x40) == 0) {
+                    currentPosition--;
+                }
+            }
+            numBlocks++;
+        }
+
+        checkArgument(numBlocks <= _maxBlocks, "Delta is too large, as it has exceeded to maximum number of blocks");
+
+        return numBlocks;
     }
 
     // removes the hex prefix that indicates the number of blocks in the delta

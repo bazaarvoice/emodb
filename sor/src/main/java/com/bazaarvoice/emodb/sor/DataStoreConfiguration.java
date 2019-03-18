@@ -14,6 +14,8 @@ import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class DataStoreConfiguration {
 
     @Valid
@@ -61,10 +63,6 @@ public class DataStoreConfiguration {
     @JsonProperty("migrationPhase")
     private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
 
-
-    /*
-    Only temporarily configurable during the migration period
-    */
     @Valid
     @NotNull
     @JsonProperty("deltaBlockSizeInKb")
@@ -177,7 +175,12 @@ public class DataStoreConfiguration {
         return _migrationPhase;
     }
 
+    /**
+     * This temporarily locked to a static 16 kilobytes because it is unsafe for this to be configurable during the migration
+     * period
+     */
     public int getDeltaBlockSizeInKb() {
+        checkArgument(_deltaBlockSizeInKb == 16);
         return _deltaBlockSizeInKb;
     }
 
