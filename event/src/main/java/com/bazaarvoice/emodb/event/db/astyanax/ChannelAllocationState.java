@@ -81,19 +81,18 @@ public class ChannelAllocationState {
             detach().release();
             return null;
 
+        }
+
+        if (countAndBytesConsumed.getLeft() < remaining) {
+
+            // All events fit in current slab, leave it attached
+            return new DefaultSlabAllocation(_slab.addRef(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+
         } else {
 
-            if (countAndBytesConsumed.getLeft() < remaining) {
+            // Whatever is left of this slab is consumed. Return the rest of the slab. Detach from it so we'll allocate a new one next time.
+            return new DefaultSlabAllocation(detach(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
 
-                // All events fit in current slab, leave it attached
-                return new DefaultSlabAllocation(_slab.addRef(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
-
-            } else {
-
-                // Whatever is left of this slab is consumed. Return the rest of the slab. Detach from it so we'll allocate a new one next time.
-                return new DefaultSlabAllocation(detach(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
-
-            }
         }
     }
 }
