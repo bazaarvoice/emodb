@@ -74,16 +74,26 @@ public class ChannelAllocationState {
         _slabConsumed += countAndBytesConsumed.getLeft();
         _slabBytesConsumed += countAndBytesConsumed.getRight();
 
-        if (countAndBytesConsumed.getLeft() < remaining) {
+        // Check for case where no more slots could be allocated because slab is full either because
+        // the max # of slots is consumed or the max # of bytes is consumed
+        if (countAndBytesConsumed.getLeft() == 0) {
 
-            // All events fit in current slab, leave it attached
-            return new DefaultSlabAllocation(_slab.addRef(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+            detach().release();
+            return null;
 
         } else {
 
-            // Whatever is left of this slab is consumed. Return the rest of the slab. Detach from it so we'll allocate a new one next time.
-            return new DefaultSlabAllocation(detach(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+            if (countAndBytesConsumed.getLeft() < remaining) {
 
+                // All events fit in current slab, leave it attached
+                return new DefaultSlabAllocation(_slab.addRef(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+
+            } else {
+
+                // Whatever is left of this slab is consumed. Return the rest of the slab. Detach from it so we'll allocate a new one next time.
+                return new DefaultSlabAllocation(detach(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+
+            }
         }
     }
 }
