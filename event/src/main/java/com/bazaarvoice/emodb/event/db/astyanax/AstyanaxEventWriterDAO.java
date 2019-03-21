@@ -9,9 +9,12 @@ import com.bazaarvoice.emodb.event.db.EventSink;
 import com.bazaarvoice.emodb.event.db.EventWriterDAO;
 import com.google.common.base.Function;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.PeekingIterator;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.thrift.ThriftUtils;
@@ -62,9 +65,21 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
                 Duration eventTtl = _channelConfiguration.getEventTtl(channel);
 
                 int remaining = events.size();
+                PeekingIterator<Integer> eventSizes = Iterators.peekingIterator(Collections2.transform(events,
+                    new Function<ByteBuffer,Integer>() {
+                        @Override
+                        public Integer apply(ByteBuffer input) {
+                            return input.limit();
+                        }
+                    }).iterator());
+
                 while (remaining > 0) {
                     // Each allocation will be from a different slab and hence a different row.
-                    SlabAllocation allocation = _slabAllocator.allocate(channel, remaining);
+                    SlabAllocation allocation = _slabAllocator.allocate(channel, remaining, eventSizes);
+
+                    // Defensive coding against possible slab allocation bugs, make sure slab allocation
+                    // is not larger than number of events to put into it
+                    assert allocation.getLength() <= remaining;
 
                     ByteBuffer slabId = allocation.getSlabId();
                     BatchUpdate.Row<ByteBuffer, Integer> row = update.updateRow(ColumnFamilies.SLAB, slabId,
@@ -78,8 +93,12 @@ public class AstyanaxEventWriterDAO implements EventWriterDAO {
                                 }
                             });
 
+                    // Loop through all slots in the slab and assign a channel event to each slot
                     for (int i = 0; i < allocation.getLength(); i++) {
                         int eventIdx = allocation.getOffset() + i;
+
+                        // we don't have to check for a drained iterator because we know that the slab allocation
+                        // will never have more slots than there are events to put in them, see assertion at line 82
                         ByteBuffer eventData = eventsIter.next();
                         row.putColumn(eventIdx, eventData, Ttls.toSeconds(eventTtl, 1, null));
 

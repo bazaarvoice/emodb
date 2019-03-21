@@ -47,6 +47,8 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
 
+    public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
+
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
                                    JobType<MoveQueueRequest, MoveQueueResult> moveQueueJobType,
@@ -118,7 +120,10 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
             for (Object message : messages) {
-                events.add(MessageSerializer.toByteBuffer(JsonValidator.checkValid(message)));
+                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+
+                events.add(messageByteBuffer);
             }
             builder.putAll(queue, events);
         }

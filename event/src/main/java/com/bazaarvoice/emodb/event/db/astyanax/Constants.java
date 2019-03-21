@@ -7,6 +7,12 @@ interface Constants {
     /** Maximum number of events that should be stored in a single slab.  Must be <= 65536. */
     static final int MAX_SLAB_SIZE = 1000;
 
+    /** Maximum number of bytes that should be in a slab */
+    static final int BYTES_PER_MEGABYTE = 1024 * 1024;
+    static final int MAX_SLAB_SIZE_IN_MEGABYTES = 10;
+    static final int MAX_SLAB_SIZE_IN_BYTES = MAX_SLAB_SIZE_IN_MEGABYTES * BYTES_PER_MEGABYTE;
+    static final int MAX_EVENT_SIZE_IN_BYTES = 256 * 1024;
+
     /** Slab column value that indicates a slab is still open. */
     static final int OPEN_SLAB_MARKER = Integer.MAX_VALUE;
 

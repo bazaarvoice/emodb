@@ -1,5 +1,8 @@
 package com.bazaarvoice.emodb.event.db.astyanax;
 
+import com.google.common.collect.PeekingIterator;
+import org.apache.commons.lang3.tuple.Pair;
+
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 
@@ -8,6 +11,7 @@ public class ChannelAllocationState {
     private SlabRef _slab;
     private int _slabConsumed;
     private long _slabExpiresAt;
+    private int _slabBytesConsumed;
 
     /** Per-channel lock on creating new shared slabs. */
     public Object getSlabCreationLock() {
@@ -25,9 +29,9 @@ public class ChannelAllocationState {
     }
 
     /** Attaches a slab and allocates from it in a single atomic operation. */
-    public synchronized SlabAllocation attachAndAllocate(SlabRef slab, int desired) {
+    public synchronized SlabAllocation attachAndAllocate(SlabRef slab, PeekingIterator<Integer> eventSizes) {
         attach(slab);
-        return allocate(desired);
+        return allocate(eventSizes);
     }
 
     /** Attaches a new slab to the channel with the specified capacity. */
@@ -37,6 +41,7 @@ public class ChannelAllocationState {
 
         _slab = slab;
         _slabConsumed = 0;
+        _slabBytesConsumed = 0;
         _slabExpiresAt = System.currentTimeMillis() + Constants.SLAB_ROTATE_TTL.toMillis();
     }
 
@@ -53,22 +58,41 @@ public class ChannelAllocationState {
         return slab;
     }
 
-    public synchronized SlabAllocation allocate(int desired) {
-        checkArgument(desired > 0);
+    public synchronized SlabAllocation allocate(PeekingIterator<Integer> eventSizes) {
+        checkArgument(eventSizes.hasNext());
 
         if (!isAttached()) {
             return null;
         }
 
         int remaining = Constants.MAX_SLAB_SIZE - _slabConsumed;
-        if (desired < remaining) {
-            // Return a portion of the slab.
-            DefaultSlabAllocation allocation = new DefaultSlabAllocation(_slab.addRef(), _slabConsumed, desired);
-            _slabConsumed += desired;
-            return allocation;
+
+        Pair<Integer, Integer> countAndBytesConsumed = DefaultSlabAllocator.defaultAllocationCount(_slabConsumed, _slabBytesConsumed, eventSizes);
+
+        int offsetForNewAllocation = _slabConsumed;
+
+        _slabConsumed += countAndBytesConsumed.getLeft();
+        _slabBytesConsumed += countAndBytesConsumed.getRight();
+
+        // Check for case where no more slots could be allocated because slab is full either because
+        // the max # of slots is consumed or the max # of bytes is consumed
+        if (countAndBytesConsumed.getLeft() == 0) {
+
+            detach().release();
+            return null;
+
+        }
+
+        if (countAndBytesConsumed.getLeft() < remaining) {
+
+            // All events fit in current slab, leave it attached
+            return new DefaultSlabAllocation(_slab.addRef(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+
         } else {
-            // Return the rest of the slab.  Detach from it so we'll allocate a new one next time.
-            return new DefaultSlabAllocation(detach(), _slabConsumed, remaining);
+
+            // Whatever is left of this slab is consumed. Return the rest of the slab. Detach from it so we'll allocate a new one next time.
+            return new DefaultSlabAllocation(detach(), offsetForNewAllocation, countAndBytesConsumed.getLeft());
+
         }
     }
 }
