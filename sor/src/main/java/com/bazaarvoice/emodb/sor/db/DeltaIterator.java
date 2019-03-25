@@ -201,7 +201,7 @@ abstract public class DeltaIterator<R, T> extends AbstractIterator<T> {
     private ByteBuffer stitchContent(int contentSize) {
         ByteBuffer content = ByteBuffer.allocate(contentSize);
         for (R delta : _list) {
-            content.put(getValue(delta));
+            content.put(getValue(delta).duplicate());
         }
         content.position(0);
         _list.clear();
