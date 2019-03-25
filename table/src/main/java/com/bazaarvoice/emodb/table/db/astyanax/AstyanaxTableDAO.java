@@ -381,15 +381,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                         // Wait until writes in-flight at the time of mirror activation have replicated so copy doesn't miss anything.
                         checkPlacementConsistent(storage.getPrimary().getPlacement(), transitionedAt);
 
-                        _log.info("Attempting to copy data now!");
-
-                        try {
-
-                            copyData(json, storage.getPrimary(), storage, progress);
-                        } catch (Exception e) {
-                            _log.error("Error occurred during copy", e);
-                            throw e;
-                        }
+                        copyData(json, storage.getPrimary(), storage, progress);
 
                         // The next step occurs in the same data center so no need to write/flush globally.
                         stateTransition(json, storage, from, MIRROR_COPIED, InvalidationScope.DATA_CENTER);
