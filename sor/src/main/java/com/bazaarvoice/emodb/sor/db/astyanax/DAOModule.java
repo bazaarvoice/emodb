@@ -39,7 +39,7 @@ public class DAOModule extends PrivateModule {
         // This needs to be done for just about anything that has only public dependencies.
         bind(AstyanaxDataWriterDAO.class).asEagerSingleton();
         bind(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(DefaultDataCopyDAO.class);
+        bind(DefaultDataCopyDAO.class).asEagerSingleton();
 
         // For migration stages, will be reverted in future version
         bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
