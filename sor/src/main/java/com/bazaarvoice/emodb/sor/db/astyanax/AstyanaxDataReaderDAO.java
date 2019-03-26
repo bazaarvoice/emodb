@@ -13,7 +13,9 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.AbstractBatchReader;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
 import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.HistoryMigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MigrationScanResult;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.Record;
@@ -78,7 +80,10 @@ import com.netflix.astyanax.util.ByteBufferRangeImpl;
 import com.netflix.astyanax.util.RangeBuilder;
 import io.netty.util.Timeout;
 import java.util.ArrayList;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.StreamSupport;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.thrift.Cassandra;
@@ -106,7 +111,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Cassandra implementation of {@link DataReaderDAO} that uses the Netflix Astyanax client library.
  */
-public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, AstyanaxKeyScanner {
+public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyReaderDAO, AstyanaxKeyScanner {
 
     private final Logger _log = LoggerFactory.getLogger(AstyanaxDataReaderDAO.class);
 
@@ -721,91 +726,47 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyDAO, Astyan
 
     }
 
-    // DataCopyDAO
     @Override
-    public void copy(AstyanaxStorage source, AstyanaxStorage dest, Runnable progress) {
-        checkNotNull(source, "source");
-        checkNotNull(dest, "dest");
+    public Iterator<? extends MigrationScanResult> getDeltasForStorage(AstyanaxStorage source) {
 
         DeltaPlacement sourcePlacement = (DeltaPlacement) source.getPlacement();
-        DeltaPlacement destPlacement = (DeltaPlacement) dest.getPlacement();
+        ColumnFamily<ByteBuffer, UUID> sourceCf = sourcePlacement.getDeltaColumnFamily();
 
-        // Loop over the source splits.
         Iterator<ByteBufferRange> scanIter = source.scanIterator(null);
-        while (scanIter.hasNext()) {
-            ByteBufferRange keyRange = scanIter.next();
-            // Copy delta records in this split.
-            copyRange(sourcePlacement, sourcePlacement.getDeltaColumnFamily(),
-                    dest, destPlacement, destPlacement.getDeltaColumnFamily(),
-                    keyRange, progress);
-            // Copy delta history records in this split.
-            copyRange(sourcePlacement, sourcePlacement.getDeltaHistoryColumnFamily(),
-                    dest, destPlacement, destPlacement.getDeltaHistoryColumnFamily(),
-                    keyRange, progress);
-        }
+
+        return getColumnsForCopy(sourcePlacement, sourceCf, scanIter);
     }
 
-    private void copyRange(DeltaPlacement sourcePlacement, ColumnFamily<ByteBuffer, UUID> sourceCf,
-                           AstyanaxStorage dest, DeltaPlacement destPlacement, ColumnFamily<ByteBuffer, UUID> destCf,
-                           ByteBufferRange keyRange, Runnable progress) {
-        ConsistencyLevel writeConsistency = SorConsistencies.toAstyanax(WriteConsistency.STRONG);
+    @Override
+    public Iterator<? extends HistoryMigrationScanResult> getHistoriesForStorage(AstyanaxStorage source) {
 
-        Iterator<List<Row<ByteBuffer, UUID>>> rowsIter = Iterators.partition(
-                rowScan(sourcePlacement, sourceCf, keyRange, _maxColumnsRange, LimitCounter.max(), ReadConsistency.STRONG),
-                MAX_SCAN_ROWS_BATCH);
-        int largeRowThreshold = _maxColumnsRange.getLimit();
+        DeltaPlacement sourcePlacement = (DeltaPlacement) source.getPlacement();
+        ColumnFamily<ByteBuffer, UUID> sourceCf = sourcePlacement.getDeltaHistoryColumnFamily();
 
-        while (rowsIter.hasNext()) {
-            List<Row<ByteBuffer, UUID>> rows = rowsIter.next();
+        Iterator<ByteBufferRange> scanIter = source.scanIterator(null);
 
-            MutationBatch mutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
-            for (Row<ByteBuffer, UUID> row : rows) {
+        return getColumnsForCopy(sourcePlacement, sourceCf, scanIter);
+
+
+    }
+
+    private Iterator<HistoryMigrationScanResult> getColumnsForCopy(DeltaPlacement placement, ColumnFamily<ByteBuffer, UUID> cf, Iterator<ByteBufferRange> scanIter) {
+
+        return Iterators.concat(Iterators.transform(scanIter, keyRange -> {
+            Iterator<Row<ByteBuffer, UUID>> rows =
+                    rowScan(placement, cf, keyRange, _maxColumnsRange, LimitCounter.max(), ReadConsistency.STRONG);
+
+            return Iterators.concat(Iterators.transform(rows, row -> {
                 ColumnList<UUID> columns = row.getColumns();
-
-                // Map the source row key to the destination row key.  Its table uuid and shard key will be different.
-                ByteBuffer newRowKey = dest.getRowKey(AstyanaxStorage.getContentKey(row.getRawKey()));
-
-                // Copy the first N columns to the multi-row mutation.
-                putAll(mutation.withRow(destCf, newRowKey), columns);
-
-                // If this is a wide row, copy the remaining columns w/separate mutation objects.
-                if (columns.size() >= largeRowThreshold) {
-                    UUID lastColumn = columns.getColumnByIndex(columns.size() - 1).getName();
-                    Iterator<List<Column<UUID>>> columnsIter = Iterators.partition(
-                            columnScan(row.getRawKey(), sourcePlacement, sourceCf, lastColumn, null,
-                                    false, Long.MAX_VALUE, 1, ReadConsistency.STRONG),
-                            MAX_COLUMN_SCAN_BATCH);
-                    while (columnsIter.hasNext()) {
-                        List<Column<UUID>> moreColumns = columnsIter.next();
-
-                        MutationBatch wideRowMutation = destPlacement.getKeyspace().prepareMutationBatch(writeConsistency);
-                        putAll(wideRowMutation.withRow(destCf, newRowKey), moreColumns);
-                        progress.run();
-                        execute(wideRowMutation,
-                                "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
-                                keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
-                                destPlacement.getName(), destCf.getName());
-                    }
+                Iterator<Column<UUID>> concatColumns = columns.iterator();
+                if (columns.size() >= _maxColumnsRange.getLimit()) {
+                    UUID lastColumn = row.getColumns().getColumnByIndex(columns.size() - 1).getName();
+                    concatColumns = Iterators.concat(concatColumns, columnScan(row.getRawKey(), placement, cf, lastColumn, null,
+                            false, Long.MAX_VALUE, 1, ReadConsistency.STRONG));
                 }
-            }
-            progress.run();
-            execute(mutation,
-                    "copy key range %s to %s from placement %s, column family %s to placement %s, column family %s",
-                    keyRange.getStart(), keyRange.getEnd(), sourcePlacement.getName(), sourceCf.getName(),
-                    destPlacement.getName(), destCf.getName());
-
-            _copyMeter.mark(rows.size());
-        }
-    }
-
-    /**
-     * Copies columns exactly, preserving Cassandra timestamp and ttl values.
-     */
-    private <C> void putAll(ColumnListMutation<C> mutation, Iterable<Column<C>> columns) {
-        for (Column<C> column : columns) {
-            mutation.setTimestamp(column.getTimestamp())
-                    .putColumn(column.getName(), column.getByteBufferValue(), column.getTtl());
-        }
+                return Iterators.transform(concatColumns, column -> new HistoryMigrationScanResult(row.getRawKey(), column.getName(), column.getByteBufferValue(), column.getTtl()));
+            }));
+        }));
     }
 
     /**

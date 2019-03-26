@@ -30,6 +30,8 @@ public class DAOModule extends PrivateModule {
         bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DataPurgeDAO.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
+        bind(DataCopyDAO.class).to(DefaultDataCopyDAO.class).asEagerSingleton();
+        bind(DataCopyWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(MigratorWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
         bind(MigratorReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
 
@@ -37,6 +39,7 @@ public class DAOModule extends PrivateModule {
         // This needs to be done for just about anything that has only public dependencies.
         bind(AstyanaxDataWriterDAO.class).asEagerSingleton();
         bind(CqlDataWriterDAO.class).asEagerSingleton();
+        bind(DefaultDataCopyDAO.class).asEagerSingleton();
 
         // For migration stages, will be reverted in future version
         bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
@@ -91,7 +94,7 @@ public class DAOModule extends PrivateModule {
 
     @Provides
     @Singleton
-    DataCopyDAO provideDataCopyDAO(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
+    DataCopyReaderDAO provideDataCopyReaderDAO(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
                                    Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
 
         return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();

@@ -37,11 +37,12 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.ttl;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 
-public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
+public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataCopyWriterDAO {
 
     private final static int ROW_KEY_SIZE = 8;
     private final static int CHANGE_ID_SIZE = 8;
@@ -283,6 +284,116 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             throw Throwables.propagate(t.get());
         }
     }
+
+    private BatchStatement executeAndReplaceIfNotEmpty(BatchStatement batchStatement, Session session,
+                                                       Runnable progress) {
+        if (batchStatement.size() > 0) {
+            progress.run();
+            session.execute(batchStatement);
+            return new BatchStatement(BatchStatement.Type.LOGGED);
+        }
+        return batchStatement;
+    }
+
+    @Override
+    public void copyHistoriesToDestination(Iterator<? extends HistoryMigrationScanResult> rows, AstyanaxStorage dest, Runnable progress) {
+        if (!rows.hasNext()) {
+            return;
+        }
+
+        DeltaPlacement placement = (DeltaPlacement) dest.getPlacement();
+        Session session = placement.getKeyspace().getCqlSession();
+
+        BatchStatement batchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
+
+        ByteBuffer lastRowKey = null;
+        int currentStatementSize = 0;
+
+        while (rows.hasNext()) {
+            HistoryMigrationScanResult result = rows.next();
+
+            ByteBuffer rowKey = dest.getRowKey(AstyanaxStorage.getContentKey(result.getRowKey()));
+
+            ByteBuffer history = result.getValue();
+            int historySize = history.remaining();
+
+            if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
+                batchStatement = executeAndReplaceIfNotEmpty(batchStatement, session, progress);
+            }
+
+            lastRowKey = rowKey;
+
+            TableDDL historyTableDDL = placement.getDeltaHistoryTableDDL();
+            Statement oldTableStatement = QueryBuilder.insertInto(historyTableDDL.getTableMetadata())
+                    .value(historyTableDDL.getRowKeyColumnName(), rowKey)
+                    .value(historyTableDDL.getChangeIdColumnName(), result.getChangeId())
+                    .value(historyTableDDL.getValueColumnName(), history)
+                    .using(ttl(result.getTtl()))
+                    .setConsistencyLevel(SorConsistencies.toCql(WriteConsistency.STRONG));
+            batchStatement.add(oldTableStatement);
+
+            currentStatementSize += historySize + ROW_KEY_SIZE + CHANGE_ID_SIZE;
+        }
+
+        executeAndReplaceIfNotEmpty(batchStatement, session, progress);
+    }
+
+    @Override
+    public void copyDeltasToDestination(Iterator<? extends MigrationScanResult> rows, AstyanaxStorage dest, Runnable progress) {
+        if (!rows.hasNext()) {
+            return;
+        }
+
+        DeltaPlacement placement = (DeltaPlacement) dest.getPlacement();
+        Session session = placement.getKeyspace().getCqlSession();
+
+        BatchStatement oldTableBatchStatement = new BatchStatement(BatchStatement.Type.LOGGED);
+        BatchStatement newTableBatchStatment = new BatchStatement(BatchStatement.Type.LOGGED);
+
+        ByteBuffer lastRowKey = null;
+        int currentStatementSize = 0;
+
+        while (rows.hasNext()) {
+            MigrationScanResult result = rows.next();
+
+            ByteBuffer rowKey = dest.getRowKey(AstyanaxStorage.getContentKey(result.getRowKey()));
+
+            ByteBuffer delta = result.getValue();
+            int deltaSize = delta.remaining();
+
+            if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
+                oldTableBatchStatement = executeAndReplaceIfNotEmpty(oldTableBatchStatement, session, progress);
+                newTableBatchStatment = executeAndReplaceIfNotEmpty(newTableBatchStatment, session, progress);
+            }
+
+            lastRowKey = rowKey;
+
+            if (_writeToLegacyDeltaTable) {
+                TableDDL deltaTableDDL = placement.getDeltaTableDDL();
+                Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
+                        .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
+                        .value(deltaTableDDL.getChangeIdColumnName(), result.getChangeId())
+                        .value(deltaTableDDL.getValueColumnName(), delta)
+                        .setConsistencyLevel(SorConsistencies.toCql(WriteConsistency.STRONG));
+                oldTableBatchStatement.add(oldTableStatement);
+            }
+
+            if (_writeToBlockedDeltaTable) {
+                ByteBuffer blockedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
+                blockedDelta.put(_deltaPrefixBytes);
+                blockedDelta.put(delta.duplicate());
+                blockedDelta.position(0);
+                insertBlockedDeltas(newTableBatchStatment, placement.getBlockedDeltaTableDDL(),
+                        SorConsistencies.toCql(WriteConsistency.STRONG), rowKey, result.getChangeId(), blockedDelta);
+            }
+
+            currentStatementSize += deltaSize + ROW_KEY_SIZE + CHANGE_ID_SIZE;
+        }
+
+        executeAndReplaceIfNotEmpty(oldTableBatchStatement, session, progress);
+        executeAndReplaceIfNotEmpty(newTableBatchStatment, session, progress);
+    }
+
 
     @Override
     public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, RateLimiter rateLimiter) {
