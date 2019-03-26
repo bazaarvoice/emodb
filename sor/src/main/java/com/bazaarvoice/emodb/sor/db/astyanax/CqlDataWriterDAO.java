@@ -321,7 +321,7 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO {
             int deltaSize = delta.remaining();
             ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
             encodedDelta.put(_deltaPrefixBytes);
-            encodedDelta.put(delta);
+            encodedDelta.put(delta.duplicate());
             encodedDelta.position(0);
 
             _migratorMeter.mark();
