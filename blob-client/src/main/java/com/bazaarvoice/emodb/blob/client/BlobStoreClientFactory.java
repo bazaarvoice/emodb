@@ -9,6 +9,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
 
 import java.util.concurrent.ScheduledExecutorService;
+import org.glassfish.jersey.client.ClientProperties;
 
 public class BlobStoreClientFactory extends AbstractBlobStoreClientFactory {
 
@@ -17,6 +18,7 @@ public class BlobStoreClientFactory extends AbstractBlobStoreClientFactory {
      * constructor and pass the Dropwizard-constructed Jersey client.
      */
     public static BlobStoreClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new BlobStoreClientFactory(clusterName, client);
     }
 

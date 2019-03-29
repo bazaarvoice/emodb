@@ -11,6 +11,7 @@ import io.dropwizard.util.Duration;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
+import org.glassfish.jersey.client.ClientProperties;
 
 public class DatabusClientFactory extends AbstractDatabusClientFactory {
 
@@ -19,6 +20,7 @@ public class DatabusClientFactory extends AbstractDatabusClientFactory {
      * factory method and pass the Dropwizard-constructed Jersey client.
      */
     public static DatabusClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new DatabusClientFactory(clusterName, client);
     }
 

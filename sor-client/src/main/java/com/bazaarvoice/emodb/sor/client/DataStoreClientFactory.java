@@ -1,16 +1,13 @@
 package com.bazaarvoice.emodb.sor.client;
 
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import io.dropwizard.client.JerseyClientBuilder;
-import io.dropwizard.client.JerseyClientConfiguration;
-import io.dropwizard.util.Duration;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
+import org.glassfish.jersey.client.ClientProperties;
 
 public class DataStoreClientFactory extends AbstractDataStoreClientFactory {
 
@@ -19,6 +16,7 @@ public class DataStoreClientFactory extends AbstractDataStoreClientFactory {
      * factory method and pass the Dropwizard-constructed Jersey client.
      */
     public static DataStoreClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new DataStoreClientFactory(clusterName, client);
     }
 
