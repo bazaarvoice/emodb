@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.resources.databus;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -10,11 +11,17 @@ import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.client.DataStoreStreaming;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
+import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.bazaarvoice.emodb.web.resources.sor.ReadConsistencyParam;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
@@ -45,10 +52,18 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -68,13 +83,21 @@ public class DatabusResource1 {
     private final SubjectDatabus _databusClient;
     private final DatabusEventStore _eventStore;
     private final DatabusResourcePoller _poller;
+    private final DataStore _dataStore;
+    private final DatabusEventWriterRegistry _eventWriterRegistry;
 
-    public DatabusResource1(SubjectDatabus databus, SubjectDatabus databusClient, DatabusEventStore eventStore,
-                            DatabusResourcePoller databusResourcePoller) {
+    public DatabusResource1(SubjectDatabus databus,
+                            SubjectDatabus databusClient,
+                            DatabusEventStore eventStore,
+                            DatabusEventWriterRegistry eventWriterRegistry,
+                            DatabusResourcePoller databusResourcePoller,
+                            DataStore dataStore) {
         _databus = checkNotNull(databus, "databus");
         _databusClient = checkNotNull(databusClient, "databusClient");
         _eventStore = checkNotNull(eventStore, "eventStore");
-        _poller = databusResourcePoller;
+        _poller = checkNotNull(databusResourcePoller, "databusResourcePoller");
+        _dataStore = checkNotNull(dataStore, "datastore");
+        _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
     }
 
     @Path ("_raw")
@@ -393,5 +416,94 @@ public class DatabusResource1 {
         }
 
         return new LoggingIterator<>(peekingIterator, _log);
+    }
+
+    @POST
+    @Path ("_batch-write-events")
+    @RequiresPermissions ("system|raw_databus")
+    @Timed (name = "bv.emodb.sor.DatabusResource1.writeEvents", absolute = true)
+    @ApiOperation (value = "Batch replay operation.",
+            notes = "Batch replay operation.",
+            response = SuccessResponse.class
+    )
+    public SuccessResponse writeEvents(Collection<UpdateRef> refs,
+                                       @Authenticated Subject subject) {
+        _eventWriterRegistry.getDatabusWriter().writeEvents(refs);
+        return SuccessResponse.instance();
+    }
+
+    @POST
+    @Path ("_write-table-events/{table}")
+    @RequiresPermissions ("sor|read|{table}, system|raw_databus")
+    @Timed (name = "bv.emodb.sor.DatabusResource1.writeTableEvent", absolute = true)
+    @ApiOperation (value = "Replay operation.",
+            notes = "Replay operation.",
+            response = Iterator.class
+    )
+    public Iterator<UpdateRef> writeEvents(@PathParam ("table") String table,
+                                        @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                                        @QueryParam ("batchsize") @DefaultValue ("10000") IntParam batchSize,
+                                        @QueryParam ("since") InstantParam sinceParam,
+                                        @Authenticated Subject subject) {
+        checkArgument(!Strings.isNullOrEmpty(table), "table is required");
+        Instant since = (sinceParam == null) ? null : sinceParam.get();
+        Date date = since != null ? Date.from(since) : null;
+        Iterator<UpdateRef> result = Iterators.emptyIterator();
+        Collection<String> splits = _dataStore.getSplits(table, batchSize.get());
+        Predicate<Map<String, Object>> predicate = getDatePredicate(date);
+        splits.parallelStream().forEach(split -> {
+            Iterable<Map<String, Object>> documents = DataStoreStreaming.getSplit(_dataStore, table, split, true, consistency.get());
+            List<UpdateRef> updateRefs = StreamSupport.stream(documents.spliterator(), true)
+                    .filter(predicate)
+                    .map(document -> getUpdateRef(document))
+                    .collect(Collectors.toList());
+
+            _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
+            Iterators.concat(result, updateRefs.iterator());
+        });
+        return streamingIterator(result);
+    }
+
+    private static Predicate<Map<String, Object>> getDatePredicate(Date date) {
+        Predicate<Map<String, Object>> datePredicate = document -> Intrinsic.getLastUpdateAt(document).compareTo(date) >= 0;
+        Predicate<Map<String, Object>> alwaysTruePredicate = document -> true;
+        return date == null ? alwaysTruePredicate : datePredicate;
+    }
+
+    @POST
+    @Path ("_write-key-event/{table}/{key}")
+//    @RequiresPermissions ("sor|read|{table}, system|raw_databus")
+    @Timed (name = "bv.emodb.sor.DatabusResource1.writeEvent", absolute = true)
+    @ApiOperation (value = "Replay operation.",
+            notes = "Replay operation.",
+            response = UpdateRef.class
+    )
+    public UpdateRef sendEvent(@PathParam ("table") String table,
+                               @PathParam ("key") String key,
+                               @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                               @QueryParam ("since") InstantParam sinceParam,
+                               @Authenticated Subject subject) {
+        checkArgument(!Strings.isNullOrEmpty(table), "table is required");
+        checkArgument(!Strings.isNullOrEmpty(key), "key is required");
+
+        Instant since = (sinceParam == null) ? null : sinceParam.get();
+        Date date = since != null ? Date.from(since) : null;
+        Map<String, Object> document = _dataStore.get(table, key, consistency.get());
+        UpdateRef updateRef = null;
+        // send events only if sinceParam isn't specified, or
+        // document had been created before sinceParam
+        if (getDatePredicate(date).test(document)) {
+            updateRef = getUpdateRef(document);
+            _eventWriterRegistry.getDatabusWriter().writeEvents(Collections.singleton(updateRef));
+        }
+        return updateRef;
+    }
+
+    private static UpdateRef getUpdateRef(final Map<String, Object> document) {
+        Set<String> tags = (Set<String>) document.get(UpdateRef.TAGS_NAME);
+        //determine changedId base on lastUpdateAt timestamp
+        UUID changeId = TimeUUIDs.uuidForTimestamp(Intrinsic.getLastUpdateAt(document));
+
+        return new UpdateRef(Intrinsic.getTable(document), Intrinsic.getId(document), changeId, tags == null ? new HashSet<>() : tags);
     }
 }

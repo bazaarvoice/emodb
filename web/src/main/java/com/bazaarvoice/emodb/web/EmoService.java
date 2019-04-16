@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
 import com.bazaarvoice.emodb.web.cli.AllTablesReportCommand;
 import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
@@ -287,6 +288,8 @@ public class EmoService extends Application<EmoConfiguration> {
         SubjectDatabus databusClient = _injector.getInstance(Key.get(SubjectDatabus.class, PartitionAwareClient.class));
         DatabusEventStore databusEventStore = _injector.getInstance(DatabusEventStore.class);
         ReplicationSource replicationSource = _injector.getInstance(ReplicationSource.class);
+        DatabusEventWriterRegistry databusEventWriterRegistry = _injector.getInstance(DatabusEventWriterRegistry.class);
+        DataStore dataStore = _injector.getInstance(DataStore.class);
 
         DatabusResourcePoller databusResourcePoller = _injector.getInstance(DatabusResourcePoller.class);
 
@@ -298,7 +301,7 @@ public class EmoService extends Application<EmoConfiguration> {
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         // Start the Databus service
         resources.addResource(_cluster, "emodb-bus-1",
-                new DatabusResource1(databus, databusClient, databusEventStore, databusResourcePoller));
+                new DatabusResource1(databus, databusClient, databusEventStore, databusEventWriterRegistry, databusResourcePoller, dataStore));
     }
 
     private void evaluateQueue()

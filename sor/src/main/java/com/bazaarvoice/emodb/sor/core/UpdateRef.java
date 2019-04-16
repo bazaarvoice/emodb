@@ -1,10 +1,9 @@
 package com.bazaarvoice.emodb.sor.core;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,7 +19,11 @@ public final class UpdateRef {
     private final UUID _changeId;
     private final Set<String> _tags;
 
-    public UpdateRef(String table, String key, UUID changeId, Set<String> tags) {
+    @JsonCreator
+    public UpdateRef(@JsonProperty("table") String table,
+                     @JsonProperty("key") String key,
+                     @JsonProperty("changeId") UUID changeId,
+                     @JsonProperty("tags") Set<String> tags) {
         _table = checkNotNull(table, "table");
         _key = checkNotNull(key, "key");
         _changeId = checkNotNull(changeId, "changeId");

@@ -21,10 +21,22 @@ import com.bazaarvoice.emodb.databus.client.DatabusAuthenticator;
 import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
+import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
+import com.bazaarvoice.emodb.sor.api.Update;
+import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
+import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.partition.PartitionForwardingException;
 import com.bazaarvoice.emodb.web.resources.databus.AbstractSubjectDatabus;
@@ -69,10 +81,13 @@ import java.lang.reflect.Type;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -100,7 +115,9 @@ import static org.mockito.Mockito.when;
  */
 public class DatabusJerseyTest extends ResourceTest {
     private static final String APIKEY_DATABUS = "databus-key";
+    private static final String APIKEY_ADMIN = "admin-key";
     private static final String INTERNAL_ID_DATABUS = "databus-id";
+    private static final String INTERNAL_ID_ADMIN = "admin-id";
     private static final String APIKEY_UNAUTHORIZED = "unauthorized-key";
     private static final String INTERNAL_ID_UNAUTHORIZED = "unauthorized-id";
 
@@ -108,15 +125,27 @@ public class DatabusJerseyTest extends ResourceTest {
             OstrichAccessors.newPartitionContextTest(SubjectDatabus.class, AbstractSubjectDatabus.class);
     private final SubjectDatabus _local = mock(SubjectDatabus.class);
     private final SubjectDatabus _client = mock(SubjectDatabus.class);
+    private final DatabusEventWriterRegistry _eventWriterRegistry = new DatabusEventWriterRegistry();
+    private final DataStore _dataStore = new InMemoryDataStore(_eventWriterRegistry, new InMemoryDataReaderDAO(), new MetricRegistry());
 
     @Rule
-    public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
-                    new DatabusResourcePoller(new MetricRegistry()))),
-            ImmutableMap.of(
-                    APIKEY_DATABUS, new ApiKey(INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
-                    APIKEY_UNAUTHORIZED, new ApiKey(INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role"))),
-            ImmutableMultimap.of("databus-role", "databus|*|*"));
+    public ResourceTestRule _resourceTestRule = getResourceTestRule();
+
+    private ResourceTestRule getResourceTestRule() {
+        _eventWriterRegistry.registerDatabusEventWriter(
+                refs -> refs.stream()
+                        .map(updateRef -> updateRef.getTable() + "|" + updateRef.getKey())
+                        .iterator());
+        return setupResourceTestRule(
+                Collections.singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class), _eventWriterRegistry,
+                        new DatabusResourcePoller(new MetricRegistry()), _dataStore)),
+                ImmutableMap.of(
+                        APIKEY_DATABUS, new ApiKey(INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
+                        APIKEY_ADMIN, new ApiKey(INTERNAL_ID_ADMIN, ImmutableSet.of("admin-role")),
+                        APIKEY_UNAUTHORIZED, new ApiKey(INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role"))),
+                ImmutableMultimap.of("databus-role", "databus|*|*",
+                        "admin-role", "system|*|*"));
+    }
 
     @After
     public void tearDownMocksAndClearState() {
@@ -869,6 +898,125 @@ public class DatabusJerseyTest extends ResourceTest {
         verifyNoMoreInteractions(_local);
         assertEquals(status.getSubscription(), "queue-name");
         assertEquals(status.getStatus(), ReplaySubscriptionStatus.Status.IN_PROGRESS);
+    }
+
+    @Test
+    public void writeEventsBatch() {
+        String table = "table";
+        String key1 = "key1";
+        String key2 = "key2";
+
+        Audit audit = new AuditBuilder().
+                setProgram("test").
+                setUser("root").
+                setLocalHost().
+                setComment("create table").
+                build();
+        TableOptions options = new TableOptionsBuilder()
+                .setPlacement("default")
+                .build();
+
+        _dataStore.createTable(table, options, Collections.emptyMap(), audit);
+        // write some data
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"SUBMITTED\"}"), newAudit("begin moderation"), WriteConsistency.STRONG);
+        _dataStore.update(table, key2, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Joe\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        // Tag this last update
+        _dataStore.updateAll(
+                ImmutableList.of(
+                        new Update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"APPROVED\"}"), newAudit("finish moderation"), WriteConsistency.STRONG)),
+                ImmutableSet.of("tag2", "tag1"));
+        _resourceTestRule.client().resource("/bus/1/_batch-write-events")
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .type(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+                .post(Arrays.asList(new UpdateRef(table, key1, UUID.randomUUID(), new HashSet<>())));
+    }
+
+    @Test
+    public void writeTableEvents() {
+        String table = "table";
+        String key1 = "key1";
+        String key2 = "key2";
+
+        Audit audit = new AuditBuilder().
+                setProgram("test").
+                setUser("root").
+                setLocalHost().
+                setComment("create table").
+                build();
+        TableOptions options = new TableOptionsBuilder()
+                .setPlacement("default")
+                .build();
+
+        _dataStore.createTable(table, options, Collections.emptyMap(), audit);
+        // write some data
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"SUBMITTED\"}"), newAudit("begin moderation"), WriteConsistency.STRONG);
+        _dataStore.update(table, key2, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Joe\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        // Tag this last update
+        _dataStore.updateAll(
+                ImmutableList.of(
+                        new Update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"APPROVED\"}"), newAudit("finish moderation"), WriteConsistency.STRONG)),
+                ImmutableSet.of("tag2", "tag1"));
+        //TODO
+//        _resourceTestRule.client().resource("/bus/1/_write-table-events/" + table)
+//                .accept(MediaType.APPLICATION_JSON_TYPE)
+//                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+//                .post(new GenericType<List<String>>() {}, null);
+    }
+
+    private static Audit newAudit(String comment) {
+        return new AuditBuilder().
+                setProgram("test").
+                setUser("root").
+                setLocalHost().
+                setComment(comment).
+                build();
+    }
+
+    @Test
+    public void writeKeyEvent() {
+        String table = "table";
+        String key1 = "key1";
+        String key2 = "key2";
+
+        Audit audit = new AuditBuilder().
+                setProgram("test").
+                setUser("root").
+                setLocalHost().
+                setComment("create table").
+                build();
+        TableOptions options = new TableOptionsBuilder()
+                .setPlacement("default")
+                .build();
+
+        _dataStore.createTable(table, options, Collections.emptyMap(), audit);
+        // write some data
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"SUBMITTED\"}"), newAudit("begin moderation"), WriteConsistency.STRONG);
+
+        _dataStore.update(table, key2, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Joe\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        // Tag this last update
+        UUID lastChangeId = TimeUUIDs.newUUID();
+        _dataStore.updateAll(
+                ImmutableList.of(
+                        new Update(table, key1, lastChangeId, Deltas.fromString("{..,\"state\":\"APPROVED\"}"), newAudit("finish moderation"), WriteConsistency.STRONG)),
+                ImmutableSet.of("tag2", "tag1"));
+        System.out.println(lastChangeId);
+
+        UpdateRef actual = _resourceTestRule.client().resource("/bus/1/_write-key-event/" + table + "/" + key1)
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+                .post(new GenericType<UpdateRef>() {}, null);
+
+//        Map<String, Object> document = _dataStore.get(table, key1);
+        UpdateRef expected = new UpdateRef(table, key1, lastChangeId, new HashSet<>());
+
+        assertEquals(expected.getTable(), actual.getTable());
+        assertEquals(expected.getKey(), actual.getKey());
+        //TODO
+//        assertEquals(expected, actual);
     }
 
     @Test

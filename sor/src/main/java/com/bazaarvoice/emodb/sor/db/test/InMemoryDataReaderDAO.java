@@ -204,7 +204,6 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
 
     @Override
     public Iterator<Record> getSplit(final Table table, String split, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency) {
-        checkArgument(split.startsWith("s"), "bad split");
         NavigableMap<String, Map<UUID, Change>> map = constrain(safeGet(_contentChanges, table.getName()),
                 decodeSplitStart(split), Strings.emptyToNull(decodeSplitEnd(split)));
         return Iterators.transform(map.entrySet().iterator(), new Function<Map.Entry<String, Map<UUID, Change>>, Record>() {
