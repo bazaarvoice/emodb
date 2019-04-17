@@ -16,7 +16,7 @@ public interface EventReaderDAO {
      * If 'since' is non-null, then most of the events before 'since' time will be skipped.
      * Some prior to 'since' time (at most 999) may still get through, but all events on or after since are guaranteed.
      * */
-    void readAll(String channel, EventSink sink, @Nullable Date since);
+    void readAll(String channel, EventSink sink, @Nullable Date since, boolean weak);
 
     /**
      * Read events for the channel and pass then to the sink until the sink returns false.  If called repeatedly

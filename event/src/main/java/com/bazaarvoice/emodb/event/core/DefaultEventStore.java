@@ -156,7 +156,7 @@ public class DefaultEventStore implements EventStore {
         checkLimit(limit, Limits.MAX_PEEK_LIMIT);
 
         DaoEventSink daoSink = new DaoEventSink(Integer.MAX_VALUE, sink);
-        _readerDao.readAll(channel, daoSink, null);
+        _readerDao.readAll(channel, daoSink, null, true);
 
         if (isDebugLoggingEnabled(channel)) {
             _log.debug("peek {} limit={} -> #={} more={}", channel, limit, daoSink.getCount(), daoSink.hasMore());
@@ -366,7 +366,7 @@ public class DefaultEventStore implements EventStore {
                 return true;
             }
         };
-        _readerDao.readAll(channel, eventSink, since);
+        _readerDao.readAll(channel, eventSink, since, false);
         if (!events.isEmpty()) {
             sink.accept(events);
         }
@@ -430,7 +430,7 @@ public class DefaultEventStore implements EventStore {
                 }
                 return true;
             }
-        }, null);
+        }, null, false);
         if (!eventsToCopy.isEmpty()) {
             addAndDelete(toChannel, eventsToCopy, fromChannel, eventsToDelete);
         }

@@ -238,8 +238,8 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
     @ParameterizedTimed(type = "AstyanaxEventReaderDAO")
     @Override
-    public void readAll(String channel, EventSink sink, Date since) {
-        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink, true);
+    public void readAll(String channel, EventSink sink, Date since, boolean weak) {
+        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink, weak);
     }
 
     void readAll(String channel, SlabFilter filter, EventSink sink, boolean weak) {
