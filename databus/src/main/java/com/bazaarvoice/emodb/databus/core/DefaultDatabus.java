@@ -205,7 +205,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
             masterFanoutChannels.add(ChannelNames.getMasterFanoutChannel(partition));
         }
         _masterFanoutChannels = masterFanoutChannels.build();
-        
+
         checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerMoveSubscriptionJobHandler(jobHandlerRegistry);
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
@@ -398,7 +398,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         }
         _eventStore.addAll(eventIds.build());
     }
-    
+
     @Override
     public long getEventCount(String ownerId, String subscription) {
         return getEventCountUpTo(ownerId, subscription, Long.MAX_VALUE);
@@ -952,6 +952,73 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
 
         _eventStore.purge(subscription);
     }
+
+//    @Override
+//    public Map<Coordinate, List<UUID>> pollWithNoResolve(String ownerId, final String subscription, final Duration claimTtl, int limit) {
+//        checkLegalSubscriptionName(subscription);
+//        checkArgument(claimTtl.compareTo(Duration.ZERO) >= 0, "ClaimTtl must be >=0");
+//        checkArgument(limit > 0, "Limit must be >0");
+//        checkSubscriptionOwner(ownerId, subscription);
+//
+//        Map<Coordinate, EventList> rawEvents = Maps.newHashMap();
+//        int remaining = limit;
+//        boolean eventsAvailableForNextPoll = false;
+//        boolean repeatable = claimTtl.toMillis() > 0;
+//        boolean noMaxPollTimeOut = true;
+//
+//        Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
+//        int padding = 0;
+//        do {
+//            if (remaining == 0) {
+//                break;  // Don't need any more events.
+//            }
+//
+//            // Query the databus event store.  Consolidate multiple events that refer to the same item.
+//            ConsolidatingEventSink sink = new ConsolidatingEventSink(remaining + padding);
+//            boolean more = _eventStore.poll(subscription, claimTtl, sink);
+//            rawEvents.putAll(sink.getEvents());
+//
+//            if (rawEvents.isEmpty()) {
+//                // No events to be had.
+//                eventsAvailableForNextPoll = more;
+//                break;
+//            }
+//
+//            if (!more) {
+//                // There are no more events to be had, so exit now
+//                break;
+//            }
+//
+//            // ideally we should get the raw events to the limit.
+//            remaining = limit - rawEvents.size();
+//
+//            // Note: Due to redundant/unknown events, it's possible that the 'events' list is empty even though, if we
+//            // tried again, we'd find more events.  Try again a few times, but not for more than MAX_POLL_TIME so clients
+//            // don't timeout the request.  This helps move through large amounts of redundant deltas relatively quickly
+//            // while also putting a bound on the total amount of work done by a single call to poll().
+//            padding = 10;
+//        } while (repeatable && (noMaxPollTimeOut = stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.toMillis()));
+//
+//
+//        Map<Coordinate, List<UUID>> eventResultMap = Maps.newHashMap();
+////        List<String> events = Lists.newArrayList();
+//        for (Map.Entry<Coordinate, EventList> rawEventsEntry : rawEvents.entrySet())  {
+//            Coordinate coordinate = rawEventsEntry.getKey();
+//            List<Pair<String, UUID>> eventAndChangeIds = rawEventsEntry.getValue().getEventAndChangeIds();
+////            events = eventAndChangeIds.stream().map(e -> e.first()).collect(Collectors.toList());
+//            List<UUID> changeIds = eventAndChangeIds.stream().map(e -> e.second()).collect(Collectors.toList());
+//            eventResultMap.put(coordinate, changeIds);
+//        }
+//
+//        return eventResultMap;
+//
+////
+////
+////
+////
+////       return new PollResult(events, events.size(), eventsAvailableForNextPoll);
+//
+//    }
 
     private void checkLegalSubscriptionName(String subscription) {
         checkArgument(Names.isLegalSubscriptionName(subscription),

@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
+import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
@@ -27,7 +28,6 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
-import com.bazaarvoice.emodb.sor.api.AuditsUnavailableException;
 import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -49,6 +49,7 @@ import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.bazaarvoice.emodb.table.db.TableDeleteOperations;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.codahale.metrics.Counter;
@@ -69,16 +70,17 @@ import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.time.Clock;
-import java.time.temporal.ChronoUnit;
-import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -92,15 +94,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.TimeoutException;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 
-public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore {
+public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore, TableDeleteOperations {
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
@@ -138,6 +139,7 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         this(eventWriterRegistry, tableDao, dataReaderDao, dataWriterDao, slowQueryLog, defaultCompactionExecutor(lifeCycle),
                 historyStore, stashRootDirectory, compactionControlSource, stashBlackListTableCondition, auditWriter,
                 minSplitSizeMap, metricRegistry, clock);
+
     }
 
     @VisibleForTesting
@@ -1024,5 +1026,50 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
 
     private String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.sor", "DefaultDataStore", name);
+    }
+
+    @Override
+    public void sendDeleteEventsForTable(String table, UUID changeId, Set<String> tags) {
+
+        // get all the keys of the table.
+        Table tableFromDAO = _tableDao.get(table);
+        Collection<String> splits = getSplits(table, 10000);
+        Collection<Key> tableKeys = Collections.EMPTY_SET;
+
+        splits.stream().forEach(split -> {
+            Iterator<Record> recordIterator = getSplitRecords(table, split, null, Long.MAX_VALUE, ReadConsistency.STRONG);
+            while (recordIterator.hasNext()) {
+                tableKeys.add(recordIterator.next().getKey());
+            }
+        });
+
+        // post refs of all keys to Databus.
+        List<UpdateRef> allUpdateRefs = Lists.newArrayListWithCapacity(tableKeys.size());
+        tableKeys.stream().forEach(tableKey -> {
+            String key = tableKey.getKey();
+            Map<String, Object> document = get(table, key, ReadConsistency.STRONG);
+
+            if (!tableFromDAO.isInternal()) {
+                allUpdateRefs.add(new UpdateRef(table, key, changeId, tags, Boolean.TRUE,
+                        Intrinsic.getVersion(document), Intrinsic.getLastUpdateAt(document)));
+            }
+        });
+
+        if (!allUpdateRefs.isEmpty()) {
+            _eventWriterRegistry.getDatabusWriter().writeEvents(allUpdateRefs);
+        }
+    }
+
+    public Iterator<Record> getSplitRecords(String tableName, String split,
+                                            @Nullable String fromKeyExclusive,
+                                            long limit, ReadConsistency consistency) {
+        checkLegalTableName(tableName);
+        checkNotNull(split, "split");
+        checkArgument(limit > 0, "Limit must be >0");
+        checkNotNull(consistency, "consistency");
+
+        Table table = _tableDao.get(tableName);
+        LimitCounter remaining = new LimitCounter(limit);
+        return _dataReaderDao.getSplit(table, split, fromKeyExclusive, remaining, consistency);
     }
 }
