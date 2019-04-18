@@ -64,6 +64,7 @@ import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -79,6 +80,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
@@ -87,11 +89,13 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotSame;
@@ -144,7 +148,7 @@ public class DatabusJerseyTest extends ResourceTest {
                         APIKEY_ADMIN, new ApiKey(INTERNAL_ID_ADMIN, ImmutableSet.of("admin-role")),
                         APIKEY_UNAUTHORIZED, new ApiKey(INTERNAL_ID_UNAUTHORIZED, ImmutableSet.of("unauthorized-role"))),
                 ImmutableMultimap.of("databus-role", "databus|*|*",
-                        "admin-role", "system|*|*"));
+                        "admin-role", "*"));
     }
 
     @After
@@ -938,6 +942,7 @@ public class DatabusJerseyTest extends ResourceTest {
         String table = "table";
         String key1 = "key1";
         String key2 = "key2";
+        String key3 = "key3";
 
         Audit audit = new AuditBuilder().
                 setProgram("test").
@@ -953,17 +958,33 @@ public class DatabusJerseyTest extends ResourceTest {
         // write some data
         _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
         _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"SUBMITTED\"}"), newAudit("begin moderation"), WriteConsistency.STRONG);
+        _dataStore.update(table, key1, TimeUUIDs.newUUID(), Deltas.delete(), newAudit("delete"), WriteConsistency.STRONG);
         _dataStore.update(table, key2, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Joe\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        _dataStore.update(table, key3, com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimeMillis(System.currentTimeMillis() - 30 * 60 * 60 * 1000), Deltas.fromString("{\"name\":\"Joe\"}"), newAudit("submit"), WriteConsistency.STRONG);
+
         // Tag this last update
         _dataStore.updateAll(
                 ImmutableList.of(
                         new Update(table, key1, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"state\":\"APPROVED\"}"), newAudit("finish moderation"), WriteConsistency.STRONG)),
                 ImmutableSet.of("tag2", "tag1"));
-        //TODO
-//        _resourceTestRule.client().resource("/bus/1/_write-table-events/" + table)
-//                .accept(MediaType.APPLICATION_JSON_TYPE)
-//                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
-//                .post(new GenericType<List<String>>() {}, null);
+
+        SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
+        dateFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        _resourceTestRule.client().resource("/bus/1/_write-table-events/" + table)
+                .queryParam("since", dateFmt.format(new Date()))
+                .queryParam("batchsize", "1")
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+                .post(new GenericType<List<UpdateRef>>() {}, null);
+
+        List<UpdateRef> actual = _resourceTestRule.client().resource("/bus/1/_write-table-events/" + table)
+                .queryParam("batchsize", "1")
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+                .post(new GenericType<List<UpdateRef>>() {}, null);
+//        TODO
+//        Assert.assertThat(actual.size(), is(3));
     }
 
     private static Audit newAudit(String comment) {
@@ -1003,20 +1024,25 @@ public class DatabusJerseyTest extends ResourceTest {
                 ImmutableList.of(
                         new Update(table, key1, lastChangeId, Deltas.fromString("{..,\"state\":\"APPROVED\"}"), newAudit("finish moderation"), WriteConsistency.STRONG)),
                 ImmutableSet.of("tag2", "tag1"));
-        System.out.println(lastChangeId);
+
+        SimpleDateFormat dateFmt = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZZZ");
+        dateFmt.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        _resourceTestRule.client().resource("/bus/1/_write-key-event/" + table + "/" + key1)
+                .queryParam("since", dateFmt.format(new Date()))
+                .accept(MediaType.APPLICATION_JSON_TYPE)
+                .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
+                .post();
 
         UpdateRef actual = _resourceTestRule.client().resource("/bus/1/_write-key-event/" + table + "/" + key1)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_ADMIN)
                 .post(new GenericType<UpdateRef>() {}, null);
 
-//        Map<String, Object> document = _dataStore.get(table, key1);
-        UpdateRef expected = new UpdateRef(table, key1, lastChangeId, new HashSet<>());
-
-        assertEquals(expected.getTable(), actual.getTable());
-        assertEquals(expected.getKey(), actual.getKey());
-        //TODO
-//        assertEquals(expected, actual);
+        assertEquals(table, actual.getTable());
+        assertEquals(key1, actual.getKey());
+        assertTrue(com.bazaarvoice.emodb.common.uuid.TimeUUIDs.compare(actual.getChangeId(), lastChangeId) > 0);
+        assertEquals(new HashSet<>(Arrays.asList("replay")), actual.getTags());
     }
 
     @Test
