@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.web.resources.databus;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
-import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.EventViews;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
@@ -11,11 +10,8 @@ import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
-import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
@@ -51,20 +47,12 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -84,21 +72,18 @@ public class DatabusResource1 {
     private final SubjectDatabus _databusClient;
     private final DatabusEventStore _eventStore;
     private final DatabusResourcePoller _poller;
-    private final DataStore _dataStore;
-    private final DatabusEventWriterRegistry _eventWriterRegistry;
+    private final DatabusEventWriterAdmin _databusEventWriterAdmin;
 
     public DatabusResource1(SubjectDatabus databus,
                             SubjectDatabus databusClient,
                             DatabusEventStore eventStore,
-                            DatabusEventWriterRegistry eventWriterRegistry,
                             DatabusResourcePoller databusResourcePoller,
-                            DataStore dataStore) {
+                            DatabusEventWriterAdmin databusEventWriterAdmin) {
         _databus = checkNotNull(databus, "databus");
         _databusClient = checkNotNull(databusClient, "databusClient");
         _eventStore = checkNotNull(eventStore, "eventStore");
         _poller = checkNotNull(databusResourcePoller, "databusResourcePoller");
-        _dataStore = checkNotNull(dataStore, "datastore");
-        _eventWriterRegistry = checkNotNull(eventWriterRegistry, "eventWriterRegistry");
+        _databusEventWriterAdmin = Objects.requireNonNull(databusEventWriterAdmin);
     }
 
     @Path ("_raw")
@@ -421,77 +406,55 @@ public class DatabusResource1 {
 
     @POST
     @Path ("_batch-write-events")
-    @RequiresPermissions ("system|raw_databus")
+    @RequiresPermissions ({ "system|raw_databus", "databus|*"})
     @Timed (name = "bv.emodb.sor.DatabusResource1.writeEvents", absolute = true)
     @ApiOperation (value = "Batch write events operation.",
             notes = "Batch write events operation. ",
-            response = SuccessResponse.class
+            response = Response.class
     )
-    public SuccessResponse writeEvents(Collection<UpdateRef> refs,
-                                       @Authenticated Subject subject) {
-        _eventWriterRegistry.getDatabusWriter().writeEvents(refs);
-        return SuccessResponse.instance();
+    public Response writeEvents(Collection<UpdateRef> refs,
+                                @Authenticated Subject subject) {
+        _databusEventWriterAdmin.writeEvents(refs);
+        return Response.ok()
+                .build();
     }
 
+    /**
+     * Command line usage:
+     * curl -v -XPOST localhost:8080/bus/1/_write-table-events/$table/$key -H “X-BV-API-Key: xxx”
+     */
     @POST
     @Path ("_write-table-events/{table}")
-    @RequiresPermissions ({"sor|read|{table}", "system|raw_databus"})
+    @RequiresPermissions ({"sor|read|{table}", "system|raw_databus", "databus|*"})
     @Timed (name = "bv.emodb.sor.DatabusResource1.writeTableEvent", absolute = true)
-    @ApiOperation (value = "Replay operation.",
-            notes = "Replay operation.",
+    @ApiOperation (value = "Write events for table operation.",
+            notes = "Write events for table operation.",
             response = Iterator.class
     )
     public Iterator<UpdateRef> writeEvents(@PathParam ("table") String table,
-                                        @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                        @QueryParam ("batchsize") @DefaultValue ("10000") IntParam batchSize,
-                                        @QueryParam ("since") InstantParam sinceParam,
-                                        @Authenticated Subject subject) {
+                                           @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                                           @QueryParam ("batchsize") @DefaultValue ("10000") IntParam batchSize,
+                                           @QueryParam ("since") InstantParam sinceParam,
+                                           @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(table), "table is required");
         Instant since = (sinceParam == null) ? null : sinceParam.get();
         Date date = since != null ? Date.from(since) : null;
-        Collection<String> splits = _dataStore.getSplits(table, batchSize.get());
-
-        final Iterator<UpdateRef>[] result = new Iterator[]{Iterators.emptyIterator()};
-        Predicate<Map<String, Object>> predicate = getDatePredicate(date);
-        Set<String> tags = new HashSet<>(Arrays.asList("replay"));
-
-        splits.parallelStream().forEach(split -> {
-            Iterator<Map<String, Object>> documents = _dataStore.getSplit(table, split, null, Long.MAX_VALUE, true, consistency.get());
-            Iterable<Map<String, Object>> iterable = () -> documents;
-            long now = System.currentTimeMillis();
-            //TODO get FCT properly, currently it's now minus 5 minutes
-            long fct = now - 5 * 1000 * 60;
-
-            List<UpdateRef> updateRefs = StreamSupport.stream(iterable.spliterator(), true)
-                    .filter(predicate)
-                    .map(document -> {
-                        long lastUpdateAt = Intrinsic.getLastUpdateAt(document).getTime();
-                        UUID changeId = getChangeId(lastUpdateAt, fct, now);
-                        return new UpdateRef(table, Intrinsic.getId(document), changeId, tags);
-                    })
-                    .collect(Collectors.toList());
-
-            _eventWriterRegistry.getDatabusWriter().writeEvents(updateRefs);
-            result[0] = Iterators.concat(result[0], updateRefs.iterator());
-        });
-        return streamingIterator(result[0]);
+        return streamingIterator(_databusEventWriterAdmin.writeEvents(table, batchSize.get(), consistency.get(), date));
     }
 
-    private static Predicate<Map<String, Object>> getDatePredicate(Date date) {
-        Predicate<Map<String, Object>> datePredicate = document -> Intrinsic.getFirstUpdateAt(document).compareTo(date) >= 0;
-        Predicate<Map<String, Object>> alwaysTruePredicate = document -> true;
-        return date == null ? alwaysTruePredicate : datePredicate;
-    }
-
+    /**
+     * Command line usage:
+     * curl -v -XPOST localhost:8080/bus/1/_write-key-event/$table/$key -H “X-BV-API-Key: xxx”
+     */
     @POST
     @Path ("_write-key-event/{table}/{key}")
-    @RequiresPermissions ({"sor|read|{table}","system|raw_databus"})
+    @RequiresPermissions ({"sor|read|{table}", "system|raw_databus", "databus|*"})
     @Timed (name = "bv.emodb.sor.DatabusResource1.writeEvent", absolute = true)
-    @ApiOperation (value = "Replay operation.",
-            notes = "Replay operation.",
-            response = UpdateRef.class
+    @ApiOperation (value = "Write event for table and key operation.",
+            notes = "Write event for table and key operation.",
+            response = Response.class
     )
-    public UpdateRef sendEvent(@PathParam ("table") String table,
+    public Response writeEvent(@PathParam ("table") String table,
                                @PathParam ("key") String key,
                                @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
                                @QueryParam ("since") InstantParam sinceParam,
@@ -501,31 +464,9 @@ public class DatabusResource1 {
 
         Instant since = (sinceParam == null) ? null : sinceParam.get();
         Date date = since != null ? Date.from(since) : null;
-        Map<String, Object> document = _dataStore.get(table, key, consistency.get());
-        UpdateRef updateRef = null;
-        // send events only if sinceParam isn't specified, or
-        // document had been created before sinceParam
-        if (getDatePredicate(date).test(document)) {
-            long now = System.currentTimeMillis();
-            //TODO get FCT properly, currently it's now minus 5 minutes
-            long fct = now - 5 * 1000 * 60;
-            long lastUpdateAt = Intrinsic.getLastUpdateAt(document).getTime();
-            UUID changeId = getChangeId(lastUpdateAt, fct, now);
-            Set<String> tags = new HashSet<>(Arrays.asList("replay"));
 
-            updateRef = new UpdateRef(table, key, changeId, tags);
-            _eventWriterRegistry.getDatabusWriter().writeEvents(Collections.singleton(updateRef));
-        }
-        return updateRef;
-    }
-
-    private static UUID getChangeId(long lastUpdateAt, long fct, long now) {
-        //Use random date between max(FCT, lastUpdateAt) and now.
-        //Any TimeUUID older than FCT will be rejected since otherwise it could be ignored by a compaction.
-        return TimeUUIDs.uuidForTimestamp(getDateBetween(Math.max(fct, lastUpdateAt), now));
-    }
-
-    private static Date getDateBetween(long from, long to) {
-        return new Date(ThreadLocalRandom.current().nextLong(from, to));
+        final UpdateRef updateRef = _databusEventWriterAdmin.writeEvent(table, key, consistency.get(), date);
+        return Response.ok(updateRef)
+                .build();
     }
 }

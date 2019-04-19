@@ -100,7 +100,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 
-public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore {
+public class DefaultDataStore implements DataStore, DataProvider, DataTools, TableBackingStore, RecordResolver {
 
     private static final int NUM_COMPACTION_THREADS = 2;
     private static final int MAX_COMPACTION_QUEUE_LENGTH = 100;
@@ -403,7 +403,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
      * Convenience call to {@link #resolve(Record, ReadConsistency, boolean)} which always schedules asynchronous
      * compaction is applicable.
      */
-    private Resolved resolve(Record record, ReadConsistency consistency) {
+    @Override
+    public Resolved resolve(Record record, ReadConsistency consistency) {
         return resolve(record, consistency, true);
     }
 
@@ -455,8 +456,8 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         };
     }
 
-    @VisibleForTesting
-    public Map<String, Object> toContent(Resolved resolved, ReadConsistency consistency) {
+    @Override
+    public Map<String, Object> toContent(Resolved resolved, ReadConsistency consistency, boolean includeCompactionData) {
         Map<String, Object> result;
         if (!resolved.isUndefined()) {
             Object content = resolved.getContent();
@@ -500,7 +501,16 @@ public class DefaultDataStore implements DataStore, DataProvider, DataTools, Tab
         if (lastMutateAt != null) {
             result.put(Intrinsic.LAST_MUTATE_AT, lastMutateAt);
         }
+        if (includeCompactionData) {
+            result.put(LAST_COMPACTED_MUTATION_KEY, resolved.getLastCompactedMutation());
+            result.put(LAST_COMPACTION_CUTOFF_KEY, resolved.getLastCompactionCutoff());
+        }
         return result;
+    }
+
+    @VisibleForTesting
+    public Map<String, Object> toContent(Resolved resolved, ReadConsistency consistency) {
+        return toContent(resolved, consistency, false);
     }
 
     @Override

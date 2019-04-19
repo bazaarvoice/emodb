@@ -250,6 +250,10 @@ public class DataStoreModule extends PrivateModule {
         bind(DataTools.class).to(DefaultDataStore.class);
         expose(DataTools.class);
 
+        // RecordResolver
+        bind(RecordResolver.class).to(DefaultDataStore.class);
+        expose(RecordResolver.class);
+
         bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
         bind(GracefulShutdownManager.class).asEagerSingleton();
 

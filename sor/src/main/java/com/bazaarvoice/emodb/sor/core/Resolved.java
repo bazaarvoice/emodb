@@ -74,6 +74,14 @@ public class Resolved {
         return _lastMutation;
     }
 
+    public UUID getLastCompactionCutoff() {
+        return _lastCompactionCutoff;
+    }
+
+    public UUID getLastCompactedMutation() {
+        return _lastCompactedMutation;
+    }
+
     public boolean isChangeDeltaPending(UUID changeId, long fullConsistencyTimestamp) {
         // Deltas older than the full consistency timestamp must be present, or else they don't exist. Also, deltas
         // that pre-date the last compaction cutoff are assumed to be deleted and in any case now irrelevant. (They're

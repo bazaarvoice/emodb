@@ -12,7 +12,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
 import com.google.common.util.concurrent.MoreExecutors;
 
-import java.net.URI;
 import java.time.Clock;
 
 /**
@@ -29,9 +28,13 @@ public class InMemoryDataStore extends DefaultDataStore {
     }
 
     public InMemoryDataStore(DatabusEventWriterRegistry eventWriterRegistry, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
-        super(eventWriterRegistry, new InMemoryTableDAO(), dataDao, dataDao,
+        this(eventWriterRegistry, new InMemoryTableDAO(), dataDao, metricRegistry);
+    }
+
+    public InMemoryDataStore(DatabusEventWriterRegistry eventWriterRegistry, InMemoryTableDAO tableDao, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
+        super(eventWriterRegistry, tableDao, dataDao, dataDao,
                 new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryHistoryStore(),
-                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                Optional.absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
     }
 }
