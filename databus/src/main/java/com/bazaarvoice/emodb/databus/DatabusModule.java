@@ -27,6 +27,7 @@ import com.bazaarvoice.emodb.databus.core.FanoutLagMonitor;
 import com.bazaarvoice.emodb.databus.core.FanoutManager;
 import com.bazaarvoice.emodb.databus.core.HashingPartitionSelector;
 import com.bazaarvoice.emodb.databus.core.MasterFanout;
+import com.bazaarvoice.emodb.databus.core.MegaBusManager;
 import com.bazaarvoice.emodb.databus.core.OwnerAwareDatabus;
 import com.bazaarvoice.emodb.databus.core.PartitionSelector;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
@@ -146,6 +147,7 @@ public class DatabusModule extends PrivateModule {
         if (_serviceMode.specifies(EmoServiceMode.Aspect.dataBus_fan_out_and_replication)) {
             bind(FanoutManager.class).to(DefaultFanoutManager.class).asEagerSingleton();
             bind(CanaryManager.class).asEagerSingleton();
+            bind(MegaBusManager.class).asEagerSingleton();
             bind(MasterFanout.class).asEagerSingleton();
             bind(DefaultReplicationManager.class).asEagerSingleton();
             bind(ReplicationEnabledTask.class).asEagerSingleton();
