@@ -5,10 +5,10 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.api.Event;
-import com.bazaarvoice.emodb.databus.api.PollResult;
+import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,12 +33,12 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class Megabus extends AbstractScheduledService {
     private final Logger _log;
 
-    private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
-    private static final Duration CLAIM_TTL = Duration.ofSeconds(30);
-    private static final int EVENTS_LIMIT = 50;
+    private static final Duration POLL_INTERVAL = Duration.ofMillis(100);
+    private static final int EVENTS_LIMIT = 1000;
 
     private final RateLimitedLog _rateLimitedLog;
     private final Databus _databus;
+    private final DatabusEventStore _eventStore;
     private final MetricsGroup _timers;
     private final String _timerName;
     private final String _subscriptionName;
@@ -48,14 +48,14 @@ public class Megabus extends AbstractScheduledService {
     private final ObjectMapper _objectMapper;
     private final String _producerTopicName;
 
-    public Megabus(int partition, int totalPartitions, Databus databus, RateLimitedLogFactory logFactory,
+    public Megabus(int partition, int totalPartitions, Databus databus, DatabusEventStore eventStore, RateLimitedLogFactory logFactory,
                    MetricRegistry metricRegistry, Producer<String, JsonNode> producer, ObjectMapper objectMapper,
                    String producerTopicName) {
-        this(partition, totalPartitions, databus, logFactory, metricRegistry, null, producer, objectMapper, producerTopicName);
+        this(partition, totalPartitions, databus, eventStore, logFactory, metricRegistry, null, producer, objectMapper, producerTopicName);
     }
 
     @VisibleForTesting
-    Megabus(int partition, int totalPartitions, Databus databus, RateLimitedLogFactory logFactory,
+    Megabus(int partition, int totalPartitions, Databus databus, DatabusEventStore eventStore, RateLimitedLogFactory logFactory,
             MetricRegistry metricRegistry, @Nullable ScheduledExecutorService executor,
             Producer<String, JsonNode> producer, ObjectMapper objectMapper, String producerTopicName) {
         checkArgument(totalPartitions > 0);
@@ -64,6 +64,7 @@ public class Megabus extends AbstractScheduledService {
 
         _log = LoggerFactory.getLogger(Megabus.class.getName() + "-" + partition);
         _databus = checkNotNull(databus, "databus");
+        _eventStore = checkNotNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
         _timerName = newTimerName("megabusPoll-" + partition);
         _rateLimitedLog = logFactory.from(_log);
@@ -121,25 +122,33 @@ public class Megabus extends AbstractScheduledService {
         }
     }
 
+    public static class Event {
+        public String id;
+        public UpdateRef payload;  // Name matches the QueueService Message object.
+
+        private Event(String id, UpdateRef payload) {
+            this.id = id;
+            this.payload = payload;
+        }
+    }
+
     private boolean pollAndAckEvents() {
         // Poll for events on the megabus subscription
         long startTime = System.nanoTime();
         List<String> eventKeys = Lists.newArrayList();
-        PollResult result = _databus.poll(_subscriptionName, CLAIM_TTL, EVENTS_LIMIT);
-        // Get the keys for all events polled.  This also forces resolution of all events for timing metrics
-        Iterator<Event> events = result.getEventIterator();
+        List<EventData> result = _eventStore.peek(_subscriptionName, EVENTS_LIMIT);
+        Iterator<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData()))).iterator();
         while (events.hasNext()) {
             Event event = events.next();
-            Map<String, Object> content = event.getContent();
             _producer.send(new ProducerRecord<String, JsonNode>(_producerTopicName,
-                    new StringBuilder(content.get("~table").toString()).append("/").append(content.get("~id").toString()).toString(),
-                    _objectMapper.valueToTree(content)));
-            try {
-            _log.info(new ObjectMapper().writeValueAsString(event.getContent()));
-            } catch (Exception e) {
-                _log.error("Error printing megabus event", e);
-            }
-            eventKeys.add(event.getEventKey());
+                    event.payload.getKey().concat("/").concat(event.payload.getTable()),
+                    _objectMapper.valueToTree(event.payload)));
+//            try {
+//            _log.info(new ObjectMapper().writeValueAsString(ref));
+//            } catch (Exception e) {
+//                _log.error("Error printing megabus event", e);
+//            }
+            eventKeys.add(event.id);
         }
         long endTime = System.nanoTime();
         trackAverageEventDuration(endTime - startTime, eventKeys.size());
@@ -156,7 +165,7 @@ public class Megabus extends AbstractScheduledService {
             _databus.acknowledge(_subscriptionName, eventKeys);
         }
 
-        return result.hasMoreEvents();
+        return !eventKeys.isEmpty();
     }
 
     private void trackAverageEventDuration(long durationInNs, int numEvents) {
