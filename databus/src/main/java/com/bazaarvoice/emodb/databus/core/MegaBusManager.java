@@ -41,6 +41,7 @@ public class MegaBusManager {
     @Inject
     public MegaBusManager(final LifeCycleRegistry lifeCycle,
                           final DatabusFactory databusFactory,
+                          DatabusEventStore databusEventStore,
                           final @SystemIdentity String systemId,
                           final RateLimitedLogFactory logFactory,
                           OstrichOwnerGroupFactory ownerGroupFactory,
@@ -77,7 +78,8 @@ public class MegaBusManager {
             @Override
             public Service create(String partition) {
                 Databus databus = databusFactory.forOwner(systemId);
-                return new Megabus(Integer.parseInt(partition), NUM_PARTITIONS, databus, logFactory, metricRegistry,
+
+                return new Megabus(Integer.parseInt(partition), NUM_PARTITIONS, databus, databusEventStore, logFactory, metricRegistry,
                         producer, objectMapper, TOPIC_NAME);
             }
         }, null);
