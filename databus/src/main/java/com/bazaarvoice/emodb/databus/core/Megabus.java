@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.condition.Condition;
@@ -14,17 +15,18 @@ import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import java.time.Duration;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -34,7 +36,7 @@ public class Megabus extends AbstractScheduledService {
     private final Logger _log;
 
     private static final Duration POLL_INTERVAL = Duration.ofMillis(100);
-    private static final int EVENTS_LIMIT = 1000;
+    private static final int EVENTS_LIMIT = 4000;
 
     private final RateLimitedLog _rateLimitedLog;
     private final Databus _databus;
@@ -137,19 +139,19 @@ public class Megabus extends AbstractScheduledService {
         long startTime = System.nanoTime();
         List<String> eventKeys = Lists.newArrayList();
         List<EventData> result = _eventStore.peek(_subscriptionName, EVENTS_LIMIT);
-        Iterator<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData()))).iterator();
-        while (events.hasNext()) {
-            Event event = events.next();
-            _producer.send(new ProducerRecord<String, JsonNode>(_producerTopicName,
-                    event.payload.getKey().concat("/").concat(event.payload.getTable()),
-                    _objectMapper.valueToTree(event.payload)));
-//            try {
-//            _log.info(new ObjectMapper().writeValueAsString(ref));
-//            } catch (Exception e) {
-//                _log.error("Error printing megabus event", e);
-//            }
+        List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
+        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(8, EVENTS_LIMIT / 8);
+        for (Event event : events) {
+            String key = event.payload.getKey().concat("/").concat(event.payload.getTable());
+            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % 8, event.payload);
             eventKeys.add(event.id);
         }
+
+        refsByPartition.keySet().forEach(key -> {
+            _producer.send(new ProducerRecord<>(_producerTopicName, key,
+                    TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key))));
+        });
+
         long endTime = System.nanoTime();
         trackAverageEventDuration(endTime - startTime, eventKeys.size());
 
