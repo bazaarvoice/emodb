@@ -142,7 +142,7 @@ public class Megabus extends AbstractScheduledService {
         List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
         Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(8, EVENTS_LIMIT / 8);
         for (Event event : events) {
-            String key = event.payload.getKey().concat("/").concat(event.payload.getTable());
+            String key = event.payload.getTable().concat("/").concat(event.payload.getKey());
             refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % 8, event.payload);
             eventKeys.add(event.id);
         }
