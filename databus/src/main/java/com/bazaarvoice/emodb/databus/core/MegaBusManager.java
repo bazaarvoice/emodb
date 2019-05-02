@@ -101,5 +101,10 @@ public class MegaBusManager {
             AdminUtils.createTopic(zkUtils, TOPIC_NAME, NUM_PARTITIONS, 1, new Properties(), RackAwareMode.Safe$.MODULE$);
         }
 
+        // Explicitly create topics
+        if (!AdminUtils.topicExists(zkUtils, "megabus-resolved")) {
+            AdminUtils.createTopic(zkUtils, "megabus-resolved", NUM_PARTITIONS, 1, new Properties(), RackAwareMode.Safe$.MODULE$);
+        }
+
     }
 }
