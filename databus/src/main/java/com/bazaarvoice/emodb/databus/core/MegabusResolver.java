@@ -14,6 +14,7 @@ import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,11 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.Transformer;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.TopicNameExtractor;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -59,8 +64,11 @@ public class MegabusResolver implements Managed {
         // for debugging
 //        refStream.foreach(((key, value) -> System.out.println(key + " " + value)));
 
-        refStream.flatMap((key, value) -> resolveRefs(value.iterator()).getKeyedDocs())
-                .to("megabus-resolved", Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
+        KStream<String, Map<String, Object>> megabus = refStream.flatMap((key, value) -> resolveRefs(value.iterator()).getKeyedDocs());
+
+
+        megabus.through("megabus-resolved", Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})))
+                .to(new SubscriptionTopicNameExtractor(_dataProvider));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
