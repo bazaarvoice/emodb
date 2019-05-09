@@ -43,6 +43,6 @@ public class S3Configuration {
     }
 
     public void setS3HealthCheckConfiguration(final S3HealthCheckConfiguration s3HealthCheckConfiguration) {
-        this._s3HealthCheckConfiguration = _s3HealthCheckConfiguration;
+        this._s3HealthCheckConfiguration = s3HealthCheckConfiguration;
     }
 }

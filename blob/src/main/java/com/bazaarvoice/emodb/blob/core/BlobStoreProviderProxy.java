@@ -29,14 +29,18 @@ import java.util.Map;
  * the blob store injection to prevent re-entrant injection issues.
  */
 public class BlobStoreProviderProxy implements BlobStore {
+    private final static String STORAGE_ATTRIBUTE_NAME = "~storage";
+    private final static String S3_STORAGE_ATTRIBUTE_VALUE = "s3";
 
     private final Supplier<BlobStore> _local;
+    private final Supplier<BlobStore> _s3;
     private final Supplier<BlobStore> _system;
 
     @Inject
-    public BlobStoreProviderProxy(@LocalBlobStore Provider<BlobStore> local, @SystemBlobStore Provider<BlobStore> system) {
+    public BlobStoreProviderProxy(@LocalCassandraBlobStore Provider<BlobStore> local, @LocalS3BlobStore Provider<BlobStore> s3, @SystemBlobStore Provider<BlobStore> system) {
         // The providers should be singletons.  Even so, locally memoize to ensure use of a singleton.
         _local = Suppliers.memoize(local::get);
+        _s3 = Suppliers.memoize(s3::get);
         _system = Suppliers.memoize(system::get);
     }
 
@@ -67,11 +71,6 @@ public class BlobStoreProviderProxy implements BlobStore {
     }
 
     @Override
-    public void purgeTableUnsafe(String table, Audit audit) throws UnknownTableException {
-        _local.get().purgeTableUnsafe(table, audit);
-    }
-
-    @Override
     public boolean getTableExists(String table) {
         return _local.get().getTableExists(table);
     }
@@ -97,40 +96,51 @@ public class BlobStoreProviderProxy implements BlobStore {
     }
 
     @Override
+    public void purgeTableUnsafe(String table, Audit audit) throws UnknownTableException {
+        getLocalBlobStore(table).purgeTableUnsafe(table, audit);
+    }
+
+    private BlobStore getLocalBlobStore(String table) {
+        Map<String, String> tableAttributes = getTableAttributes(table);
+        boolean isS3 = S3_STORAGE_ATTRIBUTE_VALUE.equals(tableAttributes.get(STORAGE_ATTRIBUTE_NAME));
+        return isS3 ? _s3.get() : _local.get();
+    }
+
+    @Override
     public long getTableApproximateSize(String table) throws UnknownTableException {
-        return _local.get().getTableApproximateSize(table);
+        return getLocalBlobStore(table).getTableApproximateSize(table);
     }
 
     @Override
     public BlobMetadata getMetadata(String table, String blobId) throws BlobNotFoundException {
-        return _local.get().getMetadata(table, blobId);
+        return getLocalBlobStore(table).getMetadata(table, blobId);
     }
 
     @Override
     public Iterator<BlobMetadata> scanMetadata(String table, @Nullable String fromBlobIdExclusive, long limit) {
-        return _local.get().scanMetadata(table, fromBlobIdExclusive, limit);
+        return getLocalBlobStore(table).scanMetadata(table, fromBlobIdExclusive, limit);
     }
 
     @Override
     public Blob get(String table, String blobId) throws BlobNotFoundException {
-        return _local.get().get(table, blobId);
+        return getLocalBlobStore(table).get(table, blobId);
     }
 
     @Override
     public Blob get(String table, String blobId, @Nullable RangeSpecification rangeSpec)
             throws BlobNotFoundException, RangeNotSatisfiableException {
-        return _local.get().get(table, blobId, rangeSpec);
+        return getLocalBlobStore(table).get(table, blobId, rangeSpec);
     }
 
     @Override
     public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes)
             throws IOException {
-        _local.get().put(table, blobId, in, attributes);
+        getLocalBlobStore(table).put(table, blobId, in, attributes);
     }
 
     @Override
     public void delete(String table, String blobId) {
-        _local.get().delete(table, blobId);
+        getLocalBlobStore(table).delete(table, blobId);
     }
 
     @Override

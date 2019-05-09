@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.blob.db.astyanax;
 
 import com.bazaarvoice.emodb.blob.BlobReadConsistency;
 import com.bazaarvoice.emodb.blob.api.Names;
+import com.bazaarvoice.emodb.blob.core.BlobPlacement;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;

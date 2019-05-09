@@ -56,9 +56,9 @@ import static java.lang.String.format;
 /**
  * Stores large binary objects like photos, videos.
  */
-public class DefaultBlobStore implements BlobStore {
+public class CassandraBlobStore implements BlobStore {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultBlobStore.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraBlobStore.class);
 
     private final TableDAO _tableDao;
     private final StorageProvider _storageProvider;
@@ -71,7 +71,7 @@ public class DefaultBlobStore implements BlobStore {
     private final Meter _metaDataNotPresentMeter;
 
     @Inject
-    public DefaultBlobStore(TableDAO tableDao,
+    public CassandraBlobStore(TableDAO tableDao,
                             StorageProvider storageProvider,
                             MetadataProvider metadataProvider,
                             MetricRegistry metricRegistry) {

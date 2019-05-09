@@ -1,5 +1,6 @@
 package test.integration.blob;
 
+import com.amazonaws.regions.Regions;
 import com.bazaarvoice.emodb.blob.BlobStoreConfiguration;
 import com.bazaarvoice.emodb.blob.BlobStoreModule;
 import com.bazaarvoice.emodb.blob.BlobStoreZooKeeper;
@@ -11,8 +12,11 @@ import com.bazaarvoice.emodb.blob.api.DefaultBlobMetadata;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
+import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
+import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
@@ -51,6 +55,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -139,8 +144,12 @@ public class CasBlobStoreTest {
 
                 bind(BlobStoreConfiguration.class).toInstance(new BlobStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of(TABLE_PLACEMENT))
-                        .setCassandraClusters(ImmutableMap.of(
-                                "media_global", new TestCassandraConfiguration("media_global", "ugc_blob"))));
+                        .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
+                                "media_global", new TestCassandraConfiguration("media_global", "ugc_blob")))
+                        .setS3Configuration(new S3Configuration()
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, null)))
+                        )
+                );
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
@@ -177,9 +186,11 @@ public class CasBlobStoreTest {
                 bind(CuratorFramework.class).annotatedWith(GlobalFullConsistencyZooKeeper.class)
                         .toInstance(ZKNamespaces.usingChildNamespace(curator, "applications/emodb-fct"));
 
-                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)
+                bind(new TypeLiteral<Supplier<Boolean>>() {
+                }).annotatedWith(CqlForScans.class)
                         .toInstance(Suppliers.ofInstance(true));
-                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class)
+                bind(new TypeLiteral<Supplier<Boolean>>() {
+                }).annotatedWith(CqlForMultiGets.class)
                         .toInstance(Suppliers.ofInstance(true));
 
                 bind(ServerFactory.class).toInstance(new SimpleServerFactory());
@@ -237,24 +248,24 @@ public class CasBlobStoreTest {
     }
 
     @Test
-    public void testTableExisting () {
+    public void testTableExisting() {
         assertTrue(_store.getTableExists(TABLE));
         assertFalse(_store.getTableExists(TABLE + 1));
     }
 
     @Test
-    public void testIsTableAvailable () {
+    public void testIsTableAvailable() {
         assertTrue(_store.isTableAvailable(TABLE));
     }
 
     @Test
-    public void testIsCreatedTableEmpty () {
+    public void testIsCreatedTableEmpty() {
         Iterator<BlobMetadata> iterator = _store.scanMetadata(TABLE, null, Long.MAX_VALUE);
         assertEquals(Iterators.size(iterator), 0);
     }
 
     @Test
-    public void testGetTablePlacements () {
+    public void testGetTablePlacements() {
         assertEquals(_store.getTablePlacements(), Sets.newHashSet(TABLE_PLACEMENT));
     }
 
@@ -498,7 +509,7 @@ public class CasBlobStoreTest {
                 fail("Iterators not equal: expected: " + expected + " and actual: " + actual);
             }
 
-            while(actual.hasNext() && expected.hasNext()) {
+            while (actual.hasNext() && expected.hasNext()) {
                 BlobMetadata e = expected.next();
                 BlobMetadata a = actual.next();
                 assertEqualsBlobMetadata(a, e);

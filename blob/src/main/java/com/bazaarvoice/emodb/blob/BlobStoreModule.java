@@ -9,19 +9,24 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.BlobStoreProviderProxy;
-import com.bazaarvoice.emodb.blob.core.DefaultBlobStore;
-import com.bazaarvoice.emodb.blob.core.LocalBlobStore;
+import com.bazaarvoice.emodb.blob.core.CassandraBlobStore;
+import com.bazaarvoice.emodb.blob.core.LocalCassandraBlobStore;
+import com.bazaarvoice.emodb.blob.core.LocalS3BlobStore;
+import com.bazaarvoice.emodb.blob.core.S3BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
-import com.bazaarvoice.emodb.blob.db.astyanax.BlobPlacementFactory;
+import com.bazaarvoice.emodb.blob.core.BlobPlacementFactory;
+import com.bazaarvoice.emodb.blob.db.s3.PlacementsToS3BucketNames;
 import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3BucketNamesToS3Clients;
 import com.bazaarvoice.emodb.blob.db.s3.S3ClientConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheck;
 import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheckConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.S3RateLimiter;
+import com.bazaarvoice.emodb.blob.db.s3.S3StorageProvider;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
@@ -107,6 +112,7 @@ import com.netflix.astyanax.model.ConsistencyLevel;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
@@ -174,6 +180,7 @@ public class BlobStoreModule extends PrivateModule {
                 .toInstance(ImmutableMap.<String, Long>of());
 
         bind(StorageProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
+        bind(S3StorageProvider.class).asEagerSingleton();
         bind(MetadataProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(DataCopyDAO.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(DataPurgeDAO.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
@@ -211,8 +218,9 @@ public class BlobStoreModule extends PrivateModule {
         }
 
         // Bind the BlobStore instance that the rest of the application will consume
-        bind(DefaultBlobStore.class).asEagerSingleton();
-        bind(BlobStore.class).annotatedWith(LocalBlobStore.class).to(DefaultBlobStore.class);
+        bind(CassandraBlobStore.class).asEagerSingleton();
+        bind(BlobStore.class).annotatedWith(LocalCassandraBlobStore.class).to(CassandraBlobStore.class);
+        bind(BlobStore.class).annotatedWith(LocalS3BlobStore.class).to(S3BlobStore.class);
         expose(BlobStore.class);
 
         bind(S3HealthCheck.class).asEagerSingleton();
@@ -221,16 +229,17 @@ public class BlobStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton
-    BlobStore provideBlobStore(@LocalBlobStore Provider<BlobStore> localBlobStoreProvider,
+    BlobStore provideBlobStore(@LocalCassandraBlobStore Provider<BlobStore> localCassandraBlobStoreProvider,
+                               @LocalS3BlobStore Provider<BlobStore> localS3BlobStoreProvider,
                                @SystemBlobStore Provider<BlobStore> systemBlobStoreProvider,
                                DataCenterConfiguration dataCenterConfiguration) {
         // Provides the unannotated version of the BlobStore
         // If this is the system data center, return the local BlobStore implementation
         // Otherwise return a proxy that delegates to local or remote system BlobStores
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return localBlobStoreProvider.get();
+            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, localCassandraBlobStoreProvider);
         } else {
-            return new BlobStoreProviderProxy(localBlobStoreProvider, systemBlobStoreProvider);
+            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, systemBlobStoreProvider);
         }
     }
 
@@ -396,30 +405,60 @@ public class BlobStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton @S3BucketNamesToS3Clients
-    Map<String, AmazonS3> provideS3BucketNamesToS3Clients(BlobStoreConfiguration configuration) {
+    Map<String, AmazonS3> provideS3BucketNamesToS3Clients(BlobStoreConfiguration configuration, Clock clock) {
+        S3RateLimiter rateLimiter = new S3RateLimiter(clock);
         S3Configuration s3Configuration = configuration.getS3Configuration();
         //    TODO remove condition in EMO-7107
         if (null != s3Configuration && null != s3Configuration.getS3BucketConfigurations()) {
             return s3Configuration.getS3BucketConfigurations().stream()
                     .collect(Collectors.toMap(
                             s3BucketConfiguration -> s3BucketConfiguration.getName(),
-                            s3BucketConfiguration -> {
-                                AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
-                                        .withRegion(Regions.fromName(s3BucketConfiguration.getRegion()))
-                                        .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
-                                        .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
-                                if (null != s3Configuration.getS3ClientConfiguration()) {
-                                    S3ClientConfiguration.EndpointConfiguration endpointConfiguration = s3Configuration.getS3ClientConfiguration().getEndpointConfiguration();
-                                    amazonS3ClientBuilder
-                                            .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointConfiguration.getServiceEndpoint(), endpointConfiguration.getSigningRegion()));
-                                }
-                                return amazonS3ClientBuilder
-                                        .build();
-                            })
+                            s3BucketConfiguration -> rateLimiter.rateLimit(getAmazonS3(s3BucketConfiguration)))
                     );
         } else {
             return new HashMap<>();
         }
+    }
+
+    private static AmazonS3 getAmazonS3(S3BucketConfiguration s3BucketConfiguration) {
+        AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
+                .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
+                .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
+        if (null != s3BucketConfiguration.getRegion()) {
+            amazonS3ClientBuilder
+                    .withRegion(Regions.fromName(s3BucketConfiguration.getRegion()));
+        } else if (null != s3BucketConfiguration.getS3ClientConfiguration()) {
+            S3ClientConfiguration.EndpointConfiguration endpointConfiguration = s3BucketConfiguration.getS3ClientConfiguration().getEndpointConfiguration();
+            amazonS3ClientBuilder
+                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointConfiguration.getServiceEndpoint(), endpointConfiguration.getSigningRegion()));
+        }
+        return amazonS3ClientBuilder
+                .build();
+    }
+
+    @Provides @Singleton @PlacementsToS3BucketNames
+    Map<String, String> providePlacementsToBucketNames(BlobStoreConfiguration configuration, @ValidTablePlacements Set<String> validPlacements, @KeyspaceMap Map<String, CassandraKeyspace> keyspaceMap) {
+        S3Configuration s3Configuration = configuration.getS3Configuration();
+        //    TODO remove condition in EMO-7107
+        if (null != s3Configuration && null != s3Configuration.getS3BucketConfigurations()) {
+            Map<String, String> placementsToS3BucketNames = s3Configuration.getS3BucketConfigurations().stream()
+                    .collect(Collectors.toMap(
+                            s3BucketConfiguration -> bucketNameToPlacement(s3BucketConfiguration.getName()),
+                            s3BucketConfiguration -> s3BucketConfiguration.getName())
+                    );
+            checkArgument(validPlacements.containsAll(placementsToS3BucketNames.keySet()), String.format("Valid placements: %s don't contain s3 buckets: %s", validPlacements, placementsToS3BucketNames.keySet()));
+            checkArgument(keyspaceMap.size() == placementsToS3BucketNames.size(), String.format("Cassandra keyspaces: %s size isn't equal to s3 buckets: %s size", keyspaceMap.keySet(), placementsToS3BucketNames.keySet()));
+            return placementsToS3BucketNames;
+        } else {
+            return new HashMap<>();
+        }
+    }
+
+    private static String bucketNameToPlacement(String bucketName) {
+        String placementString = bucketName.split("--")[1];
+        return placementString
+                .replaceFirst("-", "_")
+                .replaceFirst("-", ":");
     }
 
     private static AWSCredentialsProvider getAwsCredentialsProvider(final S3BucketConfiguration s3BucketConfiguration) {

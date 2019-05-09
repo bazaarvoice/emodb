@@ -1,5 +1,8 @@
-package com.bazaarvoice.emodb.blob.db.astyanax;
+package com.bazaarvoice.emodb.blob.core;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.bazaarvoice.emodb.blob.db.s3.PlacementsToS3BucketNames;
+import com.bazaarvoice.emodb.blob.db.s3.S3BucketNamesToS3Clients;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
@@ -7,7 +10,6 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.table.db.astyanax.AbstractPlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
-import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementUtil;
 import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
 import com.google.inject.Inject;
@@ -27,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static java.lang.String.format;
@@ -38,14 +41,21 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
     private final Set<String> _validPlacements;
     private final Map<String, CassandraKeyspace> _keyspaceMap;
     private final DataCenters _dataCenters;
+    private final Map<String, String> _placementsToBucketNames;
+    private final Map<String, AmazonS3> _bucketNamesToS3Clients;
 
     @Inject
-    public BlobPlacementFactory(LifeCycleRegistry lifeCycle, @ValidTablePlacements Set<String> validPlacements,
+    public BlobPlacementFactory(LifeCycleRegistry lifeCycle,
+                                @ValidTablePlacements Set<String> validPlacements,
                                 @KeyspaceMap Map<String, CassandraKeyspace> keyspaceMap,
-                                DataCenters dataCenters) {
+                                DataCenters dataCenters,
+                                @PlacementsToS3BucketNames final Map<String, String> placementsToBuckets,
+                                @S3BucketNamesToS3Clients final Map<String, AmazonS3> bucketNamesToS3Clients) {
         _validPlacements = validPlacements;
         _keyspaceMap = keyspaceMap;
         _dataCenters = dataCenters;
+        _placementsToBucketNames = Objects.requireNonNull(placementsToBuckets);
+        _bucketNamesToS3Clients = Objects.requireNonNull(bucketNamesToS3Clients);
         lifeCycle.manage(this);
     }
 
@@ -80,7 +90,7 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
     }
 
     @Override
-    public Placement newPlacement(String placement) throws ConnectionException {
+    public BlobPlacement newPlacement(String placement) throws ConnectionException {
         String[] parsed = PlacementUtil.parsePlacement(placement);
         String keyspaceName = parsed[0];
         String cfPrefix = parsed[1];
@@ -92,16 +102,24 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
         }
 
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
-        ColumnFamily<ByteBuffer,Composite> columnFamily = getColumnFamily(keyspaceDef, cfPrefix, "blob", placement,
+        ColumnFamily<ByteBuffer, Composite> columnFamily = getColumnFamily(keyspaceDef, cfPrefix, "blob", placement,
                 new SpecificCompositeSerializer(CompositeType.getInstance(Arrays.<AbstractType<?>>asList(
                         AsciiType.instance, IntegerType.instance))));
 
-        return new BlobPlacement(placement, keyspace, columnFamily);
+        return new BlobPlacement(placement, keyspace, columnFamily, getS3Bucket(placement), getS3Client(placement));
     }
 
     @Override
     public Collection<DataCenter> getDataCenters(String placement) {
         String keyspace = PlacementUtil.parsePlacement(placement)[0];
         return _dataCenters.getForKeyspace(keyspace);
+    }
+
+    private AmazonS3 getS3Client(final String placement) {
+        return _bucketNamesToS3Clients.get(getS3Bucket(placement));
+    }
+
+    private String getS3Bucket(final String placement) {
+        return _placementsToBucketNames.get(placement);
     }
 }

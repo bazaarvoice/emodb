@@ -52,7 +52,7 @@ public class DefaultBlobStoreTest {
         storageProvider = mock(StorageProvider.class);
         metadataProvider = mock(MetadataProvider.class);
         metricRegistry = mock(MetricRegistry.class);
-        blobStore = new DefaultBlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
+        blobStore = new CassandraBlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
         tableDao.create(TABLE, new TableOptionsBuilder().setPlacement("placement").build(), new HashMap<String, String>(), new AuditBuilder().setComment("create table").build());
     }
 
