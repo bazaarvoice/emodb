@@ -21,9 +21,13 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 /**
  * Supports delegation of DDL operations to the system data center.  This implementation uses a Providers for
@@ -31,13 +35,19 @@ import java.util.Map;
  */
 public class BlobStoreProviderProxy implements BlobStore {
 
-    private final Supplier<BlobStore> _local;
+    private final Supplier<BlobStore> _localBlobStoreReader;
+    private final List<Supplier<BlobStore>> _localBlobStoreWriters;
     private final Supplier<BlobStore> _system;
 
     @Inject
-    public BlobStoreProviderProxy(@LocalBlobStore Provider<BlobStore> local, @SystemBlobStore Provider<BlobStore> system) {
+    public BlobStoreProviderProxy(@LocalCassandraBlobStore Provider<BlobStore> localCassandra,
+                                  @LocalS3BlobStore Provider<BlobStore> localS3,
+                                  @SystemBlobStore Provider<BlobStore> system) {
         // The providers should be singletons.  Even so, locally memoize to ensure use of a singleton.
-        _local = Suppliers.memoize(local::get);
+        //TODO
+        _localBlobStoreReader = Suppliers.memoize(localCassandra::get);
+        _localBlobStoreWriters = Arrays.asList(Suppliers.memoize(localCassandra::get), Suppliers.memoize(localS3::get));
+
         _system = Suppliers.memoize(system::get);
     }
 
@@ -64,78 +74,104 @@ public class BlobStoreProviderProxy implements BlobStore {
 
     @Override
     public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
-        return _local.get().listTables(fromTableExclusive, limit);
+        return _localBlobStoreReader.get().listTables(fromTableExclusive, limit);
     }
 
     @Override
     public void purgeTableUnsafe(String table, Audit audit) throws UnknownTableException {
-        _local.get().purgeTableUnsafe(table, audit);
+        _localBlobStoreWriters.stream()
+                .map(blobStoreSupplier -> CompletableFuture.runAsync(new Runnable() {
+                    @Override
+                    public void run() {
+                        blobStoreSupplier.get().purgeTableUnsafe(table, audit);
+                    }
+                }))
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
     }
 
     @Override
     public boolean getTableExists(String table) {
-        return _local.get().getTableExists(table);
+        return _localBlobStoreReader.get().getTableExists(table);
     }
 
     @Override
     public boolean isTableAvailable(String table) {
-        return _local.get().isTableAvailable(table);
+        return _localBlobStoreReader.get().isTableAvailable(table);
     }
 
     @Override
     public Table getTableMetadata(String table) {
-        return _local.get().getTableMetadata(table);
+        return _localBlobStoreReader.get().getTableMetadata(table);
     }
 
     @Override
     public Map<String, String> getTableAttributes(String table) throws UnknownTableException {
-        return _local.get().getTableAttributes(table);
+        return _localBlobStoreReader.get().getTableAttributes(table);
     }
 
     @Override
     public TableOptions getTableOptions(String table) throws UnknownTableException {
-        return _local.get().getTableOptions(table);
+        return _localBlobStoreReader.get().getTableOptions(table);
     }
 
     @Override
     public long getTableApproximateSize(String table) throws UnknownTableException {
-        return _local.get().getTableApproximateSize(table);
+        return _localBlobStoreReader.get().getTableApproximateSize(table);
     }
 
     @Override
     public BlobMetadata getMetadata(String table, String blobId) throws BlobNotFoundException {
-        return _local.get().getMetadata(table, blobId);
+        return _localBlobStoreReader.get().getMetadata(table, blobId);
     }
 
     @Override
     public Iterator<BlobMetadata> scanMetadata(String table, @Nullable String fromBlobIdExclusive, long limit) {
-        return _local.get().scanMetadata(table, fromBlobIdExclusive, limit);
+        return _localBlobStoreReader.get().scanMetadata(table, fromBlobIdExclusive, limit);
     }
 
     @Override
     public Blob get(String table, String blobId) throws BlobNotFoundException {
-        return _local.get().get(table, blobId);
+        return _localBlobStoreReader.get().get(table, blobId);
     }
 
     @Override
     public Blob get(String table, String blobId, @Nullable RangeSpecification rangeSpec)
             throws BlobNotFoundException, RangeNotSatisfiableException {
-        return _local.get().get(table, blobId, rangeSpec);
+        return _localBlobStoreReader.get().get(table, blobId, rangeSpec);
     }
 
     @Override
     public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
-        _local.get().put(table, blobId, in, attributes, ttl);
+        _localBlobStoreWriters.stream()
+                .map(blobStoreSupplier -> CompletableFuture.runAsync(() -> {
+                    try {
+                        blobStoreSupplier.get().put(table, blobId, in, attributes, ttl);
+                    } catch (IOException e) {
+                        new RuntimeException(e);
+                    }
+                }))
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
     }
 
     @Override
     public void delete(String table, String blobId) {
-        _local.get().delete(table, blobId);
+        _localBlobStoreWriters.stream()
+                .map(blobStoreSupplier -> CompletableFuture.runAsync(new Runnable() {
+                    @Override
+                    public void run() {
+                        blobStoreSupplier.get().delete(table, blobId);
+
+                    }
+                }))
+                .map(CompletableFuture::join)
+                .collect(Collectors.toList());
     }
 
     @Override
     public Collection<String> getTablePlacements() {
-        return _local.get().getTablePlacements();
+        return _localBlobStoreReader.get().getTablePlacements();
     }
 }

@@ -1,9 +1,16 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3Client;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.BlobStoreProviderProxy;
-import com.bazaarvoice.emodb.blob.core.DefaultBlobStore;
-import com.bazaarvoice.emodb.blob.core.LocalBlobStore;
+import com.bazaarvoice.emodb.blob.core.CassandraBlobStore;
+import com.bazaarvoice.emodb.blob.core.LocalCassandraBlobStore;
+import com.bazaarvoice.emodb.blob.core.LocalS3BlobStore;
+import com.bazaarvoice.emodb.blob.core.S3BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
@@ -197,8 +204,9 @@ public class BlobStoreModule extends PrivateModule {
         }
 
         // Bind the BlobStore instance that the rest of the application will consume
-        bind(DefaultBlobStore.class).asEagerSingleton();
-        bind(BlobStore.class).annotatedWith(LocalBlobStore.class).to(DefaultBlobStore.class);
+        bind(CassandraBlobStore.class).asEagerSingleton();
+        bind(BlobStore.class).annotatedWith(LocalCassandraBlobStore.class).to(CassandraBlobStore.class);
+        bind(BlobStore.class).annotatedWith(LocalS3BlobStore.class).to(S3BlobStore.class);
         expose(BlobStore.class);
 
         // Bind any methods annotated with @ParameterizedTimed
@@ -206,17 +214,40 @@ public class BlobStoreModule extends PrivateModule {
     }
 
     @Provides @Singleton
-    BlobStore provideBlobStore(@LocalBlobStore Provider<BlobStore> localBlobStoreProvider,
+    BlobStore provideBlobStore(@LocalCassandraBlobStore Provider<BlobStore> localCassandraBlobStoreProvider,
+                               @LocalS3BlobStore Provider<BlobStore> localS3BlobStoreProvider,
                                @SystemBlobStore Provider<BlobStore> systemBlobStoreProvider,
                                DataCenterConfiguration dataCenterConfiguration) {
         // Provides the unannotated version of the BlobStore
         // If this is the system data center, return the local BlobStore implementation
         // Otherwise return a proxy that delegates to local or remote system BlobStores
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return localBlobStoreProvider.get();
+            //TODO
+            Provider<BlobStore> systemBlobStoreProvider1 = localCassandraBlobStoreProvider;
+            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, systemBlobStoreProvider1);
         } else {
-            return new BlobStoreProviderProxy(localBlobStoreProvider, systemBlobStoreProvider);
+            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, systemBlobStoreProvider);
         }
+    }
+
+    @Provides @Singleton
+    AmazonS3 getAmazonS3Client() {
+        AWSCredentialsProvider credentialsProvider = new DefaultAWSCredentialsProviderChain();
+//        if (configuration.getS3AccessKey() != null && configuration.getS3SecretKey() != null) {
+//            credentialsProvider = new StaticCredentialsProvider(
+//                    new BasicAWSCredentials(configuration.getS3AccessKey(), configuration.getS3SecretKey()));
+//        } else {
+//            credentialsProvider = new DefaultAWSCredentialsProviderChain();
+//        }
+//
+//        AmazonS3 s3 = new AmazonS3Client(credentialsProvider)
+//                .withRegion(Regions.fromName(configuration.getLogBucketRegion()));
+//
+//        if (configuration.getS3Endpoint() != null) {
+//            s3.setEndpoint(configuration.getS3Endpoint());
+//        }
+        return new AmazonS3Client(credentialsProvider)
+                .withRegion(Regions.US_EAST_1);
     }
 
     @Provides @Singleton

@@ -17,6 +17,10 @@ public class BlobStoreConfiguration {
     @NotNull
     private Set<String> _validTablePlacements = ImmutableSet.of();
 
+    @Valid
+    @NotNull
+    @JsonProperty("placementToBucket")
+    private Map<String, String> _placementToBucket;
     /**
      * The minimum number of splits per table.  This configuration setting affects only newly created tables.
      * Once created, tables ignore changes to this setting.
@@ -49,6 +53,15 @@ public class BlobStoreConfiguration {
 
     public BlobStoreConfiguration setValidTablePlacements(Set<String> validTablePlacements) {
         _validTablePlacements = validTablePlacements;
+        return this;
+    }
+
+    public Map<String, String> getPlacementToBucket() {
+        return _placementToBucket;
+    }
+
+    public BlobStoreConfiguration setPlacementToBucket(final Map<String, String> placementToBucket) {
+        this._placementToBucket = placementToBucket;
         return this;
     }
 
