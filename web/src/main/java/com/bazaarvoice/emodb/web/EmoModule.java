@@ -122,6 +122,9 @@ import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
+import com.bazaarvoice.megabus.MegabusConfiguration;
+import com.bazaarvoice.megabus.MegabusModule;
+import com.bazaarvoice.megabus.MegabusZookeeper;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
@@ -177,6 +180,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
@@ -223,6 +227,7 @@ public class EmoModule extends AbstractModule {
         evaluate(dataStore_web, new DataStoreAsyncSetup());
         evaluate(compaction_control, new CompactionControlSetup());
         evaluate(compaction_control_web, new CompactionControlWebSetup());
+        evaluate(megabus, new MegabusSetup());
     }
 
     private class CommonModuleSetup extends AbstractModule {
@@ -696,6 +701,23 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideMigratorZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "delta_migrator");
+        }
+    }
+
+    private class MegabusSetup extends AbstractModule  {
+
+        @Override
+        protected void configure() {
+            bind(MegabusConfiguration.class).toInstance(_configuration.getMegabusConfiguration().get());
+            bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
+
+            install(new MegabusModule(_serviceMode));
+        }
+
+        /** Provide ZooKeeper namespaced to SoR data. */
+        @Provides @Singleton @MegabusZookeeper
+        CuratorFramework provideDataStoreZooKeeperConnection(@Global CuratorFramework curator) {
+            return withComponentNamespace(curator, "megabus");
         }
     }
 
