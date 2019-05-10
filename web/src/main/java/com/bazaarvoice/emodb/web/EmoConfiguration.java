@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.migrator.config.MigratorConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
+import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -97,6 +98,11 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty ("deltaMigrator")
     private Optional<MigratorConfiguration> _migrator = Optional.absent();
+
+    @Valid
+    @NotNull
+    @JsonProperty("megabus")
+    private Optional<MegabusConfiguration> _megabusConfiguration = Optional.absent();
 
     @Valid
     @NotNull
@@ -229,6 +235,10 @@ public class EmoConfiguration extends Configuration {
         return _migrator;
     }
 
+    public Optional<MegabusConfiguration> getMegabusConfiguration() {
+        return _megabusConfiguration;
+    }
+
     public EmoConfiguration setScanner(Optional<ScannerConfiguration> scanner) {
         _scanner = scanner;
         return this;
@@ -236,6 +246,11 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setDeltaMigrator(Optional<MigratorConfiguration> migrator) {
         _migrator = migrator;
+        return this;
+    }
+
+    public EmoConfiguration setMegabusConfiguration(Optional<MegabusConfiguration> megabusConfiguration) {
+        _megabusConfiguration = megabusConfiguration;
         return this;
     }
 

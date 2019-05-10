@@ -1,54 +1,57 @@
-package com.bazaarvoice.emodb.databus.core;
+package com.bazaarvoice.megabus;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
+import com.bazaarvoice.emodb.databus.DatabusOstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerFactory;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.event.owner.OwnerGroup;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.ostrich.PartitionContext;
 import com.bazaarvoice.ostrich.PartitionContextBuilder;
 import com.codahale.metrics.MetricRegistry;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
+import io.dropwizard.lifecycle.Managed;
 import java.time.Duration;
-
+import java.util.Collections;
 import java.util.Properties;
-import kafka.admin.AdminUtils;
-import kafka.admin.RackAwareMode;
-import kafka.utils.ZkUtils;
-import org.I0Itec.zkclient.ZkClient;
-import org.I0Itec.zkclient.ZkConnection;
+import java.util.concurrent.ExecutionException;
+import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
-public class MegaBusManager {
+public class MegabusRefProducerManager implements Managed {
 
     private static final int MAX_PUBLISH_RETRIES = 2;
     private static final String ACKS_CONFIG = "all";
 
-    private final static int NUM_PARTITIONS = 8;
-    private final static String TOPIC_NAME = "megabus";
+    private static final int NUM_PARTITIONS = 8;
 
     @Inject
-    public MegaBusManager(final LifeCycleRegistry lifeCycle,
-                          final DatabusFactory databusFactory,
-                          DatabusEventStore databusEventStore,
-                          final @SystemIdentity String systemId,
-                          final RateLimitedLogFactory logFactory,
-                          OstrichOwnerGroupFactory ownerGroupFactory,
-                          final MetricRegistry metricRegistry,
-                          ObjectMapper objectMapper) {
+    public MegabusRefProducerManager(final LifeCycleRegistry lifeCycle,
+                                  AdminClient adminClient,
+                                  @MegabusRefTopic Topic refTopic,
+                                  final DatabusFactory databusFactory,
+                                  DatabusEventStore databusEventStore,
+                                  final @SystemIdentity String systemId,
+                                  final RateLimitedLogFactory logFactory,
+                                  @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
+                                  final MetricRegistry metricRegistry,
+                                  ObjectMapper objectMapper) {
 
-        createMegabusTopic();
+        createMegabusTopic(adminClient, refTopic);
 
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
@@ -79,8 +82,8 @@ public class MegaBusManager {
             public Service create(String partition) {
                 Databus databus = databusFactory.forOwner(systemId);
 
-                return new Megabus(Integer.parseInt(partition), NUM_PARTITIONS, databus, databusEventStore, logFactory, metricRegistry,
-                        producer, objectMapper, TOPIC_NAME);
+                return new MegabusRefProducer(databus, databusEventStore, Conditions.partition(NUM_PARTITIONS, Integer.parseInt(partition)),
+                        logFactory, metricRegistry, producer, objectMapper, refTopic, partition);
             }
         }, null);
         lifeCycle.manage(ownerGroup);
@@ -91,20 +94,27 @@ public class MegaBusManager {
         }
     }
 
-    private void createMegabusTopic() {
+    @Override
+    public void start() throws Exception {
 
-        scala.Tuple2 zkClientAndConnection = ZkUtils.createZkClientAndConnection("localhost:2181", 30000, 30000);
-        ZkUtils zkUtils =  new ZkUtils((ZkClient)zkClientAndConnection._1, (ZkConnection)zkClientAndConnection._2, false);
+    }
 
-        // Explicitly create topics
-        if (!AdminUtils.topicExists(zkUtils, TOPIC_NAME)) {
-            AdminUtils.createTopic(zkUtils, TOPIC_NAME, NUM_PARTITIONS, 1, new Properties(), RackAwareMode.Safe$.MODULE$);
+    @Override
+    public void stop() throws Exception {
+    }
+
+    private void createMegabusTopic(AdminClient adminClient, Topic refTopic) {
+
+        NewTopic newTopic = new NewTopic(refTopic.getName(), refTopic.getPartitions(), refTopic.getReplicationFactor());
+
+        try {
+            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+        } catch (ExecutionException | InterruptedException e) {
+            if (e.getCause() instanceof TopicExistsException) {
+                // TODO: check if number of partitions and replication factor match
+            } else {
+                throw new RuntimeException(e);
+            }
         }
-
-        // Explicitly create topics
-        if (!AdminUtils.topicExists(zkUtils, "megabus-resolved")) {
-            AdminUtils.createTopic(zkUtils, "megabus-resolved", NUM_PARTITIONS, 1, new Properties(), RackAwareMode.Safe$.MODULE$);
-        }
-
     }
 }
