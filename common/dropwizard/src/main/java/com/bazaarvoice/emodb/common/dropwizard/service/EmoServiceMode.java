@@ -180,7 +180,8 @@ public enum EmoServiceMode {
         scanner(false),
         delta_migrator(false),
         swagger,
-        uac;
+        uac,
+        megabus;
 
         private boolean _standard;
 

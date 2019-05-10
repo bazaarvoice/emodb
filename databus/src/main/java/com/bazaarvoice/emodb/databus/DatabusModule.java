@@ -27,8 +27,6 @@ import com.bazaarvoice.emodb.databus.core.FanoutLagMonitor;
 import com.bazaarvoice.emodb.databus.core.FanoutManager;
 import com.bazaarvoice.emodb.databus.core.HashingPartitionSelector;
 import com.bazaarvoice.emodb.databus.core.MasterFanout;
-import com.bazaarvoice.emodb.databus.core.MegaBusManager;
-import com.bazaarvoice.emodb.databus.core.MegabusResolver;
 import com.bazaarvoice.emodb.databus.core.OwnerAwareDatabus;
 import com.bazaarvoice.emodb.databus.core.PartitionSelector;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
@@ -50,6 +48,7 @@ import com.bazaarvoice.emodb.event.EventStoreModule;
 import com.bazaarvoice.emodb.event.EventStoreZooKeeper;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.bazaarvoice.emodb.event.api.DedupEventStoreChannels;
+import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
@@ -64,6 +63,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
@@ -148,8 +148,6 @@ public class DatabusModule extends PrivateModule {
         if (_serviceMode.specifies(EmoServiceMode.Aspect.dataBus_fan_out_and_replication)) {
             bind(FanoutManager.class).to(DefaultFanoutManager.class).asEagerSingleton();
             bind(CanaryManager.class).asEagerSingleton();
-            bind(MegaBusManager.class).asEagerSingleton();
-            bind(MegabusResolver.class).asEagerSingleton();
             bind(MasterFanout.class).asEagerSingleton();
             bind(DefaultReplicationManager.class).asEagerSingleton();
             bind(ReplicationEnabledTask.class).asEagerSingleton();
@@ -163,7 +161,7 @@ public class DatabusModule extends PrivateModule {
         bind(DedupMigrationTask.class).asEagerSingleton();
         bind(DrainFanoutPartitionTask.class).asEagerSingleton();
         
-        // Expose the event store directly for use by debugging APIs
+        // Expose the event store directly for use by the megabus and debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);
 
@@ -175,6 +173,12 @@ public class DatabusModule extends PrivateModule {
         // Bind the cross-data center outbound replication end point
         bind(ReplicationSource.class).to(DefaultReplicationSource.class).asEagerSingleton();
         expose(ReplicationSource.class);
+    }
+
+    @Provides @Singleton @Exposed
+    @DatabusOstrichOwnerGroupFactory
+    OstrichOwnerGroupFactory provideDatabusOstrichOwnerGroupFactory(OstrichOwnerGroupFactory ostrichOwnerGroupFactory) {
+        return ostrichOwnerGroupFactory;
     }
 
     @Provides @Singleton

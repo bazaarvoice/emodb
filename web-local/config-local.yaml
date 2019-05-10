@@ -54,6 +54,17 @@ dataCenter:
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
   systemDataCenterServiceUri: http://localhost:8080
 
+megabus:
+  kafkaBootstrapServers: localhost:9092
+  megabusRefTopic:
+    name: emodb-internal-megabus-ref
+    partitions: 8
+    replicationFactor: 1
+  megabusTopic:
+    name: emodb-megabus
+    partitions: 8
+    replicationFactor: 1
+
 
 systemOfRecord:
   migrationPhase: DOUBLE_WRITE_LEGACY_READ

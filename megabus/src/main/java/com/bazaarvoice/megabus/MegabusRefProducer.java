@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.core;
+package com.bazaarvoice.megabus;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
@@ -6,6 +6,9 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
+import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
+import com.bazaarvoice.emodb.databus.core.UpdateRefSerializer;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -32,7 +35,7 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class Megabus extends AbstractScheduledService {
+public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
 
     private static final Duration POLL_INTERVAL = Duration.ofMillis(100);
@@ -48,34 +51,34 @@ public class Megabus extends AbstractScheduledService {
     private final ScheduledExecutorService _executor;
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _objectMapper;
-    private final String _producerTopicName;
+    private final Topic _topic;
 
-    public Megabus(int partition, int totalPartitions, Databus databus, DatabusEventStore eventStore, RateLimitedLogFactory logFactory,
-                   MetricRegistry metricRegistry, Producer<String, JsonNode> producer, ObjectMapper objectMapper,
-                   String producerTopicName) {
-        this(partition, totalPartitions, databus, eventStore, logFactory, metricRegistry, null, producer, objectMapper, producerTopicName);
+    public MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+                              RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
+                              Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
+                              String instanceIdentifier) {
+        this(databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
+                topic, instanceIdentifier);
     }
 
     @VisibleForTesting
-    Megabus(int partition, int totalPartitions, Databus databus, DatabusEventStore eventStore, RateLimitedLogFactory logFactory,
-            MetricRegistry metricRegistry, @Nullable ScheduledExecutorService executor,
-            Producer<String, JsonNode> producer, ObjectMapper objectMapper, String producerTopicName) {
-        checkArgument(totalPartitions > 0);
-        checkArgument(partition > 0);
-        checkArgument(partition <= totalPartitions);
+    MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+                       RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
+                       @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
+                       ObjectMapper objectMapper, Topic topic, String instanceIdentifier) {
 
-        _log = LoggerFactory.getLogger(Megabus.class.getName() + "-" + partition);
+        _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + instanceIdentifier);
         _databus = checkNotNull(databus, "databus");
         _eventStore = checkNotNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
-        _timerName = newTimerName("megabusPoll-" + partition);
+        _timerName = newTimerName("megabusPoll-" + instanceIdentifier);
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
         _producer = checkNotNull(producer, "producer");
-        _subscriptionCondition = Conditions.partition(totalPartitions, partition);
-        _subscriptionName = "megabus-" + partition;
+        _subscriptionCondition = checkNotNull(subscriptionCondition);
+        _subscriptionName = "megabus-" + instanceIdentifier;
         _objectMapper = checkNotNull(objectMapper, "objectMapper");
-        _producerTopicName = checkNotNull(producerTopicName, "producerTopicName");
+        _topic = checkNotNull(topic, "topic");
         createMegabusSubscription();
         ServiceFailureListener.listenTo(this, metricRegistry);
 
@@ -92,7 +95,7 @@ public class Megabus extends AbstractScheduledService {
         // the subscription at startup.  The subscription should last basically forever.
         // Note: make sure that we don't ignore any events
         _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
+                DatabusChannelConfiguration.CANARY_TTL, DatabusChannelConfiguration.CANARY_TTL, false);
     }
 
     @Override
@@ -140,15 +143,15 @@ public class Megabus extends AbstractScheduledService {
         List<String> eventKeys = Lists.newArrayList();
         List<EventData> result = _eventStore.peek(_subscriptionName, EVENTS_LIMIT);
         List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
-        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(8, EVENTS_LIMIT / 8);
+        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), EVENTS_LIMIT / _topic.getPartitions());
         for (Event event : events) {
             String key = event.payload.getTable().concat("/").concat(event.payload.getKey());
-            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % 8, event.payload);
+            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(), event.payload);
             eventKeys.add(event.id);
         }
 
         refsByPartition.keySet().forEach(key -> {
-            _producer.send(new ProducerRecord<>(_producerTopicName, key,
+            _producer.send(new ProducerRecord<>(_topic.getName(), key,
                     TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key))));
         });
 
