@@ -11,6 +11,7 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.util.BinaryUtils;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadService;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
@@ -59,8 +60,8 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
     @Inject
     public S3ScanWriter(@Assisted int taskId, @Assisted URI baseUri, @Assisted Optional<Integer> maxOpenShards,
                         MetricRegistry metricRegistry, AmazonS3Provider amazonS3Provider,
-                        @ScanUploadService ScheduledExecutorService uploadService) {
-        super("s3", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards);
+                        @ScanUploadService ScheduledExecutorService uploadService, ObjectMapper objectMapper) {
+        super("s3", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards, objectMapper);
 
         checkNotNull(amazonS3Provider, "amazonS3Provider is required");
         String bucket = baseUri.getHost();
