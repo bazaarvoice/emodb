@@ -14,7 +14,7 @@ public interface ScanWriter extends Closeable {
      * The contents are actually written by writing to {@link ShardWriter#getOutputStream()}
      * then transferred to the file system using {@link ShardWriter#closeAndTransferAysnc(com.google.common.base.Optional)}.
      */
-    ShardWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
+    ScanDestinationWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
             throws IOException, InterruptedException;
 
     /**
