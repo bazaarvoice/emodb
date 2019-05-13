@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.scanner.writer;
 import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -51,9 +52,11 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     private final ReentrantLock _lock = new ReentrantLock();
     private final Condition _shardFilesClosedOrExceptionCaught = _lock.newCondition();
     private volatile IOException _uploadException = null;
+    private final ObjectMapper _mapper;
 
     protected TemporaryFileScanWriter(String type, int taskId, URI baseUri, Compression compression,
-                                      MetricRegistry metricRegistry, Optional<Integer> maxOpenShards) {
+                                      MetricRegistry metricRegistry, Optional<Integer> maxOpenShards,
+                                      ObjectMapper objectMapper) {
         super(type, taskId, baseUri, compression, metricRegistry);
         checkNotNull(maxOpenShards, "maxOpenShards");
 
@@ -62,6 +65,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
 
         _openTransfers = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "open-transfers"));
         _blockedNewShards = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "blocked-new-shards"));
+        _mapper = checkNotNull(objectMapper, "objectMapper");
     }
 
     /**
@@ -75,7 +79,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     abstract protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers();
 
     @Override
-    public ShardWriter writeShardRows(String tableName, final String placement, int shardId, long tableUuid)
+    public ScanDestinationWriter writeShardRows(String tableName, final String placement, int shardId, long tableUuid)
             throws IOException, InterruptedException {
         final ShardFiles shardFiles = getShardFiles(shardId, tableUuid);
 
@@ -98,7 +102,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
             final URI uri = getUriForShard(tableName, shardId, tableUuid);
             OutputStream out = open(shardFile, getCounterForPlacement(placement));
 
-            return new ShardWriter(out) {
+            return new ShardWriter(out, _mapper) {
                 @Override
                 synchronized protected void ready(boolean isEmpty, Optional<Integer> finalPartCount)
                         throws IOException {

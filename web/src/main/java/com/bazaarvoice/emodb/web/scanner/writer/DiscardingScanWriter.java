@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
@@ -20,8 +21,9 @@ import java.util.Map;
 public class DiscardingScanWriter extends TemporaryFileScanWriter {
 
     @Inject
-    public DiscardingScanWriter(@Assisted int taskId, @Assisted Optional<Integer> maxOpenShards, MetricRegistry metricRegistry) {
-        super("discarded", taskId, new File("/dev/null").toURI(), Compression.GZIP, metricRegistry, maxOpenShards);
+    public DiscardingScanWriter(@Assisted int taskId, @Assisted Optional<Integer> maxOpenShards,
+                                MetricRegistry metricRegistry, ObjectMapper objectMapper) {
+        super("discarded", taskId, new File("/dev/null").toURI(), Compression.GZIP, metricRegistry, maxOpenShards, objectMapper);
     }
 
     @Override
