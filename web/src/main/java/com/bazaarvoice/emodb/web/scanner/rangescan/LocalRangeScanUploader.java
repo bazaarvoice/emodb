@@ -13,6 +13,7 @@ import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
+import com.bazaarvoice.emodb.web.scanner.writer.ScanDestinationWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
 import com.bazaarvoice.emodb.web.scanner.writer.ShardWriter;
@@ -462,14 +463,11 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         ScanWriter scanWriter = context.getScanWriter();
         Counter shardCounter = context.getShardCounter();
 
-        ShardWriter writer = null;
-        OutputStream out = null;
+        ScanDestinationWriter writer = null;
         int prevShardId = UnsignedInteger.MAX_VALUE.intValue();
         long prevTableUuid = UnsignedLongs.MAX_VALUE;
         String placement = context.getPlacement();
         int totalPartsForShard = batch.getPartCountForFirstShard();
-        Counter rawBytesUploaded = context.getRawBytesUploadedCounter();
-        JsonGenerator generator = null;
 
         try {
             for (Iterator<MultiTableScanResult> resultIter = batch.getResults().iterator();
@@ -490,26 +488,21 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     prevTableUuid = tableUuid;
 
                     if (writer != null) {
-                        closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, true);
+                        closeAndTransfer(writer, totalPartsForShard, shardCounter, true);
                         totalPartsForShard = 1;
                     }
 
                     writer = scanWriter.writeShardRows(result.getTable().getName(), placement, shardId, tableUuid);
-                    out = new MetricCounterOutputStream(writer.getOutputStream(), rawBytesUploaded);
-                    generator = createGenerator(out);
-
                     _log.debug("Writing output file: {}", writer);
                 }
 
                 if (!Intrinsic.isDeleted(content)) {  // Ignore deleted objects
-                    assert generator != null;
-                    _mapper.writeValue(generator, content);
-                    generator.writeRaw('\n');
+                    writer.writeDocument(content);
                 }
             }
 
             if (writer != null) {
-                closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, !batch.isContinuedInNextBatch());
+                closeAndTransfer(writer, totalPartsForShard, shardCounter, !batch.isContinuedInNextBatch());
             }
 
             context.closeBatch(batch, null);
@@ -518,24 +511,15 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     taskId, placement, context.getTaskRange(), t);
             context.closeBatch(batch, t);
 
-            try {
-                Closeables.close(generator, true);
-                Closeables.close(out, true);
-            } catch (IOException e2) {
-                // Won't happen
-            }
-
             if (writer != null) {
                 writer.closeAndCancel();
             }
         }
     }
 
-    private void closeAndTransfer(JsonGenerator generator, OutputStream out, ShardWriter writer,
+    private void closeAndTransfer(ScanDestinationWriter writer,
                                   int partCount, Counter shardCounter, boolean isFinalPart)
             throws IOException {
-        generator.close();
-        out.close();
         if (isFinalPart) {
             shardCounter.inc();
         }
