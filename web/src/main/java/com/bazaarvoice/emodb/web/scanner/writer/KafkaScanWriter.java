@@ -23,7 +23,7 @@ public class KafkaScanWriter implements ScanWriter {
     private final ObjectMapper _mapper;
     private final Clock _clock;
     private final String _topicName;
-    private final Map<TransferKey, KafkaScanDestinationWriter> _witers;
+    private final Map<TransferKey, KafkaScanDestinationWriter> _writers;
 
     @Inject
     public KafkaScanWriter(Producer<String, JsonNode> producer, ObjectMapper objectMapper, Clock clock,
