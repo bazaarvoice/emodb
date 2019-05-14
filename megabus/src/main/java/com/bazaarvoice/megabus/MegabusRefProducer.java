@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.UpdateRefSerializer;
 import com.bazaarvoice.emodb.event.api.EventData;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
@@ -145,7 +146,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
         Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), EVENTS_LIMIT / _topic.getPartitions());
         for (Event event : events) {
-            String key = event.payload.getTable().concat("/").concat(event.payload.getKey());
+            String key = Coordinate.of(event.payload.getTable(), event.payload.getKey()).toString();
             refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(), event.payload);
             eventKeys.add(event.id);
         }
