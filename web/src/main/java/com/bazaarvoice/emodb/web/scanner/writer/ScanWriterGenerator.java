@@ -25,7 +25,7 @@ public class ScanWriterGenerator {
     }
 
     /**
-     * Creates a scan writer from the given desintations.
+     * Creates a scan writer from the given destinations.
      */
     public ScanWriter createScanWriter(final int taskId, Set<ScanDestination> destinations) {
         checkArgument(!destinations.isEmpty(), "destinations.isEmpty()");
@@ -60,6 +60,10 @@ public class ScanWriterGenerator {
 
         if ("s3".equals(scheme)) {
             return _scanWriterFactory.createS3ScanWriter(taskId, uri, Optional.<Integer>absent());
+        }
+
+        if ("kakfa".equals(scheme)) {
+            return _scanWriterFactory.createKafkaScanWriter(uri);
         }
 
         throw new IllegalArgumentException("Unsupported destination: " + destination);
