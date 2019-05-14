@@ -261,6 +261,8 @@ public class ScanUploadModule extends PrivateModule {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(ProducerConfig.CLIENT_ID_CONFIG, "stash");
+//        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 20 * 1024 * 1024); // 20 MB
+        props.put(ProducerConfig.LINGER_MS_CONFIG, 5); // 5 msloc
         return new KafkaProducer<>(props, new StringSerializer(), new JsonSerializer());
     }
 
