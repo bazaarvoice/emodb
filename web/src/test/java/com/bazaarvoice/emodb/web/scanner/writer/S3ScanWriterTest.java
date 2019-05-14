@@ -73,7 +73,7 @@ public class S3ScanWriterTest {
             S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
             ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
             shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
-            shardWriter.closeAndTransferAysnc(Optional.of(1));
+            shardWriter.closeAndTransferAsync(Optional.of(1));
 
             verifyAllTransfersComplete(scanWriter, uploadService);
 
@@ -107,7 +107,7 @@ public class S3ScanWriterTest {
         try {
             ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
             shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
-            shardWriter.closeAndTransferAysnc(Optional.of(1));
+            shardWriter.closeAndTransferAsync(Optional.of(1));
 
             scanWriter.waitForAllTransfersComplete(Duration.ofSeconds(10));
             fail("No transfer exception thrown");
@@ -151,7 +151,7 @@ public class S3ScanWriterTest {
             // Simulate canceling shardWriter[0] in response to a failure.
             shardWriter[0].closeAndCancel();
             // Close shardWriter[1] normally
-            shardWriter[1].closeAndTransferAysnc(Optional.of(1));
+            shardWriter[1].closeAndTransferAsync(Optional.of(1));
 
             verifyAllTransfersComplete(scanWriter, uploadService);
         } finally {
@@ -187,7 +187,7 @@ public class S3ScanWriterTest {
             }
 
             // Simulate closing shardWriter[0] but not shardWriter[1]
-            shardWriter[0].closeAndTransferAysnc(Optional.of(1));
+            shardWriter[0].closeAndTransferAsync(Optional.of(1));
 
             scanWriter.close();
 

@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 
-abstract public class ShardWriter extends ScanDestinationWriter {
+abstract public class ShardWriter implements ScanDestinationWriter {
     private final EmptyCheckedOutputStream _out;
     private final ObjectMapper _mapper;
     private final JsonGenerator _jsonGenerator;
@@ -33,7 +33,7 @@ abstract public class ShardWriter extends ScanDestinationWriter {
         return _out;
     }
 
-    public void closeAndTransferAysnc(Optional<Integer> finalPartCount) throws IOException {
+    public void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException {
         _out.close();
         _jsonGenerator.close();
 

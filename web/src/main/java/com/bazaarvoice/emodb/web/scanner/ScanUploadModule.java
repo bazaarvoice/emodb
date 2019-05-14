@@ -61,6 +61,7 @@ import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
+import com.bazaarvoice.emodb.web.scanner.writer.KafkaScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3CredentialsProvider;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterFactory;
@@ -70,6 +71,7 @@ import com.bazaarvoice.ostrich.dropwizard.pool.ManagedServicePoolProxy;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -89,7 +91,13 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
+import java.util.Properties;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
@@ -163,6 +171,7 @@ public class ScanUploadModule extends PrivateModule {
                 .implement(FileScanWriter.class, FileScanWriter.class)
                 .implement(S3ScanWriter.class, S3ScanWriter.class)
                 .implement(DiscardingScanWriter.class, DiscardingScanWriter.class)
+                .implement(KafkaScanWriter.class, KafkaScanWriter.class)
                 .build(ScanWriterFactory.class));
 
         // Monitors active upload status, active only by leader election
@@ -244,6 +253,15 @@ public class ScanUploadModule extends PrivateModule {
     protected ScheduledExecutorService provideUploadExecutorService(Environment environment) {
         return environment.lifecycle().scheduledExecutorService("ScanUpload-%d")
                 .threads(_config.getUploadThreadCount()).build();
+    }
+
+    @Provides
+    @Singleton
+    protected Producer<String, JsonNode> provideKafkaProducer() {
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, "stash");
+        return new KafkaProducer<>(props, new StringSerializer(), new JsonSerializer());
     }
 
     @Provides
