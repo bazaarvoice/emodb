@@ -4,10 +4,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -43,7 +41,7 @@ public class MultiScanWriter implements ScanWriter {
 
         return new ScanDestinationWriter() {
             @Override
-            public void writeDocument(Map<String, Object> document) throws IOException {
+            public void writeDocument(Map<String, Object> document) throws IOException, InterruptedException {
                 for (ScanDestinationWriter scanDestinationWriter : scanDestinationWriters) {
                     scanDestinationWriter.writeDocument(document);
                 }
@@ -57,9 +55,9 @@ public class MultiScanWriter implements ScanWriter {
             }
 
             @Override
-            public void closeAndTransferAysnc(Optional<Integer> finalPartCount) throws IOException {
+            public void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException {
                 for (ScanDestinationWriter scanDestinationWriter : scanDestinationWriters) {
-                    scanDestinationWriter.closeAndTransferAysnc(finalPartCount);
+                    scanDestinationWriter.closeAndTransferAsync(finalPartCount);
                 }
             }
         };

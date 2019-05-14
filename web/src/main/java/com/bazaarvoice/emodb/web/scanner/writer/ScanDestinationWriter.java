@@ -5,12 +5,12 @@ import com.google.common.io.Closeables;
 import java.io.IOException;
 import java.util.Map;
 
-public abstract class ScanDestinationWriter {
+public interface ScanDestinationWriter {
 
-    abstract public void writeDocument(Map<String, Object> document) throws IOException;
+    void writeDocument(Map<String, Object> document) throws IOException, InterruptedException;
 
-    abstract public void closeAndCancel();
+    void closeAndCancel();
 
-    abstract public void closeAndTransferAysnc(Optional<Integer> finalPartCount) throws IOException;
+    void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException;
 
 }
