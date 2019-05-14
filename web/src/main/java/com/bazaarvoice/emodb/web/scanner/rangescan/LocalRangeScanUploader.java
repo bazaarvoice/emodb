@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.rangescan;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricCounterOutputStream;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
@@ -16,7 +15,6 @@ import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanDestinationWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
-import com.bazaarvoice.emodb.web.scanner.writer.ShardWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferKey;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferStatus;
 import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResult;
@@ -36,7 +34,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLongs;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -523,7 +520,7 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         if (isFinalPart) {
             shardCounter.inc();
         }
-        writer.closeAndTransferAysnc(isFinalPart ? Optional.of(partCount) : Optional.<Integer>absent());
+        writer.closeAndTransferAsync(isFinalPart ? Optional.of(partCount) : Optional.<Integer>absent());
     }
 
     private JsonGenerator createGenerator(OutputStream out)
