@@ -74,6 +74,13 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         _bytesAdded += record.key().length() + record.value().size();
         _futureQueue.put(_producer.send(record));
 
+        // flush the producer if we are out of space in the producer
+        // TODO: add a metric when this is happening. If it happens often, we likely want to tweak our linger.ms, batch.size, and blocking queue capacity
+        if (_futureQueue.remainingCapacity() == 0) {
+            System.out.println("queue is full!");
+            _producer.flush();
+        }
+
     }
 
 
