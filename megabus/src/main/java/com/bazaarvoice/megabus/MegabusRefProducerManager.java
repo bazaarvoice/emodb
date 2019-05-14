@@ -49,12 +49,13 @@ public class MegabusRefProducerManager implements Managed {
                                   final RateLimitedLogFactory logFactory,
                                   @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
                                   final MetricRegistry metricRegistry,
+                                  @BootstrapServers String bootstrapServers,
                                   ObjectMapper objectMapper) {
 
         createMegabusTopic(adminClient, refTopic);
 
         Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ProducerConfig.ACKS_CONFIG, ACKS_CONFIG);
         props.put(ProducerConfig.RETRIES_CONFIG, MAX_PUBLISH_RETRIES);
 
