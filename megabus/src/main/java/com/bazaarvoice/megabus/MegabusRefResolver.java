@@ -95,7 +95,8 @@ public class MegabusRefResolver extends AbstractService {
         }
 
         public Iterable<KeyValue<String, Map<String, Object>>> getKeyedDocs() {
-            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(doc.get("~table") + "/" + doc.get("~id"), doc));
+            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc));
+
         }
     }
 
