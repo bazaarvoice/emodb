@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.UpdateRefSerializer;
 import com.bazaarvoice.emodb.event.api.EventData;
+import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;

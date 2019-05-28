@@ -13,16 +13,16 @@ import com.google.inject.Inject;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
 
-public class MegabusBootManager {
+public class MegabusBootWorkflowManager {
 
 
     private static final String SERVICE_NAME = "megabus-boot-manager";
     private static final String LEADER_DIR = "/leader/megabus";
 
     @Inject
-    public MegabusBootManager(CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
-                           LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
-                           MetricRegistry metricRegistry[]) {
+    public MegabusBootWorkflowManager(CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
+                                      LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
+                                      MetricRegistry metricRegistry[]) {
 
 //        super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
 //                new Supplier<Service>() {
