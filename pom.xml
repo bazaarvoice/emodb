@@ -69,6 +69,7 @@
         <module>yum</module>
         <module>mapreduce</module>
         <module>megabus</module>
+        <module>kafka</module>
     </modules>
 
 </project>

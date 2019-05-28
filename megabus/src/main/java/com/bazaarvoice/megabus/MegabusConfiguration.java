@@ -1,5 +1,6 @@
 package com.bazaarvoice.megabus;
 
+import com.bazaarvoice.emodb.kafka.Topic;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
