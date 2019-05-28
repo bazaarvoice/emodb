@@ -1,21 +1,20 @@
 package com.bazaarvoice.megabus;
 
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
+import com.bazaarvoice.emodb.kafka.KafkaCluster;
+import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
-import com.bazaarvoice.megabus.streams.JsonPOJOSerde;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.util.concurrent.AbstractService;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
-import io.dropwizard.lifecycle.Managed;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -37,16 +36,16 @@ public class MegabusRefResolver extends AbstractService {
 
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
-    private String _bootstrapServers;
+    private KafkaCluster _kafkaCluster;
 
     private KafkaStreams _streams;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                              @BootstrapServers String bootstrapServers) {
+                              KafkaCluster kafkaCluster) {
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
-        _bootstrapServers = checkNotNull(bootstrapServers, "bootstrapServers");
+        _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
     }
 
     @Override
@@ -56,7 +55,7 @@ public class MegabusRefResolver extends AbstractService {
         // against which the application is run.
         streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, "megabus-resolver");
         // Where to find Kafka broker(s).
-        streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _bootstrapServers);
+        streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
         streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, _megabusRefTopic.getPartitions());
 

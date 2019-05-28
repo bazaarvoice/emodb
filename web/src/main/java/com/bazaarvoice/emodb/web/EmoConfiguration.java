@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.job.JobConfiguration;
+import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.queue.QueueConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
@@ -98,6 +99,11 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty ("deltaMigrator")
     private Optional<MigratorConfiguration> _migrator = Optional.absent();
+
+    @Valid
+    @NotNull
+    @JsonProperty("kafka")
+    private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.absent();
 
     @Valid
     @NotNull
@@ -235,9 +241,14 @@ public class EmoConfiguration extends Configuration {
         return _migrator;
     }
 
+    public Optional<KafkaConfiguration> getKafkaConfiguration() {
+        return _kafkaConfiguration;
+    }
+
     public Optional<MegabusConfiguration> getMegabusConfiguration() {
         return _megabusConfiguration;
     }
+
 
     public EmoConfiguration setScanner(Optional<ScannerConfiguration> scanner) {
         _scanner = scanner;
@@ -251,6 +262,11 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setMegabusConfiguration(Optional<MegabusConfiguration> megabusConfiguration) {
         _megabusConfiguration = megabusConfiguration;
+        return this;
+    }
+
+    public EmoConfiguration setKafkaConfiguration(Optional<KafkaConfiguration> kafkaConfiguration) {
+        _kafkaConfiguration = kafkaConfiguration;
         return this;
     }
 

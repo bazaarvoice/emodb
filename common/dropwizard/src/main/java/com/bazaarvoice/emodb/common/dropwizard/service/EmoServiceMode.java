@@ -115,6 +115,24 @@ public enum EmoServiceMode {
             Aspect.compaction_control,
             Aspect.security,
             Aspect.full_consistency
+    ),
+
+    MEGABUS(
+            Aspect.web,
+            Aspect.cache,
+            Aspect.task,
+            Aspect.leader_control,
+            Aspect.dataCenter,
+            Aspect.dataStore_module,
+            Aspect.blobStore_module, // needed for permission resolver
+            Aspect.compaction_control,
+            Aspect.security,
+            Aspect.full_consistency,
+            Aspect.queue_module,
+            Aspect.dataBus_module,
+            Aspect.job,
+            Aspect.megabus,
+            Aspect.kafka
     );
 
     private final EnumSet<Aspect> aspects;
@@ -181,7 +199,8 @@ public enum EmoServiceMode {
         delta_migrator(false),
         swagger,
         uac,
-        megabus;
+        kafka(false),
+        megabus(false);
 
         private boolean _standard;
 

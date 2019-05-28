@@ -1,4 +1,4 @@
-package com.bazaarvoice.megabus;
+package com.bazaarvoice.emodb.kafka;
 
 
 import com.google.inject.BindingAnnotation;
