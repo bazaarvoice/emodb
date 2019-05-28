@@ -53,6 +53,8 @@ import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.job.JobConfiguration;
 import com.bazaarvoice.emodb.job.JobModule;
 import com.bazaarvoice.emodb.job.JobZooKeeper;
+import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
+import com.bazaarvoice.emodb.kafka.KafkaModule;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
@@ -181,6 +183,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
@@ -227,6 +230,7 @@ public class EmoModule extends AbstractModule {
         evaluate(dataStore_web, new DataStoreAsyncSetup());
         evaluate(compaction_control, new CompactionControlSetup());
         evaluate(compaction_control_web, new CompactionControlWebSetup());
+        evaluate(kafka, new KafkaSetup());
         evaluate(megabus, new MegabusSetup());
     }
 
@@ -704,7 +708,17 @@ public class EmoModule extends AbstractModule {
         }
     }
 
-    private class MegabusSetup extends AbstractModule  {
+    private class KafkaSetup extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(KafkaConfiguration.class).toInstance(_configuration.getKafkaConfiguration().get());
+
+            install(new KafkaModule());
+        }
+    }
+
+    private class MegabusSetup extends AbstractModule {
 
         @Override
         protected void configure() {
@@ -716,7 +730,7 @@ public class EmoModule extends AbstractModule {
 
         /** Provide ZooKeeper namespaced to SoR data. */
         @Provides @Singleton @MegabusZookeeper
-        CuratorFramework provideDataStoreZooKeeperConnection(@Global CuratorFramework curator) {
+        CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "megabus");
         }
     }

@@ -1,6 +1,6 @@
 # Select service mode - See EmoServiceMode class to see all available options
 # This allows you to split Emo's micro services deployed separately
-serviceMode: STANDARD_ALL
+serviceMode: MEGABUS
 #serviceMode: STANDARD_MAIN
 #serviceMode: STANDARD_BLOB
 
@@ -53,6 +53,19 @@ dataCenter:
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
   systemDataCenterServiceUri: http://localhost:8080
+
+kafka:
+  bootstrapServers: localhost:9092
+
+megabus:
+  megabusRefTopic:
+    name: emodb-internal-megabus-ref
+    partitions: 8
+    replicationFactor: 1
+  megabusTopic:
+    name: emodb-megabus
+    partitions: 8
+    replicationFactor: 1
 
 
 systemOfRecord:
@@ -236,10 +249,10 @@ auth:
 server:
   applicationConnectors:
     - type: instrumentedHttp
-      port: 8080
+      port: 8082
   adminConnectors:
     - type: instrumentedHttp
-      port: 8081
+      port: 8083
 
   shutdownGracePeriod: 60s
 

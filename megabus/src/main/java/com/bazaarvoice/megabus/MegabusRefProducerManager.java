@@ -10,6 +10,8 @@ import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerFactory;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.event.owner.OwnerGroup;
+import com.bazaarvoice.emodb.kafka.KafkaCluster;
+import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.ostrich.PartitionContext;
 import com.bazaarvoice.ostrich.PartitionContextBuilder;
@@ -20,15 +22,10 @@ import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.Properties;
-import java.util.concurrent.ExecutionException;
-import org.apache.kafka.clients.admin.AdminClient;
-import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
@@ -41,7 +38,6 @@ public class MegabusRefProducerManager implements Managed {
 
     @Inject
     public MegabusRefProducerManager(final LifeCycleRegistry lifeCycle,
-                                  AdminClient adminClient,
                                   @MegabusRefTopic Topic refTopic,
                                   final DatabusFactory databusFactory,
                                   DatabusEventStore databusEventStore,
@@ -49,13 +45,13 @@ public class MegabusRefProducerManager implements Managed {
                                   final RateLimitedLogFactory logFactory,
                                   @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
                                   final MetricRegistry metricRegistry,
-                                  @BootstrapServers String bootstrapServers,
+                                  KafkaCluster kafkaCluster,
                                   ObjectMapper objectMapper) {
 
-        createMegabusTopic(adminClient, refTopic);
+        kafkaCluster.createTopicIfNotExists(refTopic);
 
         Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaCluster.getBootstrapServers());
         props.put(ProducerConfig.ACKS_CONFIG, ACKS_CONFIG);
         props.put(ProducerConfig.RETRIES_CONFIG, MAX_PUBLISH_RETRIES);
 
@@ -104,18 +100,4 @@ public class MegabusRefProducerManager implements Managed {
     public void stop() throws Exception {
     }
 
-    private void createMegabusTopic(AdminClient adminClient, Topic refTopic) {
-
-        NewTopic newTopic = new NewTopic(refTopic.getName(), refTopic.getPartitions(), refTopic.getReplicationFactor());
-
-        try {
-            adminClient.createTopics(Collections.singleton(newTopic)).all().get();
-        } catch (ExecutionException | InterruptedException e) {
-            if (e.getCause() instanceof TopicExistsException) {
-                // TODO: check if number of partitions and replication factor match
-            } else {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 }
