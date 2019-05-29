@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
@@ -24,8 +25,11 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.Futures;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
@@ -78,7 +82,10 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _executor = executor;
         _producer = checkNotNull(producer, "producer");
         _subscriptionCondition = checkNotNull(subscriptionCondition);
-        _subscriptionName = "megabus-" + instanceIdentifier;
+
+        //TODO : this is currently hacked to use instance identifiers to avoid dedup queues, which require the leader for consistent polling.
+        // We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, which should cluster updates to the same key
+        _subscriptionName = "__system_bus:" + "megabus-" + instanceIdentifier;
         _objectMapper = checkNotNull(objectMapper, "objectMapper");
         _topic = checkNotNull(topic, "topic");
         createMegabusSubscription();
@@ -152,9 +159,12 @@ public class MegabusRefProducer extends AbstractScheduledService {
             eventKeys.add(event.id);
         }
 
+        List<Future> futures = new ArrayList<>();
+
         refsByPartition.keySet().forEach(key -> {
-            _producer.send(new ProducerRecord<>(_topic.getName(), key,
-                    TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key))));
+            System.out.println("Key: " + key);
+            futures.add(_producer.send(new ProducerRecord<>(_topic.getName(), key,
+                    TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key)))));
         });
 
         long endTime = System.nanoTime();
@@ -166,6 +176,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
         }
 
         _producer.flush();
+
+        futures.forEach(Futures::getUnchecked);
 
         // Ack these events
         if (!eventKeys.isEmpty()) {
