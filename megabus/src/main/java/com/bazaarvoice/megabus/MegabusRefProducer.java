@@ -162,7 +162,6 @@ public class MegabusRefProducer extends AbstractScheduledService {
         List<Future> futures = new ArrayList<>();
 
         refsByPartition.keySet().forEach(key -> {
-            System.out.println("Key: " + key);
             futures.add(_producer.send(new ProducerRecord<>(_topic.getName(), key,
                     TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key)))));
         });

@@ -1,5 +1,7 @@
 package com.bazaarvoice.megabus;
 
+import com.bazaarvoice.emodb.kafka.KafkaCluster;
+import com.bazaarvoice.emodb.kafka.Topic;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.time.Instant;
@@ -11,9 +13,11 @@ public class TimerBootStatusDAO implements BootStatusDAO {
     private final Instant _instantiationTime;
 
     @Inject
-    public TimerBootStatusDAO(Clock clock) {
+    public TimerBootStatusDAO(Clock clock, KafkaCluster kafkaCluster, @MegabusTopic Topic megabusTopic) {
         _clock = checkNotNull(clock, "clock");
         _instantiationTime = clock.instant();
+
+        kafkaCluster.createTopicIfNotExists(megabusTopic);
     }
 
     @Override
