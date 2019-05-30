@@ -36,15 +36,18 @@ public class MegabusRefResolver extends AbstractService {
 
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
+    private final Topic _megabusResolvedTopic;
     private KafkaCluster _kafkaCluster;
 
     private KafkaStreams _streams;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
+                              @MegabusTopic Topic megabusResolvedTopic,
                               KafkaCluster kafkaCluster) {
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
+        _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
         _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
     }
 
@@ -53,7 +56,7 @@ public class MegabusRefResolver extends AbstractService {
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, "megabus-resolver");
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _megabusResolvedTopic.getName());
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
@@ -69,7 +72,7 @@ public class MegabusRefResolver extends AbstractService {
         KStream<String, Map<String, Object>> megabus = refStream.flatMap((key, value) -> resolveRefs(value.iterator()).getKeyedDocs());
 
 
-        megabus.to("megabus-resolved", Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
+        megabus.to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
