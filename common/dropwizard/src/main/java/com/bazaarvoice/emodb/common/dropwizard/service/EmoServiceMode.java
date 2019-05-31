@@ -121,7 +121,6 @@ public enum EmoServiceMode {
             Aspect.web,
             Aspect.cache,
             Aspect.invalidation_cache_listener,
-            Aspect.task,
             Aspect.leader_control,
             Aspect.dataCenter,
             Aspect.dataStore_module,
