@@ -105,6 +105,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
@@ -217,6 +218,7 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateSecurity();
         evaluateScanner();
         evaluateDeltaMigrator();
+        evaluateMegabus();
         evaluateServiceStartedListeners();
         evaluateSwagger();
         evaluateUAC();
@@ -343,6 +345,15 @@ public class EmoService extends Application<EmoConfiguration> {
         }
         _environment.jersey().register(new BlockMigratorResource1(_injector.getInstance(DeltaMigrator.class)));
         // No admin tasks are registered automatically in DELTA_MIGRATOR ServiceMode
+        _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
+    }
+
+    private void evaluateMegabus()
+            throws Exception {
+        if (!runPerServiceMode(megabus)) {
+            return;
+        }
+        // No admin tasks are registered automatically in MEGABUS ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 
