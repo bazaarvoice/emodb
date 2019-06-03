@@ -91,6 +91,7 @@ import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
+import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
 import com.bazaarvoice.emodb.web.migrator.MigratorModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
@@ -686,7 +687,7 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ScanUploadModule(_configuration.getScanner().get(), false));
+            install(new ScanUploadModule(_configuration.getScanner().get()));
         }
 
         /** Provide ZooKeeper namespaced to scanner data. */
@@ -725,19 +726,8 @@ public class EmoModule extends AbstractModule {
         protected void configure() {
             bind(MegabusConfiguration.class).toInstance(_configuration.getMegabusConfiguration().get());
             bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
-            bind(CuratorFramework.class).annotatedWith(ScannerZooKeeper.class).
-                    to(Key.get(CuratorFramework.class, MegabusZookeeper.class));
 
-            ScannerConfiguration scannerConfiguration = new ScannerConfiguration()
-                    .setUseSQSQueues(false)
-                    .setPendingScanRangeQueueName(Optional.of("megabus-boot-pending-scan-ranges"))
-                    .setCompleteScanRangeQueueName(Optional.of("megabus-boot-compelete-scan-ranges"))
-                    .setScanStatusTable("__system_megabus_boot");
-
-                    // TODO: remove the hard-coded local admin key with something more robust
-                    scannerConfiguration.setScannerApiKey(Optional.of("local_admin"));
-
-            install(new ScanUploadModule(scannerConfiguration, true));
+            install(new MegabusStashModule(_configuration.getMegabusConfiguration().get().getBootConfiguration()));
             install(new MegabusModule(_serviceMode));
         }
 
