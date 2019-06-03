@@ -62,10 +62,12 @@ import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.KafkaScanWriter;
+import com.bazaarvoice.emodb.web.scanner.writer.MegabusKafkaScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3CredentialsProvider;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterFactory;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
+import com.bazaarvoice.emodb.web.scanner.writer.UnsupportedKafkaScanWriter;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.dropwizard.pool.ManagedServicePoolProxy;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
@@ -126,12 +128,14 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class ScanUploadModule extends PrivateModule {
     private final ScannerConfiguration _config;
+    private final boolean _kafkaEnabled;
 
-    public ScanUploadModule(ScannerConfiguration config) {
+    public ScanUploadModule(ScannerConfiguration config, boolean kafkaEnabled) {
         checkArgument(config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
         checkArgument(config.getUploadThreadCount() > 0, "Upload thread count must be at least 1");
 
         _config = config;
+        _kafkaEnabled = kafkaEnabled;
     }
 
     @Override
@@ -167,12 +171,19 @@ public class ScanUploadModule extends PrivateModule {
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
         bind(ScanWriterGenerator.class).asEagerSingleton();
-        install(new FactoryModuleBuilder()
+
+        FactoryModuleBuilder scanFactoryBuilder = new FactoryModuleBuilder()
                 .implement(FileScanWriter.class, FileScanWriter.class)
                 .implement(S3ScanWriter.class, S3ScanWriter.class)
-                .implement(DiscardingScanWriter.class, DiscardingScanWriter.class)
-                .implement(KafkaScanWriter.class, KafkaScanWriter.class)
-                .build(ScanWriterFactory.class));
+                .implement(DiscardingScanWriter.class, DiscardingScanWriter.class);
+
+        if (_kafkaEnabled) {
+            scanFactoryBuilder.implement(KafkaScanWriter.class, MegabusKafkaScanWriter.class);
+        } else {
+            scanFactoryBuilder.implement(KafkaScanWriter.class, UnsupportedKafkaScanWriter.class);
+        }
+
+        install(scanFactoryBuilder.build(ScanWriterFactory.class));
 
         // Monitors active upload status, active only by leader election
         bind(ScanUploadMonitor.class).asEagerSingleton();
@@ -253,17 +264,6 @@ public class ScanUploadModule extends PrivateModule {
     protected ScheduledExecutorService provideUploadExecutorService(Environment environment) {
         return environment.lifecycle().scheduledExecutorService("ScanUpload-%d")
                 .threads(_config.getUploadThreadCount()).build();
-    }
-
-    @Provides
-    @Singleton
-    protected Producer<String, JsonNode> provideKafkaProducer() {
-        Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(ProducerConfig.CLIENT_ID_CONFIG, "stash");
-//        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 20 * 1024 * 1024); // 20 MB
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 5); // 5 msloc
-        return new KafkaProducer<>(props, new StringSerializer(), new JsonSerializer());
     }
 
     @Provides
