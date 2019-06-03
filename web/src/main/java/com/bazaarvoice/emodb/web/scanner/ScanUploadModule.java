@@ -59,21 +59,18 @@ import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
 import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
+import com.bazaarvoice.emodb.web.scanner.writer.DefaultScanWriterGenerator;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
-import com.bazaarvoice.emodb.web.scanner.writer.KafkaScanWriter;
-import com.bazaarvoice.emodb.web.scanner.writer.MegabusKafkaScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3CredentialsProvider;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterFactory;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
-import com.bazaarvoice.emodb.web.scanner.writer.UnsupportedKafkaScanWriter;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.dropwizard.pool.ManagedServicePoolProxy;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
@@ -93,13 +90,7 @@ import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
-import java.util.Properties;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.connect.json.JsonSerializer;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
@@ -128,14 +119,12 @@ import static com.google.common.base.Preconditions.checkArgument;
  */
 public class ScanUploadModule extends PrivateModule {
     private final ScannerConfiguration _config;
-    private final boolean _kafkaEnabled;
 
-    public ScanUploadModule(ScannerConfiguration config, boolean kafkaEnabled) {
+    public ScanUploadModule(ScannerConfiguration config) {
         checkArgument(config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
         checkArgument(config.getUploadThreadCount() > 0, "Upload thread count must be at least 1");
 
         _config = config;
-        _kafkaEnabled = kafkaEnabled;
     }
 
     @Override
@@ -170,20 +159,13 @@ public class ScanUploadModule extends PrivateModule {
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeScanRangeQueueName"))
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
-        bind(ScanWriterGenerator.class).asEagerSingleton();
+        bind(ScanWriterGenerator.class).to(DefaultScanWriterGenerator.class).asEagerSingleton();
 
-        FactoryModuleBuilder scanFactoryBuilder = new FactoryModuleBuilder()
+        install(new FactoryModuleBuilder()
                 .implement(FileScanWriter.class, FileScanWriter.class)
                 .implement(S3ScanWriter.class, S3ScanWriter.class)
-                .implement(DiscardingScanWriter.class, DiscardingScanWriter.class);
-
-        if (_kafkaEnabled) {
-            scanFactoryBuilder.implement(KafkaScanWriter.class, MegabusKafkaScanWriter.class);
-        } else {
-            scanFactoryBuilder.implement(KafkaScanWriter.class, UnsupportedKafkaScanWriter.class);
-        }
-
-        install(scanFactoryBuilder.build(ScanWriterFactory.class));
+                .implement(DiscardingScanWriter.class, DiscardingScanWriter.class)
+                .build(ScanWriterFactory.class));
 
         // Monitors active upload status, active only by leader election
         bind(ScanUploadMonitor.class).asEagerSingleton();

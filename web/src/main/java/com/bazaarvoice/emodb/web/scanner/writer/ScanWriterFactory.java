@@ -14,6 +14,4 @@ public interface ScanWriterFactory {
     S3ScanWriter createS3ScanWriter(int taskId, URI destination, Optional<Integer> maxOpenFiles);
 
     DiscardingScanWriter createDiscardingScanWriter(int taskId, Optional<Integer> maxOpenFiles);
-
-    MegabusKafkaScanWriter createKafkaScanWriter(URI destination);
 }
