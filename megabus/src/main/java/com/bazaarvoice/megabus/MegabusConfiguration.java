@@ -9,11 +9,6 @@ public class MegabusConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty("kafkaBootstrapServers")
-    private String _kafkaBootstrapServers;
-
-    @Valid
-    @NotNull
     @JsonProperty("megabusRefTopic")
     private Topic _megabusRefTopic;
 
@@ -22,9 +17,11 @@ public class MegabusConfiguration {
     @JsonProperty("megabusTopic")
     private Topic _megabusTopic;
 
-    public String getKafkaBootstrapServers() {
-        return _kafkaBootstrapServers;
-    }
+    @Valid
+    @NotNull
+    @JsonProperty("boot")
+    private MegabusBootConfiguration _bootConfiguration;
+
 
     public Topic getMegabusRefTopic() {
         return _megabusRefTopic;
@@ -32,5 +29,9 @@ public class MegabusConfiguration {
 
     public Topic getMegabusTopic() {
         return _megabusTopic;
+    }
+
+    public MegabusBootConfiguration getBootConfiguration() {
+        return _bootConfiguration;
     }
 }
