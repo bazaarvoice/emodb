@@ -34,9 +34,6 @@ import org.apache.kafka.connect.json.JsonSerializer;
 
 public class MegabusRefProducerManager {
 
-    private static final int MAX_PUBLISH_RETRIES = 2;
-    private static final String ACKS_CONFIG = "all";
-
     private static final int NUM_PARTITIONS = 8;
 
     @Inject
@@ -57,24 +54,12 @@ public class MegabusRefProducerManager {
 
         kafkaCluster.createTopicIfNotExists(refTopic);
 
-        Properties props = new Properties();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaCluster.getBootstrapServers());
-        props.put(ProducerConfig.ACKS_CONFIG, ACKS_CONFIG);
-        props.put(ProducerConfig.RETRIES_CONFIG, MAX_PUBLISH_RETRIES);
-
-        props.put(ProducerConfig.CLIENT_ID_CONFIG, "megabus-producer");
-
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
-
-        Producer<String, JsonNode> producer = new KafkaProducer<String, JsonNode>(props);
-
         // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
         // we should reconcile this inconsistency
         PartitionedServiceSupplier refProducerSupplier = partition ->
                 new MegabusRefProducer(databusFactory.forOwner(systemId), databusEventStore,
                         Conditions.partition(NUM_PARTITIONS, partition + 1),
-                        logFactory, metricRegistry, producer, objectMapper, refTopic, Integer.toString(partition));
+                        logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic, Integer.toString(partition));
 
         PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
                 curator, ZKPaths.makePath("leader", "partitioned-megabus-ref-producer"), hostAndPort.toString(),

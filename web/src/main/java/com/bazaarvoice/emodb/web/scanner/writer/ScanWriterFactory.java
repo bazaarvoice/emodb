@@ -15,5 +15,5 @@ public interface ScanWriterFactory {
 
     DiscardingScanWriter createDiscardingScanWriter(int taskId, Optional<Integer> maxOpenFiles);
 
-    KafkaScanWriter createKafkaScanWriter(URI destination);
+    MegabusKafkaScanWriter createKafkaScanWriter(URI destination);
 }
