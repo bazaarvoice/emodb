@@ -67,7 +67,7 @@ public class MegabusRefResolver extends AbstractService {
         final KStream<String, List<UpdateRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<UpdateRef>>() {})));
 
         // for debugging
-//        refStream.foreach(((key, value) -> System.out.println(key + " " + value)));
+//        refStream.foreach(((key, value) -c> System.out.println(key + " " + value)));
 
         KStream<String, Map<String, Object>> megabus = refStream.flatMap((key, value) -> resolveRefs(value.iterator()).getKeyedDocs());
 
@@ -76,6 +76,8 @@ public class MegabusRefResolver extends AbstractService {
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
+
+        notifyStarted();
     }
 
     private static class ResolutionResult {
@@ -153,5 +155,6 @@ public class MegabusRefResolver extends AbstractService {
     @Override
     protected void doStop() {
         _streams.close();
+        notifyStopped();
     }
 }

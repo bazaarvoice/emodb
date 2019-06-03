@@ -62,7 +62,7 @@ public class ScanWriterGenerator {
             return _scanWriterFactory.createS3ScanWriter(taskId, uri, Optional.<Integer>absent());
         }
 
-        if ("kakfa".equals(scheme)) {
+        if ("kafka".equals(scheme)) {
             return _scanWriterFactory.createKafkaScanWriter(uri);
         }
 
