@@ -105,6 +105,7 @@ import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabusClientFactory;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadModule;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
+import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.emodb.web.settings.DatabusDefaultJoinFilterConditionAdminTask;
 import com.bazaarvoice.emodb.web.settings.Setting;
 import com.bazaarvoice.emodb.web.settings.SettingsModule;
@@ -685,7 +686,7 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ScanUploadModule(_configuration.getScanner().get()));
+            install(new ScanUploadModule(_configuration.getScanner().get(), false));
         }
 
         /** Provide ZooKeeper namespaced to scanner data. */
@@ -724,11 +725,23 @@ public class EmoModule extends AbstractModule {
         protected void configure() {
             bind(MegabusConfiguration.class).toInstance(_configuration.getMegabusConfiguration().get());
             bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
+            bind(CuratorFramework.class).annotatedWith(ScannerZooKeeper.class).
+                    to(Key.get(CuratorFramework.class, MegabusZookeeper.class));
 
+            ScannerConfiguration scannerConfiguration = new ScannerConfiguration()
+                    .setUseSQSQueues(false)
+                    .setPendingScanRangeQueueName(Optional.of("megabus-boot-pending-scan-ranges"))
+                    .setCompleteScanRangeQueueName(Optional.of("megabus-boot-compelete-scan-ranges"))
+                    .setScanStatusTable("__system_megabus_boot");
+
+                    // TODO: remove the hard-coded local admin key with something more robust
+                    scannerConfiguration.setScannerApiKey(Optional.of("local_admin"));
+
+            install(new ScanUploadModule(scannerConfiguration, true));
             install(new MegabusModule(_serviceMode));
         }
 
-        /** Provide ZooKeeper namespaced to SoR data. */
+        /** Provide ZooKeeper namespaced to megabus data. */
         @Provides @Singleton @MegabusZookeeper
         CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "megabus");
