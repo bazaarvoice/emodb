@@ -15,13 +15,13 @@ public interface StashTableDAO {
     void createStashTokenRangeSnapshot(String stashId, Set<String> placements, Condition blackListTableCondition);
 
     /**
-     * Gets all token ranges for tables from the previously created snapshot using {@link #createStashTokenRangeSnapshot(String, Set)}
+     * Gets all token ranges for tables from the previously created snapshot using {@link #createStashTokenRangeSnapshot(String, Set, Condition)}
      * in the requested range.
      */
     Iterator<StashTokenRange> getStashTokenRangesFromSnapshot(String stashId, String placement, ByteBuffer fromInclusive, ByteBuffer toExclusive);
 
     /**
-     * Clears a stash token range snapshot previously created using {@link #createStashTokenRangeSnapshot(String, Set)}.
+     * Clears a stash token range snapshot previously created using {@link #createStashTokenRangeSnapshot(String, Set, Condition)}.
      */
     void clearStashTokenRangeSnapshot(String stashId);
 }

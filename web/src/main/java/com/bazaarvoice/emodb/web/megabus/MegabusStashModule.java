@@ -24,6 +24,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.writer.KafkaScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
 import com.bazaarvoice.megabus.MegabusBootConfiguration;
+import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.bazaarvoice.megabus.MegabusZookeeper;
 import com.google.common.base.Optional;
 import com.google.inject.Key;
@@ -83,6 +84,9 @@ public class MegabusStashModule extends PrivateModule {
         bind(ScanUploadMonitor.class).asEagerSingleton();
         // Monitors for new scans waiting to start
         bind(DistributedScanRangeMonitor.class).asEagerSingleton();
+
+        bind(MegabusBootDAO.class).to(StashMegabusBootDAO.class).asEagerSingleton();
+        expose(MegabusBootDAO.class);
     }
 
     @Provides

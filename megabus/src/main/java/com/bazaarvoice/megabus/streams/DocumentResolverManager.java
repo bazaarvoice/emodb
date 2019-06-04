@@ -1,7 +1,8 @@
 package com.bazaarvoice.megabus.streams;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.megabus.BootStatusDAO;
+import com.bazaarvoice.megabus.MegabusApplicationId;
+import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.bazaarvoice.megabus.MegabusRefResolver;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
@@ -13,15 +14,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class DocumentResolverManager implements Managed {
 
-    private final BootStatusDAO _statusDAO;
+    private final MegabusBootDAO _statusDAO;
     private final ScheduledExecutorService _bootService;
     private final MegabusRefResolver _megabusRefResolver;
+    private final String _applicationId;
 
     @Inject
-    public DocumentResolverManager(LifeCycleRegistry lifeCycle, BootStatusDAO statusDAO,
-                                   MegabusRefResolver megabusRefResolver) {
+    public DocumentResolverManager(LifeCycleRegistry lifeCycle, MegabusBootDAO statusDAO,
+                                   MegabusRefResolver megabusRefResolver, @MegabusApplicationId String applicationId) {
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _megabusRefResolver = checkNotNull(megabusRefResolver);
+        _applicationId = checkNotNull(applicationId);
         _bootService = Executors.newSingleThreadScheduledExecutor();
         lifeCycle.manage(this);
     }
@@ -30,7 +33,7 @@ public class DocumentResolverManager implements Managed {
     @Override
     public void start() throws Exception {
         _bootService.scheduleAtFixedRate(() -> {
-            if (_statusDAO.isBootComplete()) {
+            if (_statusDAO.getBootStatus(_applicationId) == MegabusBootDAO.BootStatus.COMPLETE) {
                 _megabusRefResolver.startAsync();
                 _bootService.shutdown();
             }

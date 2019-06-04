@@ -9,6 +9,11 @@ public class MegabusConfiguration {
 
     @Valid
     @NotNull
+    @JsonProperty("applicationId")
+    private String _applicationId;
+
+    @Valid
+    @NotNull
     @JsonProperty("megabusRefTopic")
     private Topic _megabusRefTopic;
 
@@ -22,6 +27,9 @@ public class MegabusConfiguration {
     @JsonProperty("boot")
     private MegabusBootConfiguration _bootConfiguration;
 
+    public String getApplicationId() {
+        return _applicationId;
+    }
 
     public Topic getMegabusRefTopic() {
         return _megabusRefTopic;
