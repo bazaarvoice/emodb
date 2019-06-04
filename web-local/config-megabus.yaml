@@ -58,6 +58,7 @@ kafka:
   bootstrapServers: localhost:9092
 
 megabus:
+  applicationId: megabus-local
   megabusRefTopic:
     name: emodb-internal-megabus-ref
     partitions: 8
