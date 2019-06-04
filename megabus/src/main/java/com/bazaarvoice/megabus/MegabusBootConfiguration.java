@@ -1,7 +1,6 @@
 package com.bazaarvoice.megabus;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
