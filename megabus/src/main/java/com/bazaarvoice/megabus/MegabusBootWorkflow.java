@@ -5,14 +5,14 @@ import com.bazaarvoice.emodb.kafka.Topic;
 import com.google.common.util.concurrent.AbstractService;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class MegabusBookWorkflow extends AbstractService {
+public class MegabusBootWorkflow extends AbstractService {
 
     private KafkaCluster _kafkaCluster;
     private MegabusBootDAO _megabusBootDAO;
     private String _applicationId;
     private Topic _megabusTopic;
 
-    public MegabusBookWorkflow(KafkaCluster kafkaCluster, MegabusBootDAO megabusBootDAO, String applicationId, Topic megabusTopic) {
+    public MegabusBootWorkflow(KafkaCluster kafkaCluster, MegabusBootDAO megabusBootDAO, String applicationId, Topic megabusTopic) {
         _kafkaCluster = checkNotNull(kafkaCluster);
         _megabusBootDAO = checkNotNull(megabusBootDAO);
         _applicationId = checkNotNull(applicationId);

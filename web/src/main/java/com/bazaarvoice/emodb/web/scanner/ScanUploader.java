@@ -51,7 +51,7 @@ public class ScanUploader {
     private static final Logger _log = LoggerFactory.getLogger(ScanUploader.class);
 
     private long _compactionControlBufferTimeInMillis = Duration.ofMinutes(1).toMillis();
-    private long _scanWaitTimeInMillis = Duration.ofSeconds(5).toMillis();
+    private long _scanWaitTimeInMillis = Duration.ofMinutes(5).toMillis();
 
     private final DataTools _dataTools;
     private final ScanWorkflow _scanWorkflow;
