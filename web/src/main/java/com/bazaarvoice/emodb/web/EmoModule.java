@@ -126,6 +126,8 @@ import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
+import com.bazaarvoice.megabus.MegabusApplicationId;
+import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.bazaarvoice.megabus.MegabusModule;
 import com.bazaarvoice.megabus.MegabusZookeeper;
@@ -735,6 +737,11 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @MegabusZookeeper
         CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "megabus");
+        }
+
+        @Provides @Singleton @MegabusApplicationId
+        String provideMegabusApplicationId(MegabusConfiguration megabusConfiguration) {
+            return megabusConfiguration.getApplicationId();
         }
     }
 

@@ -22,8 +22,8 @@ public class MegabusModule extends PrivateModule {
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
         bind(MegabusRefResolver.class).asEagerSingleton();
-        bind(BootStatusDAO.class).to(TimerBootStatusDAO.class).asEagerSingleton();
         bind(DocumentResolverManager.class).asEagerSingleton();
+        bind(MegabusBootWorkflowManager.class).asEagerSingleton();
     }
 
     @Provides
