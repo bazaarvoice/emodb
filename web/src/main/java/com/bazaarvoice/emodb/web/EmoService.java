@@ -274,7 +274,7 @@ public class EmoService extends Application<EmoConfiguration> {
                 Key.get(new TypeLiteral<Set<String>>(){}, ApprovedBlobContentTypes.class));
         // Start the Blob service
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
-        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, approvedContentTypes));
+        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, approvedContentTypes, _environment.metrics()));
     }
 
     private void evaluateDatabus()

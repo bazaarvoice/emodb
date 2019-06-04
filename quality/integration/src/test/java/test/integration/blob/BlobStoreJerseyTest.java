@@ -36,6 +36,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
+import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -116,7 +117,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
-            Collections.<Object>singletonList(new BlobStoreResource1(_server, _approvedContentTypes)),
+            Collections.<Object>singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
             authIdentityManager,
             permissionManager);
     }

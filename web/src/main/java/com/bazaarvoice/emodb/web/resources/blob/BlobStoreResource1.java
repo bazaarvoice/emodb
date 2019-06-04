@@ -19,8 +19,13 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
@@ -35,6 +40,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.coursera.metrics.datadog.TaggedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,10 +92,22 @@ public class BlobStoreResource1 {
 
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
+    private final LoadingCache<String, Meter> _blobWritesWithTtlByTableName;
 
-    public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes) {
+    public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
+        _blobWritesWithTtlByTableName = CacheBuilder.newBuilder().build(new CacheLoader<String, Meter>() {
+            @Override
+            public Meter load(String key) throws Exception {
+                String metricName = new TaggedName.TaggedNameBuilder()
+                        .metricName("bv.emodb.blob.BlobStore.blobWriteWithTTL")
+                        .addTag("table", key)
+                        .build()
+                        .encode();
+                return metricRegistry.meter(MetricRegistry.name(metricName));
+            }
+        });
     }
 
     @GET
@@ -411,6 +429,7 @@ public class BlobStoreResource1 {
 
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes, ttl);
+        _blobWritesWithTtlByTableName.getUnchecked(table).mark();
 
         return SuccessResponse.instance();
     }
