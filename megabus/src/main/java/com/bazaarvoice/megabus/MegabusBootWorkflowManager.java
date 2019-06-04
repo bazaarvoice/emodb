@@ -9,9 +9,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Supplier;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
@@ -28,8 +26,8 @@ public class MegabusBootWorkflowManager extends LeaderService {
                                       MetricRegistry metricRegistry, MegabusBootDAO megabusBootDAO, KafkaCluster kafkaCluster,
                                       @MegabusApplicationId String megabusApplicationId, @MegabusTopic Topic megabusTopic) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                () -> new MegabusBookWorkflow(kafkaCluster, megabusBootDAO, megabusApplicationId, megabusTopic));
-//
+                () -> new MegabusBootWorkflow(kafkaCluster, megabusBootDAO, megabusApplicationId, megabusTopic));
+
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);
         lifecycle.manage(new ManagedGuavaService(this));
