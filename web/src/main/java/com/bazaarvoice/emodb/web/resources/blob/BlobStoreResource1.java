@@ -429,7 +429,10 @@ public class BlobStoreResource1 {
 
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes, ttl);
-        _blobWritesWithTtlByTableName.getUnchecked(table).mark();
+        
+        if (null != ttl) {
+            _blobWritesWithTtlByTableName.getUnchecked(table).mark();
+        }
 
         return SuccessResponse.instance();
     }
