@@ -19,6 +19,8 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
@@ -86,10 +88,12 @@ public class BlobStoreResource1 {
 
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
+    private final Meter _blobWritesWithTtl;
 
-    public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes) {
+    public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
+        _blobWritesWithTtl = metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStore.blobWriteWithTTL"));
     }
 
     @GET
@@ -411,6 +415,10 @@ public class BlobStoreResource1 {
 
         // Perform the put
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes, ttl);
+        
+        if (null != ttl) {
+            _blobWritesWithTtl.mark();
+        }
 
         return SuccessResponse.instance();
     }
