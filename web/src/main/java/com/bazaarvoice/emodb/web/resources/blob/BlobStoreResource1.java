@@ -88,12 +88,12 @@ public class BlobStoreResource1 {
 
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
-    private final Meter _blobWritesWithTtlByTableName;
+    private final Meter _blobWritesWithTtl;
 
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
-        _blobWritesWithTtlByTableName = metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStore.blobWriteWithTTL"));
+        _blobWritesWithTtl = metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStore.blobWriteWithTTL"));
     }
 
     @GET
@@ -417,7 +417,7 @@ public class BlobStoreResource1 {
         _blobStore.put(table, blobId, onceOnlySupplier(in), attributes, ttl);
         
         if (null != ttl) {
-            _blobWritesWithTtlByTableName.mark();
+            _blobWritesWithTtl.mark();
         }
 
         return SuccessResponse.instance();
