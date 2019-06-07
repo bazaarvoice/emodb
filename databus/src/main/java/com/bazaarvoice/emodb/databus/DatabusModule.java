@@ -153,14 +153,14 @@ public class DatabusModule extends PrivateModule {
             bind(ReplicationEnabledTask.class).asEagerSingleton();
             bind(SystemQueueMonitorManager.class).asEagerSingleton();
             bind(FanoutLagMonitor.class).asEagerSingleton();
+            bind(DrainFanoutPartitionTask.class).asEagerSingleton();
         }
 
         // Databus
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
-        bind(DrainFanoutPartitionTask.class).asEagerSingleton();
-        
+
         // Expose the event store directly for use by the megabus and debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);

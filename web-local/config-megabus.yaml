@@ -67,6 +67,14 @@ megabus:
     name: emodb-megabus
     partitions: 8
     replicationFactor: 1
+  missingRefTopic:
+    name: emodb-internal-megabus-ref-missing
+    partitions: 8
+    replicationFactor: 1
+  retryRefTopic:
+    name: emodb-internal-megabus-ref-retry
+    partitions: 8
+    replicationFactor: 1
   boot:
     queueServiceApiKey: local_admin
     scanStatusTable: __system_megabus_boot
