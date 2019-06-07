@@ -1,9 +1,8 @@
-package com.bazaarvoice.megabus.streams;
+package com.bazaarvoice.megabus.resolver;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusBootDAO;
-import com.bazaarvoice.megabus.MegabusRefResolver;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import java.util.concurrent.Executors;

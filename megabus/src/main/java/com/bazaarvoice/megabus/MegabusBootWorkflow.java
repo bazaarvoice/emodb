@@ -21,8 +21,6 @@ public class MegabusBootWorkflow extends AbstractService {
 
     @Override
     protected void doStart() {
-        _kafkaCluster.createTopicIfNotExists(_megabusTopic);
-
         switch (_megabusBootDAO.getBootStatus(_applicationId)) {
             case NOT_STARTED:
                 _megabusBootDAO.initiateBoot(_applicationId, _megabusTopic);
