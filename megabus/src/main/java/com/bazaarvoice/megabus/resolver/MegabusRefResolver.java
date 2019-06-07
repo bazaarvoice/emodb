@@ -35,6 +35,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
@@ -111,6 +112,10 @@ public class MegabusRefResolver extends AbstractService {
             return refCollection.getMissingRefs();
         })
         .to(_retryRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})));
+
+        Topology topology = streamsBuilder.build();
+
+        System.out.println(topology.describe());
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
