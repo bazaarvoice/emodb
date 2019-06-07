@@ -1,4 +1,4 @@
-package com.bazaarvoice.megabus;
+package com.bazaarvoice.megabus.resolver;
 
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
@@ -8,14 +8,22 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.UpdateRef;
+import com.bazaarvoice.megabus.MegabusRef;
+import com.bazaarvoice.megabus.MegabusRefTopic;
+import com.bazaarvoice.megabus.MegabusTopic;
+import com.bazaarvoice.megabus.MissingRefTopic;
+import com.bazaarvoice.megabus.RetryRefTopic;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -37,18 +45,27 @@ public class MegabusRefResolver extends AbstractService {
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
     private final Topic _megabusResolvedTopic;
+    private final Topic _retryRefTopic;
+    private final Topic _missingRefTopic;
+
     private KafkaCluster _kafkaCluster;
+    private Clock _clock;
 
     private KafkaStreams _streams;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
                               @MegabusTopic Topic megabusResolvedTopic,
-                              KafkaCluster kafkaCluster) {
+                              @RetryRefTopic Topic retryRefTopic,
+                              @MissingRefTopic Topic missingRefTopic,
+                              KafkaCluster kafkaCluster, Clock clock) {
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
+        _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
+        _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
         _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
+        _clock = checkNotNull(clock, "clock");
     }
 
     @Override
@@ -64,15 +81,36 @@ public class MegabusRefResolver extends AbstractService {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        final KStream<String, List<UpdateRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<UpdateRef>>() {})));
+        JsonPOJOSerde<List<MegabusRef>> megabusRefSerde = new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {});
 
-        // for debugging
-//        refStream.foreach(((key, value) -c> System.out.println(key + " " + value)));
+        final KStream<String, List<MegabusRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})))
+                .merge(streamsBuilder.stream(_retryRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {}))));
 
-        KStream<String, Map<String, Object>> megabus = refStream.flatMap((key, value) -> resolveRefs(value.iterator()).getKeyedDocs());
+        KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
 
+        resolutionResults.flatMap((key, value) -> value.getKeyedResolvedDocs())
+                .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
-        megabus.to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
+        resolutionResults.flatMapValues(result -> {
+            if (result.getMissingRefs().isEmpty()) {
+                return Collections.emptyList();
+            }
+            return Collections.singleton(new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())));
+        })
+        .through(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)))
+        .mapValues(refCollection -> {
+            Instant sendtime = refCollection.getLastProcessTime().toInstant().plusSeconds(10);
+            Instant now = _clock.instant();
+            if (now.isBefore(sendtime)) {
+                try {
+                    Thread.sleep(sendtime.toEpochMilli() - now.toEpochMilli());
+                } catch (InterruptedException e) {
+                    // TODO: log exception and just let the request through. Interuptions should be rare, and it is likely best to just let the ref pass through
+                }
+            }
+            return refCollection.getMissingRefs();
+        })
+        .to(_retryRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
@@ -83,9 +121,9 @@ public class MegabusRefResolver extends AbstractService {
     private static class ResolutionResult {
 
         private List<Map<String, Object>> _resolvedDocs;
-        private List<UpdateRef> _missingRefs;
+        private List<MegabusRef> _missingRefs;
 
-        public ResolutionResult(List<Map<String, Object>> resolvedDocs, List<UpdateRef> missingRefs) {
+        public ResolutionResult(List<Map<String, Object>> resolvedDocs, List<MegabusRef> missingRefs) {
             _resolvedDocs = resolvedDocs;
             _missingRefs = missingRefs;
         }
@@ -94,18 +132,18 @@ public class MegabusRefResolver extends AbstractService {
             return _resolvedDocs;
         }
 
-        public List<UpdateRef> getMissingRefs() {
+        public List<MegabusRef> getMissingRefs() {
             return _missingRefs;
         }
 
-        public Iterable<KeyValue<String, Map<String, Object>>> getKeyedDocs() {
+        public Iterable<KeyValue<String, Map<String, Object>>> getKeyedResolvedDocs() {
             return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc));
 
         }
     }
 
-    private ResolutionResult resolveRefs(Iterator<UpdateRef> refs) {
-        Table<Coordinate, UUID, UpdateRef> refTable = HashBasedTable.create();
+    private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
+        Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
         refs.forEachRemaining(ref ->
                 refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref)
         );
@@ -116,14 +154,15 @@ public class MegabusRefResolver extends AbstractService {
             try {
                 annotatedGet.add(coord.getTable(), coord.getId());
             } catch (UnknownTableException | UnknownPlacementException e) {
-                // TODO: handle delete table events gracefully
+                // take no action and discard the event, as the table was deleted before we could process the event
+                // TODO: add a metric to count these
             }
         }
 
         Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
 
         List<Map<String, Object>> resolvedDocuments = new ArrayList<>();
-        List<UpdateRef> missingRefs = new ArrayList<>();
+        List<MegabusRef> missingRefs = new ArrayList<>();
 
         readResultIter.forEachRemaining(result -> {
             Map<String, Object> content = result.getContent();
@@ -131,7 +170,7 @@ public class MegabusRefResolver extends AbstractService {
 
             refTable.row(Coordinate.fromJson(content)).forEach((changeId, ref) -> {
 
-                if (result.isChangeDeltaPending(changeId)) {
+                if (result.isChangeDeltaPending(changeId) || Math.random() > 0.99) {
                     missingRefs.add(ref);
                     return;
                 }

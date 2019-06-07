@@ -24,6 +24,16 @@ public class MegabusConfiguration {
 
     @Valid
     @NotNull
+    @JsonProperty("missingRefTopic")
+    private Topic _missingRefTopic;
+
+    @Valid
+    @NotNull
+    @JsonProperty("retryRefTopic")
+    private Topic _retryRefTopic;
+
+    @Valid
+    @NotNull
     @JsonProperty("boot")
     private MegabusBootConfiguration _bootConfiguration;
 
@@ -41,5 +51,13 @@ public class MegabusConfiguration {
 
     public MegabusBootConfiguration getBootConfiguration() {
         return _bootConfiguration;
+    }
+
+    public Topic getMissingRefTopic() {
+        return _missingRefTopic;
+    }
+
+    public Topic getRetryRefTopic() {
+        return _retryRefTopic;
     }
 }
