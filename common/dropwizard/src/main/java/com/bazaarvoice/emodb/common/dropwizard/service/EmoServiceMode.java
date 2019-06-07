@@ -119,6 +119,7 @@ public enum EmoServiceMode {
 
     MEGABUS(
             Aspect.web,
+            Aspect.task,
             Aspect.cache,
             Aspect.invalidation_cache_listener,
             Aspect.leader_control,

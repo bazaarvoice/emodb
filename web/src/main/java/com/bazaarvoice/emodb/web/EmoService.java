@@ -353,8 +353,6 @@ public class EmoService extends Application<EmoConfiguration> {
         if (!runPerServiceMode(megabus)) {
             return;
         }
-        // No admin tasks are registered automatically in MEGABUS ServiceMode
-        _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 
     private void evaluateBlackList()
