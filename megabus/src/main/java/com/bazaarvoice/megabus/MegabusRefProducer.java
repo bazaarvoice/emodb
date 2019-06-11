@@ -62,22 +62,22 @@ public class MegabusRefProducer extends AbstractScheduledService {
     public MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                               Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
-                              String instanceIdentifier) {
+                              String partitionIdentifier, String applicationId) {
         this(databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
-                topic, instanceIdentifier);
+                topic, partitionIdentifier, applicationId);
     }
 
     @VisibleForTesting
     MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                        RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                        @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
-                       ObjectMapper objectMapper, Topic topic, String instanceIdentifier) {
+                       ObjectMapper objectMapper, Topic topic, String partitionIdentifer, String applicationId) {
 
-        _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + instanceIdentifier);
+        _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + partitionIdentifer);
         _databus = checkNotNull(databus, "databus");
         _eventStore = checkNotNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
-        _timerName = newTimerName("megabusPoll-" + instanceIdentifier);
+        _timerName = newTimerName("megabusPoll-" + partitionIdentifer);
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
         _producer = checkNotNull(producer, "producer");
@@ -85,7 +85,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
         //TODO : this is currently hacked to use instance identifiers to avoid dedup queues, which require the leader for consistent polling.
         // We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, which should cluster updates to the same key
-        _subscriptionName = "__system_bus:" + "megabus-" + instanceIdentifier;
+        _subscriptionName = "__system_bus:" + applicationId + "-" + partitionIdentifer;
         _objectMapper = checkNotNull(objectMapper, "objectMapper");
         _topic = checkNotNull(topic, "topic");
         createMegabusSubscription();
@@ -95,7 +95,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
     }
 
     private String newTimerName(String name) {
-        return MetricRegistry.name("bv.emodb.databus", "Megabus", name, "readEvents");
+        return MetricRegistry.name("bv.emodb.megabus", name, "readEvents");
     }
 
     private void createMegabusSubscription() {
