@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTable;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusTablePlacement;
 import com.bazaarvoice.emodb.web.scanner.writer.KafkaScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
+import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.megabus.MegabusBootConfiguration;
 import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.bazaarvoice.megabus.MegabusZookeeper;
@@ -55,9 +56,6 @@ public class MegabusStashModule extends PrivateModule {
     @Override
     protected void configure() {
         binder().requireExplicitBindings();
-
-        bind(CuratorFramework.class).annotatedWith(ScannerZooKeeper.class).
-                to(Key.get(CuratorFramework.class, MegabusZookeeper.class));
 
         bind(ScanUploader.class).asEagerSingleton();
         bind(ScanStatusDAO.class).to(DataStoreScanStatusDAO.class).asEagerSingleton();
@@ -117,5 +115,12 @@ public class MegabusStashModule extends PrivateModule {
         MetricsStashStateListener listener = new MetricsStashStateListener();
         listener.init(environment, metadata, null);
         return listener;
+    }
+
+    @Provides
+    @Singleton
+    @ScannerZooKeeper
+    CuratorFramework provideScannerZookeeper(@MegabusZookeeper CuratorFramework curatorFramework) {
+        return ZKNamespaces.usingChildNamespace(curatorFramework, "boot");
     }
 }
