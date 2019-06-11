@@ -3,7 +3,6 @@ package com.bazaarvoice.megabus.resolver;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import static com.google.common.base.Preconditions.checkNotNull;
