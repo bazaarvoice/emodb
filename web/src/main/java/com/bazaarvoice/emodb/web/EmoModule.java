@@ -163,6 +163,7 @@ import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -735,8 +736,9 @@ public class EmoModule extends AbstractModule {
 
         /** Provide ZooKeeper namespaced to megabus data. */
         @Provides @Singleton @MegabusZookeeper
-        CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator) {
-            return withComponentNamespace(curator, "megabus");
+        CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator,
+                                                           @MegabusApplicationId String applicationId) {
+            return withComponentNamespace(curator, ZKPaths.makePath("megabus", applicationId));
         }
 
         @Provides @Singleton @MegabusApplicationId

@@ -35,6 +35,7 @@ import org.apache.kafka.connect.json.JsonSerializer;
 public class MegabusRefProducerManager {
 
     private static final int NUM_PARTITIONS = 8;
+    private static final String LEADER_DIR = "/leader/partitioned-megabus-ref-producer";
 
     @Inject
     public MegabusRefProducerManager(final LifeCycleRegistry lifeCycle,
@@ -46,21 +47,27 @@ public class MegabusRefProducerManager {
                                      final DatabusFactory databusFactory,
                                      DatabusEventStore databusEventStore,
                                      final @SystemIdentity String systemId,
+                                     @MegabusApplicationId String applicationId,
                                      final RateLimitedLogFactory logFactory,
                                      @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
                                      final MetricRegistry metricRegistry,
                                      KafkaCluster kafkaCluster,
                                      ObjectMapper objectMapper) {
 
+        // Since the megabus reads from the databus's internal event store. We forward the refs directly onto a
+        // kafka-based ref topic. We use a partitioned leader service to evenly balance the partitions among the megabus
+        // servers.
+
         // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
         // we should reconcile this inconsistency
         PartitionedServiceSupplier refProducerSupplier = partition ->
                 new MegabusRefProducer(databusFactory.forOwner(systemId), databusEventStore,
                         Conditions.partition(NUM_PARTITIONS, partition + 1),
-                        logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic, Integer.toString(partition));
+                        logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
+                        Integer.toString(partition), applicationId);
 
         PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
-                curator, ZKPaths.makePath("leader", "partitioned-megabus-ref-producer"), hostAndPort.toString(),
+                curator, LEADER_DIR, hostAndPort.toString(),
                 "PartitionedLeaderSelector-megabusRefProducer", NUM_PARTITIONS, 1, 1, TimeUnit.MINUTES,
                 refProducerSupplier, clock);
 
@@ -70,33 +77,6 @@ public class MegabusRefProducerManager {
 
         leaderServiceTask.register("megabus-ref-producer", partitionedLeaderService);
         lifeCycle.manage(partitionedLeaderService);
-
-        // Since the megabus reads from the databus it must either (a) execute on the same server that owns
-        // and manages the databus megabus subscription or (b) go through the Ostrich client that forwards
-        // requests to the right server.  This code implements the first option by using the same consistent
-        // hash calculation used by Ostrich to determine which server owns the megabus subscription.  As Emo
-        // servers join and leave the pool, the OwnerGroup will track which server owns the megabus subscription
-        // at a given point in time and start and stop the megabus service appropriately.
-//        OwnerGroup<Service> ownerGroup = ownerGroupFactory.create("Megabus", new OstrichOwnerFactory<Service>() {
-//            @Override
-//            public PartitionContext getContext(String partition) {
-//                return PartitionContextBuilder.of("Megabus-" + partition);
-//            }
-//
-//            @Override
-//            public Service create(String partition) {
-//                Databus databus = databusFactory.forOwner(systemId);
-//
-//                return new MegabusRefProducer(databus, databusEventStore, Conditions.partition(NUM_PARTITIONS, Integer.parseInt(partition)),
-//                        logFactory, metricRegistry, producer, objectMapper, refTopic, partition);
-//            }
-//        }, null);
-//        lifeCycle.manage(ownerGroup);
-//
-//        // Start one megabus for each partition
-//        for (int i = 1; i <= NUM_PARTITIONS; i++) {
-//            ownerGroup.startIfOwner(Integer.toString(i), Duration.ZERO);
-//        }
     }
 
 }
