@@ -16,13 +16,16 @@ public class DocumentResolverManager implements Managed {
     private final MegabusBootDAO _statusDAO;
     private final ScheduledExecutorService _bootService;
     private final MegabusRefResolver _megabusRefResolver;
+    private final MissingRefDelayProcessor _missingRefDelayProcessor;
     private final String _applicationId;
 
     @Inject
     public DocumentResolverManager(LifeCycleRegistry lifeCycle, MegabusBootDAO statusDAO,
-                                   MegabusRefResolver megabusRefResolver, @MegabusApplicationId String applicationId) {
+                                   MegabusRefResolver megabusRefResolver, MissingRefDelayProcessor missingRefDelayProcessor,
+                                   @MegabusApplicationId String applicationId) {
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _megabusRefResolver = checkNotNull(megabusRefResolver);
+        _missingRefDelayProcessor = checkNotNull(missingRefDelayProcessor);
         _applicationId = checkNotNull(applicationId);
         _bootService = Executors.newSingleThreadScheduledExecutor();
         lifeCycle.manage(this);
@@ -34,6 +37,7 @@ public class DocumentResolverManager implements Managed {
         _bootService.scheduleAtFixedRate(() -> {
             if (_statusDAO.getBootStatus(_applicationId) == MegabusBootDAO.BootStatus.COMPLETE) {
                 _megabusRefResolver.startAsync();
+                _missingRefDelayProcessor.startAsync();
                 _bootService.shutdown();
             }
         }, 0, 5, TimeUnit.SECONDS);

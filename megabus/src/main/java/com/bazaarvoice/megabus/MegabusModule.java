@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
 import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
+import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -24,6 +25,7 @@ public class MegabusModule extends PrivateModule {
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
         bind(MegabusRefResolver.class).asEagerSingleton();
+        bind(MissingRefDelayProcessor.class).asEagerSingleton();
         bind(DocumentResolverManager.class).asEagerSingleton();
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
     }
