@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.MegabusRefTopic;
 import com.bazaarvoice.megabus.MegabusTopic;
@@ -20,7 +21,6 @@ import com.google.common.collect.Table;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -35,7 +35,6 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
@@ -48,6 +47,7 @@ public class MegabusRefResolver extends AbstractService {
     private final Topic _megabusResolvedTopic;
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
+    private String _applicationId;
 
     private KafkaCluster _kafkaCluster;
     private Clock _clock;
@@ -59,12 +59,14 @@ public class MegabusRefResolver extends AbstractService {
                               @MegabusTopic Topic megabusResolvedTopic,
                               @RetryRefTopic Topic retryRefTopic,
                               @MissingRefTopic Topic missingRefTopic,
+                              @MegabusApplicationId String applicationId,
                               KafkaCluster kafkaCluster, Clock clock) {
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
         _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
+        _applicationId = checkNotNull(applicationId, "applicationId");
         _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
         _clock = checkNotNull(clock, "clock");
     }
@@ -74,7 +76,7 @@ public class MegabusRefResolver extends AbstractService {
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _megabusResolvedTopic.getName());
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId  + "-resolver");
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
@@ -82,40 +84,19 @@ public class MegabusRefResolver extends AbstractService {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        JsonPOJOSerde<List<MegabusRef>> megabusRefSerde = new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {});
-
         final KStream<String, List<MegabusRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})))
                 .merge(streamsBuilder.stream(_retryRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {}))));
 
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
 
+
         resolutionResults.flatMap((key, value) -> value.getKeyedResolvedDocs())
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
-        resolutionResults.flatMapValues(result -> {
-            if (result.getMissingRefs().isEmpty()) {
-                return Collections.emptyList();
-            }
-            return Collections.singleton(new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())));
-        })
-        .through(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)))
-        .mapValues(refCollection -> {
-            Instant sendtime = refCollection.getLastProcessTime().toInstant().plusSeconds(10);
-            Instant now = _clock.instant();
-            if (now.isBefore(sendtime)) {
-                try {
-                    Thread.sleep(sendtime.toEpochMilli() - now.toEpochMilli());
-                } catch (InterruptedException e) {
-                    // TODO: log exception and just let the request through. Interuptions should be rare, and it is likely best to just let the ref pass through
-                }
-            }
-            return refCollection.getMissingRefs();
-        })
-        .to(_retryRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})));
-
-        Topology topology = streamsBuilder.build();
-
-        System.out.println(topology.describe());
+        resolutionResults
+                .filterNot((key, result) -> result.getMissingRefs().isEmpty())
+                .mapValues(result -> new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())))
+                .to(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
         _streams.start();
