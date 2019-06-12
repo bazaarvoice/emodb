@@ -1,4 +1,4 @@
-package com.bazaarvoice.megabus;
+package com.bazaarvoice.megabus.refproducer;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.condition.Condition;
-import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -26,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,14 +38,15 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
 
-    private static final Duration POLL_INTERVAL = Duration.ofMillis(100);
-    private static final int EVENTS_LIMIT = 4000;
+    private static final Duration POLL_INTERVAL = Duration.ofMillis(50);
+    private static final int EVENTS_LIMIT = 1000;
 
     private final RateLimitedLog _rateLimitedLog;
     private final Databus _databus;
@@ -58,20 +59,22 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _objectMapper;
     private final Topic _topic;
+    private final Clock _clock;
 
     public MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                               Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
                               String partitionIdentifier, String applicationId) {
         this(databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
-                topic, partitionIdentifier, applicationId);
+                topic, partitionIdentifier, applicationId, null);
     }
 
     @VisibleForTesting
     MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                        RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                        @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
-                       ObjectMapper objectMapper, Topic topic, String partitionIdentifer, String applicationId) {
+                       ObjectMapper objectMapper, Topic topic, String partitionIdentifer, String applicationId,
+                       Clock clock) {
 
         _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + partitionIdentifer);
         _databus = checkNotNull(databus, "databus");
@@ -81,16 +84,16 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
         _producer = checkNotNull(producer, "producer");
-        _subscriptionCondition = checkNotNull(subscriptionCondition);
+        _subscriptionCondition = checkNotNull(subscriptionCondition, "subscriptionCondition");
+        _clock = firstNonNull(clock, Clock.systemUTC());
 
-        //TODO : this is currently hacked to use instance identifiers to avoid dedup queues, which require the leader for consistent polling.
+        //TODO : this is currently hacked to to avoid dedup queues, which require the leader for consistent polling.
         // We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, which should cluster updates to the same key
-        _subscriptionName = "__system_bus:" + applicationId + "-" + partitionIdentifer;
+        _subscriptionName = ChannelNames.getMegabusRefProducerChannel(applicationId, Integer.parseInt(partitionIdentifer));
         _objectMapper = checkNotNull(objectMapper, "objectMapper");
         _topic = checkNotNull(topic, "topic");
         createMegabusSubscription();
         ServiceFailureListener.listenTo(this, metricRegistry);
-
 
     }
 
@@ -104,7 +107,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         // the subscription at startup.  The subscription should last basically forever.
         // Note: make sure that we don't ignore any events
         _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                DatabusChannelConfiguration.CANARY_TTL, DatabusChannelConfiguration.CANARY_TTL, false);
+                DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL, false);
     }
 
     @Override
@@ -148,7 +151,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
     private boolean pollAndAckEvents() {
         // Poll for events on the megabus subscription
-        long startTime = System.nanoTime();
+        long startTime = _clock.instant().getNano();
         List<String> eventKeys = Lists.newArrayList();
         List<EventData> result = _eventStore.peek(_subscriptionName, EVENTS_LIMIT);
         List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
@@ -166,7 +169,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
                     TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key)))));
         });
 
-        long endTime = System.nanoTime();
+        long endTime = _clock.instant().getNano();
         trackAverageEventDuration(endTime - startTime, eventKeys.size());
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
