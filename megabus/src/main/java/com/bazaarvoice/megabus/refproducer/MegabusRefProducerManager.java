@@ -1,4 +1,4 @@
-package com.bazaarvoice.megabus;
+package com.bazaarvoice.megabus.refproducer;
 
 import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
@@ -16,21 +16,16 @@ import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.megabus.MegabusApplicationId;
+import com.bazaarvoice.megabus.MegabusRefTopic;
+import com.bazaarvoice.megabus.MegabusZookeeper;
 import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import java.time.Clock;
-import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.serialization.StringSerializer;
-import org.apache.kafka.connect.json.JsonSerializer;
 
 public class MegabusRefProducerManager {
 
@@ -68,7 +63,7 @@ public class MegabusRefProducerManager {
 
         PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
                 curator, LEADER_DIR, hostAndPort.toString(),
-                "PartitionedLeaderSelector-megabusRefProducer", NUM_PARTITIONS, 1, 1, TimeUnit.MINUTES,
+                "PartitionedLeaderSelector-MegabusRefProducer", NUM_PARTITIONS, 1, 1, TimeUnit.MINUTES,
                 refProducerSupplier, clock);
 
         for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {

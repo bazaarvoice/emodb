@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
 import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
