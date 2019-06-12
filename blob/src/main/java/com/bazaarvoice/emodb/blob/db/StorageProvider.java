@@ -1,12 +1,8 @@
 package com.bazaarvoice.emodb.blob.db;
 
-import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.table.db.Table;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Chunked storage provider based on the Astyanax {@link com.netflix.astyanax.recipes.storage.ChunkedStorageProvider}
@@ -23,17 +19,7 @@ public interface StorageProvider {
 
     ByteBuffer readChunk(Table table, String blobId, int chunkId, long timestamp);
 
-    void deleteObject(Table table, String blobId, Integer chunkCount);
-
-    void writeMetadata(Table table, String blobId, StorageSummary summary);
-
-    StorageSummary readMetadata(Table table, String blobId);
-
-    Iterator<Map.Entry<String, StorageSummary>> scanMetadata(Table table, @Nullable String fromBlobIdExclusive, LimitCounter limit);
-
-    long count(Table table);
-
-    void purge(Table table);
+    void deleteObject(Table table, String blobId);
 
     int getDefaultChunkSize();
 }
