@@ -9,6 +9,7 @@ public class ChannelNames {
     private static final String REPLICATION_FANOUT_PREFIX = SYSTEM_PREFIX + "out:";
     private static final String MASTER_REPLAY = SYSTEM_PREFIX + "replay";
     private static final String MASTER_CANARY_PREFIX = SYSTEM_PREFIX + "canary";
+    private static final String MEGABUS_REF_PRODUCER_PREFIX = SYSTEM_PREFIX + "megabus";
 
     private static final DedupEventStoreChannels DEDUP_CHANNELS =
             DedupEventStoreChannels.sharedWriteChannel("__dedupq_read:");
@@ -19,6 +20,10 @@ public class ChannelNames {
 
     public static boolean isSystemFanoutChannel(String channel) {
         return channel.startsWith(MASTER_FANOUT) || channel.startsWith(REPLICATION_FANOUT_PREFIX);
+    }
+
+    public static String getMegabusRefProducerChannel(String applicationId, int partition) {
+        return String.format("%s-%s-%d", MEGABUS_REF_PRODUCER_PREFIX, applicationId, partition);
     }
 
     public static String getMasterFanoutChannel(int partition) {
