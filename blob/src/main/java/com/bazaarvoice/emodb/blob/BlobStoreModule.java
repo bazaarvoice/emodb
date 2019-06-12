@@ -175,6 +175,7 @@ public class BlobStoreModule extends PrivateModule {
                 .toInstance(ImmutableMap.<String, Long>of());
 
         bind(StorageProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
+        bind(MetadataProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(S3StorageProvider.class).asEagerSingleton();
         bind(MetadataProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(DataCopyDAO.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
