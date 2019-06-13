@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.megabus;
 
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
@@ -14,16 +15,17 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class StashMegabusBootDAO implements MegabusBootDAO {
 
     private final ScanUploader _scanUploader;
+    private final DataTools _dataTools;
 
     @Inject
-    public StashMegabusBootDAO(ScanUploader scanUploader) {
+    public StashMegabusBootDAO(ScanUploader scanUploader, DataTools dataTools) {
         _scanUploader = checkNotNull(scanUploader);
+        _dataTools = checkNotNull(dataTools);
     }
 
     @Override
     public void initiateBoot(String applicationId, Topic topic) {
-        //TODO: this needs all placements
-        ScanOptions scanOptions = new ScanOptions("ugc_global:ugc");
+        ScanOptions scanOptions = new ScanOptions(_dataTools.getTablePlacements(false, true));
         scanOptions.addDestination(ScanDestination.to(URI.create("kafka://" + topic.getName())));
 
         _scanUploader.scanAndUpload(applicationId, scanOptions).start();
