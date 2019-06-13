@@ -34,8 +34,8 @@ abstract public class ShardWriter implements ScanDestinationWriter {
     }
 
     public void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException {
-        _out.close();
         _jsonGenerator.close();
+        _out.close();
 
         // GZIP output streams do not generate any output if no data was ever written.  In particular for
         // TemporaryFileScanWriter this means that no file is generated in the file system.  Therefore if shard
@@ -46,8 +46,8 @@ abstract public class ShardWriter implements ScanDestinationWriter {
 
     public void closeAndCancel() {
         try {
-            Closeables.close(_out, true);
             Closeables.close(_jsonGenerator, true);
+            Closeables.close(_out, true);
         } catch (IOException e) {
             // Won't happen, exception is swallowed
         }
