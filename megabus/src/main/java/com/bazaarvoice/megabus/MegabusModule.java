@@ -6,6 +6,8 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
+import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
+import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
 import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
@@ -15,6 +17,8 @@ import com.google.inject.Singleton;
 
 public class MegabusModule extends PrivateModule {
 
+    private final int REF_PARTITIONS = 8;
+
     private final EmoServiceMode _serviceMode;
 
     public MegabusModule(EmoServiceMode serviceMode) {
@@ -23,12 +27,16 @@ public class MegabusModule extends PrivateModule {
 
     @Override
     protected void configure() {
+        bind(Integer.class).annotatedWith(NumRefPartitions.class).toInstance(REF_PARTITIONS);
+
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
+
         bind(MegabusRefProducerManager.class).asEagerSingleton();
         bind(MegabusRefResolver.class).asEagerSingleton();
         bind(MissingRefDelayProcessor.class).asEagerSingleton();
         bind(DocumentResolverManager.class).asEagerSingleton();
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
+        bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }
 
     @Provides
