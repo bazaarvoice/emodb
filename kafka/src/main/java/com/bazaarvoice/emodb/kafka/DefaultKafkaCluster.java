@@ -1,8 +1,10 @@
 package com.bazaarvoice.emodb.kafka;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import java.util.Collections;
@@ -25,12 +27,15 @@ public class DefaultKafkaCluster implements KafkaCluster {
 
     private final AdminClient _adminClient;
     private final String _bootstrapServers;
+    private final String _instanceIdentifier;
     private final Supplier<Producer<String, JsonNode>> _producerSupplier;
 
     @Inject
-    public DefaultKafkaCluster(AdminClient adminClient, @BootstrapServers String bootstrapServers) {
+    public DefaultKafkaCluster(AdminClient adminClient, @BootstrapServers String bootstrapServers,
+                               @SelfHostAndPort HostAndPort hostAndPort) {
         _adminClient = checkNotNull(adminClient);
         _bootstrapServers = checkNotNull(bootstrapServers);
+        _instanceIdentifier = checkNotNull(hostAndPort).toString();
         _producerSupplier = Suppliers.memoize(this::createProducer);
 
         Futures.getUnchecked(_adminClient.describeCluster().nodes()).forEach(System.out::println);
@@ -67,8 +72,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 5); // 5 msloc
 
-        // TODO: make this instance specfic
-        props.put(ProducerConfig.CLIENT_ID_CONFIG, "megabus-producer");
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, _instanceIdentifier);
 
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);

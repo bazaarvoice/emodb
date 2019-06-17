@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.bazaarvoice.emodb.sor.api.Coordinate;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
@@ -16,8 +18,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KafkaScanDestinationWriter implements ScanDestinationWriter {
+
+    private static Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
 
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _mapper;
@@ -29,7 +35,11 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
     private int _bytesTransferred;
     private int _bytesAdded;
 
-    public KafkaScanDestinationWriter(Producer<String, JsonNode> producer, ObjectMapper objectMapper, String topic) {
+    private final Meter _blockingQueueFullMeter;
+
+
+    public KafkaScanDestinationWriter(Producer<String, JsonNode> producer, ObjectMapper objectMapper, String topic,
+                                      MetricRegistry metricRegistry) {
         _producer = producer;
         _mapper = objectMapper;
         _topic = topic;
@@ -39,9 +49,15 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         _bytesTransferred = 0;
         _bytesAdded = 0;
 
+        _blockingQueueFullMeter = metricRegistry.meter(getMetricName("blockingQueueFull"));
 
         _futureGettingService.submit(this::collectFuture);
 
+    }
+
+
+    private String getMetricName(String name) {
+        return MetricRegistry.name("bv.emodb.scanner", "KafkaScanWriter", name);
     }
 
     private void collectFuture() {
@@ -56,7 +72,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
                 }
             } catch (Exception e) {
                 _error.compareAndSet(null, e);
-                // TODO: log exception
+                _log.error("Error sending to Kafka: ", e);
             }
         }
     }
@@ -75,9 +91,8 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         _futureQueue.put(_producer.send(record));
 
         // flush the producer if we are out of space in the producer
-        // TODO: add a metric when this is happening. If it happens often, we likely want to tweak our linger.ms, batch.size, and blocking queue capacity
         if (_futureQueue.remainingCapacity() == 0) {
-            System.out.println("queue is full!");
+            _blockingQueueFullMeter.mark();
             _producer.flush();
         }
 
