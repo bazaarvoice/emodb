@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -24,12 +26,13 @@ public class KafkaScanWriter implements ScanWriter {
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _mapper;
     private final Clock _clock;
+    private final MetricRegistry _metricRegistry;
     private final String _topicName;
     private final Map<TransferKey, KafkaScanDestinationWriter> _writers;
 
     @Inject
     public KafkaScanWriter(KafkaCluster kafkaCluster, ObjectMapper objectMapper, Clock clock,
-                           @Assisted URI baseUri) {
+                           MetricRegistry metricRegistry, @Assisted URI baseUri) {
 
         checkNotNull(kafkaCluster, "kafkaCluster");
 
@@ -37,13 +40,14 @@ public class KafkaScanWriter implements ScanWriter {
         _mapper = checkNotNull(objectMapper, "objectMapper");
         _clock = checkNotNull(clock, "clock");
         _topicName  = checkNotNull(baseUri.getHost(), "topicName");
+        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
         checkArgument(!_topicName.isEmpty());
         _writers = new HashMap<>();
     }
 
     @Override
     public synchronized ScanDestinationWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid) throws IOException, InterruptedException {
-        KafkaScanDestinationWriter kafkaScanDestinationWriter = new KafkaScanDestinationWriter(_producer, _mapper, _topicName);
+        KafkaScanDestinationWriter kafkaScanDestinationWriter = new KafkaScanDestinationWriter(_producer, _mapper, _topicName, _metricRegistry);
         _writers.put(new TransferKey(tableUuid, shardId), kafkaScanDestinationWriter);
         return kafkaScanDestinationWriter;
     }

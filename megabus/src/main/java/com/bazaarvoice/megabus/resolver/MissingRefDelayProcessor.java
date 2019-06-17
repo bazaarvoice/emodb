@@ -23,9 +23,13 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Produced;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MissingRefDelayProcessor extends AbstractService {
+
+    private static Logger _log = LoggerFactory.getLogger(MissingRefDelayProcessor.class);
 
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
@@ -80,7 +84,7 @@ public class MissingRefDelayProcessor extends AbstractService {
             try {
                 Thread.sleep(sendtime.toEpochMilli() - now.toEpochMilli());
             } catch (InterruptedException e) {
-                // TODO: log exception and just let the request through. Interuptions should be rare, and it is likely best to just let the ref pass through
+                _log.warn("Attempted sleep during retry failed. Letting message to proceed without required delay.", e);
             }
         }
     }
