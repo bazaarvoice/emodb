@@ -29,7 +29,6 @@ import org.apache.curator.framework.CuratorFramework;
 
 public class MegabusRefProducerManager {
 
-    private static final int NUM_PARTITIONS = 8;
     private static final String LEADER_DIR = "/leader/partitioned-megabus-ref-producer";
 
     @Inject
@@ -45,6 +44,7 @@ public class MegabusRefProducerManager {
                                      @MegabusApplicationId String applicationId,
                                      final RateLimitedLogFactory logFactory,
                                      @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
+                                     @NumRefPartitions int numRefPartitions,
                                      final MetricRegistry metricRegistry,
                                      KafkaCluster kafkaCluster,
                                      ObjectMapper objectMapper) {
@@ -57,13 +57,13 @@ public class MegabusRefProducerManager {
         // we should reconcile this inconsistency
         PartitionedServiceSupplier refProducerSupplier = partition ->
                 new MegabusRefProducer(databusFactory.forOwner(systemId), databusEventStore,
-                        Conditions.partition(NUM_PARTITIONS, partition + 1),
+                        Conditions.partition(numRefPartitions, partition + 1),
                         logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
                         Integer.toString(partition), applicationId);
 
         PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
                 curator, LEADER_DIR, hostAndPort.toString(),
-                "PartitionedLeaderSelector-MegabusRefProducer", NUM_PARTITIONS, 1, 1, TimeUnit.MINUTES,
+                "PartitionedLeaderSelector-MegabusRefProducer", numRefPartitions, 1, 1, TimeUnit.MINUTES,
                 refProducerSupplier, clock);
 
         for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {

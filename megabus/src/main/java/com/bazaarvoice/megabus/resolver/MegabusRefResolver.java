@@ -1,8 +1,10 @@
 package com.bazaarvoice.megabus.resolver;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
@@ -14,10 +16,13 @@ import com.bazaarvoice.megabus.MegabusRefTopic;
 import com.bazaarvoice.megabus.MegabusTopic;
 import com.bazaarvoice.megabus.MissingRefTopic;
 import com.bazaarvoice.megabus.RetryRefTopic;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
@@ -47,10 +52,15 @@ public class MegabusRefResolver extends AbstractService {
     private final Topic _megabusResolvedTopic;
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
-    private String _applicationId;
+    private final String _applicationId;
 
-    private KafkaCluster _kafkaCluster;
-    private Clock _clock;
+    private final KafkaCluster _kafkaCluster;
+    private final String _instanceId;
+    private final Clock _clock;
+
+    private final Meter _redundantMeter;
+    private final Meter _discardedMeter;
+    private final Meter _pendingMeter;
 
     private KafkaStreams _streams;
 
@@ -60,7 +70,9 @@ public class MegabusRefResolver extends AbstractService {
                               @RetryRefTopic Topic retryRefTopic,
                               @MissingRefTopic Topic missingRefTopic,
                               @MegabusApplicationId String applicationId,
-                              KafkaCluster kafkaCluster, Clock clock) {
+                              KafkaCluster kafkaCluster, Clock clock,
+                              @SelfHostAndPort HostAndPort hostAndPort,
+                              MetricRegistry metricRegistry) {
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
@@ -68,7 +80,18 @@ public class MegabusRefResolver extends AbstractService {
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
         _applicationId = checkNotNull(applicationId, "applicationId");
         _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
+        _instanceId = checkNotNull(hostAndPort).toString();
         _clock = checkNotNull(clock, "clock");
+
+        _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
+        _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
+        _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
+
+        DropwizardMetricsReporter.registerDefaultMetricsRegistry(metricRegistry);
+    }
+
+    private String getMetricName(String name) {
+        return MetricRegistry.name("bv.emodb.megabus", "MegabusRefResolver", name);
     }
 
     @Override
@@ -81,6 +104,10 @@ public class MegabusRefResolver extends AbstractService {
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
         streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, _megabusRefTopic.getPartitions());
+
+        streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
+
+        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
@@ -141,7 +168,7 @@ public class MegabusRefResolver extends AbstractService {
                 annotatedGet.add(coord.getTable(), coord.getId());
             } catch (UnknownTableException | UnknownPlacementException e) {
                 // take no action and discard the event, as the table was deleted before we could process the event
-                // TODO: add a metric to count these
+                _discardedMeter.mark();
             }
         }
 
@@ -156,12 +183,14 @@ public class MegabusRefResolver extends AbstractService {
 
             refTable.row(Coordinate.fromJson(content)).forEach((changeId, ref) -> {
 
-                if (result.isChangeDeltaPending(changeId) || Math.random() > 0.99) {
+                if (result.isChangeDeltaPending(changeId)) {
+                    _pendingMeter.mark();
                     missingRefs.add(ref);
                     return;
                 }
 
                 if (result.isChangeDeltaRedundant(changeId)) {
+                    _redundantMeter.mark();
                     return;
                 }
 
