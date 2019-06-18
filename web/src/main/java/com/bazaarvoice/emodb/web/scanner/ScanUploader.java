@@ -34,7 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * Entry point for uploading JSON representations of a placement to a file system, such as S3.
  * The actual uploading takes place asynchronously the following classes:
- * <p/>
+ * <p>
  * <ul>
  * <li>
  * {@link com.bazaarvoice.emodb.web.scanner.control.ScanUploadMonitor}: monitors all active uploads and schedules
@@ -204,18 +204,15 @@ public class ScanUploader {
             throw Throwables.propagate(e);
         }
 
+        // Create the scan
+        _scanStatusDAO.updateScanStatus(status);
+
         // spawn a thread and do the below asynchronously as we would have to wait for a minute to continue to scan and we don't to include that delay in here for responding.
         new Thread(() ->
         {
-            boolean scanCreated = false;
-
             try {
                 // We would like to wait for 5 minutes here to continue to scan to make sure scan don't miss any deltas that are written before the compaction control time.
                 Thread.sleep(_scanWaitTimeInMillis);
-
-                // Create the scan
-                _scanStatusDAO.updateScanStatus(status);
-                scanCreated = true;
 
                 // Notify the workflow that the scan can be started
                 _scanWorkflow.scanStatusUpdated(scanId);
@@ -232,14 +229,12 @@ public class ScanUploader {
                     _log.error("Failed to delete the stash time for scan {}", scanId, ex);
                 }
 
-                if (scanCreated) {
-                    // The scan was not properly started; cancel the scan
-                    try {
-                        _scanStatusDAO.setCanceled(scanId);
-                    } catch (Exception e2) {
-                        // Don't mask the original exception but log it
-                        _log.error("Failed to mark unsuccessfully started scan as canceled: [id={}]", scanId, e2);
-                    }
+                // The scan was not properly started; cancel the scan
+                try {
+                    _scanStatusDAO.setCanceled(scanId);
+                } catch (Exception e2) {
+                    // Don't mask the original exception but log it
+                    _log.error("Failed to mark unsuccessfully started scan as canceled: [id={}]", scanId, e2);
                 }
             }
         }).start();
