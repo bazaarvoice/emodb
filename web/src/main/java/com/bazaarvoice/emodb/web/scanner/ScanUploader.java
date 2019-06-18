@@ -247,8 +247,7 @@ public class ScanUploader {
         try {
             _scanStatusDAO.setCanceled(scanId);
         } catch (Exception e2) {
-            // Don't mask the original exception but log it
-
+            _log.error("Failed to set the status to cancelled. ScanId: {}", scanId, e2);
         }
     }
 
