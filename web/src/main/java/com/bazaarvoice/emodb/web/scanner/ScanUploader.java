@@ -204,8 +204,13 @@ public class ScanUploader {
             throw Throwables.propagate(e);
         }
 
+
         // Create the scan
-        _scanStatusDAO.updateScanStatus(status);
+        try {
+            _scanStatusDAO.updateScanStatus(status);
+        } catch (Exception e) {
+            doExceptionTasks(scanId, e);
+        }
 
         // spawn a thread and do the below asynchronously as we would have to wait for a minute to continue to scan and we don't to include that delay in here for responding.
         new Thread(() ->
@@ -220,24 +225,31 @@ public class ScanUploader {
                 // Send notification that the scan has started
                 _stashStateListener.stashStarted(status.asPluginStashMetadata());
             } catch (Exception e) {
-                _log.error("Failed to start scan and upload for scan {}", scanId, e);
-
-                // Delete the entry of the scan start time in Zookeeper.
-                try {
-                    _compactionControlSource.deleteStashTime(scanId, _dataCenters.getSelf().getName());
-                } catch (Exception ex) {
-                    _log.error("Failed to delete the stash time for scan {}", scanId, ex);
-                }
-
-                // The scan was not properly started; cancel the scan
-                try {
-                    _scanStatusDAO.setCanceled(scanId);
-                } catch (Exception e2) {
-                    // Don't mask the original exception but log it
-                    _log.error("Failed to mark unsuccessfully started scan as canceled: [id={}]", scanId, e2);
-                }
+                doExceptionTasks(scanId, e);
             }
         }).start();
+    }
+
+    /**
+     * This is the helper routine to do few tasks in case of exception of starting a scan.
+     */
+    public void doExceptionTasks(String scanId, Exception e) {
+        _log.error("Failed to start scan and upload for scan {}", scanId, e);
+
+        // Delete the entry of the scan start time in Zookeeper.
+        try {
+            _compactionControlSource.deleteStashTime(scanId, _dataCenters.getSelf().getName());
+        } catch (Exception ex) {
+            _log.error("Failed to delete the stash time for scan {}", scanId, ex);
+        }
+
+        // The scan was not properly started; cancel the scan
+        try {
+            _scanStatusDAO.setCanceled(scanId);
+        } catch (Exception e2) {
+            // Don't mask the original exception but log it
+
+        }
     }
 
     /**
