@@ -299,7 +299,7 @@ public class DefaultBlobStore implements BlobStore {
     }
 
     @Override
-    public void put(String tableName, String blobId, InputSupplier<? extends InputStream> in, Map<String,String> attributes, @Nullable Duration ttl) throws IOException {
+    public void put(String tableName, String blobId, InputSupplier<? extends InputStream> in, Map<String,String> attributes) throws IOException {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
         checkNotNull(in, "in");
@@ -329,7 +329,7 @@ public class DefaultBlobStore implements BlobStore {
                 break;
             }
             ByteBuffer buffer = ByteBuffer.wrap(bytes, 0, chunkLength);
-            _storageProvider.writeChunk(table, blobId, chunkCount, buffer, ttl, timestamp);
+            _storageProvider.writeChunk(table, blobId, chunkCount, buffer, timestamp);
             length += chunkLength;
             chunkCount++;
         }
@@ -339,7 +339,7 @@ public class DefaultBlobStore implements BlobStore {
         String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
 
         StorageSummary summary = new StorageSummary(length, chunkCount, chunkSize, md5, sha1, attributes, timestamp);
-        _storageProvider.writeMetadata(table, blobId, summary, ttl);
+        _storageProvider.writeMetadata(table, blobId, summary);
     }
 
     @Override

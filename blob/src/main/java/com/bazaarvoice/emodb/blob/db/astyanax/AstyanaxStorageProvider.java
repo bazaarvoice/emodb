@@ -46,7 +46,6 @@ import org.apache.cassandra.dht.Token;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -136,7 +135,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
     @ParameterizedTimed(type="AstyanaxStorageProvider")
     @Override
-    public void writeChunk(Table tbl, String blobId, int chunkId, ByteBuffer data, Duration ttl, long timestamp) {
+    public void writeChunk(Table tbl, String blobId, int chunkId, ByteBuffer data, long timestamp) {
         AstyanaxTable table = (AstyanaxTable) checkNotNull(tbl, "table");
         for (AstyanaxStorage storage : table.getWriteStorage()) {
             BlobPlacement placement = (BlobPlacement) storage.getPlacement();
@@ -145,7 +144,7 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
             // the presence of the small one to be confident that the big column has replicated and is available.
             MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(CONSISTENCY_STRONG)
                     .setTimestamp(timestamp);
-            Integer ttlSeconds = Ttls.toSeconds(ttl, 1, null);
+            Integer ttlSeconds = Ttls.toSeconds(null, 1, null);
             mutation.withRow(placement.getBlobColumnFamily(), storage.getRowKey(blobId))
                     .putEmptyColumn(getColumn(ColumnGroup.B, chunkId), ttlSeconds)
                     .putColumn(getColumn(ColumnGroup.Z, chunkId), data, ttlSeconds);
@@ -201,14 +200,14 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
     @ParameterizedTimed(type="AstyanaxStorageProvider")
     @Override
-    public void writeMetadata(Table tbl, String blobId, StorageSummary summary, Duration ttl) {
+    public void writeMetadata(Table tbl, String blobId, StorageSummary summary) {
         AstyanaxTable table = (AstyanaxTable) checkNotNull(tbl, "table");
         for (AstyanaxStorage storage : table.getWriteStorage()) {
             BlobPlacement placement = (BlobPlacement) storage.getPlacement();
 
             MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(CONSISTENCY_STRONG)
                     .setTimestamp(summary.getTimestamp());
-            Integer ttlSeconds = Ttls.toSeconds(ttl, 1, null);
+            Integer ttlSeconds = Ttls.toSeconds(null, 1, null);
             mutation.withRow(placement.getBlobColumnFamily(), storage.getRowKey(blobId))
                     .putColumn(getColumn(ColumnGroup.A, 0), JsonHelper.asJson(summary), ttlSeconds);
             execute(mutation);

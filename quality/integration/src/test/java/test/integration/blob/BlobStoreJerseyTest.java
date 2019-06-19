@@ -58,7 +58,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -688,10 +687,10 @@ public class BlobStoreJerseyTest extends ResourceTest {
             }
         };
         Map<String, String> attributes = ImmutableMap.of("key", "value");
-        blobClient().put("table-name", "blob-id", in, attributes, Duration.ofDays(30));
+        blobClient().put("table-name", "blob-id", in, attributes);
 
         //noinspection unchecked
-        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes), eq(Duration.ofDays(30)));
+        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes));
         verifyNoMoreInteractions(_server);
     }
 

@@ -15,11 +15,9 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
-import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
@@ -61,7 +59,6 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -88,12 +85,10 @@ public class BlobStoreResource1 {
 
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
-    private final Meter _blobWritesWithTtl;
 
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
-        _blobWritesWithTtl = metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStore.blobWriteWithTTL"));
     }
 
     @GET
@@ -391,7 +386,6 @@ public class BlobStoreResource1 {
     public SuccessResponse put(@PathParam("table") String table,
                                @PathParam("blobId") String blobId,
                                InputStream in,
-                               @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers)
             throws IOException {
         // Note: we could copy the Content-Type and Content-Encoding headers into the attributes automatically because
@@ -410,15 +404,8 @@ public class BlobStoreResource1 {
             }
         }
 
-        // The "ttl" query param can be specified to delete the blob automatically after a period of time
-        Duration ttl = (ttlParam != null) ? ttlParam.get() : null;
-
         // Perform the put
-        _blobStore.put(table, blobId, onceOnlySupplier(in), attributes, ttl);
-        
-        if (null != ttl) {
-            _blobWritesWithTtl.mark();
-        }
+        _blobStore.put(table, blobId, onceOnlySupplier(in), attributes);
 
         return SuccessResponse.instance();
     }

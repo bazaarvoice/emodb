@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.table.db.Table;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -20,13 +19,13 @@ public interface StorageProvider {
 
     long getCurrentTimestamp(Table table);
 
-    void writeChunk(Table table, String blobId, int chunkId, ByteBuffer data, @Nullable Duration ttl, long timestamp);
+    void writeChunk(Table table, String blobId, int chunkId, ByteBuffer data, long timestamp);
 
     ByteBuffer readChunk(Table table, String blobId, int chunkId, long timestamp);
 
     void deleteObject(Table table, String blobId, Integer chunkCount);
 
-    void writeMetadata(Table table, String blobId, StorageSummary summary, @Nullable Duration ttl);
+    void writeMetadata(Table table, String blobId, StorageSummary summary);
 
     StorageSummary readMetadata(Table table, String blobId);
 

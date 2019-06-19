@@ -17,7 +17,6 @@ import com.google.common.io.InputSupplier;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -82,9 +81,9 @@ class BlobStoreAuthenticatorProxy implements BlobStore {
     }
 
     @Override
-    public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl)
+    public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes)
             throws IOException {
-        _authBlobStore.put(_apiKey, table, blobId, in, attributes, ttl);
+        _authBlobStore.put(_apiKey, table, blobId, in, attributes);
     }
 
     @Override

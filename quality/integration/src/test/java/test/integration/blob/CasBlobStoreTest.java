@@ -57,7 +57,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
-import io.dropwizard.jackson.Jackson;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
@@ -72,8 +71,6 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import javax.annotation.Nullable;
-import javax.validation.Validation;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -227,10 +224,10 @@ public class CasBlobStoreTest {
         verifyNotExists(blobId);
 
         // put some data and verify it, roughly 8MB
-        verifyPutAndGet(blobId, randomBytes(0x812345), ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover"), Duration.ofHours(1));
+        verifyPutAndGet(blobId, randomBytes(0x812345), ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover"));
 
         // overwrite it with a smaller blob, different data.  this isn't recommended because it will likely leave orphaned rows, but the blobstore doesn't prevent it.
-        verifyPutAndGet(blobId, randomBytes(0x4321), ImmutableMap.of("encoding", "image/png", "name", "mycat2.png"), null);
+        verifyPutAndGet(blobId, randomBytes(0x4321), ImmutableMap.of("encoding", "image/png", "name", "mycat2.png"));
 
         // clean up
         _store.delete(TABLE, blobId);
@@ -260,14 +257,14 @@ public class CasBlobStoreTest {
         }
     }
 
-    private void verifyPutAndGet(String blobId, final byte[] blobData, Map<String, String> attributes, @Nullable Duration ttl)
+    private void verifyPutAndGet(String blobId, final byte[] blobData, Map<String, String> attributes)
             throws IOException {
         _store.put(TABLE, blobId, new InputSupplier<InputStream>() {
             @Override
             public InputStream getInput() throws IOException {
                 return new ByteArrayInputStream(blobData);
             }
-        }, attributes, ttl);
+        }, attributes);
 
         // verify that we can get what we put
         Blob blob = _store.get(TABLE, blobId);
