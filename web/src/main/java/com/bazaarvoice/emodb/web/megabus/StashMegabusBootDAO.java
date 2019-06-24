@@ -39,12 +39,13 @@ public class StashMegabusBootDAO implements MegabusBootDAO {
             return BootStatus.NOT_STARTED;
         }
 
-        if (status.isDone()) {
-            return BootStatus.COMPLETE;
-        }
-
+        // Cancel check should go "before" Done check as isDone() returns true even if it's cancelled.
         if (status.isCanceled()) {
             return BootStatus.FAILED;
+        }
+
+        if (status.isDone()) {
+            return BootStatus.COMPLETE;
         }
 
         return BootStatus.IN_PROGRESS;
