@@ -24,6 +24,8 @@ public class MegabusBootWorkflow extends AbstractService {
         switch (_megabusBootDAO.getBootStatus(_applicationId)) {
             case NOT_STARTED:
                 _megabusBootDAO.initiateBoot(_applicationId, _megabusTopic);
+            // Scan Stash status is now updated synchronously before the wait times.
+            // so once the scan starts, the status we get here should be in progress and this should avoid multiple initiate boots.
             case IN_PROGRESS:
             case COMPLETE:
                 notifyStarted();
@@ -35,6 +37,6 @@ public class MegabusBootWorkflow extends AbstractService {
 
     @Override
     protected void doStop() {
-
+        notifyStopped();
     }
 }
