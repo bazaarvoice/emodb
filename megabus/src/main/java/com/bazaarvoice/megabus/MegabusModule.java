@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
@@ -69,6 +70,12 @@ public class MegabusModule extends PrivateModule {
     Topic provideRetryRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getRetryRefTopic());
         return megabusConfiguration.getRetryRefTopic();
+    }
+
+    @Provides
+    @Singleton
+    MegabusRefProducerConfiguration provideMegabusRefProducerConfiguration(MegabusConfiguration megabusConfiguration) {
+        return megabusConfiguration.getRefProducerConfiguration();
     }
 
 }

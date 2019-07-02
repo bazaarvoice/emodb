@@ -1,6 +1,7 @@
 package com.bazaarvoice.megabus;
 
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -37,6 +38,11 @@ public class MegabusConfiguration {
     @JsonProperty("boot")
     private MegabusBootConfiguration _bootConfiguration;
 
+    @Valid
+    @NotNull
+    @JsonProperty("refProducer")
+    private MegabusRefProducerConfiguration _refProducerConfiguration;
+
     public String getApplicationId() {
         return _applicationId;
     }
@@ -51,6 +57,10 @@ public class MegabusConfiguration {
 
     public MegabusBootConfiguration getBootConfiguration() {
         return _bootConfiguration;
+    }
+
+    public MegabusRefProducerConfiguration getRefProducerConfiguration() {
+        return _refProducerConfiguration;
     }
 
     public Topic getMissingRefTopic() {
