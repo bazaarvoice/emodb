@@ -45,8 +45,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
 
-    private static final Duration POLL_INTERVAL = Duration.ofMillis(50);
-    private static final int EVENTS_LIMIT = 1000;
+    private final int _pollIntervalMs;
+    private final int _eventsLimit;
+    private final int _skipWaitThreshold;
 
     private final RateLimitedLog _rateLimitedLog;
     private final Databus _databus;
@@ -61,22 +62,29 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final Topic _topic;
     private final Clock _clock;
 
-    public MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+    public MegabusRefProducer(MegabusRefProducerConfiguration config, Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                               Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
                               String partitionIdentifier, String applicationId) {
-        this(databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
+        this(config, databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
                 topic, partitionIdentifier, applicationId, null);
     }
 
     @VisibleForTesting
-    MegabusRefProducer(Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+    MegabusRefProducer(MegabusRefProducerConfiguration configuration, Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
                        RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                        @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
                        ObjectMapper objectMapper, Topic topic, String partitionIdentifer, String applicationId,
                        Clock clock) {
 
         _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + partitionIdentifer);
+
+        checkArgument(configuration.getPollIntervalMs() > 0);
+        checkArgument(configuration.getBatchSize() > 0);
+        checkArgument(configuration.getSkipWaitThreshold() >= 0 && configuration.getSkipWaitThreshold() <= configuration.getBatchSize());
+        _pollIntervalMs = configuration.getPollIntervalMs();
+        _eventsLimit = configuration.getBatchSize();
+        _skipWaitThreshold = configuration.getSkipWaitThreshold();
         _databus = checkNotNull(databus, "databus");
         _eventStore = checkNotNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
@@ -112,7 +120,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
     @Override
     protected AbstractScheduledService.Scheduler scheduler() {
-        return AbstractScheduledService.Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
+        return AbstractScheduledService.Scheduler.newFixedDelaySchedule(0, _pollIntervalMs, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -153,9 +161,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
         // Poll for events on the megabus subscription
         long startTime = _clock.instant().getNano();
         List<String> eventKeys = Lists.newArrayList();
-        List<EventData> result = _eventStore.peek(_subscriptionName, EVENTS_LIMIT);
+        List<EventData> result = _eventStore.peek(_subscriptionName, _eventsLimit);
         List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
-        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), EVENTS_LIMIT / _topic.getPartitions());
+        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), _eventsLimit / _topic.getPartitions());
         for (Event event : events) {
             String key = Coordinate.of(event.payload.getTable(), event.payload.getKey()).toString();
             refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(), event.payload);
@@ -186,7 +194,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
             _databus.acknowledge(_subscriptionName, eventKeys);
         }
 
-        return !eventKeys.isEmpty();
+        return eventKeys.size() >= _skipWaitThreshold;
     }
 
     private void trackAverageEventDuration(long durationInNs, int numEvents) {

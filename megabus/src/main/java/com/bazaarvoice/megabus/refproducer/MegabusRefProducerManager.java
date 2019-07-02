@@ -38,6 +38,7 @@ public class MegabusRefProducerManager {
                                      @MegabusRefTopic Topic refTopic,
                                      @SelfHostAndPort HostAndPort hostAndPort,
                                      Clock clock,
+                                     final MegabusRefProducerConfiguration refProducerConfiguration,
                                      final DatabusFactory databusFactory,
                                      DatabusEventStore databusEventStore,
                                      final @SystemIdentity String systemId,
@@ -56,7 +57,7 @@ public class MegabusRefProducerManager {
         // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
         // we should reconcile this inconsistency
         PartitionedServiceSupplier refProducerSupplier = partition ->
-                new MegabusRefProducer(databusFactory.forOwner(systemId), databusEventStore,
+                new MegabusRefProducer(refProducerConfiguration, databusFactory.forOwner(systemId), databusEventStore,
                         Conditions.partition(numRefPartitions, partition + 1),
                         logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
                         Integer.toString(partition), applicationId);
