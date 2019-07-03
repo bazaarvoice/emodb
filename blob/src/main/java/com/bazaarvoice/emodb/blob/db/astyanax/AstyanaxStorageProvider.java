@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.blob.db.astyanax;
 import com.bazaarvoice.emodb.blob.BlobReadConsistency;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
-import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
@@ -144,10 +143,9 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
             // the presence of the small one to be confident that the big column has replicated and is available.
             MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(CONSISTENCY_STRONG)
                     .setTimestamp(timestamp);
-            Integer ttlSeconds = Ttls.toSeconds(null, 1, null);
             mutation.withRow(placement.getBlobColumnFamily(), storage.getRowKey(blobId))
-                    .putEmptyColumn(getColumn(ColumnGroup.B, chunkId), ttlSeconds)
-                    .putColumn(getColumn(ColumnGroup.Z, chunkId), data, ttlSeconds);
+                    .putEmptyColumn(getColumn(ColumnGroup.B, chunkId))
+                    .putColumn(getColumn(ColumnGroup.Z, chunkId), data);
             execute(mutation);
 
             _blobWriteMeter.mark(data.remaining());
@@ -207,9 +205,8 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
 
             MutationBatch mutation = placement.getKeyspace().prepareMutationBatch(CONSISTENCY_STRONG)
                     .setTimestamp(summary.getTimestamp());
-            Integer ttlSeconds = Ttls.toSeconds(null, 1, null);
             mutation.withRow(placement.getBlobColumnFamily(), storage.getRowKey(blobId))
-                    .putColumn(getColumn(ColumnGroup.A, 0), JsonHelper.asJson(summary), ttlSeconds);
+                    .putColumn(getColumn(ColumnGroup.A, 0), JsonHelper.asJson(summary));
             execute(mutation);
         }
     }

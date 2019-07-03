@@ -15,6 +15,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
+import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
@@ -59,6 +60,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -386,6 +388,7 @@ public class BlobStoreResource1 {
     public SuccessResponse put(@PathParam("table") String table,
                                @PathParam("blobId") String blobId,
                                InputStream in,
+                               @QueryParam("ttl") SecondsParam ttlParam,
                                @Context HttpHeaders headers)
             throws IOException {
         // Note: we could copy the Content-Type and Content-Encoding headers into the attributes automatically because
@@ -402,6 +405,12 @@ public class BlobStoreResource1 {
             if (entry.getKey().startsWith(X_BVA_PREFIX)) {
                 attributes.put(entry.getKey().substring(X_BVA_PREFIX.length()), entry.getValue().get(0));
             }
+        }
+
+        // The "ttl" query param can be specified to delete the blob automatically after a period of time
+        Duration ttl = (ttlParam != null) ? ttlParam.get() : null;
+        if (null != ttl) {
+            throw new IllegalArgumentException(String.format("Ttl:{} is specified for blobId:{}"));
         }
 
         // Perform the put
