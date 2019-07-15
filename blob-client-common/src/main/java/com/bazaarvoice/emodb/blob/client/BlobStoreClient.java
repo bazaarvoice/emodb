@@ -18,7 +18,6 @@ import com.bazaarvoice.emodb.client.EmoResource;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
-import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -481,7 +480,7 @@ public class BlobStoreClient implements AuthBlobStore {
 
     @Override
     public void put(String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in,
-                    Map<String, String> attributes, @Nullable Duration ttl)
+                    Map<String, String> attributes)
             throws IOException {
         checkNotNull(table, "table");
         checkNotNull(blobId, "blobId");
@@ -489,10 +488,8 @@ public class BlobStoreClient implements AuthBlobStore {
         checkNotNull(attributes, "attributes");
         try {
             // Encode the ttl as a URL query parameter
-            Integer ttlSeconds = Ttls.toSeconds(ttl, 0, null);
             URI uri = _blobStore.clone()
                     .segment(table, blobId)
-                    .queryParam("ttl", (ttlSeconds != null) ? new Object[]{ttlSeconds} : new Object[0])
                     .build();
             // Encode the rest of the attributes as request headers
             EmoResource request = _client.resource(uri);
