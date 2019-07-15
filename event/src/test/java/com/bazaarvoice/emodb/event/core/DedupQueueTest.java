@@ -64,7 +64,7 @@ public class DedupQueueTest {
 
         // The first peek checks the read channel, find it empty, checks the write channel.
         q.peek(new SimpleEventSink(10));
-        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull());
+        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull(), Matchers.eq(true));
         verify(readerDao).readNewer(eq("write"), Matchers.<EventSink>any());
         verifyNoMoreInteractions(readerDao);
 
@@ -72,7 +72,7 @@ public class DedupQueueTest {
 
         // Subsequent peeks w/in a short window still peek the read channel, skip polling the write channel.
         q.peek(new SimpleEventSink(10));
-        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull());
+        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull(), Matchers.eq(true));
         verifyNoMoreInteractions(readerDao);
     }
 
