@@ -6,10 +6,12 @@ import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
+import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.MegabusRefTopic;
@@ -150,7 +152,7 @@ public class MegabusRefResolver extends AbstractService {
         }
 
         public Iterable<KeyValue<String, Map<String, Object>>> getKeyedResolvedDocs() {
-            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc));
+            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), Intrinsic.isDeleted(doc) ? null : doc));
 
         }
     }
