@@ -122,7 +122,7 @@ public class MegabusRefResolver extends AbstractService {
         resolutionResults
                 // extract the resolved documents
                 .flatMap((key, value) -> value.getKeyedResolvedDocs())
-                //convert deleted documents to null
+                // convert deleted documents to null
                 .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
                 // send to megabus
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
