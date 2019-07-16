@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.delta.eval.Intrinsics;
 import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.MegabusRefTopic;
@@ -29,7 +28,6 @@ import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -120,6 +118,7 @@ public class MegabusRefResolver extends AbstractService {
 
 
         resolutionResults.flatMap((key, value) -> value.getKeyedResolvedDocs())
+                .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
         resolutionResults
@@ -152,7 +151,7 @@ public class MegabusRefResolver extends AbstractService {
         }
 
         public Iterable<KeyValue<String, Map<String, Object>>> getKeyedResolvedDocs() {
-            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), Intrinsic.isDeleted(doc) ? null : doc));
+            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc));
 
         }
     }
