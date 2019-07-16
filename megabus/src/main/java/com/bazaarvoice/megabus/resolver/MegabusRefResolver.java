@@ -111,9 +111,11 @@ public class MegabusRefResolver extends AbstractService {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
+        // merge the ref stream with the ref-retry stream. They must be merged into a single stream for ordering purposes
         final KStream<String, List<MegabusRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})))
                 .merge(streamsBuilder.stream(_retryRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {}))));
 
+        // resolve refs into documents
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
 
 
