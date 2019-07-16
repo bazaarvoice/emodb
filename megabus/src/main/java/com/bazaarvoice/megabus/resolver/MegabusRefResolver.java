@@ -117,13 +117,20 @@ public class MegabusRefResolver extends AbstractService {
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
 
 
-        resolutionResults.flatMap((key, value) -> value.getKeyedResolvedDocs())
+        resolutionResults
+                // extract the resolved documents
+                .flatMap((key, value) -> value.getKeyedResolvedDocs())
+                //convert deleted documents to null
                 .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
+                // send to megabus
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
         resolutionResults
+                // filter out all resolution results without missing refs
                 .filterNot((key, result) -> result.getMissingRefs().isEmpty())
+                // add timestamp for missing refs
                 .mapValues(result -> new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())))
+                // send to missing topic
                 .to(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
