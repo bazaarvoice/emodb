@@ -80,6 +80,10 @@ megabus:
     scanStatusTable: __system_megabus_boot
     pendingScanRangeQueueName: megabus-boot-pending-scan-ranges
     completeScanRangeQueueName: megabus-boot-complete-scan-ranges
+  refProducer:
+    batchSize: 400
+    skipWaitThreshold: 250
+    pollIntervalMs: 100
 
 
 
