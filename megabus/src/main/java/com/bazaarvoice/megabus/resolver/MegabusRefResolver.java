@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
+import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -27,7 +28,6 @@ import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -111,18 +111,28 @@ public class MegabusRefResolver extends AbstractService {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
+        // merge the ref stream with the ref-retry stream. They must be merged into a single stream for ordering purposes
         final KStream<String, List<MegabusRef>> refStream = streamsBuilder.stream(_megabusRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})))
                 .merge(streamsBuilder.stream(_retryRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {}))));
 
+        // resolve refs into documents
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
 
 
-        resolutionResults.flatMap((key, value) -> value.getKeyedResolvedDocs())
+        resolutionResults
+                // extract the resolved documents
+                .flatMap((key, value) -> value.getKeyedResolvedDocs())
+                // convert deleted documents to null
+                .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
+                // send to megabus
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
         resolutionResults
+                // filter out all resolution results without missing refs
                 .filterNot((key, result) -> result.getMissingRefs().isEmpty())
+                // add timestamp for missing refs
                 .mapValues(result -> new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())))
+                // send to missing topic
                 .to(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)));
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
