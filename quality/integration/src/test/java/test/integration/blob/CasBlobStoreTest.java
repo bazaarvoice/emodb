@@ -85,12 +85,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
@@ -100,7 +98,6 @@ import java.util.Random;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static org.mockito.Mockito.atLeastOnce;
@@ -319,7 +316,7 @@ public class CasBlobStoreTest {
         }
     }
 
-    private void verifyPutAndGet(String blobId, final byte[] blobData, Map<String, String> attributes)
+    private void verifyPutAndGet(String blobId, final byte[] blobData, ImmutableMap<String, String> attributes)
             throws IOException {
         putBlob(blobId, blobData, attributes);
 
@@ -338,30 +335,18 @@ public class CasBlobStoreTest {
         assertEquals(buf.toByteArray(), blobData);
     }
 
-    private void verifyBlobMetadata(String blobId, byte[] blobData, Map<String, String> attributes) {
-        BlobMetadata md = _store.getMetadata(TABLE, blobId);
+    private void verifyBlobMetadata(String blobId, byte[] blobData, ImmutableMap<String, String> attributes) {
+        BlobMetadata blobMetadata = _store.getMetadata(TABLE, blobId);
 
-        InputSupplier<InputStream> inputSupplier = () -> new ByteArrayInputStream(blobData);
+        BlobMetadata expectedBlobMetadata = getBlobMetadata(blobId, blobData, new Date(), attributes);
 
-        DigestInputStream md5In = null;
-        try {
-            md5In = new DigestInputStream(inputSupplier.getInput(), getMessageDigest("MD5"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
-
-        DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
-        String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
-
-        assertEqualsBlobMetadata(md, new DefaultBlobMetadata(blobId, new Date(), blobData.length, md5, sha1, attributes));
+        assertEqualsBlobMetadata(blobMetadata, expectedBlobMetadata);
     }
 
     private static void assertEqualsBlobMetadata(BlobMetadata actual, BlobMetadata expected) {
         assertEquals(actual.getId(), expected.getId());
-//TODO
-//        assertEquals(actual.getMD5(), expected.getMD5());
-//        assertEquals(actual.getSHA1(), expected.getSHA1());
+        assertEquals(actual.getMD5(), expected.getMD5());
+        assertEquals(actual.getSHA1(), expected.getSHA1());
         assertEquals(actual.getLength(), expected.getLength());
         assertEquals(actual.getAttributes(), expected.getAttributes());
     }
@@ -525,11 +510,13 @@ public class CasBlobStoreTest {
     }
 
     private static DefaultBlobMetadata getBlobMetadata(String blobId, byte[] blobData, Date date, ImmutableMap<String, String> attributes) {
-        DigestInputStream md5In = new DigestInputStream(new ByteArrayInputStream(blobData), getMessageDigest("MD5"));
-        String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
+        MessageDigest mdMD5 = getMessageDigest("MD5");
+        mdMD5.update(blobData);
+        String md5 = Hex.encodeHexString(mdMD5.digest());
 
-        DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
-        String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
+        MessageDigest mdSHA1 = getMessageDigest("SHA-1");
+        mdSHA1.update(blobData);
+        String sha1 = Hex.encodeHexString(mdSHA1.digest());
 
         return new DefaultBlobMetadata(blobId, date, blobData.length, md5, sha1, attributes);
     }
