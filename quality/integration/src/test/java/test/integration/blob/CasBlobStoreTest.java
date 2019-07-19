@@ -89,6 +89,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Iterator;
@@ -207,18 +208,14 @@ public class CasBlobStoreTest {
         _store = injector.getInstance(BlobStore.class);
 
         _lifeCycle.start();
-    }
-
-    @BeforeMethod
-    public void beforeMethod() {
         TableOptions options = new TableOptionsBuilder().setPlacement(TABLE_PLACEMENT).build();
         Audit audit = new AuditBuilder().setLocalHost().build();
         _store.createTable(TABLE, options, ImmutableMap.<String, String>of(), audit);
     }
 
-    @AfterMethod
-    public void afterMethod() {
-        _store.dropTable(TABLE, new AuditBuilder().setComment("drop table").build());
+    @BeforeMethod
+    public void beforeMethod() {
+        _store.purgeTableUnsafe(TABLE, new AuditBuilder().setLocalHost().build());
     }
 
     @AfterClass
@@ -298,7 +295,7 @@ public class CasBlobStoreTest {
         putBlob(blobId, blobData, attributes);
 
         Blob blob = _store.get(TABLE, blobId, blobLength -> Range.satisfiableRange(0, blobLength));
-        verifyBlob(blob, blobData, attributes);
+        verifyBlob(blob, blobId, blobData, attributes);
     }
 
     private byte[] randomBytes(int length) {
@@ -322,25 +319,22 @@ public class CasBlobStoreTest {
 
         Blob blob = _store.get(TABLE, blobId);
         // verify that we can get what we putBlob
-        verifyBlob(blob, blobData, attributes);
+        verifyBlob(blob, blobId, blobData, attributes);
 
-        verifyBlobMetadata(blobId, blobData, attributes);
+        BlobMetadata blobMetadata = _store.getMetadata(TABLE, blobId);
+
+        //we don't check date, so can pass any non null value
+        BlobMetadata expectedBlobMetadata = getBlobMetadata(blobId, blobData, new Date(), attributes);
+        assertEqualsBlobMetadata(blobMetadata, expectedBlobMetadata);
     }
 
-    private void verifyBlob(Blob blob, byte[] blobData, Map<String, String> attributes) throws IOException {
+    private void verifyBlob(Blob blob, String blobId, byte[] blobData, Map<String, String> attributes) throws IOException {
+        assertEquals(blob.getId(), blobId);
         assertEquals(blob.getLength(), blobData.length);
         assertEquals(blob.getAttributes(), attributes);
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         blob.writeTo(buf);
         assertEquals(buf.toByteArray(), blobData);
-    }
-
-    private void verifyBlobMetadata(String blobId, byte[] blobData, ImmutableMap<String, String> attributes) {
-        BlobMetadata blobMetadata = _store.getMetadata(TABLE, blobId);
-
-        BlobMetadata expectedBlobMetadata = getBlobMetadata(blobId, blobData, new Date(), attributes);
-
-        assertEqualsBlobMetadata(blobMetadata, expectedBlobMetadata);
     }
 
     private static void assertEqualsBlobMetadata(BlobMetadata actual, BlobMetadata expected) {
@@ -434,7 +428,6 @@ public class CasBlobStoreTest {
         String blobId1 = "1";
         String blobId2 = "2";
 
-        // get fails initially
         assertEquals(Iterators.size(_store.scanMetadata(TABLE, null, Long.MAX_VALUE)), 0);
 
         verifyNotExists(blobId1);
@@ -453,6 +446,7 @@ public class CasBlobStoreTest {
         BlobMetadata blobMetadata2 = getBlobMetadata(blobId2, blobData2, now, attributes2);
 
         assertEqualsBlobMetadata(sortIterator(_store.scanMetadata(TABLE, null, Long.MAX_VALUE)), Lists.newArrayList(blobMetadata1, blobMetadata2).iterator());
+        assertEquals(Iterators.size(_store.scanMetadata(TABLE, null, 1)), 1);
     }
 
     private static Iterator<BlobMetadata> sortIterator(final Iterator<BlobMetadata> iterator) {
@@ -466,27 +460,18 @@ public class CasBlobStoreTest {
     @Test
     public void testScanMetadataFromBlobIdExclusive() throws Exception {
         String blobId1 = "1";
-        String blobId2 = "2";
 
         verifyNotExists(blobId1);
-        verifyNotExists(blobId2);
         Date now = new Date();
 
         ImmutableMap<String, String> attributes1 = ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover");
         byte[] blobData1 = randomBytes(0x812345);
         verifyPutAndGet(blobId1, blobData1, attributes1);
 
-        ImmutableMap<String, String> attributes2 = ImmutableMap.of("encoding", "image/png", "name", "mycat2.png");
-        byte[] blobData2 = randomBytes(0x4321);
-        verifyPutAndGet(blobId2, blobData2, attributes2);
-
         BlobMetadata blobMetadata1 = getBlobMetadata(blobId1, blobData1, now, attributes1);
-        BlobMetadata blobMetadata2 = getBlobMetadata(blobId2, blobData2, now, attributes2);
 
-        //TODO
-//        assertEqualsBlobMetadata(sortIterator(_store.scanMetadata(TABLE, blobId1, Long.MAX_VALUE)), Lists.newArrayList(blobMetadata2).iterator());
-//        assertEqualsBlobMetadata(sortIterator(_store.scanMetadata(TABLE, blobId2, Long.MAX_VALUE)), new ArrayList<BlobMetadata>().iterator());
-//        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, "3_not_existsing_id", Long.MAX_VALUE), new ArrayList<BlobMetadata>().iterator());
+        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, blobId1, Long.MAX_VALUE), Collections.emptyIterator());
+        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, null, Long.MAX_VALUE), Lists.newArrayList(blobMetadata1).iterator());
     }
 
     private static void assertEqualsBlobMetadata(Iterator<BlobMetadata> actual, Iterator<BlobMetadata> expected) {
@@ -509,7 +494,7 @@ public class CasBlobStoreTest {
         }
     }
 
-    private static DefaultBlobMetadata getBlobMetadata(String blobId, byte[] blobData, Date date, ImmutableMap<String, String> attributes) {
+    private static BlobMetadata getBlobMetadata(String blobId, byte[] blobData, Date date, ImmutableMap<String, String> attributes) {
         MessageDigest mdMD5 = getMessageDigest("MD5");
         mdMD5.update(blobData);
         String md5 = Hex.encodeHexString(mdMD5.digest());
