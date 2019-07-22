@@ -88,10 +88,10 @@ public class JobModule extends PrivateModule {
 
     @Provides @Singleton @JobConcurrencyLevel
     protected Integer provideJobConcurrencyLevel(JobConfiguration configuration) {
-        if (_serviceMode.specifies(EmoServiceMode.Aspect.job)) {
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.job_processing)) {
             return configuration.getConcurrencyLevel();
         }
-        // Don't process jobs if not running in server mode
+        // Don't process jobs if not running in a job processing mode
         return 0;
     }
 
