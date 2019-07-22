@@ -52,7 +52,8 @@ public enum EmoServiceMode {
             Aspect.report,
             Aspect.compaction_control,
             Aspect.compaction_control_web,
-            Aspect.job,
+            Aspect.job_module,
+            Aspect.job_processing,
             Aspect.security,
             Aspect.full_consistency,
             Aspect.invalidation_cache_listener,
@@ -131,7 +132,7 @@ public enum EmoServiceMode {
             Aspect.full_consistency,
             Aspect.queue_module,
             Aspect.dataBus_module,
-            Aspect.job,
+            Aspect.job_module,
             Aspect.megabus,
             Aspect.kafka
     );
@@ -192,7 +193,8 @@ public enum EmoServiceMode {
         report,
         compaction_control,
         compaction_control_web,
-        job,
+        job_module,
+        job_processing,
         full_consistency, // This wires in the fct global zookeeper location
         security,
         invalidation_cache_listener, // This makes sure the node is registered in zookeeper to invalidate its caches

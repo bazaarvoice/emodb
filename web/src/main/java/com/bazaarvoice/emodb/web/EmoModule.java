@@ -185,7 +185,7 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
@@ -229,7 +229,7 @@ public class EmoModule extends AbstractModule {
         evaluate(scanner, new ScannerSetup());
         evaluate(delta_migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
-        evaluate(job, new JobSetup());
+        evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
         evaluate(dataStore_web, new DataStoreAsyncSetup());
