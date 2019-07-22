@@ -8,6 +8,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -42,9 +43,9 @@ public class DefaultKafkaCluster implements KafkaCluster {
     }
 
     @Override
-    public void createTopicIfNotExists(Topic topic) {
+    public void createTopicIfNotExists(Topic topic, Map<String, String> config) {
         NewTopic newTopic = new NewTopic(topic.getName(), topic.getPartitions(), topic.getReplicationFactor());
-
+        newTopic.configs(config);
         try {
             _adminClient.createTopics(Collections.singleton(newTopic)).all().get();
         } catch (ExecutionException | InterruptedException e) {

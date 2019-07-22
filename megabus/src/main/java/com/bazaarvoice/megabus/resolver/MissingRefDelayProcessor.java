@@ -1,8 +1,10 @@
 package com.bazaarvoice.megabus.resolver;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
@@ -11,12 +13,14 @@ import com.bazaarvoice.megabus.MegabusTopic;
 import com.bazaarvoice.megabus.MissingRefTopic;
 import com.bazaarvoice.megabus.RetryRefTopic;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Properties;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -37,20 +41,23 @@ public class MissingRefDelayProcessor extends AbstractService {
 
     private KafkaCluster _kafkaCluster;
     private Clock _clock;
+    private final String _instanceId;
 
     private KafkaStreams _streams;
 
     @Inject
     public MissingRefDelayProcessor(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                              @MegabusTopic Topic megabusResolvedTopic,
-                              @RetryRefTopic Topic retryRefTopic,
-                              @MissingRefTopic Topic missingRefTopic,
-                              @MegabusApplicationId String applicationId,
-                              KafkaCluster kafkaCluster, Clock clock) {
+                                    @MegabusTopic Topic megabusResolvedTopic,
+                                    @RetryRefTopic Topic retryRefTopic,
+                                    @MissingRefTopic Topic missingRefTopic,
+                                    @MegabusApplicationId String applicationId,
+                                    KafkaCluster kafkaCluster, Clock clock,
+                                    @SelfHostAndPort HostAndPort hostAndPort) {
         _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
         _applicationId = checkNotNull(applicationId, "applicationId");
         _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
+        _instanceId = checkNotNull(hostAndPort).toString();
         _clock = checkNotNull(clock, "clock");
     }
 
@@ -62,6 +69,12 @@ public class MissingRefDelayProcessor extends AbstractService {
         streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + "-retry");
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
+
+        streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
+
+        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
+
+        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
