@@ -12,13 +12,16 @@ import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
 import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import java.time.Duration;
+import org.apache.kafka.common.config.TopicConfig;
 
 public class MegabusModule extends PrivateModule {
 
-    private final int REF_PARTITIONS = 8;
+    private final int REF_PARTITIONS = 4;
 
     private final EmoServiceMode _serviceMode;
 
@@ -44,7 +47,11 @@ public class MegabusModule extends PrivateModule {
     @Singleton
     @MegabusRefTopic
     Topic provideMegabusRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
-        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusRefTopic());
+
+        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusRefTopic(),
+                ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
+                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
         return megabusConfiguration.getMegabusRefTopic();
     }
 
@@ -52,7 +59,10 @@ public class MegabusModule extends PrivateModule {
     @Singleton
     @MegabusTopic
     Topic provideMegabusTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
-        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusTopic());
+        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusTopic(),
+                ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT,
+                        TopicConfig.DELETE_RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(14).toMillis()),
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
         return megabusConfiguration.getMegabusTopic();
     }
 
@@ -60,7 +70,10 @@ public class MegabusModule extends PrivateModule {
     @Singleton
     @MissingRefTopic
     Topic provideMissingRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
-        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMissingRefTopic());
+        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMissingRefTopic(),
+                ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
+                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
         return megabusConfiguration.getMissingRefTopic();
     }
 
@@ -68,7 +81,10 @@ public class MegabusModule extends PrivateModule {
     @Singleton
     @RetryRefTopic
     Topic provideRetryRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
-        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getRetryRefTopic());
+        kafkaCluster.createTopicIfNotExists(megabusConfiguration.getRetryRefTopic(),
+                ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
+                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
         return megabusConfiguration.getRetryRefTopic();
     }
 
