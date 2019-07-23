@@ -490,6 +490,18 @@ public class BlobStoreJerseyTest extends ResourceTest {
     }
 
     @Test
+    public void testSetTableAttributes() {
+        Map<String, String> map = ImmutableMap.of("key", "value");
+        String table = "table-name";
+        when(_server.getTableAttributes(table)).thenReturn(map);
+        Audit audit = new AuditBuilder().build();
+
+        _server.setTableAttributes(table, map, audit);
+        verify(_server).setTableAttributes(table, map, audit);
+        verifyNoMoreInteractions(_server);
+    }
+
+    @Test
     public void testGetTableOptions() {
         TableOptions expected = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableOptions("table-name")).thenReturn(expected);
