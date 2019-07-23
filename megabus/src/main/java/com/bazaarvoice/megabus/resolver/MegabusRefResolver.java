@@ -26,15 +26,6 @@ import com.google.common.collect.Table;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
-import java.time.Clock;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -44,9 +35,27 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MegabusRefResolver extends AbstractService {
+
+    private final Logger _log = LoggerFactory.getLogger(MegabusRefResolver.class);
+    private final static long RESTART_SLEEP_TIME_IN_MS = Duration.ofMinutes(1).toMillis();
 
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
@@ -62,6 +71,7 @@ public class MegabusRefResolver extends AbstractService {
     private final Meter _redundantMeter;
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
+    private final Meter _restartMeter;
 
     private KafkaStreams _streams;
 
@@ -87,6 +97,7 @@ public class MegabusRefResolver extends AbstractService {
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
+        _restartMeter = metricRegistry.meter(getMetricName("restartKafkaStream"));
 
         DropwizardMetricsReporter.registerDefaultMetricsRegistry(metricRegistry);
     }
@@ -97,6 +108,9 @@ public class MegabusRefResolver extends AbstractService {
 
     @Override
     public void doStart() {
+        _log.info("Starting Megabus Ref Resolver service");
+
+
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
@@ -128,7 +142,8 @@ public class MegabusRefResolver extends AbstractService {
                 // convert deleted documents to null
                 .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
                 // send to megabus
-                .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
+                .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {
+                })));
 
         resolutionResults
                 // filter out all resolution results without missing refs
@@ -138,10 +153,47 @@ public class MegabusRefResolver extends AbstractService {
                 // send to missing topic
                 .to(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)));
 
+
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
+
+        // setting the below exception handler to catch any unexpected exceptions. This is called whenever a stream thread is terminated by an unexpected exception.
+        _streams.setUncaughtExceptionHandler((Thread thread, Throwable throwable) -> {
+            _log.error(String.format("Stream thread: %s of application: %s encountered unexpected exception: %s", thread.getName(), _applicationId + "-resolver", throwable.getMessage()));
+
+            _log.info("Stopping Megabus Ref Resolver service for failure case.");
+            closeStream(_streams);
+
+            // don't throw any errors here and stop.
+            // notifyFailed(th);
+            try {
+                Thread.sleep(RESTART_SLEEP_TIME_IN_MS);
+            } catch (InterruptedException e) {
+                _log.error("sleep is interrupted: " + e.getMessage());
+            }
+            _log.info("Restarting kafka streams at: " + LocalDateTime.now());
+            _restartMeter.mark();
+            _streams.start();
+        });
+
         _streams.start();
 
         notifyStarted();
+    }
+
+    @Override
+    protected void doStop() {
+        _log.info("Stopping Megabus Ref Resolver service");
+
+        closeStream(_streams);
+
+        notifyStopped();
+    }
+
+    private static void closeStream(KafkaStreams streams) {
+        if (streams != null) {
+            streams.cleanUp();
+            streams.close();
+        }
     }
 
     private static class ResolutionResult {
@@ -216,12 +268,5 @@ public class MegabusRefResolver extends AbstractService {
         });
 
         return new ResolutionResult(resolvedDocuments, missingRefs);
-    }
-
-
-    @Override
-    protected void doStop() {
-        _streams.close();
-        notifyStopped();
     }
 }
