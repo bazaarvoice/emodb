@@ -57,7 +57,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.io.InputSupplier;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -75,7 +74,6 @@ import org.fest.util.Lists;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -83,7 +81,6 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -328,7 +325,7 @@ public class CasBlobStoreTest {
         assertEqualsBlobMetadata(blobMetadata, expectedBlobMetadata);
     }
 
-    private void verifyBlob(Blob blob, String blobId, byte[] blobData, Map<String, String> attributes) throws IOException {
+    private static void verifyBlob(Blob blob, String blobId, byte[] blobData, Map<String, String> attributes) throws IOException {
         assertEquals(blob.getId(), blobId);
         assertEquals(blob.getLength(), blobData.length);
         assertEquals(blob.getAttributes(), attributes);
@@ -346,12 +343,7 @@ public class CasBlobStoreTest {
     }
 
     private void putBlob(String blobId, byte[] blobData, Map<String, String> attributes) throws IOException {
-        _store.put(TABLE, blobId, new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                return new ByteArrayInputStream(blobData);
-            }
-        }, attributes);
+        _store.put(TABLE, blobId, () -> new ByteArrayInputStream(blobData), attributes);
     }
 
     @Test
@@ -459,19 +451,19 @@ public class CasBlobStoreTest {
 
     @Test
     public void testScanMetadataFromBlobIdExclusive() throws Exception {
-        String blobId1 = "1";
+        String blobId = "1";
 
-        verifyNotExists(blobId1);
+        verifyNotExists(blobId);
         Date now = new Date();
 
-        ImmutableMap<String, String> attributes1 = ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover");
-        byte[] blobData1 = randomBytes(0x812345);
-        verifyPutAndGet(blobId1, blobData1, attributes1);
+        ImmutableMap<String, String> attributes = ImmutableMap.of("encoding", "image/jpeg", "name", "mycat.jpg", "owner", "clover");
+        byte[] blobData = randomBytes(0x812345);
+        verifyPutAndGet(blobId, blobData, attributes);
 
-        BlobMetadata blobMetadata1 = getBlobMetadata(blobId1, blobData1, now, attributes1);
+        BlobMetadata blobMetadata = getBlobMetadata(blobId, blobData, now, attributes);
 
-        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, blobId1, Long.MAX_VALUE), Collections.emptyIterator());
-        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, null, Long.MAX_VALUE), Lists.newArrayList(blobMetadata1).iterator());
+        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, blobId, Long.MAX_VALUE), Collections.emptyIterator());
+        assertEqualsBlobMetadata(_store.scanMetadata(TABLE, null, Long.MAX_VALUE), Lists.newArrayList(blobMetadata).iterator());
     }
 
     private static void assertEqualsBlobMetadata(Iterator<BlobMetadata> actual, Iterator<BlobMetadata> expected) {
