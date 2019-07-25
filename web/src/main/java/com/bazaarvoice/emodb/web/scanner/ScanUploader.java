@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner;
 
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
+import com.bazaarvoice.emodb.plugin.stash.StashMetadata;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
@@ -20,6 +21,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.inject.Inject;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +64,8 @@ public class ScanUploader {
     private final CompactionControlSource _compactionControlSource;
     private final DataCenters _dataCenters;
 
+    private final ScheduledExecutorService _executorService;
+
     @Inject
     public ScanUploader(DataTools dataTools, ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
                         StashStateListener stashStateListener, @DelegateCompactionControl CompactionControlSource compactionControlSource, DataCenters dataCenters) {
@@ -69,6 +75,7 @@ public class ScanUploader {
         _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
         _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
         _dataCenters = checkNotNull(dataCenters, "dataCenters");
+        _executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
     @VisibleForTesting
@@ -190,18 +197,20 @@ public class ScanUploader {
     }
 
     private void startScanUpload(String scanId, ScanStatus status, Set<String> placements) {
-        try {
-            // compaction control timestamp = stash start time + 1 minute buffer time. This is needed to allow the setting time to trickle the request to the DataStore.
-            // Setting the time in the future takes care of the issue of there being any in-flight compactions
-            // Note: the same compaction control timestamp with 1 minute buffer time is also considered during the multiscan deltas/compactions resolving.
-            long compactionControlTime = status.getCompactionControlTime().getTime();
-            // expired time for now is designed to be 10 hours from the compaction control time.
-            long expireTime = compactionControlTime + Duration.ofHours(10).toMillis();
-            // Update the scan start time in Zookeeper in all data centers.
-            _compactionControlSource.updateStashTime(scanId, compactionControlTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
-        } catch (Exception e) {
-            _log.error("Failed to update the stash time for scan {}", scanId, e);
-            throw Throwables.propagate(e);
+        if (status.getOptions().isTemporalEnabled()) {
+            try {
+                // compaction control timestamp = stash start time + 1 minute buffer time. This is needed to allow the setting time to trickle the request to the DataStore.
+                // Setting the time in the future takes care of the issue of there being any in-flight compactions
+                // Note: the same compaction control timestamp with 1 minute buffer time is also considered during the multiscan deltas/compactions resolving.
+                long compactionControlTime = status.getCompactionControlTime().getTime();
+                // expired time for now is designed to be 10 hours from the compaction control time.
+                long expireTime = compactionControlTime + Duration.ofHours(10).toMillis();
+                // Update the scan start time in Zookeeper in all data centers.
+                _compactionControlSource.updateStashTime(scanId, compactionControlTime, Lists.newArrayList(status.getOptions().getPlacements()), expireTime, _dataCenters.getSelf().getName());
+            } catch (Exception e) {
+                _log.error("Failed to update the stash time for scan {}", scanId, e);
+                throw Throwables.propagate(e);
+            }
         }
 
 
@@ -212,13 +221,8 @@ public class ScanUploader {
             doExceptionTasks(scanId, e);
         }
 
-        // spawn a thread and do the below asynchronously as we would have to wait for a minute to continue to scan and we don't to include that delay in here for responding.
-        new Thread(() ->
-        {
+        Runnable startScan = () -> {
             try {
-                // We would like to wait for 5 minutes here to continue to scan to make sure scan don't miss any deltas that are written before the compaction control time.
-                Thread.sleep(_scanWaitTimeInMillis);
-
                 // Notify the workflow that the scan can be started
                 _scanWorkflow.scanStatusUpdated(scanId);
 
@@ -227,7 +231,14 @@ public class ScanUploader {
             } catch (Exception e) {
                 doExceptionTasks(scanId, e);
             }
-        }).start();
+        };
+
+        if (status.getOptions().isTemporalEnabled()) {
+            // We would like to wait for 5 minutes here to continue to scan to make sure scan don't miss any deltas that are written before the compaction control time.
+            _executorService.schedule(startScan, _scanWaitTimeInMillis, TimeUnit.MILLISECONDS);
+        } else {
+            startScan.run();
+        }
     }
 
     /**
