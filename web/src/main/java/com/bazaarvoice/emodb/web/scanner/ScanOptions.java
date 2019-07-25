@@ -40,7 +40,7 @@ public class ScanOptions {
     private Duration _maxRangeScanTime = DEFAULT_MAX_RANGE_SCAN_TIME;
     // Allow compaction of records during the scan.  Potentially increases the total scan time.  Default is false
     private boolean _compactionEnabled = false;
-    // Where or not to stash temporally
+    // Whether or not to stash temporally
     private boolean _temporalEnabled = true;
 
     public ScanOptions(String placement) {

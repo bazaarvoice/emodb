@@ -477,7 +477,7 @@ public class LocalScanUploadMonitor extends AbstractService {
     private void scheduleOverrunCheck(ScanStatus status) {
         final String scanId = status.getScanId();
 
-        // If temporal stash is disabled, this is likely not a traditional stash run, and it may take longer than 24 hours
+        // If temporal stash is disabled, this is likely not a daily stash run, and it may take longer than 24 hours.
         // In this case, don't interrupt it if it is taking a while.
         if (!status.getOptions().isTemporalEnabled()) {
             return;
