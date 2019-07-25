@@ -72,6 +72,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 5); // 5 msloc
+        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 15 * 1024 * 1024); // 15 MB
 
         props.put(ProducerConfig.CLIENT_ID_CONFIG, _instanceIdentifier);
 
