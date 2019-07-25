@@ -34,6 +34,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class MissingRefDelayProcessor extends AbstractService {
 
     private static Logger _log = LoggerFactory.getLogger(MissingRefDelayProcessor.class);
+    private static final String SUFFIX = "-retry";
 
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
@@ -66,7 +67,7 @@ public class MissingRefDelayProcessor extends AbstractService {
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + "-retry");
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + SUFFIX);
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
@@ -74,7 +75,7 @@ public class MissingRefDelayProcessor extends AbstractService {
 
         streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
 
-        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId);
+        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId + SUFFIX);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
