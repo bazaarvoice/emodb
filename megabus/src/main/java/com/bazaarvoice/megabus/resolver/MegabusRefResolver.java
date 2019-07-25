@@ -48,6 +48,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MegabusRefResolver extends AbstractService {
 
+    private static final String SUFFIX = "-resolver";
+
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
     private final Topic _megabusResolvedTopic;
@@ -100,7 +102,7 @@ public class MegabusRefResolver extends AbstractService {
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId  + "-resolver");
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + SUFFIX);
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
@@ -113,7 +115,7 @@ public class MegabusRefResolver extends AbstractService {
         // 15 MB max message size
         streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), 15 * 1024 * 1024);
 
-        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId);
+        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId + SUFFIX);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
