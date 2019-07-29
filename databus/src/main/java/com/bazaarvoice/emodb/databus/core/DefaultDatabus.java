@@ -120,6 +120,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     /* This is how long we submit tasks to drain the queue for each subscription from one poll request */
     private static final Duration MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION = Duration.ofMinutes(1);
 
+    /* This is how far extra we should scan the replay subscription to alleviate the effects of race conditions */
+    private static final Duration REPLAY_SINCE_PADDING = Duration.ofMinutes(30);
+
     private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final SubscriptionDAO _subscriptionDao;
     private final DatabusEventStore _eventStore;
@@ -835,9 +838,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         String source = ChannelNames.getMasterReplayChannel();
         final OwnedSubscription destination = getSubscriptionByName(subscription);
 
+        Date sinceWithPadding = since != null ? Date.from(since.toInstant().minus(REPLAY_SINCE_PADDING)) : null;
+
         _eventStore.copy(source, subscription,
-                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
-                since);
+                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes, since),
+                sinceWithPadding);
     }
 
     @Override
