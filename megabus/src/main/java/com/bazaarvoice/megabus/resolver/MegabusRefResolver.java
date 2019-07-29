@@ -39,8 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -53,9 +51,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class MegabusRefResolver extends AbstractService {
-
     private final Logger _log = LoggerFactory.getLogger(MegabusRefResolver.class);
-    private final static long RESTART_SLEEP_TIME_IN_MS = Duration.ofMinutes(1).toMillis();
 
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
@@ -102,7 +98,7 @@ public class MegabusRefResolver extends AbstractService {
         DropwizardMetricsReporter.registerDefaultMetricsRegistry(metricRegistry);
     }
 
-    private String getMetricName(String name) {
+    protected static String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.megabus", "MegabusRefResolver", name);
     }
 
@@ -110,11 +106,10 @@ public class MegabusRefResolver extends AbstractService {
     public void doStart() {
         _log.info("Starting Megabus Ref Resolver service");
 
-
         final Properties streamsConfiguration = new Properties();
         // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
         // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId  + "-resolver");
+        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + "-resolver");
         // Where to find Kafka broker(s).
         streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
 
@@ -156,23 +151,15 @@ public class MegabusRefResolver extends AbstractService {
 
         _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
 
-        // setting the below exception handler to catch any unexpected exceptions. This is called whenever a stream thread is terminated by an unexpected exception.
-        _streams.setUncaughtExceptionHandler((Thread thread, Throwable throwable) -> {
-            _log.error(String.format("Stream thread: %s of application: %s encountered unexpected exception: %s", thread.getName(), _applicationId + "-resolver", throwable.getMessage()));
-
-            _log.info("Stopping Megabus Ref Resolver service for failure case.");
-            closeStream(_streams);
-
-            // don't throw any errors here and stop.
-            // notifyFailed(th);
-            try {
-                Thread.sleep(RESTART_SLEEP_TIME_IN_MS);
-            } catch (InterruptedException e) {
-                _log.error("sleep is interrupted: " + e.getMessage());
+        AtomicBoolean errorSeen = new AtomicBoolean(false);
+        _streams.setStateListener((newState, oldState) -> {
+            if (newState == KafkaStreams.State.ERROR) {
+                errorSeen.set(true);
             }
-            _log.info("Restarting kafka streams at: " + LocalDateTime.now());
-            _restartMeter.mark();
-            _streams.start();
+            if (newState == KafkaStreams.State.NOT_RUNNING && errorSeen.get()) {
+                _log.error("Kafka stream application: {} changed from {} state to {} state passing through an ERROR state.", _applicationId + "-resolver", oldState, newState);
+                notifyFailed(new Throwable(String.format("Kafka stream application: %s changed from %s state to %s state", _applicationId + "-resolver", oldState, newState)));
+            }
         });
 
         _streams.start();
@@ -191,7 +178,6 @@ public class MegabusRefResolver extends AbstractService {
 
     private static void closeStream(KafkaStreams streams) {
         if (streams != null) {
-            streams.cleanUp();
             streams.close();
         }
     }

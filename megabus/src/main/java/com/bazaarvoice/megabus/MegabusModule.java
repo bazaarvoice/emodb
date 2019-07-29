@@ -9,7 +9,7 @@ import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
-import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
+import com.bazaarvoice.megabus.resolver.MegabusRefResolverManager;
 import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
 import com.google.common.collect.ImmutableMap;
@@ -38,7 +38,7 @@ public class MegabusModule extends PrivateModule {
         bind(MegabusRefProducerManager.class).asEagerSingleton();
         bind(MegabusRefResolver.class).asEagerSingleton();
         bind(MissingRefDelayProcessor.class).asEagerSingleton();
-        bind(DocumentResolverManager.class).asEagerSingleton();
+        bind(MegabusRefResolverManager.class).asEagerSingleton();
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
         bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }

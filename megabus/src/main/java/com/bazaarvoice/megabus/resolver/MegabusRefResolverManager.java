@@ -3,6 +3,7 @@ package com.bazaarvoice.megabus.resolver;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusBootDAO;
+import com.codahale.metrics.MetricRegistry;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import java.util.concurrent.Executors;
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class DocumentResolverManager implements Managed {
+public class MegabusRefResolverManager implements Managed {
 
     private final MegabusBootDAO _statusDAO;
     private final ScheduledExecutorService _bootService;
@@ -20,14 +21,15 @@ public class DocumentResolverManager implements Managed {
     private final String _applicationId;
 
     @Inject
-    public DocumentResolverManager(LifeCycleRegistry lifeCycle, MegabusBootDAO statusDAO,
-                                   MegabusRefResolver megabusRefResolver, MissingRefDelayProcessor missingRefDelayProcessor,
-                                   @MegabusApplicationId String applicationId) {
+    public MegabusRefResolverManager(LifeCycleRegistry lifeCycle, MegabusBootDAO statusDAO,
+                                     MegabusRefResolver megabusRefResolver, MissingRefDelayProcessor missingRefDelayProcessor,
+                                     @MegabusApplicationId String applicationId, MetricRegistry metricRegistry) {
         _statusDAO = checkNotNull(statusDAO, "statusDAO");
         _megabusRefResolver = checkNotNull(megabusRefResolver);
         _missingRefDelayProcessor = checkNotNull(missingRefDelayProcessor);
         _applicationId = checkNotNull(applicationId);
         _bootService = Executors.newSingleThreadScheduledExecutor();
+        MegabusRefResolveFailureListener.listenTo(_megabusRefResolver, _applicationId, metricRegistry);
         lifeCycle.manage(this);
     }
 
