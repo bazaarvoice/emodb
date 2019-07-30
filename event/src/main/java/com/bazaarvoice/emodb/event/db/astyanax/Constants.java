@@ -20,7 +20,7 @@ interface Constants {
     static final Duration OPEN_SLAB_MARKER_TTL = Duration.ofMinutes(20);
 
     /** Don't keep slabs open for too long.  Rotate them periodically. */
-    static final Duration SLAB_ROTATE_TTL = Duration.ofDays(1);
+    static final Duration SLAB_ROTATE_TTL = Duration.ofHours(1);
 
     /** Cap the size of updates. */
     static final int MUTATION_MAX_ROWS = 10;

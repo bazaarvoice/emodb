@@ -566,7 +566,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     protected SlabFilter getSlabFilterSince(final Date since, final String channel) {
         return new SlabFilter() {
             boolean foundStartingSlab = false;
-            final UUID sinceUUID = TimeUUIDs.uuidForTimestamp(since);
+            final UUID sinceUUID = TimeUUIDs.uuidForTimestamp(Date.from(since.toInstant().minus(Constants.SLAB_ROTATE_TTL)));
             @Override
             public boolean accept(ByteBuffer slabId, boolean open, ByteBuffer nextSlabId) {
                 UUID nextSlabUUID = !foundStartingSlab && nextSlabId != null ?
