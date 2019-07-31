@@ -19,8 +19,13 @@ interface Constants {
     /** A server is expected to update a slab at least this often or else close it. */
     static final Duration OPEN_SLAB_MARKER_TTL = Duration.ofMinutes(20);
 
-    /** Don't keep slabs open for too long.  Rotate them periodically. */
+    /** Don't keep slabs open for too long.  Rotate them periodically.
+     * This used to be one day, instead of one hour, but it was lowered to make databus replay more efficient.
+     */
     static final Duration SLAB_ROTATE_TTL = Duration.ofHours(1);
+
+    /** Add some extra padding to databus replay time to avoid any unknown race conditions */
+    static final Duration REPLAY_PADDING_TIME = Duration.ofMinutes(5);
 
     /** Cap the size of updates. */
     static final int MUTATION_MAX_ROWS = 10;
