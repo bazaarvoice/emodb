@@ -28,7 +28,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _mapper;
     private final String _topic;
-    private final BlockingQueue<Future<RecordMetadata>> _futureQueue;
+    private final BlockingQueue<CoordinateAndFuture> _futureQueue;
     private final ExecutorService _futureGettingService;
     private final AtomicReference<Throwable> _error = new AtomicReference<>();
     private boolean _closed;
@@ -62,17 +62,19 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     private void collectFuture() {
         while (true) {
+            Coordinate coordinate = null;
             try {
-                Future<RecordMetadata> future;
-                if ((future = _futureQueue.poll(100, TimeUnit.MILLISECONDS)) != null) {
-                    RecordMetadata recordMetadata = future.get();
+                CoordinateAndFuture coordinateAndFuture;
+                if ((coordinateAndFuture = _futureQueue.poll(100, TimeUnit.MILLISECONDS)) != null) {
+                    coordinate = coordinateAndFuture.getCoordinate();
+                    RecordMetadata recordMetadata = coordinateAndFuture.getFuture().get();
                     _bytesTransferred += recordMetadata.serializedKeySize() + recordMetadata.serializedValueSize();
                 } else if (_futureGettingService.isShutdown()) {
                     break;
                 }
             } catch (Exception e) {
                 _error.compareAndSet(null, e);
-                _log.error("Error sending to Kafka: ", e);
+                _log.error("Error sending coordinate {} to Kafka: ", coordinate, e);
             }
         }
     }
@@ -88,7 +90,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         }
         ProducerRecord<String, JsonNode> record = new ProducerRecord<>(_topic, Coordinate.fromJson(document).toString(), _mapper.valueToTree(document));
         _bytesAdded += record.key().length() + record.value().size();
-        _futureQueue.put(_producer.send(record));
+        _futureQueue.put(new CoordinateAndFuture(Coordinate.fromJson(document), _producer.send(record)));
 
         // flush the producer if we are out of space in the producer
         if (_futureQueue.remainingCapacity() == 0) {
@@ -128,5 +130,23 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         return new TransferStatus(transferKey, _bytesAdded, 1, _bytesTransferred);
     }
 
+
+    private static class CoordinateAndFuture {
+        private final Coordinate _coordinate;
+        private final Future<RecordMetadata> _future;
+
+        public CoordinateAndFuture(Coordinate coordinate, Future<RecordMetadata> future) {
+            _coordinate = coordinate;
+            _future = future;
+        }
+
+        public Coordinate getCoordinate() {
+            return _coordinate;
+        }
+
+        public Future<RecordMetadata> getFuture() {
+            return _future;
+        }
+    }
 
 }
