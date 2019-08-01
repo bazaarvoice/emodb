@@ -48,6 +48,9 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -285,16 +288,12 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
         // Loop over all the range prefixes (256 of them) and, for each, execute Cassandra queries to page through the
         // records with that prefix.
         final Iterator<ByteBufferRange> scanIter = storage.scanIterator(fromBlobIdExclusive);
-        return touch(Iterators.concat(new AbstractIterator<Iterator<Map.Entry<String, StorageSummary>>>() {
-            @Override
-            protected Iterator<Map.Entry<String, StorageSummary>> computeNext() {
-                if (scanIter.hasNext()) {
-                    ByteBufferRange keyRange = scanIter.next();
-                    return decodeMetadataRows(scanInternal(placement, keyRange, columnRange, limit), table);
-                }
-                return endOfData();
-            }
-        }));
+        return touch(Iterators.concat(
+                StreamSupport.stream(Spliterators.spliteratorUnknownSize(scanIter, Spliterator.ORDERED), true)
+                    .map(byteBufferRange -> decodeMetadataRows(scanInternal(placement, byteBufferRange, columnRange, limit), table))
+                    .iterator()
+                )
+        );
     }
 
     private Iterator<Map.Entry<String, StorageSummary>> decodeMetadataRows(
