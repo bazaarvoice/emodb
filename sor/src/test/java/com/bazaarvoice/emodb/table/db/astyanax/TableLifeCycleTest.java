@@ -48,6 +48,10 @@ import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -1988,6 +1992,19 @@ public class TableLifeCycleTest {
         Assertions.assertThat(expectedTables).containsOnly(TABLE1, TABLE2);
         assertTrue(expectedDates.contains(nowInstant.toEpochMilli()));
         assertTrue(expectedDates.contains(nextDayInstant.toEpochMilli()));
+    }
+
+    @Test
+    public void testMillisecondPrecisionZonedDateTime()
+            throws Exception {
+        ZonedDateTime zeroSecondDateTime = ZonedDateTime.of(LocalDate.parse("2017-01-01"), LocalTime.parse("07:01"), ZoneOffset.UTC);
+        ZonedDateTime zeroMilliSecondDateTime = ZonedDateTime.of(LocalDate.parse("2017-01-01"), LocalTime.parse("07:01:01"), ZoneOffset.UTC);
+
+        assertEquals(zeroSecondDateTime.toString(), "2017-01-01T07:01Z");
+        assertEquals(zeroMilliSecondDateTime.toString(), "2017-01-01T07:01:01Z");
+
+        assertEquals(AstyanaxTableDAO.getMillisecondPrecisionZonedDateTime(zeroSecondDateTime), "2017-01-01T07:01:00.000Z");
+        assertEquals(AstyanaxTableDAO.getMillisecondPrecisionZonedDateTime(zeroMilliSecondDateTime), "2017-01-01T07:01:01.000Z");
     }
 
     //

@@ -47,7 +47,13 @@ import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
 import com.bazaarvoice.emodb.table.db.tableset.TableSerializer;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
@@ -94,8 +100,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.util.Collection;
 import java.util.Date;
@@ -1521,7 +1529,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         ZonedDateTime dateTime = ZonedDateTime.ofInstant(_clock.instant(), ZoneOffset.UTC);
         String date = dateTime.toLocalDate().toString();
 
-        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), dateTime.toString());
+        // Forcing millisecond precision for the Zoned date time value,
+        // as zero milli second or second case omission will lead to parsing errors when deserializing the UnpublishedDatabusEvents POJO.
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime).toString());
         Audit augmentedAudit = new AuditBuilder()
                 .set("_unpublished-databus-event-update", attribute.toString())
                 .build();
@@ -1541,4 +1551,50 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         Map<String, Object> tableAttributes = table.getAttributes();
         return ConditionEvaluator.eval(blackListTableCondition, tableAttributes, new TableFilterIntrinsics(table));
     }
+
+    /*
+       The output of toString From ZonedDateTime will be one of the following ISO-8601 formats:
+       uuuu-MM-dd'T'HH:mm
+       uuuu-MM-dd'T'HH:mm:ss
+       uuuu-MM-dd'T'HH:mm:ss.SSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSSSSS
+       Note that the format used will be the shortest that outputs the full value of the time where the omitted parts are implied to be zero.
+
+       This helper method will force the Seconds and Milliseconds precision when serializing ZonedDateTime.
+       for example:
+       2017-01-01T07:01Z will always be serialized as 2017-01-01T07:01:00.000Z
+       2017-01-01T07:01:01Z will always be serialized as 2017-01-01T07:01:01.000Z
+     */
+    @VisibleForTesting
+    protected static String getMillisecondPrecisionZonedDateTime(Object dateTime) {
+        if (!(dateTime instanceof ZonedDateTime)) {
+            throw new IllegalArgumentException();
+        }
+        final JavaTimeModule javaTimeModule = new JavaTimeModule();
+        javaTimeModule.addSerializer(ZonedDateTime.class, new ToMillisecondPrecisionDateSerializer());
+        ObjectMapper mapper = new ObjectMapper().registerModule(javaTimeModule);
+
+        String zonedDateTimeString = null;
+        try {
+            zonedDateTimeString = mapper.writeValueAsString(dateTime);
+        } catch (JsonProcessingException e) {
+            _log.error("Encountered exception while serializing ZonedDateTime to String using ToMillisecondPrecisionDateSerializer: ", e);
+        }
+
+        // replace the sourrounding double quotes from the mapper output.
+        return zonedDateTimeString.replaceAll("^\"|\"$", "");
+    }
+
+    public static class ToMillisecondPrecisionDateSerializer extends JsonSerializer<ZonedDateTime> {
+        private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                .withZone(ZoneId.of("UTC"));
+
+        @Override
+        public void serialize(final ZonedDateTime zonedDateTime, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
+            final String serializedZonedDateTime = dateTimeFormatter.format(zonedDateTime);
+            jsonGenerator.writeString(serializedZonedDateTime);
+        }
+    }
+
 }
