@@ -48,6 +48,9 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Spliterator;
+import java.util.Spliterators;
+import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -344,18 +347,12 @@ public class AstyanaxStorageProvider implements StorageProvider, DataCopyDAO, Da
         LimitCounter unlimited = LimitCounter.max();
 
         // Range query all the shards and count the number of rows in each.
-        long count = 0;
         Iterator<ByteBufferRange> scanIter = storage.scanIterator(null);
-        while (scanIter.hasNext()) {
-            ByteBufferRange keyRange = scanIter.next();
-            Iterator<Row<ByteBuffer, Composite>> rowIter = scanInternal(placement, keyRange, columnRange, unlimited);
-            while (rowIter.hasNext()) {
-                if (!rowIter.next().getColumns().isEmpty()) {
-                    count++;
-                }
-            }
-        }
-        return count;
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(scanIter, Spliterator.ORDERED), true)
+                .map(byteBufferRange -> scanInternal(placement, byteBufferRange, columnRange, unlimited))
+                .map(Iterators::size)
+                .mapToInt(i -> i)
+                .sum();
     }
 
     // DataCopyDAO
