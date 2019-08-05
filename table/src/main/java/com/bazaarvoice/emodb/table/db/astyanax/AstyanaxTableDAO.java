@@ -47,13 +47,7 @@ import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
 import com.bazaarvoice.emodb.table.db.tableset.TableSerializer;
 import com.codahale.metrics.annotation.Timed;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
@@ -1567,34 +1561,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
        2017-01-01T07:01:01Z will always be serialized as 2017-01-01T07:01:01.000Z
      */
     @VisibleForTesting
-    protected static String getMillisecondPrecisionZonedDateTime(Object dateTime) {
-        if (!(dateTime instanceof ZonedDateTime)) {
-            throw new IllegalArgumentException();
-        }
-        final JavaTimeModule javaTimeModule = new JavaTimeModule();
-        javaTimeModule.addSerializer(ZonedDateTime.class, new ToMillisecondPrecisionDateSerializer());
-        ObjectMapper mapper = new ObjectMapper().registerModule(javaTimeModule);
-
-        String zonedDateTimeString = null;
-        try {
-            zonedDateTimeString = mapper.writeValueAsString(dateTime);
-        } catch (JsonProcessingException e) {
-            _log.error("Encountered exception while serializing ZonedDateTime to String using ToMillisecondPrecisionDateSerializer: ", e);
-        }
-
-        // replace the sourrounding double quotes from the mapper output.
-        return zonedDateTimeString.replaceAll("^\"|\"$", "");
+    protected static String getMillisecondPrecisionZonedDateTime(ZonedDateTime dateTime) {
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                .withZone(ZoneId.of("UTC"))
+                .format(dateTime);
     }
-
-    public static class ToMillisecondPrecisionDateSerializer extends JsonSerializer<ZonedDateTime> {
-        private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
-                .withZone(ZoneId.of("UTC"));
-
-        @Override
-        public void serialize(final ZonedDateTime zonedDateTime, final JsonGenerator jsonGenerator, final SerializerProvider serializerProvider) throws IOException {
-            final String serializedZonedDateTime = dateTimeFormatter.format(zonedDateTime);
-            jsonGenerator.writeString(serializedZonedDateTime);
-        }
-    }
-
 }

@@ -2007,6 +2007,39 @@ public class TableLifeCycleTest {
         assertEquals(AstyanaxTableDAO.getMillisecondPrecisionZonedDateTime(zeroMilliSecondDateTime), "2017-01-01T07:01:01.000Z");
     }
 
+    @Test
+    public void testListUnpublishedDatabusEventsWhenDropHappensAtZeroSecondInstant()
+            throws Exception {
+
+        // Time with Zero Seconds.
+        ZonedDateTime zeroSecondDateTime = ZonedDateTime.of(LocalDate.parse("2016-01-01"), LocalTime.parse("07:01"), ZoneOffset.UTC);
+
+        final Clock clock = mock(Clock.class);
+        when(clock.instant()).thenReturn(zeroSecondDateTime.toInstant());
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+
+        Instant from = zeroSecondDateTime.toInstant().minus(Duration.ofHours(1));
+        Instant to = zeroSecondDateTime.toInstant().plus(Duration.ofHours(1));
+
+        // create a table.
+        tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
+        Iterator<Table> tableIterator = tableDAO.list(null, LimitCounter.max());
+        assertTrue(tableIterator.hasNext());
+
+        // drop a table.
+        tableDAO.drop(TABLE, newAudit());
+
+        // unpublished databus events should have the dropped table and with the specified time.
+        // Without the getMillisecondPrecisionZonedDateTime format change, the below will throw a parsing error and this test will fail.
+        Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
+        assertTrue(unpublishedDatabusEventsIterator.hasNext());
+        UnpublishedDatabusEvent unpublishedDatabusEvent = unpublishedDatabusEventsIterator.next();
+        assertTrue(unpublishedDatabusEvent.getTable().equals(TABLE));
+        assertTrue(unpublishedDatabusEvent.getEventType().equals(UnpublishedDatabusEventType.DROP_TABLE));
+        assertEquals(unpublishedDatabusEvent.getDate(), Date.from(zeroSecondDateTime.toInstant()));
+    }
+
     //
     // Helper methods
     //
