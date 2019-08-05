@@ -47,7 +47,7 @@ public class SubscriptionEvaluator {
                 .filter(subscription -> matches(subscription, eventData));
     }
 
-    public boolean matches(OwnedSubscription subscription, ByteBuffer eventData) {
+    public boolean matches(OwnedSubscription subscription, ByteBuffer eventData, Date since) {
         MatchEventData matchEventData;
         try {
             matchEventData = getMatchEventData(eventData);
@@ -55,7 +55,8 @@ public class SubscriptionEvaluator {
             return false;
         }
 
-        return matches(subscription, matchEventData);
+        return matches(subscription, matchEventData)
+                && (since == null || !matchEventData.getEventTime().before(since));
     }
 
     public boolean matches(OwnedSubscription subscription, MatchEventData eventData) {

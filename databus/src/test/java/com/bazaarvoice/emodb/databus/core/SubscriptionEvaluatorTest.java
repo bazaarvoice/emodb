@@ -43,23 +43,23 @@ public class SubscriptionEvaluatorTest {
         Condition skipIgnoreEvents = Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("ignore")).build());
         OwnedSubscription skipIgnoreSubscription = new DefaultOwnedSubscription("test-tags", skipIgnoreEvents,
                 Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
-        assertFalse(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
+        assertFalse(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef), null));
         // The following databus event should match, as it doesn't have "ignore" tag
         UpdateRef updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
-        assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2)));
+        assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2), null));
         UpdateRef updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.<String>of());
-        assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3)));
+        assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3), null));
 
         // Subscription that explicitly asks for "ignore" events
         Condition getIgnoreEvents = Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("ignore")).build();
         OwnedSubscription getIgnoreSubscription = new DefaultOwnedSubscription("test-tags", getIgnoreEvents,
                 Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
-        assertTrue(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
+        assertTrue(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef), null));
         // The following databus event should *not* match, as it doesn't have "ignore" tag
         updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
-        assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2)));
+        assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2), null));
         updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.<String>of());
-        assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3)));
+        assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3), null));
     }
 
     @Test
@@ -74,6 +74,65 @@ public class SubscriptionEvaluatorTest {
         // No condition, even alwaysTrue(), matches when the authorizer doesn't have permission
         OwnedSubscription allSubscription = new DefaultOwnedSubscription("all", Conditions.alwaysTrue(),
                 Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
-        assertFalse(subscriptionEvaluator.matches(allSubscription, UpdateRefSerializer.toByteBuffer(updateRef)));
+        assertFalse(subscriptionEvaluator.matches(allSubscription, UpdateRefSerializer.toByteBuffer(updateRef), null));
+    }
+
+    @Test
+    public void testSince() {
+        DataProvider dataProvider = mock(DataProvider.class);
+        when(dataProvider.getTable(anyString())).thenReturn(new InMemoryTable("table1",
+                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.<String, Object>newHashMap()));
+        SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(dataProvider,
+                ConstantDatabusAuthorizer.ALLOW_ALL, mock(RateLimitedLogFactory.class));
+
+        Date date = new Date();
+
+        UpdateRef updateRef = new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(Date.from(date.toInstant().minus(Duration.ofSeconds(1)))),
+                ImmutableSet.of("ignore", "ETL"));
+        // No condition, even alwaysTrue(), matches when the the "since" timestamp is after the timestamp of the event
+        OwnedSubscription subscription = new DefaultOwnedSubscription("all", Conditions.alwaysTrue(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertFalse(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
+
+        updateRef = new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(Date.from(date.toInstant().plus(Duration.ofSeconds(1)))),
+                ImmutableSet.of("ignore", "ETL"));
+        // A matching condition matches when the the "since" timestamp is before the timestamp of the event
+        subscription = new DefaultOwnedSubscription("all", Conditions.alwaysTrue(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertTrue(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
+
+        updateRef = new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(date),
+                ImmutableSet.of("ignore", "ETL"));
+        // A matching condition matches when the the "since" timestamp is the same as the timestamp of the event
+        subscription = new DefaultOwnedSubscription("all", Conditions.alwaysTrue(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertTrue(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
+
+        updateRef = new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(date),
+                ImmutableSet.of("ignore", "ETL"));
+        // A non-matching condition does not match when the the "since" timestamp is the same as the timestamp of the event
+        subscription = new DefaultOwnedSubscription("all", Conditions.alwaysFalse(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertFalse(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
+
+        new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(Date.from(date.toInstant().minus(Duration.ofSeconds(1)))),
+                ImmutableSet.of("ignore", "ETL"));
+        // A non-matching condition does not match when the the "since" timestamp is after the timestamp of the event
+        subscription = new DefaultOwnedSubscription("all", Conditions.alwaysFalse(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertFalse(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
+
+        updateRef = new UpdateRef("table1", "some-key",
+                TimeUUIDs.uuidForTimestamp(Date.from(date.toInstant().plus(Duration.ofSeconds(1)))),
+                ImmutableSet.of("ignore", "ETL"));
+        // A non-matching condition does not match when the the "since" timestamp is before the timestamp of the event
+        subscription = new DefaultOwnedSubscription("all", Conditions.alwaysFalse(),
+                Date.from(Instant.now().plus(Duration.ofDays(1))), Duration.ofHours(1), "id");
+        assertFalse(subscriptionEvaluator.matches(subscription, UpdateRefSerializer.toByteBuffer(updateRef), date));
     }
 }
