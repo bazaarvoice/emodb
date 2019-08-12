@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class DatabusChannelConfiguration implements ChannelConfiguration {
     private static final Duration FANOUT_TTL = Duration.ofDays(365);  // Basically forever
     public static final Duration CANARY_TTL = Duration.ofDays(365);  // Basically forever
-    public static final Duration REPLAY_TTL = Duration.ofHours(50); // 2 days + 2 hours
+    public static final Duration REPLAY_TTL = Duration.ofHours(52); // 2 days + 4 hours
 
     private final SubscriptionDAO _subscriptionDao;
 

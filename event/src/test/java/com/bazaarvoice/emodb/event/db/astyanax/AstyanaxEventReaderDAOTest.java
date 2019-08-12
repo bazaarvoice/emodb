@@ -137,8 +137,8 @@ public class AstyanaxEventReaderDAOTest {
                     : null;
             boolean actual = slabFilterSince.accept(slabId, false, nextSlabId);
             // Slabs slabId4 and slabId5 are the only interesting ones for us
-            boolean expected = currSlabId.equals(slabId4) || currSlabId.equals(slabId5);
-            assertEquals(actual, expected, "slabId4 and slabId5 are the only ones we care about.");
+            boolean expected = currSlabId.equals(slabId3) || currSlabId.equals(slabId4) || currSlabId.equals(slabId5);
+            assertEquals(actual, expected, "slabId3, slabId4, and slabId5 are the only ones we care about.");
         }
     }
 }

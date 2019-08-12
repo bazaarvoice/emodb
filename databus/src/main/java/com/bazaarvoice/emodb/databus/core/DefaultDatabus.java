@@ -836,7 +836,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         final OwnedSubscription destination = getSubscriptionByName(subscription);
 
         _eventStore.copy(source, subscription,
-                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
+                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes, since),
                 since);
     }
 

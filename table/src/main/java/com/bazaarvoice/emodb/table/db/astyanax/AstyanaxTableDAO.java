@@ -94,8 +94,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.util.Collection;
 import java.util.Date;
@@ -1521,7 +1523,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         ZonedDateTime dateTime = ZonedDateTime.ofInstant(_clock.instant(), ZoneOffset.UTC);
         String date = dateTime.toLocalDate().toString();
 
-        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), dateTime.toString());
+        // Forcing millisecond precision for the Zoned date time value,
+        // as zero milli second or second case omission will lead to parsing errors when deserializing the UnpublishedDatabusEvents POJO.
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime).toString());
         Audit augmentedAudit = new AuditBuilder()
                 .set("_unpublished-databus-event-update", attribute.toString())
                 .build();
@@ -1540,5 +1544,26 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     static boolean isTableBlacklisted(Table table, Condition blackListTableCondition) {
         Map<String, Object> tableAttributes = table.getAttributes();
         return ConditionEvaluator.eval(blackListTableCondition, tableAttributes, new TableFilterIntrinsics(table));
+    }
+
+    /*
+       The output of toString From ZonedDateTime will be one of the following ISO-8601 formats:
+       uuuu-MM-dd'T'HH:mm
+       uuuu-MM-dd'T'HH:mm:ss
+       uuuu-MM-dd'T'HH:mm:ss.SSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSSSSS
+       Note that the format used will be the shortest that outputs the full value of the time where the omitted parts are implied to be zero.
+
+       This helper method will force the Seconds and Milliseconds precision when serializing ZonedDateTime.
+       for example:
+       2017-01-01T07:01Z will always be serialized as 2017-01-01T07:01:00.000Z
+       2017-01-01T07:01:01Z will always be serialized as 2017-01-01T07:01:01.000Z
+     */
+    @VisibleForTesting
+    protected static String getMillisecondPrecisionZonedDateTime(ZonedDateTime dateTime) {
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                .withZone(ZoneId.of("UTC"))
+                .format(dateTime);
     }
 }
