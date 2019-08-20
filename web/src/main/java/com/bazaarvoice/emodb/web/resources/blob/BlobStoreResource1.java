@@ -19,9 +19,13 @@ import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.TableOptionsParam;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Strings;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
@@ -36,6 +40,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.coursera.metrics.datadog.TaggedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,9 +93,59 @@ public class BlobStoreResource1 {
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
 
+    private final MetricRegistry _metricRegistry;
+    private final LoadingCache<String, Meter> _listTableRequestsByApiKey;
+    private final LoadingCache<String, Meter> _createTableRequestsByApiKey;
+    private final LoadingCache<String, Meter> _dropTableRequestsByApiKey;
+    private final LoadingCache<String, Meter> _purgeTableRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getTableAttributesRequestsByApiKey;
+    private final LoadingCache<String, Meter> _setTableAttributesRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getTableOptionsRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getTableSizeRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getTableMetadataRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getObjectMetadataRequestsByApiKey;
+    private final LoadingCache<String, Meter> _scanMetadataRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getTablePlacementsRequestsByApiKey;
+    private final LoadingCache<String, Meter> _getObjectRequestsByApiKey;
+    private final LoadingCache<String, Meter> _putObjectRequestsByApiKey;
+    private final LoadingCache<String, Meter> _deleteObjectRequestsByApiKey;
+
     public BlobStoreResource1(BlobStore blobStore, Set<String> approvedContentTypes, MetricRegistry metricRegistry) {
         _blobStore = blobStore;
         _approvedContentTypes = approvedContentTypes;
+        _metricRegistry = metricRegistry;
+
+        _listTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.listTablesByApiKey");
+        _createTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.createTableByApiKey");
+        _dropTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.dropTableByApiKey");
+        _purgeTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.purgeTableByApiKey");
+        _getTableAttributesRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableAttributesByApiKey");
+        _setTableAttributesRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.setTableAttributesByApiKey");
+        _getTableOptionsRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableOptionsByApiKey");
+        _getTableSizeRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableSizeByApiKey");
+        _getTableMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableMetadataByApiKey");
+        _getObjectMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.headByApiKey");
+        _scanMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.scanMetadataByApiKey");
+        _getTablePlacementsRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTablePlacementsByApiKey");
+        _getObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getByApiKey");
+        _putObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.putByApiKey");
+        _deleteObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.deleteByApiKey");
+
+    }
+
+    private LoadingCache<String, Meter> createMetricCache(String metricName) {
+        return CacheBuilder.newBuilder()
+                .build(new CacheLoader<String, Meter>() {
+                    @Override
+                    public Meter load(String key) throws Exception {
+                        String metric = new TaggedName.TaggedNameBuilder()
+                                .metricName(metricName)
+                                .addTag("apiKey", key)
+                                .build()
+                                .encode();
+                        return _metricRegistry.meter(MetricRegistry.name(metric));
+                    }
+                });
     }
 
     @GET
@@ -102,7 +157,8 @@ public class BlobStoreResource1 {
     )
     public Iterator<Table> listTables(@QueryParam("from") final String fromKeyExclusive,
                                       @QueryParam("limit") @DefaultValue("10") LongParam limit,
-                                      final @Authenticated Subject subject) {
+                                      @Authenticated Subject subject) {
+        _listTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return streamingIterator(
             StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
                 .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
@@ -125,6 +181,7 @@ public class BlobStoreResource1 {
                                        @QueryParam("audit") AuditParam auditParam,
                                        @Context UriInfo uriInfo,
                                        @Authenticated Subject subject) {
+        _createTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         TableOptions options = getRequired(optionParams, "options");
         Audit audit = getRequired(auditParam, "audit");
 
@@ -149,7 +206,9 @@ public class BlobStoreResource1 {
     )
     public SuccessResponse dropTable(@PathParam("table") String table,
                                      @QueryParam("audit") AuditParam auditParam,
-                                     @Context UriInfo uriInfo) {
+                                     @Context UriInfo uriInfo,
+                                     @Authenticated Subject subject) {
+        _dropTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.dropTable(table, audit);
         return SuccessResponse.instance();
@@ -164,7 +223,9 @@ public class BlobStoreResource1 {
             response = SuccessResponse.class
     )
     public SuccessResponse purgeTable(@PathParam("table") String table,
-                                      @QueryParam("audit") AuditParam auditParam) {
+                                      @QueryParam("audit") AuditParam auditParam,
+                                      @Authenticated Subject subject) {
+        _purgeTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.purgeTableUnsafe(table, audit);
         return SuccessResponse.instance();
@@ -178,7 +239,9 @@ public class BlobStoreResource1 {
             notes = "Returns a Map",
             response = Map.class
     )
-    public Map<String, String> getTableAttributes(@PathParam("table") String table) {
+    public Map<String, String> getTableAttributes(@PathParam("table") String table,
+                                                  @Authenticated Subject subject) {
+        _getTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTableAttributes(table);
     }
 
@@ -194,7 +257,9 @@ public class BlobStoreResource1 {
     public SuccessResponse setTableAttributes(@PathParam("table") String table,
                                               Map<String, String> attributes,
                                               @QueryParam("audit") AuditParam auditParam,
-                                              @Context UriInfo uriInfo) {
+                                              @Context UriInfo uriInfo,
+                                              @Authenticated Subject subject) {
+        _setTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Audit audit = getRequired(auditParam, "audit");
         _blobStore.setTableAttributes(table, attributes, audit);
         return SuccessResponse.instance();
@@ -208,7 +273,9 @@ public class BlobStoreResource1 {
             notes = "Returns TableOptions object.",
             response = TableOptions.class
     )
-    public TableOptions getTableOptions(@PathParam("table") String table) {
+    public TableOptions getTableOptions(@PathParam("table") String table,
+                                        @Authenticated Subject subject) {
+        _getTableOptionsRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTableOptions(table);
     }
 
@@ -220,7 +287,9 @@ public class BlobStoreResource1 {
             notes = "Retuns a long.",
             response = long.class
     )
-    public long getTableSize(@PathParam("table") String table) {
+    public long getTableSize(@PathParam("table") String table,
+                             @Authenticated Subject subject) {
+        _getTableSizeRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTableApproximateSize(table);
     }
 
@@ -232,7 +301,9 @@ public class BlobStoreResource1 {
             notes = "Returns a Table object.",
             response = Table.class
     )
-    public Table getTableMetadata(@PathParam ("table") String table) {
+    public Table getTableMetadata(@PathParam ("table") String table,
+                                  @Authenticated Subject subject) {
+        _getTableMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTableMetadata(table);
     }
 
@@ -247,7 +318,10 @@ public class BlobStoreResource1 {
             notes = "Returns a response object.",
             response = Response.class
     )
-    public Response head(@PathParam("table") String table, @PathParam("blobId") String blobId) {
+    public Response head(@PathParam("table") String table,
+                         @PathParam("blobId") String blobId,
+                         @Authenticated Subject subject) {
+        _getObjectMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         BlobMetadata blob = _blobStore.getMetadata(table, blobId);
 
         Response.ResponseBuilder response = Response.ok();
@@ -268,7 +342,9 @@ public class BlobStoreResource1 {
     )
     public Iterator<BlobMetadata> scanMetadata(@PathParam("table") String table,
                                                @QueryParam("from") String blobId,
-                                               @QueryParam("limit") @DefaultValue("10") LongParam limit) {
+                                               @QueryParam("limit") @DefaultValue("10") LongParam limit,
+                                               @Authenticated Subject subject) {
+        _scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return streamingIterator(_blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get()));
     }
 
@@ -280,7 +356,8 @@ public class BlobStoreResource1 {
             notes = "Retuns a Collection of strings.",
             response = String.class
     )
-    public Collection<String> getTablePlacements() {
+    public Collection<String> getTablePlacements(@Authenticated Subject subject) {
+        _getTablePlacementsRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTablePlacements();
     }
 
@@ -297,8 +374,11 @@ public class BlobStoreResource1 {
             notes = "Returns a Response.",
             response = Response.class
     )
-    public Response get(@PathParam("table") String table, @PathParam("blobId") String blobId,
-                        @HeaderParam("Range") RangeParam rangeParam) {
+    public Response get(@PathParam("table") String table,
+                        @PathParam("blobId") String blobId,
+                        @HeaderParam("Range") RangeParam rangeParam,
+                        @Authenticated Subject subject) {
+        _getObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         RangeSpecification rangeSpec = rangeParam != null ? rangeParam.get() : null;
         final Blob blob = _blobStore.get(table, blobId, rangeSpec);
 
@@ -389,8 +469,10 @@ public class BlobStoreResource1 {
                                @PathParam("blobId") String blobId,
                                InputStream in,
                                @QueryParam("ttl") SecondsParam ttlParam,
-                               @Context HttpHeaders headers)
+                               @Context HttpHeaders headers,
+                               @Authenticated Subject subject)
             throws IOException {
+        _putObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         // Note: we could copy the Content-Type and Content-Encoding headers into the attributes automatically because
         // they're so common, but in practice this runs into two problems: (1) Dropwizard interprets Content-Encoding
         // and automatically uncompresses gzip uploads, which generally isn't what we want, and (2) curl sets the
@@ -427,7 +509,10 @@ public class BlobStoreResource1 {
             notes = "Returns SuccessReponse.",
             response = SuccessResponse.class
     )
-    public SuccessResponse delete(@PathParam("table") String table, @PathParam("blobId") String blobId) {
+    public SuccessResponse delete(@PathParam("table") String table,
+                                  @PathParam("blobId") String blobId,
+                                  @Authenticated Subject subject) {
+        _deleteObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         _blobStore.delete(table, blobId);
         return SuccessResponse.instance();
     }
