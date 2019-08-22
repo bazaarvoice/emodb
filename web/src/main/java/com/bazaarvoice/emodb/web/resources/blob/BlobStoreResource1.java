@@ -144,7 +144,7 @@ public class BlobStoreResource1 {
                                 .addTag("apiKey", key)
                                 .build()
                                 .encode();
-                        return _metricRegistry.meter(MetricRegistry.name(metric));
+                        return _metricRegistry.meter(metric);
                     }
                 });
     }
