@@ -115,21 +115,21 @@ public class BlobStoreResource1 {
         _approvedContentTypes = approvedContentTypes;
         _metricRegistry = metricRegistry;
 
-        _listTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.listTablesByApiKey");
-        _createTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.createTableByApiKey");
-        _dropTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.dropTableByApiKey");
-        _purgeTableRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.purgeTableByApiKey");
-        _getTableAttributesRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableAttributesByApiKey");
-        _setTableAttributesRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.setTableAttributesByApiKey");
-        _getTableOptionsRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableOptionsByApiKey");
-        _getTableSizeRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableSizeByApiKey");
-        _getTableMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTableMetadataByApiKey");
-        _getObjectMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.headByApiKey");
-        _scanMetadataRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.scanMetadataByApiKey");
-        _getTablePlacementsRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getTablePlacementsByApiKey");
-        _getObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.getByApiKey");
-        _putObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.putByApiKey");
-        _deleteObjectRequestsByApiKey = createMetricCache("bv.emodb.blob.BlobStoreResource1.deleteByApiKey");
+        _listTableRequestsByApiKey = createMetricCache("listTablesByApiKey");
+        _createTableRequestsByApiKey = createMetricCache("createTableByApiKey");
+        _dropTableRequestsByApiKey = createMetricCache("dropTableByApiKey");
+        _purgeTableRequestsByApiKey = createMetricCache("purgeTableByApiKey");
+        _getTableAttributesRequestsByApiKey = createMetricCache("getTableAttributesByApiKey");
+        _setTableAttributesRequestsByApiKey = createMetricCache("setTableAttributesByApiKey");
+        _getTableOptionsRequestsByApiKey = createMetricCache("getTableOptionsByApiKey");
+        _getTableSizeRequestsByApiKey = createMetricCache("getTableSizeByApiKey");
+        _getTableMetadataRequestsByApiKey = createMetricCache("getTableMetadataByApiKey");
+        _getObjectMetadataRequestsByApiKey = createMetricCache("headByApiKey");
+        _scanMetadataRequestsByApiKey = createMetricCache("scanMetadataByApiKey");
+        _getTablePlacementsRequestsByApiKey = createMetricCache("getTablePlacementsByApiKey");
+        _getObjectRequestsByApiKey = createMetricCache("getByApiKey");
+        _putObjectRequestsByApiKey = createMetricCache("putByApiKey");
+        _deleteObjectRequestsByApiKey = createMetricCache("deleteByApiKey");
 
     }
 
@@ -143,7 +143,7 @@ public class BlobStoreResource1 {
                                 .addTag("apiKey", key)
                                 .build()
                                 .encode();
-                        return _metricRegistry.meter(MetricRegistry.name(metric));
+                        return _metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStoreResource1", metric));
                     }
                 });
     }
