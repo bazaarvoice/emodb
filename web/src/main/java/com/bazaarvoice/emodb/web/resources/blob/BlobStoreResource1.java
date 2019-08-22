@@ -89,6 +89,7 @@ public class BlobStoreResource1 {
     private static final String X_BVA_PREFIX = "X-BVA-";  // HTTP header prefix for BlobMetadata attributes
     private static final Pattern CONTENT_ENCODING = Pattern.compile("content[-_]?encoding", Pattern.CASE_INSENSITIVE);
     private static final Pattern CONTENT_TYPE = Pattern.compile("content[-_]?type", Pattern.CASE_INSENSITIVE);
+    private static final String METRIC_PREFIX = "bv.emodb.blob.BlobStoreResource1.";
 
     private final BlobStore _blobStore;
     private final Set<String> _approvedContentTypes;
@@ -139,11 +140,11 @@ public class BlobStoreResource1 {
                     @Override
                     public Meter load(String key) throws Exception {
                         String metric = new TaggedName.TaggedNameBuilder()
-                                .metricName(metricName)
+                                .metricName(METRIC_PREFIX + metricName)
                                 .addTag("apiKey", key)
                                 .build()
                                 .encode();
-                        return _metricRegistry.meter(MetricRegistry.name("bv.emodb.blob.BlobStoreResource1", metric));
+                        return _metricRegistry.meter(MetricRegistry.name(metric));
                     }
                 });
     }
