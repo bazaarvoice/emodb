@@ -33,5 +33,10 @@
             <artifactId>kafka-streams</artifactId>
             <version>2.2.0</version>
         </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
