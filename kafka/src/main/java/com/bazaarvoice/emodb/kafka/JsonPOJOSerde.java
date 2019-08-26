@@ -46,6 +46,9 @@ public class JsonPOJOSerde<T> implements Serde<T> {
 
             @Override
             public byte[] serialize(String topic, T data) {
+                if (data == null) {
+                    return null;
+                }
                 try {
                     return mapper.writeValueAsBytes(data);
                 } catch (Exception e) {
@@ -71,6 +74,11 @@ public class JsonPOJOSerde<T> implements Serde<T> {
 
             @Override
             public T deserialize(String topic, byte[] data) {
+
+                if (data == null) {
+                    return null;
+                }
+
                 T result;
                 try {
                     result = typeReference != null ? mapper.readValue(data, typeReference) : mapper.readValue(data, cls);
