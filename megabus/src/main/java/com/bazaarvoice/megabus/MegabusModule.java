@@ -51,7 +51,7 @@ public class MegabusModule extends PrivateModule {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
                         TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
         return megabusConfiguration.getMegabusRefTopic();
     }
 
@@ -62,7 +62,7 @@ public class MegabusModule extends PrivateModule {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT,
                         TopicConfig.DELETE_RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(14).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
         return megabusConfiguration.getMegabusTopic();
     }
 
@@ -73,7 +73,7 @@ public class MegabusModule extends PrivateModule {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMissingRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
                         TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
         return megabusConfiguration.getMissingRefTopic();
     }
 
@@ -84,7 +84,7 @@ public class MegabusModule extends PrivateModule {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getRetryRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
                         TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "zstd"));
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
         return megabusConfiguration.getRetryRefTopic();
     }
 

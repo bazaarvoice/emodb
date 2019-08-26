@@ -75,6 +75,8 @@ public class MissingRefDelayProcessor extends AbstractService {
 
         streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
 
+        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), "zstd");
+
         streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId + SUFFIX);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
