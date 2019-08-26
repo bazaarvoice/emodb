@@ -115,6 +115,8 @@ public class MegabusRefResolver extends AbstractService {
         // 15 MB max message size
         streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), 15 * 1024 * 1024);
 
+        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), "zstd");
+
         streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId + SUFFIX);
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
