@@ -44,6 +44,7 @@
         <jersey.version>1.18.1</jersey.version>
         <jacoco.version>0.7.2.201409121644</jacoco.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
+        <kafka.version>2.3.0</kafka.version>
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
         <skipCC>true</skipCC>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
@@ -350,6 +351,18 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>1.11</version>
+            </dependency>
+
+            <!-- Megabus dependencies -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka_2.12</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-streams</artifactId>
+                <version>${kafka.version}</version>
             </dependency>
 
             <!-- Test dependencies -->
