@@ -8,8 +8,11 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedServiceSupplier;
+import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DatabusOstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
+import com.bazaarvoice.emodb.databus.api.Databus;
+import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
@@ -26,10 +29,15 @@ import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
+import static com.google.common.base.Preconditions.checkNotNull;
 
-public class MegabusRefProducerManager {
+public class MegabusRefProducerManager extends PartitionedLeaderService {
 
     private static final String LEADER_DIR = "/leader/partitioned-megabus-ref-producer";
+
+    private final Databus _databus;
+    private final int _numRefPartitions;
+    private final String _applicationId;
 
     @Inject
     public MegabusRefProducerManager(final LifeCycleRegistry lifeCycle,
@@ -53,26 +61,35 @@ public class MegabusRefProducerManager {
         // Since the megabus reads from the databus's internal event store. We forward the refs directly onto a
         // kafka-based ref topic. We use a partitioned leader service to evenly balance the partitions among the megabus
         // servers.
-
-        // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
-        // we should reconcile this inconsistency
-        PartitionedServiceSupplier refProducerSupplier = partition ->
-                new MegabusRefProducer(refProducerConfiguration, databusFactory.forOwner(systemId), databusEventStore,
-                        Conditions.partition(numRefPartitions, partition + 1),
-                        logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
-                        Integer.toString(partition), applicationId);
-
-        PartitionedLeaderService partitionedLeaderService = new PartitionedLeaderService(
-                curator, LEADER_DIR, hostAndPort.toString(),
+        super(curator, LEADER_DIR, hostAndPort.toString(),
                 "PartitionedLeaderSelector-MegabusRefProducer", numRefPartitions, 1, 1, TimeUnit.MINUTES,
-                refProducerSupplier, clock);
+                partition -> new MegabusRefProducer(refProducerConfiguration, databusEventStore,
+                                logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
+                                ChannelNames.getMegabusRefProducerChannel(applicationId, partition), Integer.toString(partition)), clock);
 
-        for (LeaderService leaderService : partitionedLeaderService.getPartitionLeaderServices()) {
+        _databus = checkNotNull(databusFactory).forOwner(systemId);
+        _numRefPartitions = numRefPartitions;
+        _applicationId = checkNotNull(applicationId);
+
+        for (LeaderService leaderService : getPartitionLeaderServices()) {
             ServiceFailureListener.listenTo(leaderService, metricRegistry);
         }
 
-        leaderServiceTask.register("megabus-ref-producer", partitionedLeaderService);
-        lifeCycle.manage(partitionedLeaderService);
+        leaderServiceTask.register("megabus-ref-producer", this);
+    }
+
+    public void createRefSubscriptions() {
+        // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
+        // we should reconcile this inconsistency
+
+        // Except for resetting the ttl, recreating a subscription that already exists has no effect.
+        // Assume that multiple servers that manage the same subscriptions can each attempt to create
+        // the subscription at startup.  The subscription should last basically forever.
+        for (int i = 0; i < _numRefPartitions; i++) {
+            _databus.subscribe(ChannelNames.getMegabusRefProducerChannel(_applicationId, i),
+                    Conditions.partition(_numRefPartitions, i + 1),
+                    DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL, false);
+        }
     }
 
 }

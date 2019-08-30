@@ -17,6 +17,7 @@ import com.bazaarvoice.megabus.MegabusRefTopic;
 import com.bazaarvoice.megabus.MegabusTopic;
 import com.bazaarvoice.megabus.MissingRefTopic;
 import com.bazaarvoice.megabus.RetryRefTopic;
+import com.bazaarvoice.megabus.service.KafkaStreamsService;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,31 +42,28 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 import static com.google.common.base.Preconditions.checkNotNull;
 
-public class MegabusRefResolver extends AbstractService {
+public class MegabusRefResolver extends KafkaStreamsService {
 
-    private static final String SUFFIX = "-resolver";
+    private static final String SERVICE_NAME = "resolver";
 
     private final DataProvider _dataProvider;
     private final Topic _megabusRefTopic;
     private final Topic _megabusResolvedTopic;
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
-    private final String _applicationId;
 
-    private final KafkaCluster _kafkaCluster;
-    private final String _instanceId;
     private final Clock _clock;
 
     private final Meter _redundantMeter;
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
 
-    private KafkaStreams _streams;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
@@ -76,21 +74,17 @@ public class MegabusRefResolver extends AbstractService {
                               KafkaCluster kafkaCluster, Clock clock,
                               @SelfHostAndPort HostAndPort hostAndPort,
                               MetricRegistry metricRegistry) {
+        super(applicationId, SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), metricRegistry);
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
         _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
-        _applicationId = checkNotNull(applicationId, "applicationId");
-        _kafkaCluster = checkNotNull(kafkaCluster, "kafkaCluster");
-        _instanceId = checkNotNull(hostAndPort).toString();
         _clock = checkNotNull(clock, "clock");
 
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
-
-        DropwizardMetricsReporter.registerDefaultMetricsRegistry(metricRegistry);
     }
 
     private String getMetricName(String name) {
@@ -98,27 +92,7 @@ public class MegabusRefResolver extends AbstractService {
     }
 
     @Override
-    public void doStart() {
-        final Properties streamsConfiguration = new Properties();
-        // Give the Streams application a unique name.  The name must be unique in the Kafka cluster
-        // against which the application is run.
-        streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, _applicationId + SUFFIX);
-        // Where to find Kafka broker(s).
-        streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, _kafkaCluster.getBootstrapServers());
-
-        streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, _megabusRefTopic.getPartitions());
-
-        streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
-
-        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
-
-        // 15 MB max message size
-        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), 15 * 1024 * 1024);
-
-        streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), "zstd");
-
-        streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, _instanceId + SUFFIX);
-
+    protected Topology topology() {
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
         // merge the ref stream with the ref-retry stream. They must be merged into a single stream for ordering purposes
@@ -144,11 +118,7 @@ public class MegabusRefResolver extends AbstractService {
                 .mapValues(result -> new MissingRefCollection(result.getMissingRefs(), Date.from(_clock.instant())))
                 // send to missing topic
                 .to(_missingRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(MissingRefCollection.class)));
-
-        _streams = new KafkaStreams(streamsBuilder.build(), streamsConfiguration);
-        _streams.start();
-
-        notifyStarted();
+        return streamsBuilder.build();
     }
 
     private static class ResolutionResult {
@@ -223,12 +193,5 @@ public class MegabusRefResolver extends AbstractService {
         });
 
         return new ResolutionResult(resolvedDocuments, missingRefs);
-    }
-
-
-    @Override
-    protected void doStop() {
-        _streams.close();
-        notifyStopped();
     }
 }
