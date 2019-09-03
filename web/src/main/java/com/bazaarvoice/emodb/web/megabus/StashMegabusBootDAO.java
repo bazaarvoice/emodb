@@ -27,6 +27,7 @@ public class StashMegabusBootDAO implements MegabusBootDAO {
     public void initiateBoot(String applicationId, Topic topic) {
         ScanOptions scanOptions = new ScanOptions(_dataTools.getTablePlacements(false, true));
         scanOptions.setTemporalEnabled(false);
+        scanOptions.setOnlyScanLiveRanges(false);
         scanOptions.addDestination(ScanDestination.to(URI.create("kafka://" + topic.getName())));
 
         _scanUploader.scanAndUpload(applicationId, scanOptions).start();

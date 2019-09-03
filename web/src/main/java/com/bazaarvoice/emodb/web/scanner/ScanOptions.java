@@ -42,6 +42,8 @@ public class ScanOptions {
     private boolean _compactionEnabled = false;
     // Whether or not to stash temporally
     private boolean _temporalEnabled = true;
+    // Whether or not to only scan live ranges according to StashTableDAO
+    private boolean _onlyScanLiveRanges = true;
 
     public ScanOptions(String placement) {
         this(ImmutableSortedSet.of(placement));
@@ -60,7 +62,8 @@ public class ScanOptions {
                         @JsonProperty ("rangeScanSplitSize") Integer rangeScanSplitSize,
                         @JsonProperty ("maxRangeScanTime") Long maxRangeScanTime,
                         @JsonProperty ("compactionEnabled") Boolean compactionEnabled,
-                        @JsonProperty ("temporalEnabled") Boolean temporalEnabled) {
+                        @JsonProperty ("temporalEnabled") Boolean temporalEnabled,
+                        @JsonProperty ("onlyScanLiveRanges") Boolean onlyScanLiveRanges) {
         this(placements);
         if (destinations != null) {
             addDestinations(destinations);
@@ -82,6 +85,9 @@ public class ScanOptions {
         }
         if (temporalEnabled != null) {
             _temporalEnabled = temporalEnabled;
+        }
+        if (onlyScanLiveRanges != null) {
+            _onlyScanLiveRanges = onlyScanLiveRanges;
         }
     }
 
@@ -167,6 +173,14 @@ public class ScanOptions {
 
     public void setTemporalEnabled(boolean temporalEnabled) {
         _temporalEnabled = temporalEnabled;
+    }
+
+    public boolean isOnlyScanLiveRanges() {
+        return _onlyScanLiveRanges;
+    }
+
+    public void setOnlyScanLiveRanges(boolean onlyScanLiveRanges) {
+        _onlyScanLiveRanges = onlyScanLiveRanges;
     }
 
     @Override

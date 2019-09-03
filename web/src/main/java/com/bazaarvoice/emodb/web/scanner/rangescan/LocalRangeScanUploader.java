@@ -9,8 +9,10 @@ import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanDestinationWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
@@ -109,6 +111,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
     private final CompactionControlSource _compactionControlSource;
 
+    private final LoadingCache<String, TableSet> _tableSetByScanId;
+
     @Inject
     public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, @DelegateCompactionControl CompactionControlSource compactionControlSource,
                                   LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
@@ -158,6 +162,14 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     public Counter load(String placement)
                             throws Exception {
                         return metricRegistry.counter(MetricRegistry.name("bv.emodb.scan.ScanUploader.placement", placement, "raw-bytes-uploaded"));
+                    }
+                });
+
+        _tableSetByScanId = CacheBuilder.newBuilder()
+                .build(new CacheLoader<String, TableSet>() {
+                    @Override
+                    public TableSet load(String key) throws Exception {
+                        return _dataTools.createTableSet();
                     }
                 });
 
@@ -269,8 +281,20 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     .map(Instant::ofEpochMilli)
                     .orElse(null);
 
-            Iterator<MultiTableScanResult> allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
-                    LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            Iterator<MultiTableScanResult> allResults;
+
+            if (options.isOnlyScanLiveRanges()) {
+                allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
+                        LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            } else {
+
+                MultiTableScanOptions multiTableScanOptions = new MultiTableScanOptions()
+                        .setPlacement(placement)
+                        .setScanRange(scanRange)
+                        .setIncludeDeletedTables(false)
+                        .setIncludeMirrorTables(false);
+                allResults = _dataTools.multiTableScan(multiTableScanOptions, _tableSetByScanId.getUnchecked(scanId), LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            }
 
             // Enforce a maximum number of results based on the scan options
             Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
