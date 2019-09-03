@@ -5,6 +5,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
 import java.time.Duration;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.streams.KafkaStreams;
@@ -18,6 +19,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
     private final Properties _streamsConfiguration;
     private final AtomicReference<Throwable> _uncaughtException;
+    private final AtomicBoolean _fatalErrorEncountered;
     private KafkaStreams _streams;
 
     public KafkaStreamsService(String applicationId,
@@ -26,6 +28,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
                                String instanceId,
                                MetricRegistry metricRegistry) {
         _uncaughtException = new AtomicReference<>();
+        _fatalErrorEncountered = new AtomicBoolean(false);
 
         DropwizardMetricsReporter.registerDefaultMetricsRegistry(metricRegistry);
 
@@ -66,7 +69,9 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     @Override
     public void onChange(KafkaStreams.State newState, KafkaStreams.State oldState) {
         if (newState == KafkaStreams.State.ERROR) {
-            _streams.close();
+            _fatalErrorEncountered.set(true);
+            _streams.close(Duration.ofMillis(1));
+        } else if (newState == KafkaStreams.State.NOT_RUNNING && _fatalErrorEncountered.get()) {
             notifyFailed(_uncaughtException.get());
         }
     }
