@@ -292,7 +292,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>rpm-maven-plugin</artifactId>
-                        <version>2.2.0</version>
+                        <version>2.1.5</version>
                         <executions>
                             <execution>
                                 <phase>package</phase>
@@ -307,7 +307,7 @@
                         </executions>
                         <configuration>
                             <group>BV/EmoDB</group>
-                            <license>Other/Proprietary</license>
+                            <copyright>Other/Proprietary</copyright>
                             <defaultDirmode>755</defaultDirmode>
                             <defaultFilemode>644</defaultFilemode>
                             <defaultUsername>root</defaultUsername>

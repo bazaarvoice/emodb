@@ -18,10 +18,7 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <descriptors>
-                        <descriptor>dep.xml</descriptor>
-                    </descriptors>
-                    <tarLongFileMode>posix</tarLongFileMode>
+                    <descriptor>dep.xml</descriptor>
                     <finalName>emodb-${project.version}</finalName>
                 </configuration>
                 <executions>
@@ -45,7 +42,6 @@
                     <plugin>
                         <groupId>com.bazaarvoice.maven.plugins</groupId>
                         <artifactId>s3repo-maven-plugin</artifactId>
-                        <version>3.6</version>
                         <executions>
                             <execution>
                                 <phase>deploy</phase>
