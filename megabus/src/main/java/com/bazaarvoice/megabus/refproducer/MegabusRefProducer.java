@@ -5,15 +5,11 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.bazaarvoice.emodb.databus.ChannelNames;
-import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.UpdateRefSerializer;
 import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
-import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -26,7 +22,6 @@ import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
 import java.time.Clock;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
@@ -38,9 +33,10 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
@@ -50,32 +46,30 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final int _skipWaitThreshold;
 
     private final RateLimitedLog _rateLimitedLog;
-    private final Databus _databus;
     private final DatabusEventStore _eventStore;
     private final MetricsGroup _timers;
     private final String _timerName;
     private final String _subscriptionName;
-    private final Condition _subscriptionCondition;
     private final ScheduledExecutorService _executor;
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _objectMapper;
     private final Topic _topic;
     private final Clock _clock;
 
-    public MegabusRefProducer(MegabusRefProducerConfiguration config, Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+    public MegabusRefProducer(MegabusRefProducerConfiguration config, DatabusEventStore eventStore,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                               Producer<String, JsonNode> producer, ObjectMapper objectMapper, Topic topic,
-                              String partitionIdentifier, String applicationId) {
-        this(config, databus, eventStore, subscriptionCondition, logFactory, metricRegistry, null, producer, objectMapper,
-                topic, partitionIdentifier, applicationId, null);
+                              String subscriptionName, String partitionIdentifier) {
+        this(config, eventStore, logFactory, metricRegistry, null, producer, objectMapper,
+                topic, subscriptionName, partitionIdentifier, null);
     }
 
     @VisibleForTesting
-    MegabusRefProducer(MegabusRefProducerConfiguration configuration, Databus databus, DatabusEventStore eventStore, Condition subscriptionCondition,
+    MegabusRefProducer(MegabusRefProducerConfiguration configuration,DatabusEventStore eventStore,
                        RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                        @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
-                       ObjectMapper objectMapper, Topic topic, String partitionIdentifer, String applicationId,
-                       Clock clock) {
+                       ObjectMapper objectMapper, Topic topic, String subscriptionName,
+                       String partitionIdentifer, Clock clock) {
 
         _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + partitionIdentifer);
 
@@ -85,37 +79,24 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _pollIntervalMs = configuration.getPollIntervalMs();
         _eventsLimit = configuration.getBatchSize();
         _skipWaitThreshold = configuration.getSkipWaitThreshold();
-        _databus = checkNotNull(databus, "databus");
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _eventStore = requireNonNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
         _timerName = newTimerName("megabusPoll-" + partitionIdentifer);
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
-        _producer = checkNotNull(producer, "producer");
-        _subscriptionCondition = checkNotNull(subscriptionCondition, "subscriptionCondition");
+        _producer = requireNonNull(producer, "producer");
         _clock = firstNonNull(clock, Clock.systemUTC());
 
-        //TODO : this is currently hacked to to avoid dedup queues, which require the leader for consistent polling.
-        // We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, which should cluster updates to the same key
-        _subscriptionName = ChannelNames.getMegabusRefProducerChannel(applicationId, Integer.parseInt(partitionIdentifer));
-        _objectMapper = checkNotNull(objectMapper, "objectMapper");
-        _topic = checkNotNull(topic, "topic");
-        createMegabusSubscription();
+        // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
+        _subscriptionName = requireNonNull(subscriptionName, "subscriptionName");
+        _objectMapper = requireNonNull(objectMapper, "objectMapper");
+        _topic = requireNonNull(topic, "topic");
         ServiceFailureListener.listenTo(this, metricRegistry);
 
     }
 
     private String newTimerName(String name) {
         return MetricRegistry.name("bv.emodb.megabus", name, "readEvents");
-    }
-
-    private void createMegabusSubscription() {
-        // Except for resetting the ttl, recreating a subscription that already exists has no effect.
-        // Assume that multiple servers that manage the same subscriptions can each attempt to create
-        // the subscription at startup.  The subscription should last basically forever.
-        // Note: make sure that we don't ignore any events
-        _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL, false);
     }
 
     @Override
@@ -138,7 +119,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
     protected void runOneIteration() {
         try {
             //noinspection StatementWithEmptyBody
-            while (isRunning() && pollAndAckEvents()) {
+            while (isRunning() && peekAndAckEvents()) {
                 // Loop w/o sleeping as long as we keep finding events
             }
         } catch (Throwable t) {
@@ -157,7 +138,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         }
     }
 
-    private boolean pollAndAckEvents() {
+    private boolean peekAndAckEvents() {
         // Poll for events on the megabus subscription
         long startTime = _clock.instant().getNano();
         List<String> eventKeys = Lists.newArrayList();
@@ -191,7 +172,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
         // Ack these events
         if (!eventKeys.isEmpty()) {
-            _databus.acknowledge(_subscriptionName, eventKeys);
+            _eventStore.delete(_subscriptionName, eventKeys, false);
         }
 
         return eventKeys.size() >= _skipWaitThreshold;
