@@ -20,7 +20,7 @@ public class KafkaConfiguration {
         return _kafkaBootstrapServers;
     }
 
-    public String getKafkaBootstrapServers() {
-        return _kafkaBootstrapServers;
+    public KafkaProducerConfiguration getKafkaProducerConfiguration() {
+        return _kafkaProducerConfiguration;
     }
 }
