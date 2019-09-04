@@ -69,7 +69,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
                     coordinate = coordinateAndFuture.getCoordinate();
                     RecordMetadata recordMetadata = coordinateAndFuture.getFuture().get();
                     _bytesTransferred += recordMetadata.serializedKeySize() + recordMetadata.serializedValueSize();
-                } else if (_futureGettingService.isShutdown()) {
+                } else if (_futureGettingService.isShutdown() && _futureQueue.isEmpty()) {
                     break;
                 }
             } catch (Exception e) {
@@ -112,7 +112,6 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
     @Override
     public void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException {
         _closed = true;
-        _producer.flush();
         _futureGettingService.shutdown();
     }
 
