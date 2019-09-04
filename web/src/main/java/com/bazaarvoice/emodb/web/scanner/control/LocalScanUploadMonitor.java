@@ -235,8 +235,10 @@ public class LocalScanUploadMonitor extends AbstractService {
         }
 
         // Before going any further ensure the stash table snapshot has been created and, if not, do so now.
-        // This should only happen prior to the first scan range being processed.
-        if (!status.isTableSnapshotCreated() && status.getOptions().isTemporalEnabled()) {
+        // This should only happen if both
+        // 1. it is prior to the first scan range being processed.
+        // 2. the scan being processed is configured to only scan live table ranges
+        if (!status.isTableSnapshotCreated() && status.getOptions().isOnlyScanLiveRanges()) {
             _dataTools.createStashTokenRangeSnapshot(id, status.getOptions().getPlacements());
             _scanStatusDAO.setTableSnapshotCreated(id);
         }
