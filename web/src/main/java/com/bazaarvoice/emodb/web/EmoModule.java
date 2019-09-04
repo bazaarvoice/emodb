@@ -731,7 +731,7 @@ public class EmoModule extends AbstractModule {
             bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
 
             install(new MegabusStashModule(_configuration.getMegabusConfiguration().get().getBootConfiguration()));
-            install(new MegabusModule(_serviceMode));
+            install(new MegabusModule());
         }
 
         /** Provide ZooKeeper namespaced to megabus data. */

@@ -2,7 +2,6 @@ package com.bazaarvoice.megabus;
 
 import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
-import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
@@ -10,9 +9,12 @@ import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.DocumentResolverManager;
-import com.bazaarvoice.megabus.resolver.MegabusRefResolver;
-import com.bazaarvoice.megabus.resolver.MissingRefDelayProcessor;
+import com.bazaarvoice.megabus.resolver.guice.MegabusRefResolverService;
+import com.bazaarvoice.megabus.resolver.guice.MissingRefDelayService;
+import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
+import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -23,22 +25,16 @@ public class MegabusModule extends PrivateModule {
 
     private final int REF_PARTITIONS = 4;
 
-    private final EmoServiceMode _serviceMode;
-
-    public MegabusModule(EmoServiceMode serviceMode) {
-        _serviceMode = serviceMode;
-    }
-
     @Override
     protected void configure() {
         bind(Integer.class).annotatedWith(NumRefPartitions.class).toInstance(REF_PARTITIONS);
 
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
 
+        bind(Service.class).annotatedWith(MegabusRefResolverService.class).to(ResilientMegabusRefResolver.class).asEagerSingleton();
+        bind(Service.class).annotatedWith(MissingRefDelayService.class).to(ResilientMissingRefDelayProcessor.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
-        bind(MegabusRefResolver.class).asEagerSingleton();
-        bind(MissingRefDelayProcessor.class).asEagerSingleton();
-        bind(DocumentResolverManager.class).asEagerSingleton();
+
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
         bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }
