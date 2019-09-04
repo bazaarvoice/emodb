@@ -56,6 +56,8 @@ dataCenter:
 
 kafka:
   bootstrapServers: localhost:9092
+  producer:
+    lingerMs: 5
 
 megabus:
   applicationId: megabus-local
