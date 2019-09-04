@@ -31,7 +31,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
     private final BlockingQueue<CoordinateAndFuture> _futureQueue;
     private final ExecutorService _futureGettingService;
     private final AtomicReference<Throwable> _error = new AtomicReference<>();
-    private boolean _closed;
+    private volatile boolean _closed;
     private int _bytesTransferred;
     private int _bytesAdded;
 
