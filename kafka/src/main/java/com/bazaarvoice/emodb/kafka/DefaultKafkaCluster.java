@@ -29,14 +29,17 @@ public class DefaultKafkaCluster implements KafkaCluster {
     private final AdminClient _adminClient;
     private final String _bootstrapServers;
     private final String _instanceIdentifier;
+    private final KafkaProducerConfiguration _kafkaProducerConfiguration;
     private final Supplier<Producer<String, JsonNode>> _producerSupplier;
 
     @Inject
     public DefaultKafkaCluster(AdminClient adminClient, @BootstrapServers String bootstrapServers,
-                               @SelfHostAndPort HostAndPort hostAndPort) {
+                               @SelfHostAndPort HostAndPort hostAndPort,
+                               KafkaProducerConfiguration producerConfiguration) {
         _adminClient = checkNotNull(adminClient);
         _bootstrapServers = checkNotNull(bootstrapServers);
         _instanceIdentifier = checkNotNull(hostAndPort).toString();
+        _kafkaProducerConfiguration = checkNotNull(producerConfiguration);
         _producerSupplier = Suppliers.memoize(this::createProducer);
 
         Futures.getUnchecked(_adminClient.describeCluster().nodes()).forEach(System.out::println);
@@ -71,7 +74,6 @@ public class DefaultKafkaCluster implements KafkaCluster {
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, _bootstrapServers);
         props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 5); // 5 msloc
         props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 15 * 1024 * 1024); // 15 MB
         props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "zstd");
 
@@ -79,6 +81,18 @@ public class DefaultKafkaCluster implements KafkaCluster {
 
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+        if (_kafkaProducerConfiguration.getLingerMs().isPresent()) {
+            props.put(ProducerConfig.LINGER_MS_CONFIG, _kafkaProducerConfiguration.getLingerMs().get());
+        }
+
+        if (_kafkaProducerConfiguration.getBatchsize().isPresent()) {
+            props.put(ProducerConfig.BATCH_SIZE_CONFIG, _kafkaProducerConfiguration.getBatchsize().get());
+        }
+
+        if (_kafkaProducerConfiguration.getBufferMemory().isPresent()) {
+            props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, _kafkaProducerConfiguration.getBufferMemory().get());
+        }
 
         return new KafkaProducer<>(props);
     }

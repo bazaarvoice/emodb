@@ -17,8 +17,8 @@ public class KafkaModule extends PrivateModule {
     @Provides
     @Singleton
     @BootstrapServers
-    String provideBootstrapServers(KafkaConfiguration megabusConfiguration) {
-        return megabusConfiguration.getBootstrapServers();
+    String provideBootstrapServers(KafkaConfiguration kafkaConfiguration) {
+        return kafkaConfiguration.getBootstrapServers();
     }
 
 
@@ -28,6 +28,12 @@ public class KafkaModule extends PrivateModule {
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         return AdminClient.create(properties);
+    }
+
+    @Provides
+    @Singleton
+    KafkaProducerConfiguration provideKafkaProducerConfiguration(KafkaConfiguration kafkaConfiguration) {
+        return kafkaConfiguration.getKafkaProducerConfiguration();
     }
 
 }
