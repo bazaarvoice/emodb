@@ -235,8 +235,10 @@ public class LocalScanUploadMonitor extends AbstractService {
         }
 
         // Before going any further ensure the stash table snapshot has been created and, if not, do so now.
-        // This should only happen prior to the first scan range being processed.
-        if (!status.isTableSnapshotCreated()) {
+        // This should only happen if both
+        // 1. it is prior to the first scan range being processed.
+        // 2. the scan being processed is configured to only scan live table ranges
+        if (!status.isTableSnapshotCreated() && status.getOptions().isOnlyScanLiveRanges()) {
             _dataTools.createStashTokenRangeSnapshot(id, status.getOptions().getPlacements());
             _scanStatusDAO.setTableSnapshotCreated(id);
         }
@@ -402,7 +404,7 @@ public class LocalScanUploadMonitor extends AbstractService {
     private void scanCanceled(ScanStatus status) {
         // Send notification that the scan has been canceled
         _stashStateListener.stashCanceled(status.asPluginStashMetadata(), new Date());
-        cleanupScan(status.getScanId());
+        cleanupScan(status.getScanId(), status.getOptions().isOnlyScanLiveRanges());
     }
 
     private void completeScan(ScanStatus status)
@@ -430,21 +432,23 @@ public class LocalScanUploadMonitor extends AbstractService {
             status.setCompleteTime(completeTime);
             _stashStateListener.stashCompleted(status.asPluginStashMetadata(), status.getCompleteTime());
         } finally {
-            cleanupScan(id);
+            cleanupScan(id, status.getOptions().isOnlyScanLiveRanges());
         }
     }
 
-    private void cleanupScan(String id) {
+    private void cleanupScan(String id, boolean isOnlyLiveRanges) {
         // Remove this scan from the active set
         if (_activeScans.remove(id)) {
             notifyActiveScanCountChanged();
         }
 
-        try {
-            // Remove the table snapshots set for this scan
-            _dataTools.clearStashTokenRangeSnapshot(id);
-        } catch (Exception e) {
-            _log.error("Failed to clean up table set for scan {}", id, e);
+        if (isOnlyLiveRanges) {
+            try {
+                // Remove the table snapshots set for this scan
+                _dataTools.clearStashTokenRangeSnapshot(id);
+            } catch (Exception e) {
+                _log.error("Failed to clean up table set for scan {}", id, e);
+            }
         }
 
         try {
