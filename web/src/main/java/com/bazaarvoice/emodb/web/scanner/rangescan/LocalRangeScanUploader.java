@@ -272,8 +272,10 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
             Iterator<MultiTableScanResult> allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
                     LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
 
+            Iterator<MultiTableScanResult> nonInternalResults = Iterators.filter(allResults, result -> !result.getTable().isInternal());
+
             // Enforce a maximum number of results based on the scan options
-            Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
+            Iterator<MultiTableScanResult> results = Iterators.limit(nonInternalResults, getResplitRowCount(options));
 
             while (results.hasNext() && !timeout.isTimedOut()) {
                 MultiTableScanResult result = results.next();
