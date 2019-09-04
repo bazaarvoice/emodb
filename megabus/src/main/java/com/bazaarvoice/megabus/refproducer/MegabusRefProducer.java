@@ -33,9 +33,10 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
@@ -78,18 +79,18 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _pollIntervalMs = configuration.getPollIntervalMs();
         _eventsLimit = configuration.getBatchSize();
         _skipWaitThreshold = configuration.getSkipWaitThreshold();
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _eventStore = requireNonNull(eventStore, "eventStore");
         _timers = new MetricsGroup(metricRegistry);
         _timerName = newTimerName("megabusPoll-" + partitionIdentifer);
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
-        _producer = checkNotNull(producer, "producer");
+        _producer = requireNonNull(producer, "producer");
         _clock = firstNonNull(clock, Clock.systemUTC());
 
         // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
-        _subscriptionName = checkNotNull(subscriptionName, "subscriptionName");
-        _objectMapper = checkNotNull(objectMapper, "objectMapper");
-        _topic = checkNotNull(topic, "topic");
+        _subscriptionName = requireNonNull(subscriptionName, "subscriptionName");
+        _objectMapper = requireNonNull(objectMapper, "objectMapper");
+        _topic = requireNonNull(topic, "topic");
         ServiceFailureListener.listenTo(this, metricRegistry);
 
     }

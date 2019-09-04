@@ -7,7 +7,6 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
-import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedServiceSupplier;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DatabusOstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
@@ -29,11 +28,13 @@ import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import org.apache.curator.framework.CuratorFramework;
-import static com.google.common.base.Preconditions.checkNotNull;
+
+import static java.util.Objects.requireNonNull;
 
 public class MegabusRefProducerManager extends PartitionedLeaderService {
 
     private static final String LEADER_DIR = "/leader/partitioned-megabus-ref-producer";
+    private static final String SERVICE_NAME = "megabus-ref-producer";
 
     private final Databus _databus;
     private final int _numRefPartitions;
@@ -67,15 +68,15 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
                                 logFactory, metricRegistry, kafkaCluster.producer(), objectMapper, refTopic,
                                 ChannelNames.getMegabusRefProducerChannel(applicationId, partition), Integer.toString(partition)), clock);
 
-        _databus = checkNotNull(databusFactory).forOwner(systemId);
+        _databus = requireNonNull(databusFactory).forOwner(systemId);
         _numRefPartitions = numRefPartitions;
-        _applicationId = checkNotNull(applicationId);
+        _applicationId = requireNonNull(applicationId);
 
         for (LeaderService leaderService : getPartitionLeaderServices()) {
             ServiceFailureListener.listenTo(leaderService, metricRegistry);
         }
 
-        leaderServiceTask.register("megabus-ref-producer", this);
+        leaderServiceTask.register(SERVICE_NAME, this);
     }
 
     public void createRefSubscriptions() {

@@ -3,7 +3,8 @@ package com.bazaarvoice.megabus;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.google.common.util.concurrent.AbstractIdleService;
-import static com.google.common.base.Preconditions.checkNotNull;
+
+import static java.util.Objects.requireNonNull;
 
 public class MegabusBootInitiater extends AbstractIdleService {
 
@@ -16,10 +17,10 @@ public class MegabusBootInitiater extends AbstractIdleService {
 
     public MegabusBootInitiater(MegabusBootDAO megabusBootDAO, String applicationId, Topic megabusTopic,
                                 MegabusRefProducerManager megabusRefProducerManager) {
-        _megabusBootDAO = checkNotNull(megabusBootDAO);
-        _applicationId = checkNotNull(applicationId);
-        _megabusTopic = checkNotNull(megabusTopic);
-        _megabusRefProducerManager = checkNotNull(megabusRefProducerManager);
+        _megabusBootDAO = requireNonNull(megabusBootDAO);
+        _applicationId = requireNonNull(applicationId);
+        _megabusTopic = requireNonNull(megabusTopic);
+        _megabusRefProducerManager = requireNonNull(megabusRefProducerManager);
     }
 
     @Override
