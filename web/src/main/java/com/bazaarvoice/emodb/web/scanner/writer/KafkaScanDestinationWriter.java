@@ -21,6 +21,11 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class writes documents to Kafka asynchronously, then cleans up the futures using the future service. Access to
+ * this class is multi-threaded. A single thread is responsible for calling {@link #writeDocument(Map)},
+ * {@link #closeAndCancel()}, and {@link #closeAndTransferAsync(Optional)}. A separate threads calls {@link #isFinishedUploading()}
+ */
 public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     private static Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
@@ -31,7 +36,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
     private final BlockingQueue<CoordinateAndFuture> _futureQueue;
     private final ExecutorService _futureGettingService;
     private final AtomicReference<Throwable> _error = new AtomicReference<>();
-    private boolean _closed;
+    private volatile boolean _closed;
     private int _bytesTransferred;
     private int _bytesAdded;
 
@@ -104,9 +109,9 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     @Override
     public void closeAndCancel() {
+        _error.compareAndSet(null, new RuntimeException("Kafka upload canceled.")); 
         _closed = true;
         _futureGettingService.shutdownNow();
-        _error.compareAndSet(null, new RuntimeException("Kafka upload canceled."));
     }
 
     @Override
