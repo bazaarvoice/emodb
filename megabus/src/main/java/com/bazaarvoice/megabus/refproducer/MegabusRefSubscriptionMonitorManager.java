@@ -8,7 +8,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.megabus.MegabusApplicationId;
-import com.bazaarvoice.megabus.MegabusZookeeper;
+import com.bazaarvoice.megabus.guice.MegabusZookeeper;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;

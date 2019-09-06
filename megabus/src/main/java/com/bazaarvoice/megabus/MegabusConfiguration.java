@@ -35,6 +35,16 @@ public class MegabusConfiguration {
 
     @Valid
     @NotNull
+    @JsonProperty("refResolverConsumerGroupName")
+    private String _refResolverConsumerGroupName;
+
+    @Valid
+    @NotNull
+    @JsonProperty("delayProcessorConsumerGroupName")
+    private String _delayProcessorConsumerGroupName;
+
+    @Valid
+    @NotNull
     @JsonProperty("boot")
     private MegabusBootConfiguration _bootConfiguration;
 
@@ -69,5 +79,13 @@ public class MegabusConfiguration {
 
     public Topic getRetryRefTopic() {
         return _retryRefTopic;
+    }
+
+    public String getRefResolverConsumerGroupName() {
+        return _refResolverConsumerGroupName;
+    }
+
+    public String getDelayProcessorConsumerGroupName() {
+        return _delayProcessorConsumerGroupName;
     }
 }

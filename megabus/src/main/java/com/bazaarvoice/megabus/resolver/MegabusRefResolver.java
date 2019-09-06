@@ -1,22 +1,15 @@
 package com.bazaarvoice.megabus.resolver;
 
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
-import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
-import com.bazaarvoice.megabus.MegabusRefTopic;
-import com.bazaarvoice.megabus.MegabusTopic;
-import com.bazaarvoice.megabus.MissingRefTopic;
-import com.bazaarvoice.megabus.RetryRefTopic;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -25,7 +18,6 @@ import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.AbstractService;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.util.ArrayList;
@@ -33,15 +25,11 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
@@ -66,15 +54,15 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
 
     @Inject
-    public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                              @MegabusTopic Topic megabusResolvedTopic,
-                              @RetryRefTopic Topic retryRefTopic,
-                              @MissingRefTopic Topic missingRefTopic,
-                              @MegabusApplicationId String applicationId,
+    public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
+                              Topic megabusResolvedTopic,
+                              Topic retryRefTopic,
+                              Topic missingRefTopic,
                               KafkaCluster kafkaCluster, Clock clock,
-                              @SelfHostAndPort HostAndPort hostAndPort,
+                              HostAndPort hostAndPort,
+                              String refResolverConsumerGroup,
                               MetricRegistry metricRegistry) {
-        super(applicationId, SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), metricRegistry);
+        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), refResolverConsumerGroup, metricRegistry);
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");

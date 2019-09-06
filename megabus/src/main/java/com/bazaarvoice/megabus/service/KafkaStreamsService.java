@@ -22,10 +22,10 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     private final AtomicBoolean _fatalErrorEncountered;
     private KafkaStreams _streams;
 
-    public KafkaStreamsService(String applicationId,
-                               String serviceName,
+    public KafkaStreamsService(String serviceName,
                                String bootstrapServers,
                                String instanceId,
+                               String consumerGroupName,
                                MetricRegistry metricRegistry) {
         _uncaughtException = new AtomicReference<>();
         _fatalErrorEncountered = new AtomicBoolean(false);
@@ -34,7 +34,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
         _streamsConfiguration = new Properties();
 
-        _streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, applicationId + "-" + serviceName);
+        _streamsConfiguration.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerGroupName);
 
         _streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
