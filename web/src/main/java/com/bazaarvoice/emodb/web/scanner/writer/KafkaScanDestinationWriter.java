@@ -104,8 +104,8 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     @Override
     public void closeAndCancel() {
+        _error.compareAndSet(null, new RuntimeException("Kafka upload canceled.")); 
         _closed = true;
-        _error.compareAndSet(null, new RuntimeException("Kafka upload canceled."));
         _futureGettingService.shutdownNow();
     }
 
