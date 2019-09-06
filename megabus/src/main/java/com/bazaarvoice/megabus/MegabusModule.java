@@ -4,9 +4,11 @@ import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.megabus.guice.DelayProcessorConsumerGroup;
 import com.bazaarvoice.megabus.guice.MegabusRefTopic;
 import com.bazaarvoice.megabus.guice.MegabusTopic;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
+import com.bazaarvoice.megabus.guice.RefResolverConsumerGroup;
 import com.bazaarvoice.megabus.guice.RetryRefTopic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
@@ -91,6 +93,20 @@ public class MegabusModule extends PrivateModule {
     @Singleton
     MegabusRefProducerConfiguration provideMegabusRefProducerConfiguration(MegabusConfiguration megabusConfiguration) {
         return megabusConfiguration.getRefProducerConfiguration();
+    }
+
+    @Provides
+    @Singleton
+    @DelayProcessorConsumerGroup
+    String provideDelayProcessorConsumerGroup(MegabusConfiguration megabusConfiguration) {
+        return megabusConfiguration.getDelayProcessorConsumerGroupName();
+    }
+
+    @Provides
+    @Singleton
+    @RefResolverConsumerGroup
+    String provideRefResolverConsumerGroup(MegabusConfiguration megabusConfiguration) {
+        return megabusConfiguration.getRefResolverConsumerGroupName();
     }
 
 }

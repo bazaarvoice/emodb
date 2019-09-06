@@ -1,14 +1,10 @@
 package com.bazaarvoice.megabus.resolver;
 
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
-import com.bazaarvoice.megabus.guice.MissingRefTopic;
-import com.bazaarvoice.megabus.guice.RetryRefTopic;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -36,13 +32,13 @@ public class MissingRefDelayProcessor extends KafkaStreamsService {
 
 
     public MissingRefDelayProcessor(DataProvider dataProvider,
-                                    @RetryRefTopic Topic retryRefTopic,
-                                    @MissingRefTopic Topic missingRefTopic,
-                                    @MegabusApplicationId String applicationId,
+                                    Topic retryRefTopic,
+                                    Topic missingRefTopic,
                                     KafkaCluster kafkaCluster, Clock clock,
-                                    @SelfHostAndPort HostAndPort hostAndPort,
+                                    HostAndPort hostAndPort,
+                                    String delayProcessorConsumerGroup,
                                     MetricRegistry metricRegistry) {
-        super(applicationId, SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), metricRegistry);
+        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), delayProcessorConsumerGroup, metricRegistry);
 
         _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");

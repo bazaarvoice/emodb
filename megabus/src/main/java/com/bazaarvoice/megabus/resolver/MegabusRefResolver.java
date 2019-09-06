@@ -1,6 +1,5 @@
 package com.bazaarvoice.megabus.resolver;
 
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
@@ -10,12 +9,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.MegabusRef;
-import com.bazaarvoice.megabus.guice.MegabusRefTopic;
-import com.bazaarvoice.megabus.guice.MegabusTopic;
-import com.bazaarvoice.megabus.guice.MissingRefTopic;
-import com.bazaarvoice.megabus.guice.RetryRefTopic;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
@@ -60,15 +54,15 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
 
     @Inject
-    public MegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                              @MegabusTopic Topic megabusResolvedTopic,
-                              @RetryRefTopic Topic retryRefTopic,
-                              @MissingRefTopic Topic missingRefTopic,
-                              @MegabusApplicationId String applicationId,
+    public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
+                              Topic megabusResolvedTopic,
+                              Topic retryRefTopic,
+                              Topic missingRefTopic,
                               KafkaCluster kafkaCluster, Clock clock,
-                              @SelfHostAndPort HostAndPort hostAndPort,
+                              HostAndPort hostAndPort,
+                              String refResolverConsumerGroup,
                               MetricRegistry metricRegistry) {
-        super(applicationId, SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), metricRegistry);
+        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), refResolverConsumerGroup, metricRegistry);
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");

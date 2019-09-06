@@ -61,20 +61,22 @@ kafka:
 
 megabus:
   applicationId: megabus-local
+  refResolverConsumerGroupName: emodb.megabus.resolver
+  delayProcessorConsumerGroupName: emodb.megabus.delay
   megabusRefTopic:
-    name: emodb-internal-megabus-ref
+    name: emodb.internal.megabus.ref
     partitions: 8
     replicationFactor: 1
   megabusTopic:
-    name: emodb-megabus
+    name: emodb.megabus
     partitions: 8
     replicationFactor: 1
   missingRefTopic:
-    name: emodb-internal-megabus-ref-missing
+    name: emodb.internal.megabus.missing
     partitions: 8
     replicationFactor: 1
   retryRefTopic:
-    name: emodb-internal-megabus-ref-retry
+    name: emodb.internal.megabus.retry
     partitions: 8
     replicationFactor: 1
   boot:
