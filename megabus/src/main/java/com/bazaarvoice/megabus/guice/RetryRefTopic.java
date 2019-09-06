@@ -1,4 +1,4 @@
-package com.bazaarvoice.megabus;
+package com.bazaarvoice.megabus.guice;
 
 import com.google.inject.BindingAnnotation;
 import java.lang.annotation.Retention;
