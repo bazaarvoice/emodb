@@ -21,6 +21,11 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * This class writes documents to Kafka asynchronously, then cleans up the futures using the future service. Access to
+ * this class is multi-threaded. A single thread is responsible for calling {@link #writeDocument(Map)},
+ * {@link #closeAndCancel()}, and {@link #closeAndTransferAsync(Optional)}. A separate threads calls {@link #isFinishedUploading()}
+ */
 public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     private static Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
