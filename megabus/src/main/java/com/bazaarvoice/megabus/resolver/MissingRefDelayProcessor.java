@@ -38,7 +38,8 @@ public class MissingRefDelayProcessor extends KafkaStreamsService {
                                     HostAndPort hostAndPort,
                                     String delayProcessorConsumerGroup,
                                     MetricRegistry metricRegistry) {
-        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), delayProcessorConsumerGroup, metricRegistry);
+        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
+                delayProcessorConsumerGroup, 1, metricRegistry);
 
         _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");

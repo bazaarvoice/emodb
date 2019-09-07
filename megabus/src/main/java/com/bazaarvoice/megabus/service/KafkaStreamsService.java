@@ -26,6 +26,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
                                String bootstrapServers,
                                String instanceId,
                                String consumerGroupName,
+                               int streamThreads,
                                MetricRegistry metricRegistry) {
         _uncaughtException = new AtomicReference<>();
         _fatalErrorEncountered = new AtomicBoolean(false);
@@ -39,6 +40,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
         _streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
         _streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
+
+        _streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamThreads);
 
         _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
 
