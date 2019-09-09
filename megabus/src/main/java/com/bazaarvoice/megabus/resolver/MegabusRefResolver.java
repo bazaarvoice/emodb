@@ -62,7 +62,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               HostAndPort hostAndPort,
                               String refResolverConsumerGroup,
                               MetricRegistry metricRegistry) {
-        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(), refResolverConsumerGroup, metricRegistry);
+        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
+                refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
         _dataProvider = checkNotNull(dataProvider, "dataProvider");
         _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
