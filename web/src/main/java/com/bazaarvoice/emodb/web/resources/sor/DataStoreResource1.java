@@ -105,6 +105,9 @@ import static java.lang.String.format;
 public class DataStoreResource1 {
     private static final Logger _log = LoggerFactory.getLogger(DataStoreResource1.class);
 
+    private static final String TEMPORARY_UNAUTHORIZED_MESSAGE =
+            "Modifying the metadata of existing tables is temporarily disabled for EmoDB users. Contact the database administrator for assistance";
+
     /**
      * To distinguish between UUID and timestamps, assume anything that looks like "hex-hex-hex-hex-hex" is a UUID.
      */
@@ -211,8 +214,14 @@ public class DataStoreResource1 {
     )
     public SuccessResponse dropTable(@PathParam ("table") String table,
                                      @QueryParam ("audit") AuditParam auditParam,
-                                     @Context UriInfo uriInfo) {
+                                     @Context UriInfo uriInfo,
+                                     @Authenticated Subject subject) {
         Audit audit = getRequired(auditParam, "audit");
+
+        if (!subject.hasPermission(Permissions.unlimited())) {
+            throw new UnauthorizedException(TEMPORARY_UNAUTHORIZED_MESSAGE);
+        }
+
         _dataStore.dropTable(table, audit);
         return SuccessResponse.instance();
     }
@@ -247,9 +256,15 @@ public class DataStoreResource1 {
     public SuccessResponse dropFacade(@PathParam ("table") String table,
                                       @QueryParam ("audit") AuditParam auditParam,
                                       @QueryParam ("placement") String placement,
-                                      @Context UriInfo uriInfo) {
+                                      @Context UriInfo uriInfo,
+                                      @Authenticated Subject subject) {
         checkArgument(!Strings.isNullOrEmpty(placement), "Missing required placement.");
         Audit audit = getRequired(auditParam, "audit");
+
+        if (!subject.hasPermission(Permissions.unlimited())) {
+            throw new UnauthorizedException(TEMPORARY_UNAUTHORIZED_MESSAGE);
+        }
+
         _dataStore.dropFacade(table, placement, audit);
         return SuccessResponse.instance();
     }
@@ -264,8 +279,14 @@ public class DataStoreResource1 {
             response = SuccessResponse.class
     )
     public Map<String, Object> purgeTableAsync(@PathParam ("table") String table,
-                                               @QueryParam ("audit") AuditParam auditParam) {
+                                               @QueryParam ("audit") AuditParam auditParam,
+                                               @Authenticated Subject subject) {
         Audit audit = getRequired(auditParam, "audit");
+
+        if (!subject.hasPermission(Permissions.unlimited())) {
+            throw new UnauthorizedException(TEMPORARY_UNAUTHORIZED_MESSAGE);
+        }
+
         String jobID = _dataStoreAsync.purgeTableAsync(table, audit);
         return ImmutableMap.<String, Object>of("id", jobID);
     }
@@ -308,8 +329,14 @@ public class DataStoreResource1 {
     public SuccessResponse setTableTemplate(@PathParam ("table") String table,
                                             Map<String, Object> template,
                                             @QueryParam ("audit") AuditParam auditParam,
-                                            @Context UriInfo uriInfo) {
+                                            @Context UriInfo uriInfo,
+                                            @Authenticated Subject subject) {
         Audit audit = getRequired(auditParam, "audit");
+
+        if (!subject.hasPermission(Permissions.unlimited())) {
+            throw new UnauthorizedException(TEMPORARY_UNAUTHORIZED_MESSAGE);
+        }
+
         _dataStore.setTableTemplate(table, template, audit);
         return SuccessResponse.instance();
     }

@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.purge;
 
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.job.api.JobIdentifier;
@@ -24,6 +25,7 @@ import com.bazaarvoice.emodb.sor.core.PurgeRequest;
 import com.bazaarvoice.emodb.sor.core.PurgeResult;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.resources.sor.AuditParam;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
@@ -45,6 +47,7 @@ import java.util.Objects;
 import static com.bazaarvoice.emodb.job.api.JobIdentifier.createNew;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertTrue;
 
 
@@ -141,7 +144,9 @@ public class PurgeTest {
         assertTrue(purgeStatus.get("status").toString().equals("IN_PROGRESS"));
 
         // calling job directly via calling purgeTableAsync on DataStoreResource1
-        Map<String, Object> jobID3Map = _dataStoreResource.purgeTableAsync(TABLE3, new AuditParam("audit=comment:'purgetest+comment'"));
+        Subject subject = mock(Subject.class);
+        when(subject.hasPermission(Permissions.unlimited())).thenReturn(true);
+        Map<String, Object> jobID3Map = _dataStoreResource.purgeTableAsync(TABLE3, new AuditParam("audit=comment:'purgetest+comment'"), subject);
         Map<String, Object> purgeStatus3 = _dataStoreResource.getPurgeStatus(TABLE3, jobID3Map.get("id").toString());
         assertTrue(purgeStatus3.get("status").toString().equals("IN_PROGRESS"));
     }
