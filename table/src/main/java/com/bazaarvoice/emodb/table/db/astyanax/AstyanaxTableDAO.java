@@ -40,6 +40,7 @@ import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.bazaarvoice.emodb.table.db.TableDeleteOperations;
 import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
@@ -100,12 +101,14 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -181,6 +184,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final Map<String, String> _placementsUnderMove;
     private CQLStashTableDAO _stashTableDao;
     private final boolean _purgesBlocked;
+    private TableDeleteOperations _tableDeleteOperations;
     private Clock _clock;
 
     @Inject
@@ -247,6 +251,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Inject (optional = true)
     public void setCQLStashTableDAO(CQLStashTableDAO stashTableDao) {
         _stashTableDao = stashTableDao;
+    }
+
+    @Inject
+    public void setTableDeleteOperations(TableDeleteOperations tableDeleteOperations) {
+        _tableDeleteOperations = tableDeleteOperations;
     }
 
     @Override
@@ -749,6 +758,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         _log.info("Purging data for table '{}' and table uuid '{}' (facade={}, iteration={}).",
                 json.getTable(), storage.getUuidString(), storage.isFacade(), iteration);
 
+
+        // for other approach - CREATE AND FANOUT DATABUS EVENTS RIGHT HERE.
+
+
         // Cap the # of writes-per-second to avoid saturating the cluster.
         Runnable rateLimitedProgress = rateLimited(_placementCache.get(storage.getPlacement()), progress);
 
@@ -758,6 +771,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 .set("_placement", storage.getPlacement())
                 .build());
         _dataPurgeDAO.purge(newAstyanaxStorage(storage, json.getTable()), rateLimitedProgress);
+
+        // post databus delete events for all the keys of the dropped table.
+
+        // TODO: Decide on the changeId and Tags.
+        UUID changeId = TimeUUIDs.newUUID();
+        Set<String> tags = Collections.EMPTY_SET;
+        _tableDeleteOperations.sendDeleteEventsForTable(json.getTable(), changeId, tags);
     }
 
     /**

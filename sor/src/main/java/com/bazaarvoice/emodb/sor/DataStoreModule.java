@@ -35,8 +35,28 @@ import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
 import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
-import com.bazaarvoice.emodb.sor.core.*;
+import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DataStoreMinSplitSize;
+import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
+import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.sor.core.DataWriteCloser;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
+import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
 import com.bazaarvoice.emodb.sor.core.DefaultHistoryStore;
+import com.bazaarvoice.emodb.sor.core.DefaultMigratorTools;
+import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
+import com.bazaarvoice.emodb.sor.core.GracefulShutdownManager;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
+import com.bazaarvoice.emodb.sor.core.LocalDataStore;
+import com.bazaarvoice.emodb.sor.core.ManagedDataStoreDelegate;
+import com.bazaarvoice.emodb.sor.core.ManagedTableBackingStoreDelegate;
+import com.bazaarvoice.emodb.sor.core.MigratorTools;
+import com.bazaarvoice.emodb.sor.core.MinSplitSizeCleanupMonitor;
+import com.bazaarvoice.emodb.sor.core.MinSplitSizeMap;
+import com.bazaarvoice.emodb.sor.core.StashRoot;
+import com.bazaarvoice.emodb.sor.core.SystemDataStore;
+import com.bazaarvoice.emodb.sor.core.WriteCloseableDataStore;
+import com.bazaarvoice.emodb.sor.core.ZKDataStoreMinSplitSizeSerializer;
 import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
@@ -53,7 +73,29 @@ import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.*;
+import com.bazaarvoice.emodb.table.db.TableDeleteOperations;
+import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxKeyspaceDiscovery;
+import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
+import com.bazaarvoice.emodb.table.db.astyanax.BootstrapTables;
+import com.bazaarvoice.emodb.table.db.astyanax.CQLSessionForHintsPollerMap;
+import com.bazaarvoice.emodb.table.db.astyanax.CQLStashTableDAO;
+import com.bazaarvoice.emodb.table.db.astyanax.CqlMigratorTableDAO;
+import com.bazaarvoice.emodb.table.db.astyanax.CurrentDataCenter;
+import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
+import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
+import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
+import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceDAO;
+import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceRateLimitTask;
+import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceSchedulerManager;
+import com.bazaarvoice.emodb.table.db.astyanax.MoveTableTask;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
+import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
+import com.bazaarvoice.emodb.table.db.astyanax.PurgesBlocked;
+import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
+import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
+import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
+import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;
 import com.bazaarvoice.emodb.table.db.consistency.ClusterHintsPoller;
 import com.bazaarvoice.emodb.table.db.consistency.CompositeConsistencyTimeProvider;
@@ -258,6 +300,10 @@ public class DataStoreModule extends PrivateModule {
             bind(MigratorTools.class).to(DefaultMigratorTools.class);
             expose(MigratorTools.class);
         }
+
+        // The AstyanaxTableDAO class uses the TableDeleteOperations, and the default implementation is provided by DefaultDataStore.
+        bind(TableDeleteOperations.class).to(DefaultDataStore.class);
+        expose(TableDeleteOperations.class);
     }
 
     @Provides @Singleton

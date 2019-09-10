@@ -8,6 +8,7 @@ import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.event.api.EventData;
+import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -213,6 +214,7 @@ public class DefaultFanout extends AbstractScheduledService {
                             for (EventData rawEvent : rawEventPartition) {
                                 ByteBuffer eventData = rawEvent.getData();
 
+                                UpdateRef updateRef = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
                                 SubscriptionEvaluator.MatchEventData matchEventData;
                                 try (Timer.Context ignored2 = _fetchMatchEventDataTimer.time()) {
                                     matchEventData = _subscriptionEvaluator.getMatchEventData(eventData);
@@ -222,9 +224,12 @@ public class DefaultFanout extends AbstractScheduledService {
                                     // plenty of room for error wait until over 30 seconds after the event was written
                                     // before dropping the event.  After this the event must be orphaned because
                                     // the associated table was dropped.
-                                    if (e.getEventTime().until(_clock.instant(), ChronoUnit.SECONDS) > 30) {
+                                    // Also, include the event if isDroppedUpdate is set to TRUE. This means, the events are for the dropped table which we already know.
+                                    if (e.getEventTime().until(_clock.instant(), ChronoUnit.SECONDS) > 30 ||
+                                            Boolean.TRUE.equals(updateRef.getIsDroppedUpdate())) {
                                         eventKeys.add(rawEvent.getId());
                                     }
+
                                     continue;
                                 }
 

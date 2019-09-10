@@ -12,7 +12,6 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
-import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
