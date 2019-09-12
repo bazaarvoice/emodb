@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
+import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.UpdateRefSerializer;
 import com.bazaarvoice.emodb.event.api.EventData;
@@ -17,18 +18,15 @@ import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -90,6 +88,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _clock = firstNonNull(clock, Clock.systemUTC());
 
         // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
+        // NOTE: megabus subscriptions currently avoid dedup queues by starting with "__"
         _subscriptionName = requireNonNull(subscriptionName, "subscriptionName");
         _objectMapper = requireNonNull(objectMapper, "objectMapper");
         _topic = requireNonNull(topic, "topic");
@@ -130,39 +129,23 @@ public class MegabusRefProducer extends AbstractScheduledService {
         }
     }
 
-    public static class Event {
-        public String id;
-        public UpdateRef payload;  // Name matches the QueueService Message object.
-
-        private Event(String id, UpdateRef payload) {
-            this.id = id;
-            this.payload = payload;
-        }
-    }
-
     private boolean peekAndAckEvents() {
         // Poll for events on the megabus subscription
         long startTime = _clock.instant().getNano();
-        List<String> eventKeys = Lists.newArrayList();
         List<EventData> result = _eventStore.peek(_subscriptionName, _eventsLimit);
-        List<Event> events = result.stream().map(event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData()))).collect(Collectors.toList());
-        Multimap<Integer, MegabusRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), _eventsLimit / _topic.getPartitions());
-        for (Event event : events) {
-            String key = Coordinate.of(event.payload.getTable(), event.payload.getKey()).toString();
-            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(),
-                    new MegabusRef(event.payload.getTable(), event.payload.getKey(), event.payload.getChangeId()));
-            eventKeys.add(event.id);
-        }
 
-        List<Future> futures = new ArrayList<>();
-
-        refsByPartition.keySet().forEach(key -> {
-            futures.add(_producer.send(new ProducerRecord<>(_topic.getName(), key,
-                    TimeUUIDs.newUUID().toString(), _objectMapper.valueToTree(refsByPartition.get(key)))));
-        });
-
-        long endTime = _clock.instant().getNano();
-        trackAverageEventDuration(endTime - startTime, eventKeys.size());
+        List<Future> futures = result.stream()
+                .map(eventData -> UpdateRefSerializer.fromByteBuffer(eventData.getData()))
+                .map(ref -> new MegabusRef(ref.getTable(), ref.getKey(), ref.getChangeId()))
+                .collect(Collectors.groupingBy(ref -> {
+                    String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
+                    return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();
+                }, Collectors.toList()))
+                .entrySet()
+                .stream()
+                .map(entry -> _producer.send(new ProducerRecord<>(_topic.getName(), entry.getKey(), TimeUUIDs.newUUID().toString(),
+                                _objectMapper.valueToTree(entry.getValue()))))
+                .collect(Collectors.toList());
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
         if (!isRunning()) {
@@ -173,12 +156,14 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
         futures.forEach(Futures::getUnchecked);
 
-        // Ack these events
-        if (!eventKeys.isEmpty()) {
-            _eventStore.delete(_subscriptionName, eventKeys, false);
+        long endTime = _clock.instant().getNano();
+        trackAverageEventDuration(endTime - startTime, result.size());
+
+        if (!result.isEmpty()) {
+            _eventStore.delete(_subscriptionName, result.stream().map(EventData::getId).collect(Collectors.toList()), false);
         }
 
-        return eventKeys.size() >= _skipWaitThreshold;
+        return result.size() >= _skipWaitThreshold;
     }
 
     private void trackAverageEventDuration(long durationInNs, int numEvents) {

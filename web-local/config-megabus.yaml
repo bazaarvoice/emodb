@@ -1,8 +1,6 @@
 # Select service mode - See EmoServiceMode class to see all available options
 # This allows you to split Emo's micro services deployed separately
 serviceMode: MEGABUS
-#serviceMode: STANDARD_MAIN
-#serviceMode: STANDARD_BLOB
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default

@@ -28,6 +28,10 @@ import org.apache.kafka.common.config.TopicConfig;
 
 public class MegabusModule extends PrivateModule {
 
+    /**
+     * These values should not be changed without extreme caution. Changing them on a live system will likely not be
+     * backward compatible
+     */
     private static final int REF_PARTITIONS = 4;
     private static final String REF_TOPIC_RETENTION = Long.toString(Duration.ofDays(30).toMillis());
     private static final String MEGABUS_DELETE_RETENTION = Long.toString(Duration.ofDays(14).toMillis());

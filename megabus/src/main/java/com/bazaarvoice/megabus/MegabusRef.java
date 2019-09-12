@@ -6,8 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 
 import java.util.UUID;
+import static java.util.Objects.requireNonNull;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Reference to a System of Record update. Designed to be similar to {@link com.bazaarvoice.emodb.sor.core.UpdateRef},
@@ -23,9 +23,9 @@ public class MegabusRef {
     @JsonCreator
     public MegabusRef(@JsonProperty("table") String table, @JsonProperty("key") String key,
                      @JsonProperty("changeId") UUID changeId) {
-        _table = checkNotNull(table, "table");
-        _key = checkNotNull(key, "key");
-        _changeId = checkNotNull(changeId, "changeId");
+        _table = requireNonNull(table, "table");
+        _key = requireNonNull(key, "key");
+        _changeId = requireNonNull(changeId, "changeId");
     }
 
     public String getTable() {

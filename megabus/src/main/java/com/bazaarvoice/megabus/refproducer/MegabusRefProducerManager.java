@@ -3,18 +3,15 @@ package com.bazaarvoice.megabus.refproducer;
 import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.zookeeper.leader.PartitionedLeaderService;
 import com.bazaarvoice.emodb.databus.ChannelNames;
-import com.bazaarvoice.emodb.databus.DatabusOstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.core.DatabusChannelConfiguration;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.core.DatabusFactory;
-import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -41,8 +38,7 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
     private final String _applicationId;
 
     @Inject
-    public MegabusRefProducerManager(final LifeCycleRegistry lifeCycle,
-                                     LeaderServiceTask leaderServiceTask,
+    public MegabusRefProducerManager(LeaderServiceTask leaderServiceTask,
                                      @MegabusZookeeper CuratorFramework curator,
                                      @MegabusRefTopic Topic refTopic,
                                      @SelfHostAndPort HostAndPort hostAndPort,
@@ -53,7 +49,6 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
                                      final @SystemIdentity String systemId,
                                      @MegabusApplicationId String applicationId,
                                      final RateLimitedLogFactory logFactory,
-                                     @DatabusOstrichOwnerGroupFactory OstrichOwnerGroupFactory ownerGroupFactory,
                                      @NumRefPartitions int numRefPartitions,
                                      final MetricRegistry metricRegistry,
                                      KafkaCluster kafkaCluster,

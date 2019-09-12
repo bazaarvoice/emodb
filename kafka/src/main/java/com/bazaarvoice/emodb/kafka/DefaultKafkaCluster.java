@@ -22,7 +22,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultKafkaCluster implements KafkaCluster {
 
@@ -36,10 +36,10 @@ public class DefaultKafkaCluster implements KafkaCluster {
     public DefaultKafkaCluster(AdminClient adminClient, @BootstrapServers String bootstrapServers,
                                @SelfHostAndPort HostAndPort hostAndPort,
                                KafkaProducerConfiguration producerConfiguration) {
-        _adminClient = checkNotNull(adminClient);
-        _bootstrapServers = checkNotNull(bootstrapServers);
-        _instanceIdentifier = checkNotNull(hostAndPort).toString();
-        _kafkaProducerConfiguration = checkNotNull(producerConfiguration);
+        _adminClient = requireNonNull(adminClient);
+        _bootstrapServers = requireNonNull(bootstrapServers);
+        _instanceIdentifier = requireNonNull(hostAndPort).toString();
+        _kafkaProducerConfiguration = requireNonNull(producerConfiguration);
         _producerSupplier = Suppliers.memoize(this::createProducer);
     }
 
@@ -70,10 +70,10 @@ public class DefaultKafkaCluster implements KafkaCluster {
     private Producer<String, JsonNode> createProducer() {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, _bootstrapServers);
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 0);
-        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, 15 * 1024 * 1024); // 15 MB
-        props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, "zstd");
+        props.put(ProducerConfig.ACKS_CONFIG, Constants.ACKS_CONFIG);
+        props.put(ProducerConfig.RETRIES_CONFIG, Constants.RETRIES_CONFIG);
+        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, Constants.MAX_REQUEST_SIZE);
+        props.put(ProducerConfig.COMPRESSION_TYPE_CONFIG, Constants.PRODUCER_COMPRESSION_TYPE);
 
         props.put(ProducerConfig.CLIENT_ID_CONFIG, _instanceIdentifier);
 

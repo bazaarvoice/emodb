@@ -10,7 +10,7 @@ import com.bazaarvoice.megabus.MegabusBootDAO;
 import com.google.inject.Inject;
 import java.net.URI;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class StashMegabusBootDAO implements MegabusBootDAO {
 
@@ -19,8 +19,8 @@ public class StashMegabusBootDAO implements MegabusBootDAO {
 
     @Inject
     public StashMegabusBootDAO(ScanUploader scanUploader, DataTools dataTools) {
-        _scanUploader = checkNotNull(scanUploader);
-        _dataTools = checkNotNull(dataTools);
+        _scanUploader = requireNonNull(scanUploader);
+        _dataTools = requireNonNull(dataTools);
     }
 
     @Override

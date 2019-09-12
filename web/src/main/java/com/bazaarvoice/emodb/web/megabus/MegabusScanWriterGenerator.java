@@ -5,7 +5,7 @@ import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
 import com.google.inject.Inject;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MegabusScanWriterGenerator extends ScanWriterGenerator {
 
@@ -13,7 +13,7 @@ public class MegabusScanWriterGenerator extends ScanWriterGenerator {
 
     @Inject
     public MegabusScanWriterGenerator(KafkaScanWriterFactory kafkaScanWriterFactory) {
-        _kafkaScanWriterFactory = checkNotNull(kafkaScanWriterFactory);
+        _kafkaScanWriterFactory = requireNonNull(kafkaScanWriterFactory);
     }
 
     @Override

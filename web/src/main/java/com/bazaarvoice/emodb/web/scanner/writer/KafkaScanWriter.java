@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
-import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +14,10 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.Producer;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class KafkaScanWriter implements ScanWriter {
 
@@ -34,13 +32,13 @@ public class KafkaScanWriter implements ScanWriter {
     public KafkaScanWriter(KafkaCluster kafkaCluster, ObjectMapper objectMapper, Clock clock,
                            MetricRegistry metricRegistry, @Assisted URI baseUri) {
 
-        checkNotNull(kafkaCluster, "kafkaCluster");
+        requireNonNull(kafkaCluster, "kafkaCluster");
 
         _producer = kafkaCluster.producer();
-        _mapper = checkNotNull(objectMapper, "objectMapper");
-        _clock = checkNotNull(clock, "clock");
-        _topicName  = checkNotNull(baseUri.getHost(), "topicName");
-        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
+        _mapper = requireNonNull(objectMapper, "objectMapper");
+        _clock = requireNonNull(clock, "clock");
+        _topicName  = requireNonNull(baseUri.getHost(), "topicName");
+        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
         checkArgument(!_topicName.isEmpty());
         _writers = new HashMap<>();
     }

@@ -9,8 +9,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import static java.util.Objects.requireNonNull;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 public class ResilientService extends AbstractExecutionThreadService {
 
@@ -27,9 +27,9 @@ public class ResilientService extends AbstractExecutionThreadService {
 
     public ResilientService(String serviceName, Supplier<Service> serviceFactory, Duration restartDelay,
                             boolean restartOnTermination) {
-        _serviceName = checkNotNull(serviceName);
-        _serviceFactory = checkNotNull(serviceFactory);
-        _restartDelay = checkNotNull(restartDelay);
+        _serviceName = requireNonNull(serviceName);
+        _serviceFactory = requireNonNull(serviceFactory);
+        _restartDelay = requireNonNull(restartDelay);
         _restartOnTermination = restartOnTermination;
         _semaphore = new Semaphore(0);
     }

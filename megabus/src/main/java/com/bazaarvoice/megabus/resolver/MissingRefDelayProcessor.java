@@ -19,7 +19,7 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MissingRefDelayProcessor extends KafkaStreamsService {
 
@@ -41,9 +41,9 @@ public class MissingRefDelayProcessor extends KafkaStreamsService {
         super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
                 delayProcessorConsumerGroup, 1, metricRegistry);
 
-        _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
-        _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
-        _clock = checkNotNull(clock, "clock");
+        _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");
+        _missingRefTopic = requireNonNull(missingRefTopic, "missingRefTopic");
+        _clock = requireNonNull(clock, "clock");
     }
 
     @Override

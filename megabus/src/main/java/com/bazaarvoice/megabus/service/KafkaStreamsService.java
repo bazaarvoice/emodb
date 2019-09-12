@@ -1,5 +1,6 @@
 package com.bazaarvoice.megabus.service;
 
+import com.bazaarvoice.emodb.kafka.Constants;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
@@ -13,9 +14,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 
 public abstract class KafkaStreamsService extends AbstractService implements KafkaStreams.StateListener {
-
-    // 15 MB
-    private static final int MAX_MESSAGE_SIZE = 15 * 1024 * 1024;
 
     private final Properties _streamsConfiguration;
     private final AtomicReference<Throwable> _uncaughtException;
@@ -43,11 +41,11 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
         _streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamThreads);
 
-        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), "all");
+        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), Constants.ACKS_CONFIG);
 
-        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), "zstd");
+        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.COMPRESSION_TYPE_CONFIG), Constants.PRODUCER_COMPRESSION_TYPE);
 
-        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), MAX_MESSAGE_SIZE);
+        _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.MAX_REQUEST_SIZE_CONFIG), Constants.MAX_REQUEST_SIZE);
 
         _streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, instanceId + "-" + serviceName);
     }

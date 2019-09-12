@@ -5,7 +5,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Date;
 import java.util.List;
-import static com.google.common.base.Preconditions.checkNotNull;
+
+import static java.util.Objects.requireNonNull;
 
 public class MissingRefCollection {
 
@@ -14,8 +15,8 @@ public class MissingRefCollection {
 
     @JsonCreator
     public MissingRefCollection(@JsonProperty("missingRefs") List<MegabusRef> missingRefs, @JsonProperty("lastProcessTime") Date lastProcessTime) {
-        _missingRefs = checkNotNull(missingRefs);
-        _lastProcessTime = checkNotNull(lastProcessTime);
+        _missingRefs = requireNonNull(missingRefs);
+        _lastProcessTime = requireNonNull(lastProcessTime);
     }
 
     public List<MegabusRef> getMissingRefs() {

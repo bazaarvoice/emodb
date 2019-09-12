@@ -34,7 +34,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MegabusRefResolver extends KafkaStreamsService {
 
@@ -64,12 +64,12 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               MetricRegistry metricRegistry) {
         super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
                 refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
-        _dataProvider = checkNotNull(dataProvider, "dataProvider");
-        _megabusRefTopic = checkNotNull(megabusRefTopic, "megabusRefTopic");
-        _megabusResolvedTopic = checkNotNull(megabusResolvedTopic, "megabusResolvedTopic");
-        _retryRefTopic = checkNotNull(retryRefTopic, "retryRefTopic");
-        _missingRefTopic = checkNotNull(missingRefTopic, "missingRefTopic");
-        _clock = checkNotNull(clock, "clock");
+        _dataProvider = requireNonNull(dataProvider, "dataProvider");
+        _megabusRefTopic = requireNonNull(megabusRefTopic, "megabusRefTopic");
+        _megabusResolvedTopic = requireNonNull(megabusResolvedTopic, "megabusResolvedTopic");
+        _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");
+        _missingRefTopic = requireNonNull(missingRefTopic, "missingRefTopic");
+        _clock = requireNonNull(clock, "clock");
 
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));

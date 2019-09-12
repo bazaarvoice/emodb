@@ -40,14 +40,14 @@ import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class MegabusStashModule extends PrivateModule {
 
     private final MegabusBootConfiguration _config;
 
     public MegabusStashModule(MegabusBootConfiguration configuration) {
-        _config = checkNotNull(configuration);
+        _config = requireNonNull(configuration);
 
         checkArgument(_config.getScanThreadCount() > 0, "Scan thread count must be at least 1");
     }

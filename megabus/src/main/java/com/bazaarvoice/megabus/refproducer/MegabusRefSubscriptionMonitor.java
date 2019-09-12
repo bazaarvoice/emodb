@@ -11,14 +11,14 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A service that polls ref subscription queue sizes periodically and reports them to Datadog via Dropwizard Metrics, subject
  * to leader election.
  */
 public class MegabusRefSubscriptionMonitor extends AbstractScheduledService {
-    private static final Logger _log = LoggerFactory.getLogger(com.bazaarvoice.emodb.databus.core.SystemQueueMonitor.class);
+    private static final Logger _log = LoggerFactory.getLogger(MegabusRefSubscriptionMonitor.class);
 
     private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
 
@@ -31,9 +31,9 @@ public class MegabusRefSubscriptionMonitor extends AbstractScheduledService {
                                          MetricRegistry metricRegistry,
                                          String applicationId,
                                          int partitions) {
-        _eventStore = checkNotNull(eventStore, "eventStore");
+        _eventStore = requireNonNull(eventStore, "eventStore");
         _gauges = new MetricsGroup(metricRegistry);
-        _applicationId = checkNotNull(applicationId, "applicationId");
+        _applicationId = requireNonNull(applicationId, "applicationId");
         _partitions = partitions;
         checkArgument(_partitions > 0);
         ServiceFailureListener.listenTo(this, metricRegistry);
