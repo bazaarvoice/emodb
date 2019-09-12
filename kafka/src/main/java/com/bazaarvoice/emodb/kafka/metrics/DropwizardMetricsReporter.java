@@ -21,7 +21,7 @@ public class DropwizardMetricsReporter implements MetricsReporter {
     private static final String REGISTRY_NAME = "default";
     private static final String METRIC_PREFIX = MetricsReporter.class.getPackage().getName();
 
-    protected MetricRegistry _registry;
+    private MetricRegistry _registry;
     private Set<String> _metricNames = new HashSet<>();
 
     public static void registerDefaultMetricsRegistry(MetricRegistry metricRegistry) {
@@ -42,7 +42,7 @@ public class DropwizardMetricsReporter implements MetricsReporter {
 
     @Override
     public void metricChange(KafkaMetric metric) {
-        _log.debug("Processing a metric change for {}", metric.metricName().toString());
+        _log.debug("Processing a metric change for {}", metric.metricName());
         String name = metricName(metric);
 
         Gauge<Double> gauge = metric::value;
@@ -78,8 +78,6 @@ public class DropwizardMetricsReporter implements MetricsReporter {
                 .metricName(MetricRegistry.name(METRIC_PREFIX, name.group(), name.name()));
 
         name.tags().forEach(builder::addTag);
-
-        builder.build().encode();
 
         return builder.build().encode();
     }

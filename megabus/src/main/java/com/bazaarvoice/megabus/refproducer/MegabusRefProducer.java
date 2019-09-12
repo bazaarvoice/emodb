@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
+import com.bazaarvoice.megabus.MegabusRef;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -143,11 +145,12 @@ public class MegabusRefProducer extends AbstractScheduledService {
         long startTime = _clock.instant().getNano();
         List<String> eventKeys = Lists.newArrayList();
         List<EventData> result = _eventStore.peek(_subscriptionName, _eventsLimit);
-        List<Event> events = Lists.transform(result, event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData())));
-        Multimap<Integer, UpdateRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), _eventsLimit / _topic.getPartitions());
+        List<Event> events = result.stream().map(event -> new Event(event.getId(), UpdateRefSerializer.fromByteBuffer(event.getData()))).collect(Collectors.toList());
+        Multimap<Integer, MegabusRef> refsByPartition = ArrayListMultimap.create(_topic.getPartitions(), _eventsLimit / _topic.getPartitions());
         for (Event event : events) {
             String key = Coordinate.of(event.payload.getTable(), event.payload.getKey()).toString();
-            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(), event.payload);
+            refsByPartition.put(Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions(),
+                    new MegabusRef(event.payload.getTable(), event.payload.getKey(), event.payload.getChangeId()));
             eventKeys.add(event.id);
         }
 

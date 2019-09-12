@@ -28,7 +28,10 @@ import org.apache.kafka.common.config.TopicConfig;
 
 public class MegabusModule extends PrivateModule {
 
-    private final int REF_PARTITIONS = 4;
+    private static final int REF_PARTITIONS = 4;
+    private static final String REF_TOPIC_RETENTION = Long.toString(Duration.ofDays(30).toMillis());
+    private static final String MEGABUS_DELETE_RETENTION = Long.toString(Duration.ofDays(14).toMillis());
+    private static final String COMPRESSION_CONFIGURATION = "producer";
 
     @Override
     protected void configure() {
@@ -51,8 +54,8 @@ public class MegabusModule extends PrivateModule {
 
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
-                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
+                        TopicConfig.RETENTION_MS_CONFIG, REF_TOPIC_RETENTION,
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, COMPRESSION_CONFIGURATION));
         return megabusConfiguration.getMegabusRefTopic();
     }
 
@@ -62,8 +65,8 @@ public class MegabusModule extends PrivateModule {
     Topic provideMegabusTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMegabusTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_COMPACT,
-                        TopicConfig.DELETE_RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(14).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
+                        TopicConfig.DELETE_RETENTION_MS_CONFIG, MEGABUS_DELETE_RETENTION,
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, COMPRESSION_CONFIGURATION));
         return megabusConfiguration.getMegabusTopic();
     }
 
@@ -73,8 +76,8 @@ public class MegabusModule extends PrivateModule {
     Topic provideMissingRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getMissingRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
-                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
+                        TopicConfig.RETENTION_MS_CONFIG, REF_TOPIC_RETENTION,
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, COMPRESSION_CONFIGURATION));
         return megabusConfiguration.getMissingRefTopic();
     }
 
@@ -84,8 +87,8 @@ public class MegabusModule extends PrivateModule {
     Topic provideRetryRefTopic(MegabusConfiguration megabusConfiguration, KafkaCluster kafkaCluster) {
         kafkaCluster.createTopicIfNotExists(megabusConfiguration.getRetryRefTopic(),
                 ImmutableMap.of(TopicConfig.CLEANUP_POLICY_CONFIG, TopicConfig.CLEANUP_POLICY_DELETE,
-                        TopicConfig.RETENTION_MS_CONFIG, Long.toString(Duration.ofDays(30).toMillis()),
-                        TopicConfig.COMPRESSION_TYPE_CONFIG, "producer"));
+                        TopicConfig.RETENTION_MS_CONFIG, REF_TOPIC_RETENTION,
+                        TopicConfig.COMPRESSION_TYPE_CONFIG, COMPRESSION_CONFIGURATION));
         return megabusConfiguration.getRetryRefTopic();
     }
 

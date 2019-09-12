@@ -120,10 +120,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
             _missingRefs = missingRefs;
         }
 
-        public List<Map<String, Object>> getResolvedDocs() {
-            return _resolvedDocs;
-        }
-
         public List<MegabusRef> getMissingRefs() {
             return _missingRefs;
         }

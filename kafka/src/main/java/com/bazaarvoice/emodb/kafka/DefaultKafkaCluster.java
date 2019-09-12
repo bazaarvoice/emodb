@@ -41,8 +41,6 @@ public class DefaultKafkaCluster implements KafkaCluster {
         _instanceIdentifier = checkNotNull(hostAndPort).toString();
         _kafkaProducerConfiguration = checkNotNull(producerConfiguration);
         _producerSupplier = Suppliers.memoize(this::createProducer);
-
-        Futures.getUnchecked(_adminClient.describeCluster().nodes()).forEach(System.out::println);
     }
 
     @Override
@@ -97,7 +95,6 @@ public class DefaultKafkaCluster implements KafkaCluster {
         return new KafkaProducer<>(props);
     }
 
-    // TODO: tune this
     public Producer<String, JsonNode> producer() {
         return _producerSupplier.get();
     }
