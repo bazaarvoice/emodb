@@ -8,30 +8,6 @@ cluster: local_default
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
 
-
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#metrics:
-#  reporters:
-#  - type: datadogExpansionFiltered
-#    host: test-host
-#    excludes:
-#    - ch.qos.logback
-#    - com.bazaarvoice.ostrich.pool
-#    excludeExpansions:
-#    - 5MinuteRate
-#    - 15MinuteRate
-#    - meanRate
-#    - min
-#    - max
-#    - mean
-#    - stddev
-#    - p95
-#    - p99
-#    - p999
-#    transport:
-#      type: http
-#      apiKey: invalid-key
-
 dataCenter:
   # Which data center does this server belong to?
   currentDataCenter: datacenter1
@@ -245,16 +221,6 @@ queueService:
 cqlDriver:
   multiRowFetchSize: 100
   multiRowPrefetchLimit: 50
-
-#jobs:
-#
-#Configure the ZooKeeper connection used for SOA service discovery
-# zooKeeper:
-#  #namespace: datacenter1
-#
-#  # ZooKeeper connection string that looks like "host:port,host:port,...".
-#  # It should include all members of the ZooKeeper ensemble.
-#  #connectString: localhost:2181
 
 auth:
   # The admin and replication API keys must be encrypted using the encrypt-configuration-api-key command
