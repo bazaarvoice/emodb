@@ -53,6 +53,8 @@ import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.job.JobConfiguration;
 import com.bazaarvoice.emodb.job.JobModule;
 import com.bazaarvoice.emodb.job.JobZooKeeper;
+import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
+import com.bazaarvoice.emodb.kafka.KafkaModule;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
@@ -89,6 +91,7 @@ import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
+import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
 import com.bazaarvoice.emodb.web.migrator.MigratorModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
@@ -122,6 +125,10 @@ import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
+import com.bazaarvoice.megabus.MegabusApplicationId;
+import com.bazaarvoice.megabus.MegabusConfiguration;
+import com.bazaarvoice.megabus.MegabusModule;
+import com.bazaarvoice.megabus.guice.MegabusZookeeper;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
@@ -154,6 +161,7 @@ import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -175,8 +183,10 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
@@ -217,12 +227,14 @@ public class EmoModule extends AbstractModule {
         evaluate(scanner, new ScannerSetup());
         evaluate(delta_migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
-        evaluate(job, new JobSetup());
+        evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
         evaluate(dataStore_web, new DataStoreAsyncSetup());
         evaluate(compaction_control, new CompactionControlSetup());
         evaluate(compaction_control_web, new CompactionControlWebSetup());
+        evaluate(kafka, new KafkaSetup());
+        evaluate(megabus, new MegabusSetup());
     }
 
     private class CommonModuleSetup extends AbstractModule {
@@ -696,6 +708,40 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideMigratorZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "delta_migrator");
+        }
+    }
+
+    private class KafkaSetup extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(KafkaConfiguration.class).toInstance(_configuration.getKafkaConfiguration().get());
+
+            install(new KafkaModule());
+        }
+    }
+
+    private class MegabusSetup extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(MegabusConfiguration.class).toInstance(_configuration.getMegabusConfiguration().get());
+            bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
+
+            install(new MegabusStashModule(_configuration.getMegabusConfiguration().get().getBootConfiguration()));
+            install(new MegabusModule());
+        }
+
+        /** Provide ZooKeeper namespaced to megabus data. */
+        @Provides @Singleton @MegabusZookeeper
+        CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator,
+                                                           @MegabusApplicationId String applicationId) {
+            return withComponentNamespace(curator, ZKPaths.makePath("megabus", applicationId));
+        }
+
+        @Provides @Singleton @MegabusApplicationId
+        String provideMegabusApplicationId(MegabusConfiguration megabusConfiguration) {
+            return megabusConfiguration.getApplicationId();
         }
     }
 

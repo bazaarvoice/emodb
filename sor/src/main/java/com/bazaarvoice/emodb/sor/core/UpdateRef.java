@@ -1,10 +1,7 @@
 package com.bazaarvoice.emodb.sor.core;
 
 import com.google.common.base.Objects;
-import com.google.common.base.Optional;
-import com.google.common.collect.Sets;
 
-import javax.annotation.Nullable;
 import java.util.Set;
 import java.util.UUID;
 

@@ -184,7 +184,7 @@ public class DataStoreModule extends PrivateModule {
         }
 
         // Stash requires an additional DAO for storing Stash artifacts and provides a custom interface for access.
-        if (_serviceMode.specifies(EmoServiceMode.Aspect.scanner)) {
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.scanner) || _serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
             bind(CQLStashTableDAO.class).asEagerSingleton();
             bind(StashTableDAO.class).to(AstyanaxTableDAO.class).asEagerSingleton();
             expose(StashTableDAO.class);

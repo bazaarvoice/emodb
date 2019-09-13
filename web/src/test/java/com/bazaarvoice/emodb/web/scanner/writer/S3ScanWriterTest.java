@@ -6,11 +6,14 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.queue.core.ByteBufferInputStream;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
+import java.util.HashMap;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -67,20 +70,22 @@ public class S3ScanWriterTest {
                         }
                     });
 
+            Map<String, Object> doc = ImmutableMap.of("type", "review", "rating", 5);
+
             AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
             when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
-            ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
-            shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
-            shardWriter.closeAndTransferAysnc(Optional.of(1));
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService, new ObjectMapper());
+            ScanDestinationWriter scanDestinationWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
+            scanDestinationWriter.writeDocument(doc);
+            scanDestinationWriter.closeAndTransferAsync(Optional.of(1));
 
             verifyAllTransfersComplete(scanWriter, uploadService);
 
             ByteBuffer byteBuffer = putObjects.get("scan/testtable/testtable-00-0000000000000001-1.json.gz");
             byteBuffer.position(0);
             try (Reader in = new InputStreamReader(new GzipCompressorInputStream(new ByteBufferInputStream(byteBuffer)))) {
-                assertEquals("This is a test line", CharStreams.toString(in));
+                assertEquals(CharStreams.toString(in).trim(), "{\"type\":\"review\",\"rating\":5}");
             }
         } finally {
             uploadService.shutdownNow();
@@ -101,13 +106,13 @@ public class S3ScanWriterTest {
         AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
         when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
 
-        S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService);
+        S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), metricRegistry, amazonS3Provider, uploadService, new ObjectMapper());
         scanWriter.setRetryDelay(Duration.ofMillis(10));
 
         try {
-            ShardWriter shardWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
-            shardWriter.getOutputStream().write("This is a test line".getBytes(Charsets.UTF_8));
-            shardWriter.closeAndTransferAysnc(Optional.of(1));
+            ScanDestinationWriter scanDestinationWriter = scanWriter.writeShardRows("testtable", "p0", 0, 1);
+            scanDestinationWriter.writeDocument(ImmutableMap.of("type", "review", "rating", 5));
+            scanDestinationWriter.closeAndTransferAsync(Optional.of(1));
 
             scanWriter.waitForAllTransfersComplete(Duration.ofSeconds(10));
             fail("No transfer exception thrown");
@@ -139,19 +144,19 @@ public class S3ScanWriterTest {
             AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
             when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService);
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService, new ObjectMapper());
 
-            ShardWriter shardWriter[] = new ShardWriter[2];
+            ScanDestinationWriter scanDestinationWriters[] = new ScanDestinationWriter[2];
 
-            for (int i=0; i < 2; i++) {
-                shardWriter[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
-                shardWriter[i].getOutputStream().write("line0\n".getBytes(Charsets.UTF_8));
+            for (int i = 0; i < 2; i++) {
+                scanDestinationWriters[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
+                scanDestinationWriters[i].writeDocument(ImmutableMap.of("type", "review", "rating", i));
             }
 
             // Simulate canceling shardWriter[0] in response to a failure.
-            shardWriter[0].closeAndCancel();
+            scanDestinationWriters[0].closeAndCancel();
             // Close shardWriter[1] normally
-            shardWriter[1].closeAndTransferAysnc(Optional.of(1));
+            scanDestinationWriters[1].closeAndTransferAsync(Optional.of(1));
 
             verifyAllTransfersComplete(scanWriter, uploadService);
         } finally {
@@ -177,17 +182,17 @@ public class S3ScanWriterTest {
             AmazonS3Provider amazonS3Provider = mock(AmazonS3Provider.class);
             when(amazonS3Provider.getS3ClientForBucket("test-bucket")).thenReturn(amazonS3);
 
-            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService);
+            S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService, new ObjectMapper());
 
-            ShardWriter shardWriter[] = new ShardWriter[2];
+            ScanDestinationWriter scanDestinationWriters[] = new ScanDestinationWriter[2];
 
             for (int i=0; i < 2; i++) {
-                shardWriter[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
-                shardWriter[i].getOutputStream().write("line0\n".getBytes(Charsets.UTF_8));
+                scanDestinationWriters[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
+                scanDestinationWriters[i].writeDocument(ImmutableMap.of("type", "review", "rating", i));
             }
 
             // Simulate closing shardWriter[0] but not shardWriter[1]
-            shardWriter[0].closeAndTransferAysnc(Optional.of(1));
+            scanDestinationWriters[0].closeAndTransferAsync(Optional.of(1));
 
             scanWriter.close();
 

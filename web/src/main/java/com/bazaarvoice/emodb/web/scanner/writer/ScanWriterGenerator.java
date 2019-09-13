@@ -15,17 +15,10 @@ import static com.google.common.base.Preconditions.checkArgument;
 /**
  * Generator class for creating a scan writer for a set of destinations.
  */
-public class ScanWriterGenerator {
-
-    private final ScanWriterFactory _scanWriterFactory;
-
-    @Inject
-    public ScanWriterGenerator(ScanWriterFactory scanWriterFactory) {
-        _scanWriterFactory = scanWriterFactory;
-    }
+public abstract class ScanWriterGenerator {
 
     /**
-     * Creates a scan writer from the given desintations.
+     * Creates a scan writer from the given destinations.
      */
     public ScanWriter createScanWriter(final int taskId, Set<ScanDestination> destinations) {
         checkArgument(!destinations.isEmpty(), "destinations.isEmpty()");
@@ -46,23 +39,6 @@ public class ScanWriterGenerator {
     /**
      * Creates a scan writer for the given destination.
      */
-    public ScanWriter createScanWriter(int taskId, ScanDestination destination) {
-        if (destination.isDiscarding()) {
-            return _scanWriterFactory.createDiscardingScanWriter(taskId, Optional.<Integer>absent());
-        }
-
-        URI uri = destination.getUri();
-        String scheme = uri.getScheme();
-
-        if ("file".equals(scheme)) {
-            return _scanWriterFactory.createFileScanWriter(taskId, uri, Optional.<Integer>absent());
-        }
-
-        if ("s3".equals(scheme)) {
-            return _scanWriterFactory.createS3ScanWriter(taskId, uri, Optional.<Integer>absent());
-        }
-
-        throw new IllegalArgumentException("Unsupported destination: " + destination);
-    }
+    abstract public ScanWriter createScanWriter(int taskId, ScanDestination destination);
 
 }

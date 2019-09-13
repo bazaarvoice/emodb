@@ -40,6 +40,10 @@ public class ScanOptions {
     private Duration _maxRangeScanTime = DEFAULT_MAX_RANGE_SCAN_TIME;
     // Allow compaction of records during the scan.  Potentially increases the total scan time.  Default is false
     private boolean _compactionEnabled = false;
+    // Whether or not to stash temporally
+    private boolean _temporalEnabled = true;
+    // Whether or not to only scan live ranges according to StashTableDAO
+    private boolean _onlyScanLiveRanges = true;
 
     public ScanOptions(String placement) {
         this(ImmutableSortedSet.of(placement));
@@ -57,7 +61,9 @@ public class ScanOptions {
                         @JsonProperty ("maxConcurrentSubRangeScans") Integer maxConcurrentSubRangeScans,
                         @JsonProperty ("rangeScanSplitSize") Integer rangeScanSplitSize,
                         @JsonProperty ("maxRangeScanTime") Long maxRangeScanTime,
-                        @JsonProperty ("compactionEnabled") Boolean compactionEnabled) {
+                        @JsonProperty ("compactionEnabled") Boolean compactionEnabled,
+                        @JsonProperty ("temporalEnabled") Boolean temporalEnabled,
+                        @JsonProperty ("onlyScanLiveRanges") Boolean onlyScanLiveRanges) {
         this(placements);
         if (destinations != null) {
             addDestinations(destinations);
@@ -76,6 +82,12 @@ public class ScanOptions {
         }
         if (compactionEnabled != null) {
             _compactionEnabled = compactionEnabled;
+        }
+        if (temporalEnabled != null) {
+            _temporalEnabled = temporalEnabled;
+        }
+        if (onlyScanLiveRanges != null) {
+            _onlyScanLiveRanges = onlyScanLiveRanges;
         }
     }
 
@@ -153,6 +165,22 @@ public class ScanOptions {
     public ScanOptions setCompactionEnabled(boolean compactionEnabled) {
         _compactionEnabled = compactionEnabled;
         return this;
+    }
+
+    public boolean isTemporalEnabled() {
+        return _temporalEnabled;
+    }
+
+    public void setTemporalEnabled(boolean temporalEnabled) {
+        _temporalEnabled = temporalEnabled;
+    }
+
+    public boolean isOnlyScanLiveRanges() {
+        return _onlyScanLiveRanges;
+    }
+
+    public void setOnlyScanLiveRanges(boolean onlyScanLiveRanges) {
+        _onlyScanLiveRanges = onlyScanLiveRanges;
     }
 
     @Override

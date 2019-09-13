@@ -4,10 +4,8 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.commons.io.output.TeeOutputStream;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
@@ -30,35 +28,36 @@ public class MultiScanWriter implements ScanWriter {
     }
 
     @Override
-    public ShardWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
+    public ScanDestinationWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
             throws IOException, InterruptedException {
 
-        final List<ShardWriter> shardWriters = Lists.newArrayListWithCapacity(_scanWriters.size());
-        OutputStream out = null;
+        final List<ScanDestinationWriter> scanDestinationWriters = Lists.newArrayListWithCapacity(_scanWriters.size());
 
         // Create an output stream that tees to all of the underling shard writer's output streams
         for (ScanWriter scanWriter : _scanWriters) {
-            ShardWriter shardWriter = scanWriter.writeShardRows(tableName, placement, shardId, tableUuid);
-            shardWriters.add(shardWriter);
-
-            out = (out == null) ? shardWriter.getOutputStream()
-                    : new TeeOutputStream(out, shardWriter.getOutputStream());
+            ScanDestinationWriter scanDestinationWriter = scanWriter.writeShardRows(tableName, placement, shardId, tableUuid);
+            scanDestinationWriters.add(scanDestinationWriter);
         }
 
-        return new ShardWriter(out) {
+        return new ScanDestinationWriter() {
             @Override
-            protected void ready(boolean isEmpty, Optional<Integer> finalPartCount)
-                    throws IOException {
-                // Notify each shard writer that the file is ready
-                for (ShardWriter shardWriter : shardWriters) {
-                    shardWriter.ready(isEmpty, finalPartCount);
+            public void writeDocument(Map<String, Object> document) throws IOException, InterruptedException {
+                for (ScanDestinationWriter scanDestinationWriter : scanDestinationWriters) {
+                    scanDestinationWriter.writeDocument(document);
                 }
             }
+
             @Override
-            protected void cancel() {
-                // Cancel each of the underlying writer's files
-                for (ShardWriter shardWriter : shardWriters) {
-                    shardWriter.cancel();
+            public void closeAndCancel() {
+                for (ScanDestinationWriter scanDestinationWriter : scanDestinationWriters) {
+                    scanDestinationWriter.closeAndCancel();
+                }
+            }
+
+            @Override
+            public void closeAndTransferAsync(Optional<Integer> finalPartCount) throws IOException {
+                for (ScanDestinationWriter scanDestinationWriter : scanDestinationWriters) {
+                    scanDestinationWriter.closeAndTransferAsync(finalPartCount);
                 }
             }
         };

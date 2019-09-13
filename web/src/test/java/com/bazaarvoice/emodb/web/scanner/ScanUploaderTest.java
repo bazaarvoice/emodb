@@ -45,6 +45,7 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatusDAO;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
+import com.bazaarvoice.emodb.web.scanner.writer.DefaultScanWriterGenerator;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
@@ -54,6 +55,7 @@ import com.bazaarvoice.emodb.web.scanner.writer.TransferKey;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferStatus;
 import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResult;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.AbstractIterator;
@@ -309,11 +311,11 @@ public class ScanUploaderTest {
                         int taskId = (Integer) invocation.getArguments()[0];
                         URI uri = (URI) invocation.getArguments()[1];
                         Optional<Integer> maxOpenShards = (Optional<Integer>) invocation.getArguments()[2];
-                        return new S3ScanWriter(taskId, uri, maxOpenShards, metricRegistry, amazonS3Provider, _service);
+                        return new S3ScanWriter(taskId, uri, maxOpenShards, metricRegistry, amazonS3Provider, _service, new ObjectMapper());
                     }
                 }
         );
-        ScanWriterGenerator scanWriterGenerator = new ScanWriterGenerator(scanWriterFactory);
+        ScanWriterGenerator scanWriterGenerator = new DefaultScanWriterGenerator(scanWriterFactory);
 
         StashStateListener stashStateListener = mock(StashStateListener.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
@@ -962,7 +964,7 @@ public class ScanUploaderTest {
                     }
                 });
 
-        ScanWriter scanWriter = new DiscardingScanWriter(123, Optional.<Integer>absent(), metricRegistry);
+        ScanWriter scanWriter = new DiscardingScanWriter(123, Optional.<Integer>absent(), metricRegistry, new ObjectMapper());
         ScanWriterGenerator scanWriterGenerator = mock(ScanWriterGenerator.class);
         when(scanWriterGenerator.createScanWriter(eq(123), anySetOf(ScanDestination.class)))
                 .thenReturn(scanWriter);
@@ -1120,7 +1122,7 @@ public class ScanUploaderTest {
             when(amazonS3Provider.getS3ClientForBucket(anyString())).thenReturn(amazonS3);
 
             S3ScanWriter s3ScanWriter = new S3ScanWriter(
-                    1, URI.create("http://dummy-s3-bucket/root"), Optional.of(10), metricRegistry, amazonS3Provider, uploadService);
+                    1, URI.create("http://dummy-s3-bucket/root"), Optional.of(10), metricRegistry, amazonS3Provider, uploadService, new ObjectMapper());
             s3ScanWriter.setRetryDelay(Duration.ofMillis(1));
 
             ScanWriterGenerator scanWriterGenerator = mock(ScanWriterGenerator.class);
@@ -1215,7 +1217,7 @@ public class ScanUploaderTest {
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
         when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows("test:table", "p0", 0, 0));
+                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer(new Answer<WaitForAllTransfersCompleteResult>() {
                     @Override
@@ -1233,7 +1235,7 @@ public class ScanUploaderTest {
         when(scanWriterFactory.createS3ScanWriter(anyInt(), any(URI.class), any(Optional.class)))
                 .thenReturn(scanWriter);
 
-        ScanWriterGenerator scanWriterGenerator = new ScanWriterGenerator(scanWriterFactory);
+        ScanWriterGenerator scanWriterGenerator = new DefaultScanWriterGenerator(scanWriterFactory);
 
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"))
                 .addDestination(ScanDestination.to(URI.create("s3://bucket/test")));
@@ -1290,7 +1292,7 @@ public class ScanUploaderTest {
 
         S3ScanWriter scanWriter = mock(S3ScanWriter.class);
         when(scanWriter.writeShardRows(anyString(), anyString(), anyInt(), anyLong()))
-                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry).writeShardRows("test:table", "p0", 0, 0));
+                .thenReturn(new DiscardingScanWriter(0, Optional.<Integer>absent(), metricRegistry, new ObjectMapper()).writeShardRows("test:table", "p0", 0, 0));
         when(scanWriter.waitForAllTransfersComplete(any(Duration.class)))
                 .thenAnswer(new Answer<WaitForAllTransfersCompleteResult>() {
                     int _call = -1;
@@ -1318,7 +1320,7 @@ public class ScanUploaderTest {
         when(scanWriterFactory.createS3ScanWriter(anyInt(), any(URI.class), any(Optional.class)))
                 .thenReturn(scanWriter);
 
-        ScanWriterGenerator scanWriterGenerator = new ScanWriterGenerator(scanWriterFactory);
+        ScanWriterGenerator scanWriterGenerator = new DefaultScanWriterGenerator(scanWriterFactory);
 
         ScanOptions options = new ScanOptions(ImmutableList.of("p0"))
                 .addDestination(ScanDestination.to(URI.create("s3://bucket/test")));

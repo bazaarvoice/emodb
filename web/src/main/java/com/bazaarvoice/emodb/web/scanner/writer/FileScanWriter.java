@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -23,8 +24,8 @@ public class FileScanWriter extends TemporaryFileScanWriter {
 
     @Inject
     public FileScanWriter(@Assisted int taskId, @Assisted URI baseUri, @Assisted Optional<Integer> maxOpenShards,
-                          MetricRegistry metricRegistry) {
-        super("file", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards);
+                          MetricRegistry metricRegistry, ObjectMapper objectMapper) {
+        super("file", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards, objectMapper);
     }
 
     @Override
@@ -43,8 +44,9 @@ public class FileScanWriter extends TemporaryFileScanWriter {
 
     }
 
-    protected FileScanWriter(String type, int taskId, URI baseUri, Compression compression, Optional<Integer> maxOpenShards, MetricRegistry metricRegistry) {
-        super(type, taskId, baseUri, compression, metricRegistry, maxOpenShards);
+    protected FileScanWriter(String type, int taskId, URI baseUri, Compression compression,
+                             Optional<Integer> maxOpenShards, MetricRegistry metricRegistry, ObjectMapper objectMapper) {
+        super(type, taskId, baseUri, compression, metricRegistry, maxOpenShards, objectMapper);
     }
 
     @Override

@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.rangescan;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricCounterOutputStream;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
@@ -10,12 +9,14 @@ import com.bazaarvoice.emodb.sor.api.StashRunTimeInfo;
 import com.bazaarvoice.emodb.sor.api.StashTimeKey;
 import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
 import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
+import com.bazaarvoice.emodb.web.scanner.writer.ScanDestinationWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.ScanWriterGenerator;
-import com.bazaarvoice.emodb.web.scanner.writer.ShardWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferKey;
 import com.bazaarvoice.emodb.web.scanner.writer.TransferStatus;
 import com.bazaarvoice.emodb.web.scanner.writer.WaitForAllTransfersCompleteResult;
@@ -35,7 +36,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.collect.Sets;
-import com.google.common.io.Closeables;
 import com.google.common.primitives.UnsignedInteger;
 import com.google.common.primitives.UnsignedLongs;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -111,6 +111,8 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
 
     private final CompactionControlSource _compactionControlSource;
 
+    private final LoadingCache<String, TableSet> _tableSetByScanId;
+
     @Inject
     public LocalRangeScanUploader(DataTools dataTools, ScanWriterGenerator scanWriterGenerator, @DelegateCompactionControl CompactionControlSource compactionControlSource,
                                   LifeCycleRegistry lifecycle, MetricRegistry metricRegistry) {
@@ -160,6 +162,14 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     public Counter load(String placement)
                             throws Exception {
                         return metricRegistry.counter(MetricRegistry.name("bv.emodb.scan.ScanUploader.placement", placement, "raw-bytes-uploaded"));
+                    }
+                });
+
+        _tableSetByScanId = CacheBuilder.newBuilder()
+                .build(new CacheLoader<String, TableSet>() {
+                    @Override
+                    public TableSet load(String key) throws Exception {
+                        return _dataTools.createTableSet();
                     }
                 });
 
@@ -271,11 +281,25 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     .map(Instant::ofEpochMilli)
                     .orElse(null);
 
-            Iterator<MultiTableScanResult> allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
-                    LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            Iterator<MultiTableScanResult> allResults;
+
+            if (options.isOnlyScanLiveRanges()) {
+                allResults = _dataTools.stashMultiTableScan(scanId, placement, scanRange,
+                        LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            } else {
+
+                MultiTableScanOptions multiTableScanOptions = new MultiTableScanOptions()
+                        .setPlacement(placement)
+                        .setScanRange(scanRange)
+                        .setIncludeDeletedTables(false)
+                        .setIncludeMirrorTables(false);
+                allResults = _dataTools.multiTableScan(multiTableScanOptions, _tableSetByScanId.getUnchecked(scanId), LimitCounter.max(), ReadConsistency.STRONG, cutoffTime);
+            }
+
+            Iterator<MultiTableScanResult> nonInternalResults = Iterators.filter(allResults, result -> !result.getTable().isInternal());
 
             // Enforce a maximum number of results based on the scan options
-            Iterator<MultiTableScanResult> results = Iterators.limit(allResults, getResplitRowCount(options));
+            Iterator<MultiTableScanResult> results = Iterators.limit(nonInternalResults, getResplitRowCount(options));
 
             while (results.hasNext() && !timeout.isTimedOut()) {
                 MultiTableScanResult result = results.next();
@@ -462,14 +486,11 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
         ScanWriter scanWriter = context.getScanWriter();
         Counter shardCounter = context.getShardCounter();
 
-        ShardWriter writer = null;
-        OutputStream out = null;
+        ScanDestinationWriter writer = null;
         int prevShardId = UnsignedInteger.MAX_VALUE.intValue();
         long prevTableUuid = UnsignedLongs.MAX_VALUE;
         String placement = context.getPlacement();
         int totalPartsForShard = batch.getPartCountForFirstShard();
-        Counter rawBytesUploaded = context.getRawBytesUploadedCounter();
-        JsonGenerator generator = null;
 
         try {
             for (Iterator<MultiTableScanResult> resultIter = batch.getResults().iterator();
@@ -490,26 +511,21 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     prevTableUuid = tableUuid;
 
                     if (writer != null) {
-                        closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, true);
+                        closeAndTransfer(writer, totalPartsForShard, shardCounter, true);
                         totalPartsForShard = 1;
                     }
 
                     writer = scanWriter.writeShardRows(result.getTable().getName(), placement, shardId, tableUuid);
-                    out = new MetricCounterOutputStream(writer.getOutputStream(), rawBytesUploaded);
-                    generator = createGenerator(out);
-
                     _log.debug("Writing output file: {}", writer);
                 }
 
                 if (!Intrinsic.isDeleted(content)) {  // Ignore deleted objects
-                    assert generator != null;
-                    _mapper.writeValue(generator, content);
-                    generator.writeRaw('\n');
+                    writer.writeDocument(content);
                 }
             }
 
             if (writer != null) {
-                closeAndTransfer(generator, out, writer, totalPartsForShard, shardCounter, !batch.isContinuedInNextBatch());
+                closeAndTransfer(writer, totalPartsForShard, shardCounter, !batch.isContinuedInNextBatch());
             }
 
             context.closeBatch(batch, null);
@@ -518,28 +534,19 @@ public class LocalRangeScanUploader implements RangeScanUploader, Managed {
                     taskId, placement, context.getTaskRange(), t);
             context.closeBatch(batch, t);
 
-            try {
-                Closeables.close(generator, true);
-                Closeables.close(out, true);
-            } catch (IOException e2) {
-                // Won't happen
-            }
-
             if (writer != null) {
                 writer.closeAndCancel();
             }
         }
     }
 
-    private void closeAndTransfer(JsonGenerator generator, OutputStream out, ShardWriter writer,
+    private void closeAndTransfer(ScanDestinationWriter writer,
                                   int partCount, Counter shardCounter, boolean isFinalPart)
             throws IOException {
-        generator.close();
-        out.close();
         if (isFinalPart) {
             shardCounter.inc();
         }
-        writer.closeAndTransferAysnc(isFinalPart ? Optional.of(partCount) : Optional.<Integer>absent());
+        writer.closeAndTransferAsync(isFinalPart ? Optional.of(partCount) : Optional.<Integer>absent());
     }
 
     private JsonGenerator createGenerator(OutputStream out)

@@ -59,6 +59,7 @@ import com.bazaarvoice.emodb.web.scanner.scheduling.ScanUploadSchedulingService;
 import com.bazaarvoice.emodb.web.scanner.scheduling.ScheduledDailyScanUpload;
 import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.scanner.writer.AmazonS3Provider;
+import com.bazaarvoice.emodb.web.scanner.writer.DefaultScanWriterGenerator;
 import com.bazaarvoice.emodb.web.scanner.writer.DiscardingScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.FileScanWriter;
 import com.bazaarvoice.emodb.web.scanner.writer.S3CredentialsProvider;
@@ -158,7 +159,8 @@ public class ScanUploadModule extends PrivateModule {
         bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeScanRangeQueueName"))
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
-        bind(ScanWriterGenerator.class).asEagerSingleton();
+        bind(ScanWriterGenerator.class).to(DefaultScanWriterGenerator.class).asEagerSingleton();
+
         install(new FactoryModuleBuilder()
                 .implement(FileScanWriter.class, FileScanWriter.class)
                 .implement(S3ScanWriter.class, S3ScanWriter.class)

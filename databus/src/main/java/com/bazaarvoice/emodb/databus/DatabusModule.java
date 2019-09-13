@@ -48,6 +48,7 @@ import com.bazaarvoice.emodb.event.EventStoreModule;
 import com.bazaarvoice.emodb.event.EventStoreZooKeeper;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.bazaarvoice.emodb.event.api.DedupEventStoreChannels;
+import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
@@ -62,6 +63,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
@@ -151,15 +153,15 @@ public class DatabusModule extends PrivateModule {
             bind(ReplicationEnabledTask.class).asEagerSingleton();
             bind(SystemQueueMonitorManager.class).asEagerSingleton();
             bind(FanoutLagMonitor.class).asEagerSingleton();
+            bind(DrainFanoutPartitionTask.class).asEagerSingleton();
         }
 
         // Databus
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
-        bind(DrainFanoutPartitionTask.class).asEagerSingleton();
-        
-        // Expose the event store directly for use by debugging APIs
+
+        // Expose the event store directly for use by the megabus and debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);
 
@@ -171,6 +173,12 @@ public class DatabusModule extends PrivateModule {
         // Bind the cross-data center outbound replication end point
         bind(ReplicationSource.class).to(DefaultReplicationSource.class).asEagerSingleton();
         expose(ReplicationSource.class);
+    }
+
+    @Provides @Singleton @Exposed
+    @DatabusOstrichOwnerGroupFactory
+    OstrichOwnerGroupFactory provideDatabusOstrichOwnerGroupFactory(OstrichOwnerGroupFactory ostrichOwnerGroupFactory) {
+        return ostrichOwnerGroupFactory;
     }
 
     @Provides @Singleton
