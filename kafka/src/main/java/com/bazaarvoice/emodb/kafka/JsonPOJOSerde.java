@@ -11,18 +11,20 @@ import java.util.Map;
 
 public class JsonPOJOSerde<T> implements Serde<T> {
 
-    private final ObjectMapper mapper = new ObjectMapper();
-    private final Class<T> cls;
-    private final TypeReference typeReference;
+    private final ObjectMapper _mapper;
+    private final Class<T> _cls;
+    private final TypeReference _typeReference;
 
     public JsonPOJOSerde(Class<T> cls) {
-        this.cls = cls;
-        typeReference = null;
+        this._cls = cls;
+        _typeReference = null;
+        _mapper = new ObjectMapper();
     }
 
     public JsonPOJOSerde(TypeReference<T> t) {
-        typeReference = t;
-        cls = null;
+        _typeReference = t;
+        _cls = null;
+        _mapper = new ObjectMapper();
     }
 
     @Override
@@ -50,7 +52,7 @@ public class JsonPOJOSerde<T> implements Serde<T> {
                     return null;
                 }
                 try {
-                    return mapper.writeValueAsBytes(data);
+                    return _mapper.writeValueAsBytes(data);
                 } catch (Exception e) {
                     throw new SerializationException("Error serializing JSON message", e);
                 }
@@ -81,7 +83,7 @@ public class JsonPOJOSerde<T> implements Serde<T> {
 
                 T result;
                 try {
-                    result = typeReference != null ? mapper.readValue(data, typeReference) : mapper.readValue(data, cls);
+                    result = _typeReference != null ? _mapper.readValue(data, _typeReference) : _mapper.readValue(data, _cls);
                 } catch (Exception e) {
                     throw new SerializationException(e);
                 }
