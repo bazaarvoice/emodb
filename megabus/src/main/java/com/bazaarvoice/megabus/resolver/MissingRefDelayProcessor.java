@@ -55,10 +55,7 @@ public class MissingRefDelayProcessor extends KafkaStreamsService {
                 .mapValues(MissingRefCollection::getMissingRefs)
                 .to(_retryRefTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {})));
         return streamsBuilder.build();
-
     }
-
-
 
     private void delayRefs(String key, MissingRefCollection refCollection) {
         Instant sendtime = refCollection.getLastProcessTime().toInstant().plusSeconds(10);

@@ -30,6 +30,8 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     private static Logger _log = LoggerFactory.getLogger(KafkaScanDestinationWriter.class);
 
+    private static final int BLOCKING_QUEUE_CAPACITY = 10000;
+
     private final Producer<String, JsonNode> _producer;
     private final ObjectMapper _mapper;
     private final String _topic;
@@ -48,7 +50,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
         _producer = producer;
         _mapper = objectMapper;
         _topic = topic;
-        _futureQueue = new ArrayBlockingQueue<>(10000);
+        _futureQueue = new ArrayBlockingQueue<>(BLOCKING_QUEUE_CAPACITY);
         _futureGettingService = Executors.newSingleThreadExecutor();
         _closed = false;
         _bytesTransferred = 0;
@@ -60,8 +62,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
 
     }
 
-
-    private String getMetricName(String name) {
+    private static String getMetricName(String name) {
         return MetricRegistry.name("bv.emodb.scanner", "KafkaScanWriter", name);
     }
 
@@ -102,10 +103,7 @@ public class KafkaScanDestinationWriter implements ScanDestinationWriter {
             _blockingQueueFullMeter.mark();
             _producer.flush();
         }
-
     }
-
-
 
     @Override
     public void closeAndCancel() {

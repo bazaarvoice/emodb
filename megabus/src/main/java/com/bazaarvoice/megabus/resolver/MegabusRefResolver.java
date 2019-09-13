@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -125,8 +126,9 @@ public class MegabusRefResolver extends KafkaStreamsService {
         }
 
         public Iterable<KeyValue<String, Map<String, Object>>> getKeyedResolvedDocs() {
-            return Lists.transform(_resolvedDocs, doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc));
-
+            return _resolvedDocs.stream().
+                    map(doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc))
+                    .collect(Collectors.toList());
         }
     }
 
