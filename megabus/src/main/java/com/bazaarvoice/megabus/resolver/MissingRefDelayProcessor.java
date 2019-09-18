@@ -3,15 +3,11 @@ package com.bazaarvoice.megabus.resolver;
 import com.bazaarvoice.emodb.kafka.JsonPOJOSerde;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
-import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.net.HostAndPort;
-import java.time.Clock;
-import java.time.Instant;
-import java.util.List;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
@@ -19,6 +15,11 @@ import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.Produced;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.Clock;
+import java.time.Instant;
+import java.util.List;
+
 import static java.util.Objects.requireNonNull;
 
 public class MissingRefDelayProcessor extends KafkaStreamsService {
@@ -31,14 +32,14 @@ public class MissingRefDelayProcessor extends KafkaStreamsService {
     private Clock _clock;
 
 
-    public MissingRefDelayProcessor(DataProvider dataProvider,
-                                    Topic retryRefTopic,
+    public MissingRefDelayProcessor(Topic retryRefTopic,
                                     Topic missingRefTopic,
-                                    KafkaCluster kafkaCluster, Clock clock,
+                                    KafkaCluster kafkaCluster,
+                                    Clock clock,
                                     HostAndPort hostAndPort,
                                     String delayProcessorConsumerGroup,
                                     MetricRegistry metricRegistry) {
-        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
+        super(SERVICE_NAME, kafkaCluster, hostAndPort.toString(),
                 delayProcessorConsumerGroup, 1, metricRegistry);
 
         _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");

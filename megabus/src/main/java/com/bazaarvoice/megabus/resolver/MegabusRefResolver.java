@@ -15,10 +15,17 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.HashBasedTable;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
+import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Produced;
+
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Date;
@@ -28,13 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Consumed;
-import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.Produced;
+
 import static java.util.Objects.requireNonNull;
 
 public class MegabusRefResolver extends KafkaStreamsService {
@@ -63,7 +64,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               HostAndPort hostAndPort,
                               String refResolverConsumerGroup,
                               MetricRegistry metricRegistry) {
-        super(SERVICE_NAME, kafkaCluster.getBootstrapServers(), hostAndPort.toString(),
+        super(SERVICE_NAME, kafkaCluster, hostAndPort.toString(),
                 refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
         _dataProvider = requireNonNull(dataProvider, "dataProvider");
         _megabusRefTopic = requireNonNull(megabusRefTopic, "megabusRefTopic");

@@ -2,8 +2,9 @@ package com.bazaarvoice.emodb.kafka;
 
 
 import com.fasterxml.jackson.databind.JsonNode;
-import java.util.Map;
 import org.apache.kafka.clients.producer.Producer;
+
+import java.util.Map;
 
 public interface KafkaCluster {
 
@@ -12,5 +13,7 @@ public interface KafkaCluster {
     Producer<String, JsonNode> producer();
 
     String getBootstrapServers();
+
+    SslConfiguration getSSLConfiguration();
 
 }
