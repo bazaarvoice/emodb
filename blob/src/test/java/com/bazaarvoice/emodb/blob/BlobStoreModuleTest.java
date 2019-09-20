@@ -3,11 +3,14 @@ package com.bazaarvoice.emodb.blob;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
+import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -18,12 +21,12 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.cache.Cache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
@@ -107,7 +110,11 @@ public class BlobStoreModuleTest {
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "media_global", new KeyspaceConfiguration())))));
+                                        "media_global", new KeyspaceConfiguration())))
+                        )
+                        .setS3Configuration(new S3Configuration()
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", null, null, false))))
+                );
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");
 
