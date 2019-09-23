@@ -4,6 +4,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
 import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
@@ -393,6 +394,7 @@ public class BlobStoreModule extends PrivateModule {
                             s3BucketConfiguration -> s3BucketConfiguration.getName(),
                             s3BucketConfiguration -> {
                                 AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
+                                        .withRegion(Regions.fromName(s3BucketConfiguration.getRegion()))
                                         .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
                                         .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
                                 if (null != s3Configuration.getS3ClientConfiguration()) {

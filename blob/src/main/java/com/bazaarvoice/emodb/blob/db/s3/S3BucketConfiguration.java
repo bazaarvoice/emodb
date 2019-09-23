@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.blob.db.s3;
 
 public class S3BucketConfiguration {
     private String name;
+    private String region;
     private String roleArn;
     private String roleExternalId;
     private Boolean accelerateModeEnabled;
@@ -41,10 +42,19 @@ public class S3BucketConfiguration {
     public S3BucketConfiguration() {
     }
 
-    public S3BucketConfiguration(final String name, final String roleArn, final String roleExternalId, Boolean accelerateModeEnabled) {
+    public S3BucketConfiguration(final String name, final String region, final String roleArn, final String roleExternalId, Boolean accelerateModeEnabled) {
         this.name = name;
+        this.region = region;
         this.roleArn = roleArn;
         this.roleExternalId = roleExternalId;
         this.accelerateModeEnabled = accelerateModeEnabled;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public void setRegion(String region) {
+        this.region = region;
     }
 }

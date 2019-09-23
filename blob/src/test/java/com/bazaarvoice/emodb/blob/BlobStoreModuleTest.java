@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.amazonaws.regions.Regions;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
@@ -113,7 +114,7 @@ public class BlobStoreModuleTest {
                                         "media_global", new KeyspaceConfiguration())))
                         )
                         .setS3Configuration(new S3Configuration()
-                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", null, null, false))))
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false))))
                 );
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");
