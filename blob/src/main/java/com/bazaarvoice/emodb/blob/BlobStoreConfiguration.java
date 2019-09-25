@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +28,12 @@ public class BlobStoreConfiguration {
     @NotNull
     @JsonProperty("cassandraClusters")
     private Map<String, CassandraConfiguration> _cassandraClusters;
+
+    @Valid
+//    TODO migrate to @NotNull in EMO-7107
+    @Nullable
+    @JsonProperty("s3")
+    private S3Configuration _s3Configuration;
 
     @Valid
     @Nullable
@@ -66,6 +73,15 @@ public class BlobStoreConfiguration {
 
     public BlobStoreConfiguration setCassandraClusters(Map<String, CassandraConfiguration> cassandraClusters) {
         _cassandraClusters = cassandraClusters;
+        return this;
+    }
+
+    public S3Configuration getS3Configuration() {
+        return _s3Configuration;
+    }
+
+    public BlobStoreConfiguration setS3Configuration(S3Configuration s3Configuration) {
+        _s3Configuration = s3Configuration;
         return this;
     }
 
