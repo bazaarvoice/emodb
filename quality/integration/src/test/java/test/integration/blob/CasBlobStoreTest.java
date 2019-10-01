@@ -1,5 +1,6 @@
 package test.integration.blob;
 
+import com.amazonaws.regions.Regions;
 import com.bazaarvoice.emodb.blob.BlobStoreConfiguration;
 import com.bazaarvoice.emodb.blob.BlobStoreModule;
 import com.bazaarvoice.emodb.blob.BlobStoreZooKeeper;
@@ -11,6 +12,9 @@ import com.bazaarvoice.emodb.blob.api.DefaultBlobMetadata;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
+import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.S3ClientConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
@@ -52,6 +56,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
@@ -141,7 +146,17 @@ public class CasBlobStoreTest {
                 bind(BlobStoreConfiguration.class).toInstance(new BlobStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of(TABLE_PLACEMENT))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
-                                "media_global", new TestCassandraConfiguration("media_global", "ugc_blob"))));
+                                "media_global", new TestCassandraConfiguration("media_global", "ugc_blob")))
+                        .setS3Configuration(new S3Configuration()
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", null, null, null, false)))
+                                .setS3ClientConfiguration(new S3ClientConfiguration().setEndpointConfiguration(
+                                        new S3ClientConfiguration.EndpointConfiguration()
+                                                .setServiceEndpoint("https://localhost:9191")
+                                                .setSigningRegion(Regions.DEFAULT_REGION.getName())
+                                        )
+                                )
+                        )
+                );
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))

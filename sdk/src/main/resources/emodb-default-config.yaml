@@ -131,6 +131,12 @@ blobStore:
         name: blob-cassandra
       keyspaces:
         media_global: {}
+  s3:
+    buckets:
+      - name: local-emodb--media-global-ugc
+    client:
+      endpointConfiguration:
+        serviceEndpoint: localhost:9090
 
   approvedContentTypes:
   - application/json

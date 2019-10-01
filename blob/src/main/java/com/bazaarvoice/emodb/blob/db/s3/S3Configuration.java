@@ -30,7 +30,8 @@ public class S3Configuration {
         return _s3ClientConfiguration;
     }
 
-    public void setS3ClientConfiguration(final S3ClientConfiguration s3ClientConfiguration) {
+    public S3Configuration setS3ClientConfiguration(final S3ClientConfiguration s3ClientConfiguration) {
         _s3ClientConfiguration = s3ClientConfiguration;
+        return this;
     }
 }

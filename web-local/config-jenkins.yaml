@@ -178,6 +178,14 @@ blobStore:
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
+  s3:
+    buckets:
+      - name: local-emodb--media-global-ugc
+      - name: local-emodb--blob-global-media
+    client:
+      endpointConfiguration:
+        serviceEndpoint: https://localhost:9191
+        signingRegion: us-east-1
 
 
 queueService:

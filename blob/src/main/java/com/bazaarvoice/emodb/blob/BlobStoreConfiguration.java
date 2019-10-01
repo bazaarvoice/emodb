@@ -30,8 +30,7 @@ public class BlobStoreConfiguration {
     private Map<String, CassandraConfiguration> _cassandraClusters;
 
     @Valid
-//    TODO migrate to @NotNull in EMO-7107
-    @Nullable
+    @NotNull
     @JsonProperty("s3")
     private S3Configuration _s3Configuration;
 

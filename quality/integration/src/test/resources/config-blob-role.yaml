@@ -123,6 +123,13 @@ blobStore:
         name: blob-cassandra
       keyspaces:
         media_global: {}
+  s3:
+    buckets:
+      - name: local-emodb--media-global-ugc
+    client:
+      endpointConfiguration:
+        serviceEndpoint: https://localhost:9191
+        signingRegion: us-east-1
 
   approvedContentTypes:
   - application/json

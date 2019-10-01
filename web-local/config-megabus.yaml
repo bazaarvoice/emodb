@@ -178,6 +178,15 @@ blobStore:
         media_global: {}
         media_global_mirror: {}
         blob_global: {}
+  s3:
+    buckets:
+      - name: local-emodb--media-global-ugc
+      - name: local-emodb--blob-global-media
+    client:
+      endpointConfiguration:
+        serviceEndpoint: https://localhost:9191
+        signingRegion: us-east-1
+
 
   approvedContentTypes:
   - application/json

@@ -19,6 +19,9 @@
         <mavenVersion>3.1.1</mavenVersion>
         <mavenPluginAnnotationsVersion>3.3</mavenPluginAnnotationsVersion>
         <mavenPluginPluginVersion>3.3</mavenPluginPluginVersion>
+        <version.docker.maven.plugin>0.31.0</version.docker.maven.plugin>
+        <skipITs>false</skipITs>
+        <pause>false</pause>
     </properties>
 
     <dependencies>
@@ -100,6 +103,108 @@
             </resource>
         </resources>
         <plugins>
+            <plugin>
+                <groupId>com.bazaarvoice.maven.plugins</groupId>
+                <artifactId>process-exec-maven-plugin</artifactId>
+                <version>0.9</version>
+                <executions>
+                    <execution>
+                        <id>docker-compose-kill-before-tests</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <name>kill-containers-before-tests</name>
+                            <skip>${skipITs}</skip>
+                            <redirectErrorStream>true</redirectErrorStream>
+
+                            <waitAfterLaunch>3</waitAfterLaunch>
+                            <arguments>
+                                <argument>docker-compose</argument>
+                                <argument>kill</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>docker-compose-down-before-tests</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <name>kill-containers-before-tests</name>
+                            <skip>${skipITs}</skip>
+                            <redirectErrorStream>true</redirectErrorStream>
+
+                            <waitAfterLaunch>3</waitAfterLaunch>
+                            <arguments>
+                                <argument>docker-compose</argument>
+                                <argument>down</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>docker-compose-up</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <name>start-containers</name>
+                            <skip>${skipITs}</skip>
+                            <redirectErrorStream>true</redirectErrorStream>
+
+                            <waitAfterLaunch>3</waitAfterLaunch>
+                            <arguments>
+                                <argument>docker-compose</argument>
+                                <argument>up</argument>
+                                <argument>-d</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>docker-compose-down</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                        <configuration>
+                            <name>kill-containers</name>
+                            <skip>${skipITs}</skip>
+                            <redirectErrorStream>true</redirectErrorStream>
+
+                            <waitAfterLaunch>3</waitAfterLaunch>
+                            <arguments>
+                                <argument>docker-compose</argument>
+                                <argument>down</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>stop-all</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop-all</goal>
+                        </goals>
+                        <configuration>
+                            <redirectErrorStream>true</redirectErrorStream>
+
+                            <waitForInterrupt>${pause}</waitForInterrupt>
+                            <arguments>
+                                <argument>docker-compose</argument>
+                                <argument>down</argument>
+                            </arguments>
+                            <!-- wait for interrupt only in "local" mode (not running tests) -->
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-plugin-plugin</artifactId>

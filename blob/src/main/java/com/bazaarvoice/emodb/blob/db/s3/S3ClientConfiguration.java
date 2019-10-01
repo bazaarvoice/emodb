@@ -8,8 +8,9 @@ public class S3ClientConfiguration {
         return endpointConfiguration;
     }
 
-    public void setEndpointConfiguration(final EndpointConfiguration endpointConfiguration) {
+    public S3ClientConfiguration setEndpointConfiguration(final EndpointConfiguration endpointConfiguration) {
         this.endpointConfiguration = endpointConfiguration;
+        return this;
     }
 
     public static final class EndpointConfiguration {
@@ -18,12 +19,14 @@ public class S3ClientConfiguration {
         // signingRegion the region to use for SigV4 signing of requests (e.g. us-west-1)
         private String signingRegion;
 
-        public void setServiceEndpoint(final String serviceEndpoint) {
+        public EndpointConfiguration setServiceEndpoint(final String serviceEndpoint) {
             this.serviceEndpoint = serviceEndpoint;
+            return this;
         }
 
-        public void setSigningRegion(final String signingRegion) {
+        public EndpointConfiguration setSigningRegion(final String signingRegion) {
             this.signingRegion = signingRegion;
+            return this;
         }
 
         public String getServiceEndpoint() {

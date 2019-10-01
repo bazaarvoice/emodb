@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.auth.STSAssumeRoleSessionCredentialsProvider;
@@ -105,10 +106,19 @@ import com.google.inject.name.Names;
 import com.netflix.astyanax.model.ConsistencyLevel;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.http.conn.ssl.NoopHostnameVerifier;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509ExtendedTrustManager;
+import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
@@ -387,28 +397,35 @@ public class BlobStoreModule extends PrivateModule {
     @Provides @Singleton @S3BucketNamesToS3Clients
     Map<String, AmazonS3> provideS3BucketNamesToS3Clients(BlobStoreConfiguration configuration) {
         S3Configuration s3Configuration = configuration.getS3Configuration();
-        //    TODO remove condition in EMO-7107
-        if (null != s3Configuration && null != s3Configuration.getS3BucketConfigurations()) {
-            return s3Configuration.getS3BucketConfigurations().stream()
-                    .collect(Collectors.toMap(
-                            s3BucketConfiguration -> s3BucketConfiguration.getName(),
-                            s3BucketConfiguration -> {
-                                AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
-                                        .withRegion(Regions.fromName(s3BucketConfiguration.getRegion()))
-                                        .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
-                                        .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
-                                if (null != s3Configuration.getS3ClientConfiguration()) {
-                                    S3ClientConfiguration.EndpointConfiguration endpointConfiguration = s3Configuration.getS3ClientConfiguration().getEndpointConfiguration();
-                                    amazonS3ClientBuilder
-                                            .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointConfiguration.getServiceEndpoint(), endpointConfiguration.getSigningRegion()));
-                                }
-                                return amazonS3ClientBuilder
-                                        .build();
-                            })
-                    );
-        } else {
-            return new HashMap<>();
+        S3ClientConfiguration s3ClientConfiguration = s3Configuration.getS3ClientConfiguration();
+
+        return s3Configuration.getS3BucketConfigurations().stream()
+                .collect(Collectors.toMap(
+                        s3BucketConfiguration -> s3BucketConfiguration.getName(),
+                        s3BucketConfiguration -> getAmazonS3(s3ClientConfiguration, s3BucketConfiguration))
+                );
+    }
+
+    private static AmazonS3 getAmazonS3(S3ClientConfiguration s3ClientConfiguration, S3BucketConfiguration s3BucketConfiguration) {
+        AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
+                .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
+                .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
+        if (null != s3BucketConfiguration.getRegion()) {
+            amazonS3ClientBuilder
+                    .withRegion(Regions.fromName(s3BucketConfiguration.getRegion()));
         }
+        if (null != s3ClientConfiguration) {
+            S3ClientConfiguration.EndpointConfiguration endpointConfiguration = s3ClientConfiguration.getEndpointConfiguration();
+            amazonS3ClientBuilder
+                    .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(endpointConfiguration.getServiceEndpoint(), endpointConfiguration.getSigningRegion()));
+            //for local env
+            if (s3BucketConfiguration.getName().startsWith("local")) {
+                amazonS3ClientBuilder.withClientConfiguration(ignoringInvalidSslCertificates(new ClientConfiguration()))
+                        .enablePathStyleAccess();
+            }
+        }
+        return amazonS3ClientBuilder
+                .build();
     }
 
     private static AWSCredentialsProvider getAwsCredentialsProvider(final S3BucketConfiguration s3BucketConfiguration) {
@@ -423,5 +440,69 @@ public class BlobStoreModule extends PrivateModule {
             credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
         return credentialsProvider;
+    }
+
+    private static ClientConfiguration ignoringInvalidSslCertificates(
+            final ClientConfiguration clientConfiguration) {
+
+        clientConfiguration.getApacheHttpClientConfig()
+                .withSslSocketFactory(new SSLConnectionSocketFactory(
+                        createBlindlyTrustingSslContext(),
+                        NoopHostnameVerifier.INSTANCE));
+
+        return clientConfiguration;
+    }
+
+    private static SSLContext createBlindlyTrustingSslContext() {
+        try {
+            final SSLContext sc = SSLContext.getInstance("TLS");
+
+            sc.init(null, new TrustManager[] {new X509ExtendedTrustManager() {
+                @Override
+                public X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+
+                @Override
+                public void checkClientTrusted(final X509Certificate[] certs, final String authType) {
+                    // no-op
+                }
+
+                @Override
+                public void checkClientTrusted(final X509Certificate[] arg0, final String arg1,
+                                               final SSLEngine arg2) {
+                    // no-op
+                }
+
+                @Override
+                public void checkClientTrusted(final X509Certificate[] arg0, final String arg1,
+                                               final Socket arg2) {
+                    // no-op
+                }
+
+                @Override
+                public void checkServerTrusted(final X509Certificate[] arg0, final String arg1,
+                                               final SSLEngine arg2) {
+                    // no-op
+                }
+
+                @Override
+                public void checkServerTrusted(final X509Certificate[] arg0, final String arg1,
+                                               final Socket arg2) {
+                    // no-op
+                }
+
+                @Override
+                public void checkServerTrusted(final X509Certificate[] certs, final String authType) {
+                    // no-op
+                }
+
+            }
+            }, new java.security.SecureRandom());
+
+            return sc;
+        } catch (final NoSuchAlgorithmException | KeyManagementException e) {
+            throw new RuntimeException("Unexpected exception", e);
+        }
     }
 }
