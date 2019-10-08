@@ -64,6 +64,7 @@ import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.logback.InstrumentedAppender;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
@@ -201,6 +202,10 @@ public class EmoService extends Application<EmoConfiguration> {
         environment.jersey().getResourceConfig().getResourceFilterFactories().add(new UnbufferedStreamResourceFilterFactory());
         environment.getApplicationContext().addFilter(new FilterHolder(new UnbufferedStreamFilter()), "/*", EnumSet.of(DispatcherType.REQUEST));
 
+        // instrument Logback root logger with appender that will emit logging metrics
+        ((ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME))
+            .addAppender(new InstrumentedAppender(_environment.metrics()));
+
         // Create all the major EmoDB components using Guice.  Note: This code is organized such that almost all
         // initialization is complete before we register with Ostrich so we don't start receiving inbound requests
         // before the server is ready and listening.
@@ -260,7 +265,7 @@ public class EmoService extends Application<EmoConfiguration> {
         DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
         CompactionControlSource compactionControlSource = _injector.getInstance(Key.get(CompactionControlSource.class, LocalCompactionControl.class));
         DataStoreUpdateThrottler updateThrottle = _injector.getInstance(DataStoreUpdateThrottler.class);
-        
+
         // Start the System Of Record service
         resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource, updateThrottle));
     }
