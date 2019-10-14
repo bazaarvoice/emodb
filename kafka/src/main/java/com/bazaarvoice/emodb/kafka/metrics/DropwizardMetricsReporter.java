@@ -3,10 +3,6 @@ package com.bazaarvoice.emodb.kafka.metrics;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.SharedMetricRegistries;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.metrics.KafkaMetric;
 import org.apache.kafka.common.metrics.MetricsReporter;
@@ -14,11 +10,17 @@ import org.coursera.metrics.datadog.TaggedName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 public class DropwizardMetricsReporter implements MetricsReporter {
+
+    public static final String REGISTRY_NAME = "default";
 
     private static Logger _log = LoggerFactory.getLogger(DropwizardMetricsReporter.class);
 
-    private static final String REGISTRY_NAME = "default";
     private static final String METRIC_PREFIX = MetricsReporter.class.getPackage().getName();
 
     private MetricRegistry _registry;

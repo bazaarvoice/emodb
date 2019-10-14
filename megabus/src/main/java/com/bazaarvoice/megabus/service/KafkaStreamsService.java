@@ -44,6 +44,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
         _streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
 
+        _streamsConfiguration.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG, ProducerExceptionHandler.class);
+
         _streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamThreads);
 
         _streamsConfiguration.put(StreamsConfig.producerPrefix(ProducerConfig.ACKS_CONFIG), Constants.ACKS_CONFIG);

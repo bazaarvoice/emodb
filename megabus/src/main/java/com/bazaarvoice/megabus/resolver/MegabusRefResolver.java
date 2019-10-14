@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -53,7 +55,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Meter _redundantMeter;
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
-
+    private final Counter _errorProcessingCounter;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
@@ -76,6 +78,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
+        _errorProcessingCounter = metricRegistry.counter(getMetricName("error.processing"));
     }
 
     private String getMetricName(String name) {
@@ -92,7 +95,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
         // resolve refs into documents
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
-
 
         resolutionResults
                 // extract the resolved documents
@@ -134,9 +136,12 @@ public class MegabusRefResolver extends KafkaStreamsService {
     }
 
     private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
+        final LongAdder refCounter = new LongAdder();
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref ->
-                refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref)
+        refs.forEachRemaining(ref -> {
+                refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref);
+                refCounter.increment();
+            }
         );
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
@@ -147,39 +152,52 @@ public class MegabusRefResolver extends KafkaStreamsService {
             } catch (UnknownTableException | UnknownPlacementException e) {
                 // take no action and discard the event, as the table was deleted before we could process the event
                 _discardedMeter.mark();
+            } catch (Throwable e) {
+                _errorProcessingCounter.inc();
             }
         }
 
-        Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
+        try {
+            Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
 
-        List<Map<String, Object>> resolvedDocuments = new ArrayList<>();
-        List<MegabusRef> missingRefs = new ArrayList<>();
+            List<Map<String, Object>> resolvedDocuments = new ArrayList<>();
+            List<MegabusRef> missingRefs = new ArrayList<>();
 
-        readResultIter.forEachRemaining(result -> {
-            Map<String, Object> content = result.getContent();
-            AtomicBoolean triggerEvent = new AtomicBoolean(false);
+            readResultIter.forEachRemaining(result -> {
+                try {
+                    Map<String, Object> content = result.getContent();
+                    AtomicBoolean triggerEvent = new AtomicBoolean(false);
 
-            refTable.row(Coordinate.fromJson(content)).forEach((changeId, ref) -> {
+                    refTable.row(Coordinate.fromJson(content)).forEach((changeId, ref) -> {
 
-                if (result.isChangeDeltaPending(changeId)) {
-                    _pendingMeter.mark();
-                    missingRefs.add(ref);
-                    return;
+                        if (result.isChangeDeltaPending(changeId)) {
+                            _pendingMeter.mark();
+                            missingRefs.add(ref);
+                            return;
+                        }
+
+                        if (result.isChangeDeltaRedundant(changeId)) {
+                            _redundantMeter.mark();
+                            return;
+                        }
+
+                        triggerEvent.set(true);
+                    });
+
+                    if (triggerEvent.get()) {
+                        resolvedDocuments.add(content);
+                    }
+                } catch (Throwable t) {
+                    _errorProcessingCounter.inc();
+                    throw t;
                 }
-
-                if (result.isChangeDeltaRedundant(changeId)) {
-                    _redundantMeter.mark();
-                    return;
-                }
-
-                triggerEvent.set(true);
             });
 
-            if (triggerEvent.get()) {
-                resolvedDocuments.add(content);
-            }
-        });
 
-        return new ResolutionResult(resolvedDocuments, missingRefs);
+            return new ResolutionResult(resolvedDocuments, missingRefs);
+        } catch (Throwable t) {
+            _errorProcessingCounter.inc(refCounter.sum());
+            throw t;
+        }
     }
 }
