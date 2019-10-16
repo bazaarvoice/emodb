@@ -174,11 +174,11 @@ public class MegabusRefProducer extends AbstractScheduledService {
     }
 
     private void trackAverageEventDuration(long durationInNs, int numEvents) {
-        _eventCounter.inc(numEvents);
-
         if (numEvents == 0) {
             return;
         }
+
+        _eventCounter.inc(numEvents);
 
         long durationPerEvent = (durationInNs + numEvents - 1) / numEvents;  // round up
 
