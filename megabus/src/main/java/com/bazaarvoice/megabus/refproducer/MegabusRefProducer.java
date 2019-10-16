@@ -57,6 +57,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final Clock _clock;
 
     private final Counter _eventCounter;
+    private final Counter _errorCounter;
 
     public MegabusRefProducer(MegabusRefProducerConfiguration config, DatabusEventStore eventStore,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
@@ -89,6 +90,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _producer = requireNonNull(producer, "producer");
         _clock = firstNonNull(clock, Clock.systemUTC());
         _eventCounter = metricRegistry.counter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "event-count"));
+        _errorCounter = metricRegistry.counter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "error-count"));
 
         // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
         // NOTE: megabus subscriptions currently avoid dedup queues by starting with "__"
@@ -128,7 +130,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
             }
         } catch (Throwable t) {
             _rateLimitedLog.error(t, "Unexpected megabus exception: {}", t);
-            stop();  // Give up leadership temporarily.  Maybe another server will have more success.
+            _errorCounter.inc();
+            // Give up leadership temporarily.  Maybe another server will have more success.
+             stopAsync().awaitTerminated();
         }
     }
 

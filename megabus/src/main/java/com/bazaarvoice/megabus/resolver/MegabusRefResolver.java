@@ -78,7 +78,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
-        _errorProcessingCounter = metricRegistry.counter(getMetricName("error.processing"));
+        _errorProcessingCounter = metricRegistry.counter(getMetricName("error-count"));
     }
 
     private String getMetricName(String name) {

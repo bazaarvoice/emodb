@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.kafka.Constants;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.SslConfiguration;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
+import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -13,7 +14,6 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 
-import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -23,6 +23,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     private final Properties _streamsConfiguration;
     private final AtomicReference<Throwable> _uncaughtException;
     private final AtomicBoolean _fatalErrorEncountered;
+    private final Counter _streamsExceptionCounter;
+
     private KafkaStreams _streams;
 
     public KafkaStreamsService(String serviceName,
@@ -43,8 +45,6 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
         _streamsConfiguration.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaCluster.getBootstrapServers());
 
         _streamsConfiguration.put(StreamsConfig.METRIC_REPORTER_CLASSES_CONFIG, DropwizardMetricsReporter.class.getName());
-
-        _streamsConfiguration.put(StreamsConfig.DEFAULT_PRODUCTION_EXCEPTION_HANDLER_CLASS_CONFIG, ProducerExceptionHandler.class);
 
         _streamsConfiguration.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, streamThreads);
 
@@ -67,6 +67,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
             _streamsConfiguration.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, sslConfiguration.getKeyStorePassword());
             _streamsConfiguration.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, sslConfiguration.getKeyPassword());
         }
+
+        _streamsExceptionCounter = metricRegistry.counter("bv.emodb.megabus.kafka-streams-exception.count");
     }
 
     protected abstract Topology topology();
@@ -74,7 +76,11 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     @Override
     protected final void doStart() {
         _streams = new KafkaStreams(topology(), _streamsConfiguration);
-        _streams.setUncaughtExceptionHandler((thread, throwable) -> _uncaughtException.compareAndSet(null, throwable));
+        _streams.setUncaughtExceptionHandler((thread, throwable) -> {
+            _uncaughtException.compareAndSet(null, throwable);
+            _streamsExceptionCounter.inc();
+            notifyFailed(_uncaughtException.get());
+        });
         _streams.setStateListener(this);
         _streams.start();
         notifyStarted();
@@ -90,7 +96,6 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     public void onChange(KafkaStreams.State newState, KafkaStreams.State oldState) {
         if (newState == KafkaStreams.State.ERROR) {
             _fatalErrorEncountered.set(true);
-            _streams.close(Duration.ofMillis(1));
         } else if (newState == KafkaStreams.State.NOT_RUNNING && _fatalErrorEncountered.get()) {
             notifyFailed(_uncaughtException.get());
         }

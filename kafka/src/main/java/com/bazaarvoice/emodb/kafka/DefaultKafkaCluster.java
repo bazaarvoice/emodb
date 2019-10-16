@@ -19,6 +19,7 @@ import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -39,7 +40,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
     @Inject
     public DefaultKafkaCluster(AdminClient adminClient,
                                @BootstrapServers String bootstrapServers,
-                               SslConfiguration sslConfiguration,
+                               @Nullable SslConfiguration sslConfiguration,
                                @SelfHostAndPort HostAndPort hostAndPort,
                                KafkaProducerConfiguration producerConfiguration) {
         _adminClient = requireNonNull(adminClient);
