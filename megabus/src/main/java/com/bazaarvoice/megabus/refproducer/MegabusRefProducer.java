@@ -132,7 +132,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
             _rateLimitedLog.error(t, "Unexpected megabus exception: {}", t);
             _errorCounter.inc();
             // Give up leadership temporarily.  Maybe another server will have more success.
-             stopAsync().awaitTerminated();
+            stopAsync().awaitTerminated();
         }
     }
 

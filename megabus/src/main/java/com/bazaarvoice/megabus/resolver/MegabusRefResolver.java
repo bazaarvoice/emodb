@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
@@ -136,13 +135,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
     }
 
     private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
-        final LongAdder refCounter = new LongAdder();
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref -> {
-                refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref);
-                refCounter.increment();
-            }
-        );
+        refs.forEachRemaining(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
 
@@ -152,8 +146,9 @@ public class MegabusRefResolver extends KafkaStreamsService {
             } catch (UnknownTableException | UnknownPlacementException e) {
                 // take no action and discard the event, as the table was deleted before we could process the event
                 _discardedMeter.mark();
-            } catch (Throwable e) {
+            } catch (Throwable t) {
                 _errorProcessingCounter.inc();
+                throw t;
             }
         }
 
@@ -196,7 +191,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
             return new ResolutionResult(resolvedDocuments, missingRefs);
         } catch (Throwable t) {
-            _errorProcessingCounter.inc(refCounter.sum());
+            _errorProcessingCounter.inc();
             throw t;
         }
     }
