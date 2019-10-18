@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.kafka.Constants;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.SslConfiguration;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
-import com.codahale.metrics.Counter;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -23,7 +23,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     private final Properties _streamsConfiguration;
     private final AtomicReference<Throwable> _uncaughtException;
     private final AtomicBoolean _fatalErrorEncountered;
-    private final Counter _streamsExceptionCounter;
+    private final Meter _streamsExceptionMeter;
 
     private KafkaStreams _streams;
 
@@ -68,7 +68,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
             _streamsConfiguration.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, sslConfiguration.getKeyPassword());
         }
 
-        _streamsExceptionCounter = metricRegistry.counter("bv.emodb.megabus.kafka-streams-exception.count");
+        _streamsExceptionMeter = metricRegistry.meter("bv.emodb.megabus.kafka-streams-exceptions");
     }
 
     protected abstract Topology topology();
@@ -78,7 +78,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
         _streams = new KafkaStreams(topology(), _streamsConfiguration);
         _streams.setUncaughtExceptionHandler((thread, throwable) -> {
             _uncaughtException.compareAndSet(null, throwable);
-            _streamsExceptionCounter.inc();
+            _streamsExceptionMeter.mark();
             notifyFailed(_uncaughtException.get());
         });
         _streams.setStateListener(this);

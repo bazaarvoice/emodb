@@ -11,7 +11,7 @@ import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.megabus.MegabusRef;
-import com.codahale.metrics.Counter;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -56,8 +56,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final Topic _topic;
     private final Clock _clock;
 
-    private final Counter _eventCounter;
-    private final Counter _errorCounter;
+    private final Meter _eventMeter;
+    private final Meter _errorMeter;
 
     public MegabusRefProducer(MegabusRefProducerConfiguration config, DatabusEventStore eventStore,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
@@ -89,8 +89,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _executor = executor;
         _producer = requireNonNull(producer, "producer");
         _clock = firstNonNull(clock, Clock.systemUTC());
-        _eventCounter = metricRegistry.counter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "event-count"));
-        _errorCounter = metricRegistry.counter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "error-count"));
+        _eventMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "events"));
+        _errorMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "errors"));
 
         // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
         // NOTE: megabus subscriptions currently avoid dedup queues by starting with "__"
@@ -130,9 +130,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
             }
         } catch (Throwable t) {
             _rateLimitedLog.error(t, "Unexpected megabus exception: {}", t);
-            _errorCounter.inc();
+            _errorMeter.mark();
             // Give up leadership temporarily.  Maybe another server will have more success.
-            stopAsync().awaitTerminated();
+            stopAsync();
         }
     }
 
@@ -178,7 +178,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
             return;
         }
 
-        _eventCounter.inc(numEvents);
+        _eventMeter.mark(numEvents);
 
         long durationPerEvent = (durationInNs + numEvents - 1) / numEvents;  // round up
 
