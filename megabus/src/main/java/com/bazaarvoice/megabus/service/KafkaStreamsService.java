@@ -14,6 +14,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 
+import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -78,8 +79,9 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
         _streams = new KafkaStreams(topology(), _streamsConfiguration);
         _streams.setUncaughtExceptionHandler((thread, throwable) -> {
             _uncaughtException.compareAndSet(null, throwable);
+            _fatalErrorEncountered.set(true);
             _streamsExceptionMeter.mark();
-            notifyFailed(_uncaughtException.get());
+            _streams.close(Duration.ofMillis(1));
         });
         _streams.setStateListener(this);
         _streams.start();
@@ -96,6 +98,7 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     public void onChange(KafkaStreams.State newState, KafkaStreams.State oldState) {
         if (newState == KafkaStreams.State.ERROR) {
             _fatalErrorEncountered.set(true);
+            _streams.close(Duration.ofMillis(1));
         } else if (newState == KafkaStreams.State.NOT_RUNNING && _fatalErrorEncountered.get()) {
             notifyFailed(_uncaughtException.get());
         }
