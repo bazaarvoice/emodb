@@ -53,7 +53,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Meter _redundantMeter;
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
-
+    private final Meter _errorProcessingMeter;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
@@ -76,6 +76,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
+        _errorProcessingMeter = metricRegistry.meter(getMetricName("errors"));
     }
 
     private String getMetricName(String name) {
@@ -91,8 +92,14 @@ public class MegabusRefResolver extends KafkaStreamsService {
                 .merge(streamsBuilder.stream(_retryRefTopic.getName(), Consumed.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<List<MegabusRef>>() {}))));
 
         // resolve refs into documents
-        KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> resolveRefs(value.iterator()));
-
+        KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> {
+            try {
+                return resolveRefs(value.iterator());
+            } catch (Throwable t) {
+                _errorProcessingMeter.mark();
+                throw t;
+            }
+        });
 
         resolutionResults
                 // extract the resolved documents
@@ -135,9 +142,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
     private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref ->
-                refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref)
-        );
+        refs.forEachRemaining(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
 
@@ -151,7 +156,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
         }
 
         Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
-
         List<Map<String, Object>> resolvedDocuments = new ArrayList<>();
         List<MegabusRef> missingRefs = new ArrayList<>();
 

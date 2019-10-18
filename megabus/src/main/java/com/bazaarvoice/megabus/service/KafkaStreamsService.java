@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.kafka.Constants;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.SslConfiguration;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
 import org.apache.kafka.clients.CommonClientConfigs;
@@ -23,6 +24,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     private final Properties _streamsConfiguration;
     private final AtomicReference<Throwable> _uncaughtException;
     private final AtomicBoolean _fatalErrorEncountered;
+    private final Meter _streamsExceptionMeter;
+
     private KafkaStreams _streams;
 
     public KafkaStreamsService(String serviceName,
@@ -65,6 +68,8 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
             _streamsConfiguration.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, sslConfiguration.getKeyStorePassword());
             _streamsConfiguration.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, sslConfiguration.getKeyPassword());
         }
+
+        _streamsExceptionMeter = metricRegistry.meter("bv.emodb.megabus.kafka-streams-exceptions");
     }
 
     protected abstract Topology topology();
@@ -72,7 +77,12 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
     @Override
     protected final void doStart() {
         _streams = new KafkaStreams(topology(), _streamsConfiguration);
-        _streams.setUncaughtExceptionHandler((thread, throwable) -> _uncaughtException.compareAndSet(null, throwable));
+        _streams.setUncaughtExceptionHandler((thread, throwable) -> {
+            _uncaughtException.compareAndSet(null, throwable);
+            _fatalErrorEncountered.set(true);
+            _streamsExceptionMeter.mark();
+            _streams.close(Duration.ofMillis(1));
+        });
         _streams.setStateListener(this);
         _streams.start();
         notifyStarted();

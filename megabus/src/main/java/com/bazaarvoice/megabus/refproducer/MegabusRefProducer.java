@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.event.api.EventData;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.megabus.MegabusRef;
+import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,18 +19,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.utils.Utils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nullable;
 import java.time.Clock;
 import java.util.List;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import javax.annotation.Nullable;
-import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.utils.Utils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -37,6 +39,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MegabusRefProducer extends AbstractScheduledService {
     private final Logger _log;
+
 
     private final int _pollIntervalMs;
     private final int _eventsLimit;
@@ -52,6 +55,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
     private final ObjectMapper _objectMapper;
     private final Topic _topic;
     private final Clock _clock;
+
+    private final Meter _eventMeter;
+    private final Meter _errorMeter;
 
     public MegabusRefProducer(MegabusRefProducerConfiguration config, DatabusEventStore eventStore,
                               RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
@@ -83,6 +89,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _executor = executor;
         _producer = requireNonNull(producer, "producer");
         _clock = firstNonNull(clock, Clock.systemUTC());
+        _eventMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "events"));
+        _errorMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "errors"));
 
         // TODO: We should ideally make the megabus poller also the dedup leader, which should allow consistent polling and deduping, as well as cluster updates to the same key
         // NOTE: megabus subscriptions currently avoid dedup queues by starting with "__"
@@ -122,7 +130,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
             }
         } catch (Throwable t) {
             _rateLimitedLog.error(t, "Unexpected megabus exception: {}", t);
-            stop();  // Give up leadership temporarily.  Maybe another server will have more success.
+            _errorMeter.mark();
+            // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync();
         }
     }
 
@@ -167,6 +177,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
         if (numEvents == 0) {
             return;
         }
+
+        _eventMeter.mark(numEvents);
 
         long durationPerEvent = (durationInNs + numEvents - 1) / numEvents;  // round up
 
