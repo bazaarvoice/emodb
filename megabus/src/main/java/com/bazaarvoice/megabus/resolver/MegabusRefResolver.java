@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,8 +26,12 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -40,6 +45,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MegabusRefResolver extends KafkaStreamsService {
 
+    private static final Logger _log = LoggerFactory.getLogger(MegabusRefResolver.class);
     private static final String SERVICE_NAME = "resolver";
 
     private final DataProvider _dataProvider;
@@ -47,6 +53,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Topic _megabusResolvedTopic;
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
+    private final Duration _stalenessTarget;
 
     private final Clock _clock;
 
@@ -54,6 +61,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
     private final Meter _errorProcessingMeter;
+    private final Meter _oldRefsMeter;
+    private final Histogram _processingLatencyHisto;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
@@ -63,20 +72,26 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               KafkaCluster kafkaCluster, Clock clock,
                               HostAndPort hostAndPort,
                               String refResolverConsumerGroup,
+                              Duration stalenessTarget,
                               MetricRegistry metricRegistry) {
         super(SERVICE_NAME, kafkaCluster, hostAndPort.toString(),
                 refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
+
         _dataProvider = requireNonNull(dataProvider, "dataProvider");
         _megabusRefTopic = requireNonNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = requireNonNull(megabusResolvedTopic, "megabusResolvedTopic");
         _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = requireNonNull(missingRefTopic, "missingRefTopic");
+        _stalenessTarget = requireNonNull(stalenessTarget, "stalenessTarget");
+
         _clock = requireNonNull(clock, "clock");
 
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
         _errorProcessingMeter = metricRegistry.meter(getMetricName("errors"));
+        _oldRefsMeter = metricRegistry.meter(getMetricName("old-refs"));
+        _processingLatencyHisto = metricRegistry.histogram(getMetricName("processing-latency-ms"));
     }
 
     private String getMetricName(String name) {
@@ -141,8 +156,24 @@ public class MegabusRefResolver extends KafkaStreamsService {
     }
 
     private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
+        final Instant mark = _clock.instant();
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
+        refs.forEachRemaining(ref -> {
+            refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref);
+
+            final Instant readAt = ref.getReadTime();
+
+            _log.warn("doc[{}], readAt[{}], staleness  target[{}], window[{}], age[{}s], isStale[{}]",
+                ref.getKey(), readAt, _stalenessTarget, mark.minus(_stalenessTarget),
+                (mark.toEpochMilli() - readAt.toEpochMilli()) / 1000L, readAt.isBefore(mark.minus(_stalenessTarget)));
+
+            if(readAt.isBefore(mark.minus(_stalenessTarget))) {
+                _oldRefsMeter.mark();
+            }
+
+            _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
+
+        });
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
 

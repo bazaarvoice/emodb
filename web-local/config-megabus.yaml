@@ -62,6 +62,7 @@ megabus:
     batchSize: 400
     skipWaitThreshold: 250
     pollIntervalMs: 100
+  stalenessTarget: PT30S # PT24H
 
 
 

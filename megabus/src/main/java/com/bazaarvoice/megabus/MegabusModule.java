@@ -5,8 +5,10 @@ import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.guice.DelayProcessorConsumerGroup;
+import com.bazaarvoice.megabus.guice.MegabusRefResolverService;
 import com.bazaarvoice.megabus.guice.MegabusRefTopic;
 import com.bazaarvoice.megabus.guice.MegabusTopic;
+import com.bazaarvoice.megabus.guice.MissingRefDelayService;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
 import com.bazaarvoice.megabus.guice.RefResolverConsumerGroup;
 import com.bazaarvoice.megabus.guice.RetryRefTopic;
@@ -14,8 +16,6 @@ import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
-import com.bazaarvoice.megabus.guice.MegabusRefResolverService;
-import com.bazaarvoice.megabus.guice.MissingRefDelayService;
 import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
 import com.google.common.collect.ImmutableMap;
@@ -23,8 +23,9 @@ import com.google.common.util.concurrent.Service;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import java.time.Duration;
 import org.apache.kafka.common.config.TopicConfig;
+
+import java.time.Duration;
 
 public class MegabusModule extends PrivateModule {
 
