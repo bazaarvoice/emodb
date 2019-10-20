@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import java.time.Duration;
 
 public class MegabusConfiguration {
 
@@ -55,11 +54,6 @@ public class MegabusConfiguration {
     @JsonProperty("refProducer")
     private MegabusRefProducerConfiguration _refProducerConfiguration;
 
-    @Valid
-    @NotNull
-    @JsonProperty("stalenessTarget")
-    private Duration _stalenessTarget;
-
     public String getApplicationId() {
         return _applicationId;
     }
@@ -96,7 +90,4 @@ public class MegabusConfiguration {
         return _delayProcessorConsumerGroupName;
     }
 
-    public Duration getStalenessTarget() {
-        return _stalenessTarget;
-    }
 }
