@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
@@ -53,7 +52,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Topic _megabusResolvedTopic;
     private final Topic _retryRefTopic;
     private final Topic _missingRefTopic;
-    private final Duration _stalenessTarget;
 
     private final Clock _clock;
 
@@ -61,7 +59,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
     private final Meter _errorProcessingMeter;
-    private final Meter _oldRefsMeter;
     private final Histogram _processingLatencyHisto;
 
     @Inject
@@ -72,7 +69,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               KafkaCluster kafkaCluster, Clock clock,
                               HostAndPort hostAndPort,
                               String refResolverConsumerGroup,
-                              Duration stalenessTarget,
                               MetricRegistry metricRegistry) {
         super(SERVICE_NAME, kafkaCluster, hostAndPort.toString(),
                 refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
@@ -82,7 +78,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
         _megabusResolvedTopic = requireNonNull(megabusResolvedTopic, "megabusResolvedTopic");
         _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = requireNonNull(missingRefTopic, "missingRefTopic");
-        _stalenessTarget = requireNonNull(stalenessTarget, "stalenessTarget");
 
         _clock = requireNonNull(clock, "clock");
 
@@ -90,7 +85,6 @@ public class MegabusRefResolver extends KafkaStreamsService {
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
         _errorProcessingMeter = metricRegistry.meter(getMetricName("errors"));
-        _oldRefsMeter = metricRegistry.meter(getMetricName("old-refs"));
         _processingLatencyHisto = metricRegistry.histogram(getMetricName("processing-latency-ms"));
     }
 
@@ -163,14 +157,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
             final Instant readAt = ref.getReadTime();
 
-            _log.warn("doc[{}], readAt[{}], staleness  target[{}], window[{}], age[{}s], isStale[{}]",
-                ref.getKey(), readAt, _stalenessTarget, mark.minus(_stalenessTarget),
-                (mark.toEpochMilli() - readAt.toEpochMilli()) / 1000L, readAt.isBefore(mark.minus(_stalenessTarget)));
-
-            if(readAt.isBefore(mark.minus(_stalenessTarget))) {
-                _oldRefsMeter.mark();
-            }
-
+            _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
             _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
 
         });

@@ -30,11 +30,10 @@ public class ResilientMegabusRefResolver extends ResilientService {
                                        KafkaCluster kafkaCluster, Clock clock,
                                        @SelfHostAndPort HostAndPort hostAndPort,
                                        @RefResolverConsumerGroup String refResolverConsumerGroup,
-                                       MegabusConfiguration megabusConfiguration, MetricRegistry metricRegistry) {
+                                       MetricRegistry metricRegistry) {
         super(SERVICE_NAME,
                 () -> new MegabusRefResolver(dataProvider, megabusRefTopic, megabusResolvedTopic, retryRefTopic,
-                        missingRefTopic, kafkaCluster, clock, hostAndPort, refResolverConsumerGroup,
-                        megabusConfiguration.getStalenessTarget(), metricRegistry),
+                        missingRefTopic, kafkaCluster, clock, hostAndPort, refResolverConsumerGroup, metricRegistry),
                 RESTART_DELAY, false);
     }
 }
