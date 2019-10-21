@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.kafka;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
@@ -11,20 +12,22 @@ import java.util.Map;
 
 public class JsonPOJOSerde<T> implements Serde<T> {
 
-    private final ObjectMapper _mapper;
+    private static final ObjectMapper _mapper = new ObjectMapper();
     private final Class<T> _cls;
     private final TypeReference _typeReference;
+
+    static {
+        _mapper.registerModule(new JavaTimeModule());
+    }
 
     public JsonPOJOSerde(Class<T> cls) {
         this._cls = cls;
         _typeReference = null;
-        _mapper = new ObjectMapper();
     }
 
     public JsonPOJOSerde(TypeReference<T> t) {
         _typeReference = t;
         _cls = null;
-        _mapper = new ObjectMapper();
     }
 
     @Override

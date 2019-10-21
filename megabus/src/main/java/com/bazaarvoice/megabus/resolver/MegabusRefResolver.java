@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.service.KafkaStreamsService;
+import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -25,8 +26,11 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -40,6 +44,7 @@ import static java.util.Objects.requireNonNull;
 
 public class MegabusRefResolver extends KafkaStreamsService {
 
+    private static final Logger _log = LoggerFactory.getLogger(MegabusRefResolver.class);
     private static final String SERVICE_NAME = "resolver";
 
     private final DataProvider _dataProvider;
@@ -54,6 +59,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
     private final Meter _discardedMeter;
     private final Meter _pendingMeter;
     private final Meter _errorProcessingMeter;
+    private final Histogram _processingLatencyHisto;
 
     @Inject
     public MegabusRefResolver(DataProvider dataProvider, Topic megabusRefTopic,
@@ -66,17 +72,20 @@ public class MegabusRefResolver extends KafkaStreamsService {
                               MetricRegistry metricRegistry) {
         super(SERVICE_NAME, kafkaCluster, hostAndPort.toString(),
                 refResolverConsumerGroup, megabusRefTopic.getPartitions(), metricRegistry);
+
         _dataProvider = requireNonNull(dataProvider, "dataProvider");
         _megabusRefTopic = requireNonNull(megabusRefTopic, "megabusRefTopic");
         _megabusResolvedTopic = requireNonNull(megabusResolvedTopic, "megabusResolvedTopic");
         _retryRefTopic = requireNonNull(retryRefTopic, "retryRefTopic");
         _missingRefTopic = requireNonNull(missingRefTopic, "missingRefTopic");
+
         _clock = requireNonNull(clock, "clock");
 
         _redundantMeter = metricRegistry.meter(getMetricName("redundantUpdates"));
         _discardedMeter = metricRegistry.meter(getMetricName("discardedUpdates"));
         _pendingMeter = metricRegistry.meter(getMetricName("pendingUpdates"));
         _errorProcessingMeter = metricRegistry.meter(getMetricName("errors"));
+        _processingLatencyHisto = metricRegistry.histogram(getMetricName("processing-latency-ms"));
     }
 
     private String getMetricName(String name) {
@@ -177,6 +186,11 @@ public class MegabusRefResolver extends KafkaStreamsService {
                 }
 
                 triggerEvent.set(true);
+
+                final Instant mark = _clock.instant();
+                final Instant readAt = ref.getReadTime();
+                _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
+                _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
             });
 
             if (triggerEvent.get()) {
