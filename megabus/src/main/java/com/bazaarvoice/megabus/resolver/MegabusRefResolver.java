@@ -150,14 +150,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
     }
 
     private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
-        final Instant mark = _clock.instant();
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref -> {
-            final Instant readAt = ref.getReadTime();
-            refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref);
-            _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
-            _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
-        });
+        refs.forEachRemaining(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
 
@@ -192,6 +186,11 @@ public class MegabusRefResolver extends KafkaStreamsService {
                 }
 
                 triggerEvent.set(true);
+
+                final Instant mark = _clock.instant();
+                final Instant readAt = ref.getReadTime();
+                _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
+                _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
             });
 
             if (triggerEvent.get()) {

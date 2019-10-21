@@ -12,22 +12,22 @@ import java.util.Map;
 
 public class JsonPOJOSerde<T> implements Serde<T> {
 
-    private final ObjectMapper _mapper;
+    private static final ObjectMapper _mapper = new ObjectMapper();
     private final Class<T> _cls;
     private final TypeReference _typeReference;
+
+    static {
+        _mapper.registerModule(new JavaTimeModule());
+    }
 
     public JsonPOJOSerde(Class<T> cls) {
         this._cls = cls;
         _typeReference = null;
-        _mapper = new ObjectMapper();
-        _mapper.registerModule(new JavaTimeModule());
     }
 
     public JsonPOJOSerde(TypeReference<T> t) {
         _typeReference = t;
         _cls = null;
-        _mapper = new ObjectMapper();
-        _mapper.registerModule(new JavaTimeModule());
     }
 
     @Override
