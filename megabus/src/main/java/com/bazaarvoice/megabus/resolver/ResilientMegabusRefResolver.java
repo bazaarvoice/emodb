@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.bazaarvoice.megabus.guice.MegabusRefTopic;
 import com.bazaarvoice.megabus.guice.MegabusTopic;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
@@ -24,13 +23,13 @@ public class ResilientMegabusRefResolver extends ResilientService {
 
     @Inject
     public ResilientMegabusRefResolver(DataProvider dataProvider, @MegabusRefTopic Topic megabusRefTopic,
-                                       @MegabusTopic Topic megabusResolvedTopic,
-                                       @RetryRefTopic Topic retryRefTopic,
-                                       @MissingRefTopic Topic missingRefTopic,
-                                       KafkaCluster kafkaCluster, Clock clock,
-                                       @SelfHostAndPort HostAndPort hostAndPort,
-                                       @RefResolverConsumerGroup String refResolverConsumerGroup,
-                                       MetricRegistry metricRegistry) {
+                              @MegabusTopic Topic megabusResolvedTopic,
+                              @RetryRefTopic Topic retryRefTopic,
+                              @MissingRefTopic Topic missingRefTopic,
+                              KafkaCluster kafkaCluster, Clock clock,
+                              @SelfHostAndPort HostAndPort hostAndPort,
+                              @RefResolverConsumerGroup String refResolverConsumerGroup,
+                              MetricRegistry metricRegistry) {
         super(SERVICE_NAME,
                 () -> new MegabusRefResolver(dataProvider, megabusRefTopic, megabusResolvedTopic, retryRefTopic,
                         missingRefTopic, kafkaCluster, clock, hostAndPort, refResolverConsumerGroup, metricRegistry),

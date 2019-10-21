@@ -3,7 +3,6 @@ package com.bazaarvoice.megabus;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -89,5 +88,4 @@ public class MegabusConfiguration {
     public String getDelayProcessorConsumerGroupName() {
         return _delayProcessorConsumerGroupName;
     }
-
 }
