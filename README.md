@@ -34,6 +34,8 @@ Documentation
 
 [Stash API](https://bazaarvoice.github.io/emodb/stash/)
 
+[Megabus API](https://bazaarvoice.github.io/emodb/megabus/)
+
 [Hadoop and Hive Support](https://bazaarvoice.github.io/emodb/mapreduce/)
 
 [Operations](markdowns/Operations.md)
