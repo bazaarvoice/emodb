@@ -60,11 +60,6 @@ public class DataStoreConfiguration {
 
     @Valid
     @NotNull
-    @JsonProperty("migrationPhase")
-    private DeltaMigrationPhase _migrationPhase = DeltaMigrationPhase.PRE_MIGRATION;
-
-    @Valid
-    @NotNull
     @JsonProperty("deltaBlockSizeInKb")
     private int _deltaBlockSizeInKb = 16;
 
@@ -169,10 +164,6 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setDeltaEncodingVersion(int deltaEncodingVersion) {
         _deltaEncodingVersion = deltaEncodingVersion;
         return this;
-    }
-
-    public DeltaMigrationPhase getMigrationPhase() {
-        return _migrationPhase;
     }
 
     /**

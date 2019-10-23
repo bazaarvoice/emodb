@@ -22,7 +22,6 @@ public class CreateKeyspacesCommandTest {
         assertFalse(CqlTemplate.create("/ddl/sor/tables.template.cql")
                 .withBinding("keyspace", "ugc_global")
                 .withBinding("table.audit", "ugc_audit")
-                .withBinding("table.delta", "ugc_delta")
                 .withBinding("table.delta_v2", "ugc_delta_v2")
                 .withBinding("table.history", "ugc_history")
                 .toCqlScript().contains("${"));

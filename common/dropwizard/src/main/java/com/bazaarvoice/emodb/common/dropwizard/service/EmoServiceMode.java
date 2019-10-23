@@ -105,19 +105,6 @@ public enum EmoServiceMode {
             Aspect.full_consistency
     ),
 
-    DELTA_MIGRATOR(
-            Aspect.web,
-            Aspect.cache,
-            Aspect.leader_control,
-            Aspect.dataCenter,
-            Aspect.dataStore_module,
-            Aspect.blobStore_module, // needed for permission resolver
-            Aspect.delta_migrator,
-            Aspect.compaction_control,
-            Aspect.security,
-            Aspect.full_consistency
-    ),
-
     MEGABUS(
             Aspect.web,
             Aspect.task,
@@ -199,7 +186,6 @@ public enum EmoServiceMode {
         security,
         invalidation_cache_listener, // This makes sure the node is registered in zookeeper to invalidate its caches
         scanner(false),
-        delta_migrator(false),
         swagger,
         uac,
         kafka(false),

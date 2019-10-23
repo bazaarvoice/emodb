@@ -42,7 +42,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 
-public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataCopyWriterDAO {
+public class CqlDataWriterDAO implements DataWriterDAO, DataCopyWriterDAO {
 
     private final static int ROW_KEY_SIZE = 8;
     private final static int CHANGE_ID_SIZE = 8;
@@ -52,16 +52,12 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
     private final int _deltaPrefixLength;
     private final byte[] _deltaPrefixBytes;
     private final DAOUtils _daoUtils;
-    private final boolean _writeToLegacyDeltaTable;
-    private final boolean _writeToBlockedDeltaTable;
     private final boolean _cellTombstoneCompactionEnabled;
     private final int _cellTombstoneBlockLimit;
 
     private final DataWriterDAO _astyanaxWriterDAO;
     private final ChangeEncoder _changeEncoder;
-    private final Meter _migratorMeter;
     private final Meter _blockedRowsMigratedMeter;
-    private final PlacementCache _placementCache;
 
     private final HistoryStore _historyStore;
 
@@ -70,23 +66,17 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
                             PlacementCache placementCache, HistoryStore historyStore,
                             ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                             DAOUtils daoUtils, @PrefixLength int deltaPrefixLength,
-                            @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable, @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable,
                             @CellTombstoneCompactionEnabled boolean cellTombstoneCompactionEnabled, @CellTombstoneBlockLimit int cellTombstoneBlockLimit) {
 
-        checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
 
         _astyanaxWriterDAO = checkNotNull(delegate, "delegate");
         _historyStore = checkNotNull(historyStore, "historyStore");
         _changeEncoder = checkNotNull(changeEncoder, "changeEncoder");
-        _placementCache = placementCache;
-        _migratorMeter = metricRegistry.meter(getMetricName("migratedRows"));
         _blockedRowsMigratedMeter = metricRegistry.meter(getMetricName("blockedMigratedRows"));
         _daoUtils = daoUtils;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixBytes = _deltaPrefix.getBytes(Charsets.UTF_8);
         _deltaPrefixLength = deltaPrefixLength;
-        _writeToLegacyDeltaTable = writeToLegacyDeltaTable;
-        _writeToBlockedDeltaTable = writeToBlockedDeltaTable;
         _cellTombstoneCompactionEnabled = cellTombstoneCompactionEnabled;
         _cellTombstoneBlockLimit = cellTombstoneBlockLimit;
     }
@@ -159,38 +149,14 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
 
         // Add the compaction record
         ByteBuffer encodedBlockedCompaction = ByteBuffer.wrap(_changeEncoder.encodeCompaction(compaction, new StringBuilder(_deltaPrefix)).toString().getBytes(Charsets.UTF_8));
-        ByteBuffer encodedCompaction = encodedBlockedCompaction.duplicate();
-        encodedCompaction.position(encodedCompaction.position() + _deltaPrefixLength);
-
         Session session = keyspace.getCqlSession();
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
 
-        ResultSetFuture oldTableFuture = null;
-
-        // this write statement should be removed in the next version
-        if (_writeToLegacyDeltaTable) {
-            TableDDL deltaTableDDL = placement.getDeltaTableDDL();
-            Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
-                    .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
-                    .value(deltaTableDDL.getChangeIdColumnName(), compactionKey)
-                    .value(deltaTableDDL.getValueColumnName(), encodedCompaction)
-                    .setConsistencyLevel(consistencyLevel);
-            oldTableFuture = session.executeAsync(oldTableStatement);
-        }
-
-
-        if (_writeToBlockedDeltaTable) {
-            // create new atomic batch
-            BlockedDeltaTableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
-            BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.LOGGED);
-            insertBlockedDeltas(newTableStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
-            session.execute(newTableStatement);
-        }
-
-        // Wait for both statements to return
-        if (oldTableFuture != null) {
-            oldTableFuture.getUninterruptibly();
-        }
+        // create new atomic batch
+        BlockedDeltaTableDDL blockedDeltaTableDDL = placement.getBlockedDeltaTableDDL();
+        BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.LOGGED);
+        insertBlockedDeltas(newTableStatement, blockedDeltaTableDDL, consistencyLevel, rowKey, compactionKey, encodedBlockedCompaction);
+        session.execute(newTableStatement);
 
     }
 
@@ -225,7 +191,6 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
         ConsistencyLevel consistencyLevel = SorConsistencies.toCql(consistency);
 
         // the old statement should be removed in the next version
-        ResultSetFuture legacyTableFuture = null;
         ResultSetFuture historyBatchFuture = null;
 
         if (historyList != null && !historyList.isEmpty()) {
@@ -236,33 +201,18 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
             historyBatchFuture = session.executeAsync(historyBatchStatement);
         }
 
-        // delete the old deltas & compaction records
-        if (_writeToLegacyDeltaTable) {
-            BatchStatement legacyTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (DeltaClusteringKey change : changesToDelete) {
-                legacyTableStatement.add(deleteStatement(placement.getDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
-            }
-            legacyTableFuture = session.executeAsync(legacyTableStatement);
-        }
-
-        if (_writeToBlockedDeltaTable) {
-            BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
-            for (DeltaClusteringKey change : changesToDelete) {
-                if (_cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
-                    for (int i = 0; i < change.getNumBlocks(); i++) {
-                        newTableStatement.add(blockDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
-                    }
-                }
-                else {
-                    newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
+        BatchStatement newTableStatement = new BatchStatement(BatchStatement.Type.UNLOGGED);
+        for (DeltaClusteringKey change : changesToDelete) {
+            if (_cellTombstoneCompactionEnabled && change.getNumBlocks() <= _cellTombstoneBlockLimit) {
+                for (int i = 0; i < change.getNumBlocks(); i++) {
+                    newTableStatement.add(blockDeleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), i, consistencyLevel));
                 }
             }
-            session.execute(newTableStatement);
+            else {
+                newTableStatement.add(deleteStatement(placement.getBlockedDeltaTableDDL(), rowKey, change.getChangeId(), consistencyLevel));
+            }
         }
-
-        if (legacyTableFuture != null) {
-            legacyTableFuture.getUninterruptibly();
-        }
+        session.execute(newTableStatement);
 
         if (historyBatchFuture != null) {
             historyBatchFuture.getUninterruptibly();
@@ -368,100 +318,17 @@ public class CqlDataWriterDAO implements DataWriterDAO, MigratorWriterDAO, DataC
 
             lastRowKey = rowKey;
 
-            if (_writeToLegacyDeltaTable) {
-                TableDDL deltaTableDDL = placement.getDeltaTableDDL();
-                Statement oldTableStatement = QueryBuilder.insertInto(deltaTableDDL.getTableMetadata())
-                        .value(deltaTableDDL.getRowKeyColumnName(), rowKey)
-                        .value(deltaTableDDL.getChangeIdColumnName(), result.getChangeId())
-                        .value(deltaTableDDL.getValueColumnName(), delta)
-                        .setConsistencyLevel(SorConsistencies.toCql(WriteConsistency.STRONG));
-                oldTableBatchStatement.add(oldTableStatement);
-            }
-
-            if (_writeToBlockedDeltaTable) {
-                ByteBuffer blockedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
-                blockedDelta.put(_deltaPrefixBytes);
-                blockedDelta.put(delta.duplicate());
-                blockedDelta.position(0);
-                insertBlockedDeltas(newTableBatchStatment, placement.getBlockedDeltaTableDDL(),
-                        SorConsistencies.toCql(WriteConsistency.STRONG), rowKey, result.getChangeId(), blockedDelta);
-            }
+            ByteBuffer blockedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
+            blockedDelta.put(_deltaPrefixBytes);
+            blockedDelta.put(delta.duplicate());
+            blockedDelta.position(0);
+            insertBlockedDeltas(newTableBatchStatment, placement.getBlockedDeltaTableDDL(),
+                    SorConsistencies.toCql(WriteConsistency.STRONG), rowKey, result.getChangeId(), blockedDelta);
 
             currentStatementSize += deltaSize + ROW_KEY_SIZE + CHANGE_ID_SIZE;
         }
 
         executeAndReplaceIfNotEmpty(oldTableBatchStatement, session, progress);
         executeAndReplaceIfNotEmpty(newTableBatchStatment, session, progress);
-    }
-
-
-    @Override
-    public void writeRows(String placementName, Iterator<MigrationScanResult> iterator, RateLimiter rateLimiter) {
-
-        if (!iterator.hasNext()) {
-            return;
-        }
-
-        DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
-        Session session = placement.getKeyspace().getCqlSession();
-        BatchStatement statement = new BatchStatement(BatchStatement.Type.LOGGED);
-        AtomicReference<Throwable> error = new AtomicReference<>();
-        Phaser phaser = new Phaser(1);
-        ByteBuffer lastRowKey = null;
-        int currentStatementSize = 0;
-        FutureCallback<ResultSet> callback = new FutureCallback<ResultSet>() {
-            @Override
-            public void onSuccess(@Nullable ResultSet result) {
-                phaser.arriveAndDeregister();
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                phaser.arriveAndDeregister();
-                error.compareAndSet(null, t);
-            }
-        };
-
-        while (iterator.hasNext()) {
-            MigrationScanResult result = iterator.next();
-
-            ByteBuffer rowKey = result.getRowKey();
-
-            // build blocked delta value
-            ByteBuffer delta = result.getValue();
-            int deltaSize = delta.remaining();
-            ByteBuffer encodedDelta = ByteBuffer.allocate(deltaSize + _deltaPrefixLength);
-            encodedDelta.put(_deltaPrefixBytes);
-            encodedDelta.put(delta.duplicate());
-            encodedDelta.position(0);
-
-            _migratorMeter.mark();
-
-            // execute statement if we have encountered a new C* wide row OR if statement has become too large
-            if ((lastRowKey != null && !rowKey.equals(lastRowKey)) || currentStatementSize > MAX_STATEMENT_SIZE) {
-
-                rateLimiter.acquire();
-                phaser.register();
-
-                Futures.addCallback(session.executeAsync(statement), callback);
-                statement = new BatchStatement(BatchStatement.Type.LOGGED);
-                currentStatementSize = 0;
-            }
-
-            lastRowKey = rowKey;
-            insertBlockedDeltas(statement, placement.getBlockedDeltaTableDDL(), ConsistencyLevel.LOCAL_QUORUM, rowKey, result.getChangeId(), encodedDelta);
-            currentStatementSize += encodedDelta.limit() + ROW_KEY_SIZE + CHANGE_ID_SIZE;
-
-            // fail fast if an error has occurred
-            checkError(error);
-
-        }
-
-        rateLimiter.acquire();
-        phaser.register();
-        Futures.addCallback(session.executeAsync(statement), callback);
-        phaser.arriveAndAwaitAdvance();
-        checkError(error);
-
     }
 }

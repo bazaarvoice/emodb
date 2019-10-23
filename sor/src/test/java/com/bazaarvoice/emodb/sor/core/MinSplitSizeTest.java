@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.db.DAOUtils;
-import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxBlockedDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.ChangeEncoder;
 import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -67,7 +67,8 @@ public class MinSplitSizeTest {
 
     @Test
     public void testLocalResplitting() {
-        AstyanaxDataReaderDAO astyanaxDataReaderDAO = new AstyanaxDataReaderDAO(mock(PlacementCache.class), mock(ChangeEncoder.class), mock(DAOUtils.class), new MetricRegistry());
+        AstyanaxBlockedDataReaderDAO astyanaxDataReaderDAO = new AstyanaxBlockedDataReaderDAO(mock(PlacementCache.class),
+                mock(ChangeEncoder.class), new MetricRegistry(), mock(DAOUtils.class), 4);
 
         String[] minMaxResplits3Times = {
                 "0000000000000000000000000000000000000000",

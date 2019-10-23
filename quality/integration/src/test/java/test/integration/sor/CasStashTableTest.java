@@ -80,8 +80,8 @@ public class CasStashTableTest  {
         CassandraFactory cassandraFactory = new CassandraFactory(_lifeCycleRegistry, healthCheckRegistry,
                 curator, new MetricRegistry(), Clock.systemUTC());
         Map<String, CassandraKeyspace> keyspaceMap = Maps.newHashMap();
-        keyspaceMap.putAll(cassandraFactory.build(new TestCassandraConfiguration("app_global", "sys_delta")));
-        keyspaceMap.putAll(cassandraFactory.build(new TestCassandraConfiguration("ugc_global", "ugc_delta")));
+        keyspaceMap.putAll(cassandraFactory.build(new TestCassandraConfiguration("app_global", "sys_delta_v2")));
+        keyspaceMap.putAll(cassandraFactory.build(new TestCassandraConfiguration("ugc_global", "ugc_delta_v2")));
 
         PlacementFactory placementFactory = new DeltaPlacementFactory(_lifeCycleRegistry, ImmutableSet.of("app_global:sys", "ugc_global:ugc"),
                keyspaceMap, dataCenters);
@@ -92,7 +92,7 @@ public class CasStashTableTest  {
         _astyanaxTableDAO = new AstyanaxTableDAO(_lifeCycleRegistry, "__system_sor", "app_global:sys",
                 8, ImmutableMap.of(), placementFactory, placementCache, "datacenter1",
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class), mock(FullConsistencyTimeProvider.class),
-                mock(ValueStore.class), mock(CacheRegistry.class), ImmutableMap.of(), false, mock(Clock.class));
+                mock(ValueStore.class), mock(CacheRegistry.class), ImmutableMap.of(), mock(Clock.class));
         _astyanaxTableDAO.setCQLStashTableDAO(cqlStashTableDAO);
         // Don't store table definitions in the actual backing store so as not to interrupt other tests.  Use a
         // private in-memory implementation.

@@ -24,9 +24,9 @@ import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
-import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxBlockedDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.astyanax.AstyanaxDataWriterDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.astyanax.CqlBlockedDataReaderDAO;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
@@ -80,8 +80,8 @@ public class DataStoreModuleTest {
         assertPrivate(injector, MutexTableDAO.class);
         assertPrivate(injector, CachingTableDAO.class);
         assertPrivate(injector, AstyanaxTableDAO.class);
-        assertPrivate(injector, AstyanaxDataReaderDAO.class);
-        assertPrivate(injector, CqlDataReaderDAO.class);
+        assertPrivate(injector, AstyanaxBlockedDataReaderDAO.class);
+        assertPrivate(injector, CqlBlockedDataReaderDAO.class);
         assertPrivate(injector, AstyanaxDataWriterDAO.class);
     }
 

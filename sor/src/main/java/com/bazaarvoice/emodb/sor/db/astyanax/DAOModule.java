@@ -1,14 +1,12 @@
 package com.bazaarvoice.emodb.sor.db.astyanax;
 
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
-import com.bazaarvoice.emodb.sor.DeltaMigrationPhase;
 import com.bazaarvoice.emodb.sor.db.*;
 import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.table.db.astyanax.DataCopyDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
 import com.google.inject.PrivateModule;
-import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 
@@ -26,14 +24,17 @@ public class DAOModule extends PrivateModule {
     protected void configure() {
         bind(Integer.class).annotatedWith(PrefixLength.class).toInstance(DELTA_PREFIX_LENGTH);
         bind(DAOUtils.class).asEagerSingleton();
-        bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
-        bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(DataWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(DataPurgeDAO.class).to(AstyanaxDataWriterDAO.class).asEagerSingleton();
-        bind(DataCopyDAO.class).to(DefaultDataCopyDAO.class).asEagerSingleton();
-        bind(DataCopyWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(MigratorWriterDAO.class).to(CqlDataWriterDAO.class).asEagerSingleton();
-        bind(MigratorReaderDAO.class).to(CqlDataReaderDAO.class).asEagerSingleton();
+        bind(DataWriterDAO.class).annotatedWith(CqlWriterDAODelegate.class).to(AstyanaxDataWriterDAO.class);
+        bind(DataWriterDAO.class).annotatedWith(AstyanaxWriterDAODelegate.class).to(CqlDataWriterDAO.class);
+        bind(DataWriterDAO.class).to(CqlDataWriterDAO.class);
+        bind(DataPurgeDAO.class).to(AstyanaxDataWriterDAO.class);
+        bind(DataCopyDAO.class).to(DefaultDataCopyDAO.class);
+        bind(DataCopyWriterDAO.class).to(CqlDataWriterDAO.class);
+
+        bind(DataReaderDAO.class).to(CqlBlockedDataReaderDAO.class);
+        bind(DataReaderDAO.class).annotatedWith(CqlReaderDAODelegate.class).to(AstyanaxBlockedDataReaderDAO.class);
+        bind(DataCopyReaderDAO.class).to(AstyanaxBlockedDataReaderDAO.class);
+        bind(AstyanaxKeyScanner.class).to(AstyanaxBlockedDataReaderDAO.class);
 
         // Explicit bindings so objects don't get created as a just-in-time binding in the root injector.
         // This needs to be done for just about anything that has only public dependencies.
@@ -41,71 +42,19 @@ public class DAOModule extends PrivateModule {
         bind(CqlDataWriterDAO.class).asEagerSingleton();
         bind(DefaultDataCopyDAO.class).asEagerSingleton();
 
-        // For migration stages, will be reverted in future version
-        bind(AstyanaxDataReaderDAO.class).asEagerSingleton();
         bind(AstyanaxBlockedDataReaderDAO.class).asEagerSingleton();
-        bind(CqlDataReaderDAO.class).asEagerSingleton();
         bind(CqlBlockedDataReaderDAO.class).asEagerSingleton();
 
         expose(DataReaderDAO.class);
         expose(DataWriterDAO.class);
         expose(DataCopyDAO.class);
         expose(DataPurgeDAO.class);
-        expose(MigratorReaderDAO.class);
-        expose(MigratorWriterDAO.class);
     }
 
     @Provides
     @Singleton
     ChangeEncoder provideChangeEncoder(DataStoreConfiguration configuration) {
         return new DefaultChangeEncoder(configuration.getDeltaEncodingVersion());
-    }
-
-    @Provides
-    @WriteToLegacyDeltaTable
-    boolean provideWriteToLegacyDeltaTable(DataStoreConfiguration configuration) {
-        DeltaMigrationPhase migrationPhase = configuration.getMigrationPhase();
-        return migrationPhase.isWriteToLegacyDeltaTables();
-    }
-
-    @Provides
-    @WriteToBlockedDeltaTable
-    boolean provideWriteToBlockedDeltaTable(DataStoreConfiguration configuration) {
-        DeltaMigrationPhase migrationPhase = configuration.getMigrationPhase();
-        return migrationPhase.isWriteToBlockedDeltaTables();
-    }
-
-    @Provides
-    @Singleton
-    DataReaderDAO provideDataReaderDAO(DataStoreConfiguration configuration, Provider<CqlDataReaderDAO> legacyReader,
-                                       Provider<CqlBlockedDataReaderDAO> blockedReader) {
-
-        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
-    }
-
-    @Provides
-    @Singleton
-    @CqlReaderDAODelegate
-    DataReaderDAO provideCqlReaderDAODelegate(DataStoreConfiguration configuration,
-                                              Provider<AstyanaxDataReaderDAO> legacyReader,
-                                              Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
-        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
-    }
-
-    @Provides
-    @Singleton
-    DataCopyReaderDAO provideDataCopyReaderDAO(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
-                                   Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
-
-        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
-    }
-
-    @Provides
-    @Singleton
-    AstyanaxKeyScanner provideAstyanaxKeyScanner(DataStoreConfiguration configuration, Provider<AstyanaxDataReaderDAO> legacyReader,
-                                                 Provider<AstyanaxBlockedDataReaderDAO> blockedReader) {
-
-        return configuration.getMigrationPhase().isReadFromLegacyDeltaTables() ? legacyReader.get() : blockedReader.get();
     }
 
     @Provides
