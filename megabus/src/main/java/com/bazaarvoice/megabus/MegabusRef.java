@@ -15,6 +15,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * Reference to a System of Record update. Designed to be similar to {@link com.bazaarvoice.emodb.sor.core.UpdateRef},
  * but with more flexibility to add new fields without breaking serialization.
+ *
+ * Note that changes do need to be backward-compatible, as the outgoing Megabus will have inevitably written
+ * some records as the new Megabus release is coming online.
  */
 
 @JsonIgnoreProperties(ignoreUnknown = true)
