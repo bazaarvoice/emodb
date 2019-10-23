@@ -188,9 +188,11 @@ public class MegabusRefResolver extends KafkaStreamsService {
                 triggerEvent.set(true);
 
                 final Instant mark = _clock.instant();
-                final Instant readAt = ref.getReadTime() != null ? ref.getReadTime() : mark;
-                _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
-                _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
+                final Instant readAt = ref.getReadTime();
+                if (readAt != null) {
+                    _log.debug("doc[{}], readAt[{}], age[{}ms]", ref.getKey(), readAt, mark.toEpochMilli() - readAt.toEpochMilli());
+                    _processingLatencyHisto.update(mark.toEpochMilli() - readAt.toEpochMilli());
+                }
             });
 
             if (triggerEvent.get()) {
