@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 
+import javax.annotation.Nullable;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ import static java.util.Objects.requireNonNull;
 /**
  * Reference to a System of Record update. Designed to be similar to {@link com.bazaarvoice.emodb.sor.core.UpdateRef},
  * but with more flexibility to add new fields without breaking serialization.
+ *
+ * Note that changes do need to be backward-compatible, as the outgoing Megabus will have inevitably written
+ * some records as the new Megabus release is coming online.
  */
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -25,11 +29,11 @@ public class MegabusRef {
 
     @JsonCreator
     public MegabusRef(@JsonProperty("table") String table, @JsonProperty("key") String key,
-                     @JsonProperty("changeId") UUID changeId, @JsonProperty("readTime") Instant readTime) {
+                     @JsonProperty("changeId") UUID changeId, @JsonProperty("readTime") @Nullable Instant readTime) {
         _table = requireNonNull(table, "table");
         _key = requireNonNull(key, "key");
         _changeId = requireNonNull(changeId, "changeId");
-        _readTime = requireNonNull(readTime, "readTime");
+        _readTime = readTime;
     }
 
     public String getTable() {
@@ -44,6 +48,7 @@ public class MegabusRef {
         return _changeId;
     }
 
+    @Nullable
     public Instant getReadTime() {
         return _readTime;
     }
