@@ -15,6 +15,8 @@ import java.util.Map;
 
 public interface BlobStore {
 
+    String STORAGE_ATTRIBUTE_NAME = "~storage";
+    String S3_STORAGE_ATTRIBUTE_VALUE = "s3";
     /**
      * Retrieves metadata about up to {@code limit} tables.  The records will be returned in a deterministic
      * order but not sorted alphabetically by key.  If {@code fromTableExclusive} is not null, the list will

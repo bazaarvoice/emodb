@@ -5,6 +5,8 @@ import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.api.DefaultBlobMetadata;
+import com.bazaarvoice.emodb.blob.api.DefaultTable;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.Table;
@@ -67,6 +69,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -158,14 +161,32 @@ public class BlobStoreResource1 {
     )
     public Iterator<Table> listTables(@QueryParam("from") final String fromKeyExclusive,
                                       @QueryParam("limit") @DefaultValue("10") LongParam limit,
+                                      @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                                       @Authenticated Subject subject) {
         _listTableRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        return streamingIterator(
-            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
+        Iterator<Table> iterator = StreamSupport.stream(Spliterators.spliteratorUnknownSize(_blobStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
                 .filter(input -> subject.hasPermission(Permissions.readBlobTable(new NamedResource(input.getName()))))
                 .limit(limit.get())
-                .iterator()
-        );
+                .iterator();
+        if (includeStorageAttribute) {
+            return streamingIterator(iterator);
+        } else {
+            return streamingIterator(Iterators.transform(iterator,
+                    md -> {
+                        if (md.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+                            return new DefaultTable(md.getName(), md.getOptions(), getAttributesWithoutStorage(md.getAttributes()), md.getAvailability());
+                        } else {
+                            return md;
+                        }
+                    }));
+        }
+    }
+
+    private Map<String, String> getAttributesWithoutStorage(Map<String, String> attributes) {
+        Map<String, String> attributesMap = new HashMap<>();
+        attributesMap.putAll(attributes);
+        attributesMap.remove(BlobStore.STORAGE_ATTRIBUTE_NAME);
+        return attributesMap;
     }
 
     @PUT
@@ -241,9 +262,16 @@ public class BlobStoreResource1 {
             response = Map.class
     )
     public Map<String, String> getTableAttributes(@PathParam("table") String table,
+                                                  @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                                                   @Authenticated Subject subject) {
         _getTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        return _blobStore.getTableAttributes(table);
+        Map<String, String> tableAttributes = _blobStore.getTableAttributes(table);
+
+        if (includeStorageAttribute || !tableAttributes.containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+           return tableAttributes;
+        } else {
+            return getAttributesWithoutStorage(tableAttributes);
+        }
     }
 
     @PUT
@@ -303,9 +331,16 @@ public class BlobStoreResource1 {
             response = Table.class
     )
     public Table getTableMetadata(@PathParam ("table") String table,
+                                  @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                                   @Authenticated Subject subject) {
         _getTableMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        return _blobStore.getTableMetadata(table);
+        Table tableMetadata = _blobStore.getTableMetadata(table);
+        if (includeStorageAttribute || !tableMetadata.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+            return tableMetadata;
+        } else {
+            Map<String, String> attributes = getAttributesWithoutStorage(tableMetadata.getAttributes());
+            return new DefaultTable(tableMetadata.getName(), tableMetadata.getOptions(), attributes, tableMetadata.getAvailability());
+        }
     }
 
     /**
@@ -321,12 +356,13 @@ public class BlobStoreResource1 {
     )
     public Response head(@PathParam("table") String table,
                          @PathParam("blobId") String blobId,
+                         @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                          @Authenticated Subject subject) {
         _getObjectMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         BlobMetadata blob = _blobStore.getMetadata(table, blobId);
 
         Response.ResponseBuilder response = Response.ok();
-        setHeaders(response, blob, null);
+        setHeaders(response, blob, null, includeStorageAttribute);
         return response.build();
     }
 
@@ -344,9 +380,22 @@ public class BlobStoreResource1 {
     public Iterator<BlobMetadata> scanMetadata(@PathParam("table") String table,
                                                @QueryParam("from") String blobId,
                                                @QueryParam("limit") @DefaultValue("10") LongParam limit,
+                                               @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                                                @Authenticated Subject subject) {
         _scanMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
-        return streamingIterator(_blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get()));
+
+        Iterator<BlobMetadata> iterator = _blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get());
+        if (includeStorageAttribute) {
+            return streamingIterator(iterator);
+        } else {
+            return streamingIterator(Iterators.transform(iterator, md -> {
+                if (!md.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+                    return md;
+                } else {
+                    return new DefaultBlobMetadata(md.getId(), md.getTimestamp(), md.getLength(), md.getMD5(), md.getSHA1(), getAttributesWithoutStorage(md.getAttributes()));
+                }
+            }));
+        }
     }
 
     /** Returns a list of valid table placements. */
@@ -378,6 +427,7 @@ public class BlobStoreResource1 {
     public Response get(@PathParam("table") String table,
                         @PathParam("blobId") String blobId,
                         @HeaderParam("Range") RangeParam rangeParam,
+                        @QueryParam("includeStorageAttribute") @DefaultValue("false") Boolean includeStorageAttribute,
                         @Authenticated Subject subject) {
         _getObjectRequestsByApiKey.getUnchecked(subject.getId()).mark();
         RangeSpecification rangeSpec = rangeParam != null ? rangeParam.get() : null;
@@ -389,12 +439,15 @@ public class BlobStoreResource1 {
                 blob.writeTo(output);
             }
         });
-        setHeaders(response, blob, (rangeSpec != null) ? blob.getByteRange() : null);
+        setHeaders(response, blob, (rangeSpec != null) ? blob.getByteRange() : null, includeStorageAttribute);
         return response.build();
     }
 
-    private void setHeaders(Response.ResponseBuilder response, BlobMetadata metadata, Range range) {
+    private void setHeaders(Response.ResponseBuilder response, BlobMetadata metadata, Range range, boolean includeStorageAttribute) {
         Map<String, String> attributes = metadata.getAttributes();
+        if (!includeStorageAttribute) {
+            attributes = getAttributesWithoutStorage(attributes);
+        }
 
         // Set the length so the HTTP client knows how many bytes to expect in the response
         if (range == null) {

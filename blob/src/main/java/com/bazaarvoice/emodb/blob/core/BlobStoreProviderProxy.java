@@ -29,8 +29,6 @@ import java.util.Map;
  * the blob store injection to prevent re-entrant injection issues.
  */
 public class BlobStoreProviderProxy implements BlobStore {
-    private final static String STORAGE_ATTRIBUTE_NAME = "~storage";
-    private final static String S3_STORAGE_ATTRIBUTE_VALUE = "s3";
 
     private final Supplier<BlobStore> _local;
     private final Supplier<BlobStore> _s3;
