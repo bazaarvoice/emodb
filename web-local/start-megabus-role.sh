@@ -6,7 +6,7 @@
 # - Cassandra (port 9160)
 # - ZooKeeper (port 2181)
 # - EmoDB Megabus (ports 8082, 8083)
-# - Kafka (ports 9092, 9093)
+# - Kafka (port 9092)
 #
 # Cassandra:
 #
