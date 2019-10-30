@@ -39,7 +39,7 @@
 
 function cleanup {
     kafka-server-stop
-    until ! $(ps ax | grep -iq -e 'kafka\.Kafka|io\.confluent\.support\.metrics' -e 'io\.confluent\.support\.metrics\.SupportedKafka'); do sleep 2 ; done
+    until ! $(ps ax | grep -iq -e 'kafka\.Kafka' -e 'io\.confluent\.support\.metrics\.SupportedKafka'); do sleep 2 ; done
     zookeeper-server-stop
     until ! $(ps ax | grep java | grep -iq QuorumPeerMain) ; do sleep 2 ; done
     exit
