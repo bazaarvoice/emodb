@@ -171,16 +171,18 @@ public class ScanOptions {
         return _temporalEnabled;
     }
 
-    public void setTemporalEnabled(boolean temporalEnabled) {
+    public ScanOptions setTemporalEnabled(boolean temporalEnabled) {
         _temporalEnabled = temporalEnabled;
+        return this;
     }
 
     public boolean isOnlyScanLiveRanges() {
         return _onlyScanLiveRanges;
     }
 
-    public void setOnlyScanLiveRanges(boolean onlyScanLiveRanges) {
+    public ScanOptions setOnlyScanLiveRanges(boolean onlyScanLiveRanges) {
         _onlyScanLiveRanges = onlyScanLiveRanges;
+        return this;
     }
 
     @Override
