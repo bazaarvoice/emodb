@@ -60,6 +60,8 @@ public class StashResource1 {
                                 @QueryParam ("byAZ") @DefaultValue ("true") Boolean byAZ,
                                 @QueryParam ("maxConcurrency") @DefaultValue ("4") Integer maxConcurrency,
                                 @QueryParam ("compactionEnabled") @DefaultValue ("false") Boolean compactionEnabled,
+                                @QueryParam ("temporalEnabled") @DefaultValue ("true") Boolean temporalEnabled,
+                                @QueryParam ("onlyScanLiveRanges") @DefaultValue ("true") Boolean onlyScanLiveRanges,
                                 @QueryParam ("rangeScanSplitSize") @DefaultValue("1000000") Integer rangeScanSplitSize,
                                 @QueryParam ("maxRangeScanTime") @DefaultValue("PT10M") String maxRangeScanTime,
                                 @QueryParam ("usePlanFrom") String usePlanFromStashId,
@@ -91,6 +93,8 @@ public class StashResource1 {
                 .setScanByAZ(byAZ)
                 .setMaxConcurrentSubRangeScans(maxConcurrency)
                 .setCompactionEnabled(compactionEnabled)
+                .setTemporalEnabled(temporalEnabled)
+                .setOnlyScanLiveRanges(onlyScanLiveRanges)
                 .setRangeScanSplitSize(rangeScanSplitSize)
                 .setMaxRangeScanTime(Duration.parse(maxRangeScanTime));
 
