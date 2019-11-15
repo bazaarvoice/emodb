@@ -10,7 +10,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>${yumArtifactId}</artifactId>
+    <artifactId>emodb-web</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB RESTful Web Server</name>
