@@ -79,6 +79,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 
+import static com.bazaarvoice.emodb.blob.core.Constants.STORAGE_ATTRIBUTE_NAME;
 import static java.lang.String.format;
 
 @Path("/blob/1")
@@ -173,7 +174,7 @@ public class BlobStoreResource1 {
         } else {
             return streamingIterator(Iterators.transform(iterator,
                     md -> {
-                        if (md.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+                        if (md.getAttributes().containsKey(STORAGE_ATTRIBUTE_NAME)) {
                             return new DefaultTable(md.getName(), md.getOptions(), getAttributesWithoutStorage(md.getAttributes()), md.getAvailability());
                         } else {
                             return md;
@@ -185,7 +186,7 @@ public class BlobStoreResource1 {
     private Map<String, String> getAttributesWithoutStorage(Map<String, String> attributes) {
         Map<String, String> attributesMap = new HashMap<>();
         attributesMap.putAll(attributes);
-        attributesMap.remove(BlobStore.STORAGE_ATTRIBUTE_NAME);
+        attributesMap.remove(STORAGE_ATTRIBUTE_NAME);
         return attributesMap;
     }
 
@@ -267,7 +268,7 @@ public class BlobStoreResource1 {
         _getTableAttributesRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Map<String, String> tableAttributes = _blobStore.getTableAttributes(table);
 
-        if (includeStorageAttribute || !tableAttributes.containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+        if (includeStorageAttribute || !tableAttributes.containsKey(STORAGE_ATTRIBUTE_NAME)) {
            return tableAttributes;
         } else {
             return getAttributesWithoutStorage(tableAttributes);
@@ -335,7 +336,7 @@ public class BlobStoreResource1 {
                                   @Authenticated Subject subject) {
         _getTableMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         Table tableMetadata = _blobStore.getTableMetadata(table);
-        if (includeStorageAttribute || !tableMetadata.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+        if (includeStorageAttribute || !tableMetadata.getAttributes().containsKey(STORAGE_ATTRIBUTE_NAME)) {
             return tableMetadata;
         } else {
             Map<String, String> attributes = getAttributesWithoutStorage(tableMetadata.getAttributes());
@@ -389,7 +390,7 @@ public class BlobStoreResource1 {
             return streamingIterator(iterator);
         } else {
             return streamingIterator(Iterators.transform(iterator, md -> {
-                if (!md.getAttributes().containsKey(BlobStore.STORAGE_ATTRIBUTE_NAME)) {
+                if (!md.getAttributes().containsKey(STORAGE_ATTRIBUTE_NAME)) {
                     return md;
                 } else {
                     return new DefaultBlobMetadata(md.getId(), md.getTimestamp(), md.getLength(), md.getMD5(), md.getSHA1(), getAttributesWithoutStorage(md.getAttributes()));

@@ -24,6 +24,9 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 
+import static com.bazaarvoice.emodb.blob.core.Constants.S3_STORAGE_ATTRIBUTE_VALUE;
+import static com.bazaarvoice.emodb.blob.core.Constants.STORAGE_ATTRIBUTE_NAME;
+
 /**
  * Supports delegation of DDL operations to the system data center.  This implementation uses a Providers for
  * the blob store injection to prevent re-entrant injection issues.
