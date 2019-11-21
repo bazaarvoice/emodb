@@ -67,11 +67,7 @@ import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
-import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
-import com.bazaarvoice.emodb.table.db.generic.CachingTableDAODelegate;
-import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
-import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
-import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
+import com.bazaarvoice.emodb.table.db.generic.*;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
@@ -146,7 +142,8 @@ public class DataStoreModule extends PrivateModule {
         // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
         bind(TableDAO.class).annotatedWith(MutexTableDAODelegate.class).to(CachingTableDAO.class).asEagerSingleton();
-        bind(TableDAO.class).annotatedWith(CachingTableDAODelegate.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+        bind(TableDAO.class).annotatedWith(CachingTableDAODelegate.class).to(LockingTableDAO.class).asEagerSingleton();
+        bind(TableDAO.class).annotatedWith(LockingTableDAODelegate.class).to(AstyanaxTableDAO.class).asEagerSingleton();
         bind(String.class).annotatedWith(SystemTableNamespace.class).toInstance("__system_sor");
         bind(PlacementFactory.class).to(DeltaPlacementFactory.class).asEagerSingleton();
         bind(DeltaPlacementFactory.class).asEagerSingleton();
