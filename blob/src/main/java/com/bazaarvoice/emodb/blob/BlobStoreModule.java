@@ -234,7 +234,7 @@ public class BlobStoreModule extends PrivateModule {
                                @SystemBlobStore Provider<BlobStore> systemBlobStoreProvider,
                                DataCenterConfiguration dataCenterConfiguration) {
         // Provides the unannotated version of the BlobStore
-        // If this is the system data center, return the local BlobStore implementation
+        // If this is the system data center, return a proxy that delegates to local BlobStores
         // Otherwise return a proxy that delegates to local or remote system BlobStores
         if (dataCenterConfiguration.isSystemDataCenter()) {
             return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, localCassandraBlobStoreProvider);
@@ -454,6 +454,14 @@ public class BlobStoreModule extends PrivateModule {
         }
     }
 
+    /**
+     * Transforms s3 bucket name(see restrictions https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html) to blob placement
+     * examples:
+     *      local-emodb--blob-global-media  -> blob_global:media
+     *      local-emodb--media-global-ugc   -> media_global:ugc
+     * @param bucketName
+     * @return
+     */
     private static String bucketNameToPlacement(String bucketName) {
         String placementString = bucketName.split("--")[1];
         return placementString

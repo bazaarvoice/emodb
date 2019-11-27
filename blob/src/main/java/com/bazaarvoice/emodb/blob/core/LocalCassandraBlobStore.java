@@ -11,7 +11,7 @@ import static java.lang.annotation.ElementType.PARAMETER;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
- * Guice binding annotation indicating that the annotated object is the 'local' blob store.
+ * Guice binding annotation indicating that the annotated object is the 'local' cassandra blob store.
  */
 @BindingAnnotation
 @Target({FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)
