@@ -110,6 +110,12 @@ public class S3StorageProvider {
                 });
     }
 
+    /**
+     * Splits range into disjoint subranges
+     * @param range
+     * @param rangeSize
+     * @return
+     */
     private static List<Range> toSubRanges(final Range range, final long rangeSize) {
         Objects.requireNonNull(range);
         if (1 >= rangeSize) {
@@ -123,12 +129,12 @@ public class S3StorageProvider {
             while (j * rangeSize < range.getLength()) {
                 long offset = range.getOffset() + j * rangeSize;
                 long suffix = max - offset;
-                long length = suffix >= 0 ? suffix : rangeSize;
+                long length = suffix >= 0 && suffix < rangeSize ? suffix: rangeSize;
                 subRanges.add(new Range(offset, length));
                 j++;
             }
         } else {
-            //put null, so don't create range request
+            //put null to not create range request
             subRanges.add(null);
         }
         LOGGER.debug("Range: {} -> subranges: {}", range, subRanges);
@@ -262,7 +268,7 @@ public class S3StorageProvider {
                 uploadResult = amazonS3.uploadPart(uploadRequest);
                 partETags.add(uploadResult.getPartETag());
             } catch (final Exception ex) {
-                throw new RuntimeException("Error on file split.");
+                throw new RuntimeException("Error on file split.", ex);
             }
         }
 
@@ -284,7 +290,9 @@ public class S3StorageProvider {
         final ObjectMetadata om = new ObjectMetadata();
         attributes.put("SHA-1", sha1);
         attributes.put("MD5", md5);
-        om.setContentType(attributes.remove("contentType"));
+        if (null != attributes.get("contentType")) {
+            om.setContentType(attributes.remove("contentType"));
+        }
         om.setUserMetadata(attributes);
         return om;
     }
@@ -294,9 +302,10 @@ public class S3StorageProvider {
                 .withNewObjectMetadata(objectMetadata);
 
         try {
+            LOGGER.debug("Copy s3 object, uri: {}, metadata: {}", uri, objectMetadata.getRawMetadata());
             amazonS3.copyObject(request);
         } catch (final AmazonS3Exception e) {
-            LOGGER.error("Failed to put s3 object metadata: {}", uri, e);
+            LOGGER.error("Failed to overwrite s3 object metadata: uri: {}, metadata: {}", uri, objectMetadata.getRawMetadata());
             throw new RuntimeException(e);
         }
     }
@@ -304,9 +313,10 @@ public class S3StorageProvider {
     private void putObjectKnownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final InputStream input, final ObjectMetadata objectMetadata) {
         final PutObjectRequest putObjectRequest = new PutObjectRequest(uri.getBucket(), uri.getKey(), input, objectMetadata);
         try {
+            LOGGER.debug("Put object known size, uri:{}, metadata: {}", uri, objectMetadata);
             amazonS3.putObject(putObjectRequest);
         } catch (final AmazonS3Exception e) {
-            LOGGER.error("Failed to put s3 object: {}", uri, e);
+            LOGGER.error("Failed to put s3 object: {}", uri);
             throw new RuntimeException(e);
         }
     }
