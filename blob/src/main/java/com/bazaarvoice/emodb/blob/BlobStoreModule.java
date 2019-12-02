@@ -237,7 +237,7 @@ public class BlobStoreModule extends PrivateModule {
         // If this is the system data center, return a proxy that delegates to local BlobStores
         // Otherwise return a proxy that delegates to local or remote system BlobStores
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, localCassandraBlobStoreProvider);
+            return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, () -> null);
         } else {
             return new BlobStoreProviderProxy(localCassandraBlobStoreProvider, localS3BlobStoreProvider, systemBlobStoreProvider);
         }

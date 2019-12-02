@@ -88,6 +88,7 @@ public class S3BlobStore implements BlobStore {
         checkLegalTableName(tableName);
         Objects.requireNonNull(audit, "audit");
 
+        purgeTableUnsafe(tableName, audit);
         _tableDao.drop(tableName, audit);
     }
 

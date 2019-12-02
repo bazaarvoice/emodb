@@ -91,11 +91,11 @@ public class S3StorageProvider {
         }
 
         try {
-            LOGGER.debug("Get s3 object: {}", uri);
+            LOGGER.debug("Get s3 object: {}, range: {}", uri, range);
             return _placementCache.getUnchecked(tablePlacement).getS3Client()
                     .getObject(rangeObjectRequest);
         } catch (final AmazonS3Exception e) {
-            LOGGER.error("Failed to get s3 object: {}", uri, e);
+            LOGGER.error("Failed to get s3 object: {}, range: {}", uri, range);
             throw new RuntimeException(e);
         }
     }
@@ -112,6 +112,7 @@ public class S3StorageProvider {
 
     /**
      * Splits range into disjoint subranges
+     *
      * @param range
      * @param rangeSize
      * @return
@@ -129,7 +130,7 @@ public class S3StorageProvider {
             while (j * rangeSize < range.getLength()) {
                 long offset = range.getOffset() + j * rangeSize;
                 long suffix = max - offset;
-                long length = suffix >= 0 && suffix < rangeSize ? suffix: rangeSize;
+                long length = suffix >= 0 && suffix < rangeSize ? suffix : rangeSize;
                 subRanges.add(new Range(offset, length));
                 j++;
             }
@@ -168,7 +169,7 @@ public class S3StorageProvider {
             if (e.getStatusCode() == Response.Status.NOT_FOUND.getStatusCode()) {
                 metadata = null;
             } else {
-                LOGGER.error("Failed to get s3 object metadata: {}", uri, e);
+                LOGGER.error("Failed to get s3 object metadata: {}", uri);
                 throw new RuntimeException(e);
             }
         }
@@ -363,6 +364,7 @@ public class S3StorageProvider {
     public void delete(final String tableName, final String tablePlacement) {
         final AtomicInteger counter = new AtomicInteger();
         final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, null);
+        LOGGER.debug("Delete table uri:{}", uri);
 
         final AmazonS3 writeS3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
         list(tableName, tablePlacement, null, Long.MAX_VALUE)
@@ -380,11 +382,13 @@ public class S3StorageProvider {
 
     private void delete(final AmazonS3 s3Client, final List<AmazonS3URI> uris) {
         //TODO consider to use Futures
+        LOGGER.debug("Delete object uris:{}", uris);
         uris.forEach(uri -> delete(s3Client, uri));
     }
 
     private void delete(final AmazonS3 s3Client, final AmazonS3URI uri) {
         try {
+            LOGGER.debug("Delete object uri:{}", uri);
             s3Client.deleteObject(new DeleteObjectRequest(uri.getBucket(), uri.getKey()));
 
             final DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(uri.getBucket())
@@ -397,7 +401,7 @@ public class S3StorageProvider {
             s3Client.deleteObjects(new DeleteObjectsRequest(uri.getBucket())
                     .withKeys(keyVersionsMarkers));
         } catch (final AmazonS3Exception e) {
-            LOGGER.error("Failed to delete blob", e);
+            LOGGER.error("Failed to delete blob: {}", uri);
             throw new RuntimeException(e);
         }
     }

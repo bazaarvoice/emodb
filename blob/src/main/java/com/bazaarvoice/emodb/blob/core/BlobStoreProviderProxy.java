@@ -38,7 +38,7 @@ public class BlobStoreProviderProxy implements BlobStore {
     private final Supplier<BlobStore> _system;
 
     @Inject
-    public BlobStoreProviderProxy(@LocalCassandraBlobStore Provider<BlobStore> local, @LocalS3BlobStore Provider<BlobStore> s3, @SystemBlobStore Provider<BlobStore> system) {
+    public BlobStoreProviderProxy(@LocalCassandraBlobStore Provider<BlobStore> local, @LocalS3BlobStore Provider<BlobStore> s3, @Nullable @SystemBlobStore Provider<BlobStore> system) {
         // The providers should be singletons.  Even so, locally memoize to ensure use of a singleton.
         _local = Suppliers.memoize(local::get);
         _s3 = Suppliers.memoize(s3::get);
@@ -50,18 +50,18 @@ public class BlobStoreProviderProxy implements BlobStore {
     @Override
     public void createTable(String table, TableOptions options, Map<String, String> attributes, Audit audit)
             throws TableExistsException {
-        _system.get().createTable(table, options, attributes, audit);
+        getSystemBlobStore().createTable(table, options, attributes, audit);
     }
 
     @Override
     public void dropTable(String table, Audit audit) throws UnknownTableException {
-        _system.get().dropTable(table, audit);
+        getSystemBlobStore().dropTable(table, audit);
     }
 
     @Override
     public void setTableAttributes(String table, Map<String, String> attributes, Audit audit)
             throws UnknownTableException {
-        _system.get().setTableAttributes(table, attributes, audit);
+        getSystemBlobStore().setTableAttributes(table, attributes, audit);
     }
 
     // All other calls can be serviced locally
@@ -101,10 +101,23 @@ public class BlobStoreProviderProxy implements BlobStore {
         getLocalBlobStore(table).purgeTableUnsafe(table, audit);
     }
 
+    private BlobStore getSystemBlobStore() {
+        BlobStore system = _system.get();
+        if (null != system) {
+            return system;
+        } else {
+            return _local.get();
+        }
+    }
+
     private BlobStore getLocalBlobStore(String table) {
-        Map<String, String> tableAttributes = getTableAttributes(table);
-        boolean isS3 = S3_STORAGE_ATTRIBUTE_VALUE.equals(tableAttributes.get(STORAGE_ATTRIBUTE_NAME));
+        boolean isS3 = isTableInS3(table);
         return isS3 ? _s3.get() : _local.get();
+    }
+
+    private boolean isTableInS3(String table) {
+        Map<String, String> tableAttributes = getTableAttributes(table);
+        return S3_STORAGE_ATTRIBUTE_VALUE.equals(tableAttributes.get(STORAGE_ATTRIBUTE_NAME));
     }
 
     @Override
