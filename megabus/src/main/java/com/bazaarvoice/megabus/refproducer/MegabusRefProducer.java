@@ -68,7 +68,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
     }
 
     @VisibleForTesting
-    MegabusRefProducer(MegabusRefProducerConfiguration configuration,DatabusEventStore eventStore,
+    MegabusRefProducer(MegabusRefProducerConfiguration configuration, DatabusEventStore eventStore,
                        RateLimitedLogFactory logFactory, MetricRegistry metricRegistry,
                        @Nullable ScheduledExecutorService executor, Producer<String, JsonNode> producer,
                        ObjectMapper objectMapper, Topic topic, String subscriptionName,
@@ -136,7 +136,8 @@ public class MegabusRefProducer extends AbstractScheduledService {
         }
     }
 
-    private boolean peekAndAckEvents() {
+    @VisibleForTesting
+    boolean peekAndAckEvents() {
         // Poll for events on the megabus subscription
         long startTime = _clock.instant().getNano();
         List<EventData> result = _eventStore.peek(_subscriptionName, _eventsLimit);

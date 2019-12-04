@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.kafka;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
+
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 
@@ -20,6 +22,13 @@ public class Topic {
     @NotNull
     @JsonProperty("replicationFactor")
     private short _replicationFactor;
+
+    @VisibleForTesting
+    public Topic(String name, int partitions, short replicationFactor) {
+        this._name = name;
+        this._partitions = partitions;
+        this._replicationFactor = replicationFactor;
+    }
 
     public String getName() {
         return _name;
