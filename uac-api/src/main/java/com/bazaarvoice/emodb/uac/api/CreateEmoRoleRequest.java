@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
@@ -71,7 +71,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setPermissions(Set<String> permissions) {
-        _permissions = Objects.firstNonNull(permissions, ImmutableSet.<String>of());
+        _permissions = MoreObjects.firstNonNull(permissions, ImmutableSet.<String>of());
         return this;
     }
 }

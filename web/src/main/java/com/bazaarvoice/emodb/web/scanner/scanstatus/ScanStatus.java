@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -59,9 +60,9 @@ public class ScanStatus {
         _tableSnapshotCreated = tableSnapshotCreated;
         _canceled = canceled;
         _startTime = startTime;
-        _pendingScanRanges = Objects.firstNonNull(pendingScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _activeScanRanges = Objects.firstNonNull(activeScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _completeScanRanges = Objects.firstNonNull(completeScanRanges, ImmutableList.<ScanRangeStatus>of());
+        _pendingScanRanges = MoreObjects.firstNonNull(pendingScanRanges, ImmutableList.<ScanRangeStatus>of());
+        _activeScanRanges = MoreObjects.firstNonNull(activeScanRanges, ImmutableList.<ScanRangeStatus>of());
+        _completeScanRanges = MoreObjects.firstNonNull(completeScanRanges, ImmutableList.<ScanRangeStatus>of());
         _completeTime = completeTime;
     }
 

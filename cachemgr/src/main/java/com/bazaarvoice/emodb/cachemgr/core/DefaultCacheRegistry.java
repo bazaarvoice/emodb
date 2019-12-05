@@ -9,7 +9,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.InstrumentedCache;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsSet;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.LoadingCache;
@@ -69,7 +69,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
 
     private HandleImpl getOrPut(String name) {
         HandleImpl handle = new HandleImpl(name);
-        return Objects.firstNonNull(_handles.putIfAbsent(name, handle), handle);
+        return MoreObjects.firstNonNull(_handles.putIfAbsent(name, handle), handle);
     }
 
     @Override

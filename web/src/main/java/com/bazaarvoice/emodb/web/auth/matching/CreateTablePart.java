@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.auth.permissions.matching.Implier;
 import com.bazaarvoice.emodb.auth.permissions.matching.MatchingPart;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.List;
@@ -27,7 +27,7 @@ public class CreateTablePart extends EmoMatchingPart {
                            @JsonProperty("attributes") Map<String, ?> attributes) {
         _name = checkNotNull(name, "name");
         _placement = checkNotNull(placement, "placement");
-        _attributes = Objects.firstNonNull(attributes, ImmutableMap.<String, Object>of());
+        _attributes = MoreObjects.firstNonNull(attributes, ImmutableMap.<String, Object>of());
     }
 
     public String getName() {

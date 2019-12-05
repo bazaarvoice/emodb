@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.cachemgr.api;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 
 import java.util.EventObject;
@@ -45,7 +45,7 @@ public class InvalidationEvent extends EventObject {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("cache", _cache)
                 .add("scope", _scope)
                 .add("keys", _keys)

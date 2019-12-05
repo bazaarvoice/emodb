@@ -10,7 +10,7 @@ import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -93,8 +93,8 @@ public class EmoDataCenterDAO implements DataCenterDAO {
         URI serviceUri = URI.create((String) map.get("serviceUri"));
         URI adminUri = URI.create((String) map.get("adminUri"));
         boolean system = (Boolean) map.get("system");
-        String cassandraName = Objects.firstNonNull((String) map.get("cassandraName"), name);
-        List<String> cassandraKeyspaces = Objects.firstNonNull((List<String>) map.get("cassandraKeyspaces"), Collections.<String>emptyList());
+        String cassandraName = MoreObjects.firstNonNull((String) map.get("cassandraName"), name);
+        List<String> cassandraKeyspaces = MoreObjects.firstNonNull((List<String>) map.get("cassandraKeyspaces"), Collections.<String>emptyList());
         return new DefaultDataCenter(name, serviceUri, adminUri, system, cassandraName, cassandraKeyspaces);
     }
 

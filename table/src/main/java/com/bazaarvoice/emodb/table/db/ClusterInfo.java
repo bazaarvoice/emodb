@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.table.db;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -10,7 +10,7 @@ public class ClusterInfo {
 
     public ClusterInfo(String cluster, String clusterMetric) {
         _cluster = checkNotNull(cluster, "cluster");
-        _clusterMetric = Objects.firstNonNull(clusterMetric, cluster);
+        _clusterMetric = MoreObjects.firstNonNull(clusterMetric, cluster);
     }
 
     public String getCluster(){

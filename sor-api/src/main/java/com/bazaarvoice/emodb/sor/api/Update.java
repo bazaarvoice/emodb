@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
@@ -36,11 +37,11 @@ public final class Update {
                         "An example of a valid table name would be 'review:testcustomer'.");
         checkArgument(!Strings.isNullOrEmpty(key), "key must be a non-empty string");
         _key = key;
-        _changeId = Objects.firstNonNull(changeId, TimeUUIDs.newUUID());
+        _changeId = MoreObjects.firstNonNull(changeId, TimeUUIDs.newUUID());
         checkArgument(_changeId.version() == 1, "The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
         _delta = checkNotNull(delta, "delta");
         _audit = checkNotNull(audit, "audit");
-        _consistency = Objects.firstNonNull(consistency, WriteConsistency.STRONG);
+        _consistency = MoreObjects.firstNonNull(consistency, WriteConsistency.STRONG);
     }
 
     public String getTable() {

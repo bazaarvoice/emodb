@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.common.dropwizard.lifecycle;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.util.concurrent.Service;
 import io.dropwizard.lifecycle.Managed;
 
@@ -29,6 +29,6 @@ public class ManagedGuavaService implements Managed {
     // For debugging
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).addValue(_service).toString();
+        return MoreObjects.toStringHelper(this).addValue(_service).toString();
     }
 }

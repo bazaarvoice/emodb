@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import javax.annotation.Nullable;
@@ -42,7 +42,7 @@ public final class Change {
         _delta = delta;
         _compaction = compaction;
         _history = history;
-        _tags = Objects.firstNonNull(tags, ImmutableSet.<String>of());
+        _tags = MoreObjects.firstNonNull(tags, ImmutableSet.<String>of());
     }
 
     // Add a human-readable timestamp for debugging.  This gets serialized into the JSON

@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
@@ -42,7 +42,7 @@ public class CreateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoApiKeyRequest setRoles(Set<EmoRoleKey> roles) {
-        _roles = Objects.firstNonNull(roles, ImmutableSet.<EmoRoleKey>of());
+        _roles = MoreObjects.firstNonNull(roles, ImmutableSet.<EmoRoleKey>of());
         return this;
     }
 }

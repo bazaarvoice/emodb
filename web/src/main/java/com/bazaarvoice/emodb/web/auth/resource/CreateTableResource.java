@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
@@ -26,7 +26,7 @@ public class CreateTableResource extends AuthResource {
                                @JsonProperty("attributes") Map<String, ?> attributes) {
         _name = checkNotNull(name, "name");
         _placement = checkNotNull(placement, "placement");
-        _attributes = Objects.firstNonNull(attributes, ImmutableMap.<String, Object>of());
+        _attributes = MoreObjects.firstNonNull(attributes, ImmutableMap.<String, Object>of());
     }
 
     public String getName() {

@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.table.db.astyanax;
 import com.bazaarvoice.emodb.common.zookeeper.store.ChangeType;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStoreListener;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -44,7 +44,7 @@ public class RateLimiterCache {
 
     private double getRate(String key) {
         Double rate = _rates.get(key);
-        return Objects.firstNonNull(rate, _defaultRate);
+        return MoreObjects.firstNonNull(rate, _defaultRate);
     }
 
     public RateLimiter get(String key) {

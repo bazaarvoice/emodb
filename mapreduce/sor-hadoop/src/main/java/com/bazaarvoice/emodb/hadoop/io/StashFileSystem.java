@@ -15,7 +15,7 @@ import com.bazaarvoice.emodb.common.stash.StashSplit;
 import com.bazaarvoice.emodb.common.stash.StashTable;
 import com.bazaarvoice.emodb.hadoop.ConfigurationParameters;
 import com.bazaarvoice.emodb.sor.api.TableNotStashedException;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
@@ -93,7 +93,7 @@ public class StashFileSystem extends FileSystem implements EmoInputSplittable {
         // The location is either a table or a split.  Get the root path depending on which it is.
 
         // Strip the trailing slash if present
-        String locationPath = Objects.firstNonNull(location.getPath(), "/");
+        String locationPath = MoreObjects.firstNonNull(location.getPath(), "/");
         if (locationPath.length() > 0 && locationPath.endsWith("/")) {
             locationPath = locationPath.substring(0, locationPath.length() - 1);
         }

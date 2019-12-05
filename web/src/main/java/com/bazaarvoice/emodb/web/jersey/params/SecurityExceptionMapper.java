@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.jersey.params;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -13,7 +13,7 @@ public class SecurityExceptionMapper implements ExceptionMapper<SecurityExceptio
     public Response toResponse(SecurityException e) {
         return Response.status(Response.Status.FORBIDDEN)
                 .header("X-BV-Exception", SecurityException.class.getName())
-                .entity(Objects.firstNonNull(e.getMessage(), "Access Denied."))
+                .entity(MoreObjects.firstNonNull(e.getMessage(), "Access Denied."))
                 .type(MediaType.TEXT_PLAIN_TYPE)
                 .build();
     }

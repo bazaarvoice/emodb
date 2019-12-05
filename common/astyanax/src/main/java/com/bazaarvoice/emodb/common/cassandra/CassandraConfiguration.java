@@ -7,7 +7,6 @@ import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.jmx.JmxReporter;
 import com.datastax.driver.core.AuthProvider;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PlainTextAuthProvider;
@@ -21,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -183,12 +182,12 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
             if (_keyspace == null) {
                 // Use the shared pool configuration
-                metricName = Objects.firstNonNull(_clusterMetric, _cluster);
+                metricName = MoreObjects.firstNonNull(_clusterMetric, _cluster);
                 poolConfig = CassandraConfiguration.this;
             } else {
                 // Use the configuration specifically for this keyspace
                 KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
-                metricName = Objects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
+                metricName = MoreObjects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
                 poolConfig = keyspaceConfig;
             }
 
@@ -319,12 +318,12 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
             if (_keyspace == null) {
                 // Use the shared pool configuration
-                metricName = Objects.firstNonNull(_clusterMetric, _cluster);
+                metricName = MoreObjects.firstNonNull(_clusterMetric, _cluster);
                 poolConfig = new FilterConnectionPoolConfiguration(CassandraConfiguration.this);
             } else {
                 // Use the configuration specifically for this keyspace
                 KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
-                metricName = Objects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
+                metricName = MoreObjects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
                 poolConfig = new FilterConnectionPoolConfiguration(keyspaceConfig);
             }
 
@@ -336,8 +335,8 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
             }
 
             // Set any unset policies to the default
-            _loadBalancingPolicy = Objects.firstNonNull(_loadBalancingPolicy, Policies.defaultLoadBalancingPolicy());
-            _retryPolicy = Objects.firstNonNull(_retryPolicy, Policies.defaultRetryPolicy());
+            _loadBalancingPolicy = MoreObjects.firstNonNull(_loadBalancingPolicy, Policies.defaultLoadBalancingPolicy());
+            _retryPolicy = MoreObjects.firstNonNull(_retryPolicy, Policies.defaultRetryPolicy());
 
             com.datastax.driver.core.Cluster cluster = newCqlDriverBuilder(poolConfig, _metricRegistry)
                     .withClusterName(_cluster)
@@ -366,7 +365,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         // to be converted into host names only.
         for (String seed : seeds) {
             HostAndPort hostAndPort = HostAndPort.fromString(seed);
-            seed = hostAndPort.getHostText();
+            seed = hostAndPort.getHost();
             if (hostAndPort.hasPort()) {
                 if (hostAndPort.getPort() == _thriftPort) {
                     _log.debug("Seed {} found using RPC port; swapping for native port {}", seed, _cqlPort);

@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.scanner.scanstatus;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import java.util.Date;
@@ -49,7 +50,7 @@ public class StashRequest {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(getClass())
+        return MoreObjects.toStringHelper(getClass())
                 .add("requestedBy", _requestedBy)
                 .add("requestTime", _requestTime)
                 .toString();
