@@ -2,12 +2,11 @@ package com.bazaarvoice.emodb.web.throttling;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
 
-import java.util.concurrent.ConcurrentMap;
 import javax.ws.rs.container.ContainerRequestContext;
-import org.glassfish.jersey.server.ContainerRequest;
+import java.util.concurrent.ConcurrentMap;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -56,7 +55,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
 
             while (cachedRegulator == null || !cachedRegulator.throttle.equals(updatedValue.throttle)) {
                 if (cachedRegulator == null) {
-                    cachedRegulator = Objects.firstNonNull(_regulatorCache.putIfAbsent(endpoint, updatedValue), updatedValue);
+                    cachedRegulator = MoreObjects.firstNonNull(_regulatorCache.putIfAbsent(endpoint, updatedValue), updatedValue);
                 } else if (_regulatorCache.replace(endpoint, cachedRegulator, updatedValue)) {
                     cachedRegulator = updatedValue;
                 } else {

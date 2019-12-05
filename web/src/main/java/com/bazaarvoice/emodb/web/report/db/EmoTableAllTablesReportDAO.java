@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.report.db;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
@@ -17,13 +18,12 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.report.AllTablesReportQuery;
 import com.bazaarvoice.emodb.web.report.ReportNotFoundException;
 import com.bazaarvoice.emodb.web.report.TableStatistics;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.AbstractIterator;
@@ -347,12 +347,12 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
             return null;
         }
 
-        Boolean dropped = Objects.firstNonNull((Boolean) map.get("dropped"), false);
+        Boolean dropped = MoreObjects.firstNonNull((Boolean) map.get("dropped"), false);
         if (!droppedFilter.apply(dropped)) {
             return null;
         }
 
-        Boolean facade = Objects.firstNonNull((Boolean) map.get("facade"), false);
+        Boolean facade = MoreObjects.firstNonNull((Boolean) map.get("facade"), false);
         if (!facadeFilter.apply(facade)) {
             return null;
         }

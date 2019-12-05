@@ -44,7 +44,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -65,7 +65,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
-import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Spliterators;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
@@ -586,7 +586,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         String placementName = checkNotNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
 
-        ScanRange scanRange = Objects.firstNonNull(query.getScanRange(), ScanRange.all());
+        ScanRange scanRange = MoreObjects.firstNonNull(query.getScanRange(), ScanRange.all());
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> ranges = scanRange.unwrapped();

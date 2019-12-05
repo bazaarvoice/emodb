@@ -7,7 +7,6 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -16,8 +15,9 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
@@ -150,7 +150,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         // Use DeMorgan's law.  In this case allow "not(sub-condition)" for any sub-conditions which do not have an
         // inverse, leaving future operations to handle if necessary.
         List<Condition> inverseConditions = conditions.stream()
-                .map(condition -> Objects.firstNonNull(condition.visit(this, null), Conditions.not(condition)))
+                .map(condition -> MoreObjects.firstNonNull(condition.visit(this, null), Conditions.not(condition)))
                 .collect(Collectors.toList());
 
         if (fromAnd) {
@@ -168,7 +168,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         List<Condition> conditions = Lists.newArrayListWithCapacity(condition.getEntries().size());
         for (Map.Entry<String, Condition> entry : condition.getEntries().entrySet()) {
             Condition keyCond = entry.getValue();
-            Condition inverted = Objects.firstNonNull(keyCond.visit(this, null), Conditions.not(keyCond));
+            Condition inverted = MoreObjects.firstNonNull(keyCond.visit(this, null), Conditions.not(keyCond));
             conditions.add(Conditions.mapBuilder().matches(entry.getKey(), inverted).build());
         }
 
@@ -187,7 +187,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         }
         return Conditions.partition(condition.getNumPartitions(), inverse);
     }
-    
+
     // The remaining conditions have no well-defined inverse expressible as a Condition other than not(condition).
 
     @Nullable

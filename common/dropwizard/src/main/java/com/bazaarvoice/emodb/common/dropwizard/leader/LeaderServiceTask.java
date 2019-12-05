@@ -46,7 +46,7 @@ public class LeaderServiceTask extends Task {
             public void failed(Service.State from, Throwable failure) {
                 unregister(name, leaderService);
             }
-        }, MoreExecutors.sameThreadExecutor());
+        }, MoreExecutors.directExecutor());
     }
 
     public void register(final String name, final PartitionedLeaderService partitionedLeaderService) {

@@ -40,7 +40,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import io.dropwizard.testing.junit.ResourceTestRule;
-import javax.ws.rs.container.ContainerRequestContext;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
@@ -57,6 +56,7 @@ import org.mockito.internal.util.Primitives;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.ws.rs.container.ContainerRequestContext;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -338,7 +338,7 @@ public class AdHocThrottleTest extends ResourceTest {
                             completeThrottledFutures.add(future);
                         }
                     },
-                    MoreExecutors.sameThreadExecutor());
+                    MoreExecutors.directExecutor());
         }
 
         // Wait until all three threads are blocked getting the table size

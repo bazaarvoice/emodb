@@ -36,6 +36,7 @@ import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicates;
@@ -701,7 +702,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyReaderDAO, 
         String placementName = checkNotNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
 
-        ScanRange scanRange = Objects.firstNonNull(query.getScanRange(), ScanRange.all());
+        ScanRange scanRange = MoreObjects.firstNonNull(query.getScanRange(), ScanRange.all());
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> ranges = scanRange.unwrapped();
@@ -914,7 +915,7 @@ public class AstyanaxDataReaderDAO implements DataReaderDAO, DataCopyReaderDAO, 
     private boolean isTimeoutException(Exception e) {
         return Iterables.tryFind(Throwables.getCausalChain(e), Predicates.instanceOf(IsTimeoutException.class)).isPresent();
     }
-    
+
     /**
      * Scans a single row for columns within the specified range, inclusive or exclusive on start based on whether
      * <code>page</code> is non-zero, and inclusive on end.

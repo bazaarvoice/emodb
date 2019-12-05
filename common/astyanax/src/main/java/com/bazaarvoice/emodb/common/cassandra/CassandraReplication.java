@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 
@@ -46,6 +46,6 @@ public class CassandraReplication {
     }
 
     public int getReplicationFactorForDataCenter(String dataCenter) {
-        return Objects.firstNonNull(_replicationFactorByDataCenter.get(dataCenter), 0);
+        return MoreObjects.firstNonNull(_replicationFactorByDataCenter.get(dataCenter), 0);
     }
 }

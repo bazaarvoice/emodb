@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 /**
@@ -81,7 +82,7 @@ public class QueueScanRangeTask implements ScanRangeTask {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("id", _id)
                 .add("scanId", _scanId)
                 .add("placement", _placement)

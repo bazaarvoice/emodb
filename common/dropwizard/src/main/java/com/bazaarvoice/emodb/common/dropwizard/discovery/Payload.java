@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.common.dropwizard.discovery;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Maps;
 
 import java.net.URI;
@@ -27,7 +27,7 @@ public class Payload {
         Map<?, ?> map = JsonHelper.fromJson(string, Map.class);
         URI serviceUri = URI.create((String) checkNotNull(map.get("serviceUrl"), "serviceUrl"));
         URI adminUri = URI.create((String) checkNotNull(map.get("adminUrl"), "adminUrl"));
-        @SuppressWarnings("unchecked") Map<String, ?> extensions = Objects.firstNonNull(
+        @SuppressWarnings("unchecked") Map<String, ?> extensions = MoreObjects.firstNonNull(
                 (Map<String, ?>) map.get("extensions"), Collections.<String, Object>emptyMap());
         return new Payload(serviceUri, adminUri, extensions);
     }
