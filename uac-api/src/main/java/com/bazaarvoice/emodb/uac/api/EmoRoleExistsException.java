@@ -17,9 +17,13 @@ public class EmoRoleExistsException extends RuntimeException {
         this("unknown", "unknown");
     }
 
+    public EmoRoleExistsException(String group, String id) {
+        this(group, id, "Role exists");
+    }
+
     @JsonCreator
-    public EmoRoleExistsException(@JsonProperty("group") String group, @JsonProperty("id") String id) {
-        super("Role exists");
+    public EmoRoleExistsException(@JsonProperty("group") String group, @JsonProperty("id") String id, @JsonProperty("message") String message) {
+        super(message);
         _group = Objects.firstNonNull(group, EmoRoleKey.NO_GROUP);
         _id = id;
     }

@@ -33,12 +33,7 @@ public class MigratorMonitor extends LeaderService {
                            final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
                            MetricRegistry metricRegistry) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                new Supplier<Service>() {
-                    @Override
-                    public Service get() {
-                        return new LocalMigratorMonitor(workflow, statusDAO, dataTools);
-                    }
-                });
+                () -> new LocalMigratorMonitor(workflow, statusDAO, dataTools));
 
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);

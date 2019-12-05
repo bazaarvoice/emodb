@@ -7,6 +7,7 @@ import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.jmx.JmxReporter;
 import com.datastax.driver.core.AuthProvider;
 import com.datastax.driver.core.HostDistance;
 import com.datastax.driver.core.PlainTextAuthProvider;
@@ -342,6 +343,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                     .withClusterName(_cluster)
                     .withLoadBalancingPolicy(_loadBalancingPolicy)
                     .withRetryPolicy(_retryPolicy)
+                    .withoutJMXReporting()
                     .build();
 
             if (_disableClusterMetrics) {

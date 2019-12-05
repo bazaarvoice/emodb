@@ -13,20 +13,11 @@ import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
-import io.dropwizard.client.HttpClientBuilder;
-import io.dropwizard.client.HttpClientConfiguration;
-import io.dropwizard.jackson.Jackson;
-import io.dropwizard.jersey.jackson.JacksonMessageBodyProvider;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.util.Duration;
-import org.apache.http.client.HttpClient;
+import javax.ws.rs.client.Client;
 
-import javax.validation.Validation;
-import javax.validation.ValidatorFactory;
 import java.net.URI;
 
 /**
@@ -34,15 +25,13 @@ import java.net.URI;
  */
 public class UserAccessControlClientFactory implements MultiThreadedServiceFactory<AuthUserAccessControl> {
 
-    private static ValidatorFactory _validatorFactory = Validation.buildDefaultValidatorFactory();
-
     private final String _clusterName;
     private final EmoClient _client;
 
     public static UserAccessControlClientFactory forCluster(String clusterName, MetricRegistry metricRegistry) {
-        HttpClientConfiguration httpClientConfiguration = new HttpClientConfiguration();
-        httpClientConfiguration.setKeepAlive(Duration.seconds(1));
-        return new UserAccessControlClientFactory(clusterName, createDefaultJerseyClient(httpClientConfiguration, getServiceName(clusterName), metricRegistry));
+        JerseyClientConfiguration jerseyClientConfiguration = new JerseyClientConfiguration();
+        jerseyClientConfiguration.setKeepAlive(Duration.seconds(1));
+        return new UserAccessControlClientFactory(clusterName, createDefaultJerseyClient(jerseyClientConfiguration, getServiceName(clusterName), metricRegistry));
     }
 
     /**
@@ -53,16 +42,12 @@ public class UserAccessControlClientFactory implements MultiThreadedServiceFacto
         return new UserAccessControlClientFactory(clusterName, client);
     }
 
-    public static UserAccessControlClientFactory forClusterAndHttpConfiguration(String clusterName, HttpClientConfiguration configuration, MetricRegistry metricRegistry) {
+    public static UserAccessControlClientFactory forClusterAndHttpConfiguration(String clusterName, JerseyClientConfiguration configuration, MetricRegistry metricRegistry) {
         return new UserAccessControlClientFactory(clusterName, createDefaultJerseyClient(configuration, getServiceName(clusterName), metricRegistry));
     }
 
-    private static ApacheHttpClient4 createDefaultJerseyClient(HttpClientConfiguration configuration, String serviceName, MetricRegistry metricRegistry) {
-        HttpClient httpClient = new HttpClientBuilder(metricRegistry).using(configuration).build(serviceName);
-        ApacheHttpClient4Handler handler = new ApacheHttpClient4Handler(httpClient, null, true);
-        ApacheHttpClient4Config config = new DefaultApacheHttpClient4Config();
-        config.getSingletons().add(new JacksonMessageBodyProvider(Jackson.newObjectMapper(), _validatorFactory.getValidator()));
-        return new ApacheHttpClient4(handler, config);
+    private static Client createDefaultJerseyClient(JerseyClientConfiguration configuration, String serviceName, MetricRegistry metricRegistry) {
+        return new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
     }
 
     private UserAccessControlClientFactory(String clusterName, Client jerseyClient) {

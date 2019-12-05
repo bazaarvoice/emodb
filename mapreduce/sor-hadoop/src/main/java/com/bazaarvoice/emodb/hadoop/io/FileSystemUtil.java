@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.hadoop.io;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
+import java.util.Collections;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -149,7 +149,7 @@ public class FileSystemUtil {
             @Override
             protected Iterator<Map<String, Object>> getRowIterator()
                     throws IOException {
-                return Iterators.emptyIterator();
+                return Collections.emptyIterator();
             }
 
             @Override

@@ -91,22 +91,18 @@ public class EmoConfiguration extends Configuration {
     private JerseyClientConfiguration _httpClientConfiguration = new JerseyClientConfiguration();
 
     @Valid
-    @NotNull
     @JsonProperty ("scanner")
     private Optional<ScannerConfiguration> _scanner = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty ("deltaMigrator")
     private Optional<MigratorConfiguration> _migrator = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty("kafka")
     private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty("megabus")
     private Optional<MegabusConfiguration> _megabusConfiguration = Optional.absent();
 

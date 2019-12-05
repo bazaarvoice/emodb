@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
+import com.google.common.io.ByteSource;
 import org.apache.http.MalformedChunkCodingException;
 import org.apache.http.TruncatedChunkException;
 import org.testng.annotations.Test;
@@ -67,19 +66,19 @@ public class JsonStreamingArrayParserTest {
     @Test
     @SuppressWarnings("unchecked")
     public void testMalformedChunkException() throws Exception {
-        InputSupplier<InputStream> input = ByteStreams.join(
-                ByteStreams.newInputStreamSupplier("[5,6".getBytes(Charsets.UTF_8)),
+        ByteSource input = ByteSource.concat(
+                ByteSource.wrap("[5,6".getBytes(Charsets.UTF_8)),
                 exceptionStreamSupplier(new MalformedChunkCodingException("Bad chunk header")));
-        assertThrowsEOFException(input.getInput(), Integer.class);
+        assertThrowsEOFException(input.openStream(), Integer.class);
     }
 
     @Test
     @SuppressWarnings("unchecked")
     public void testTruncatedChunkException() throws Exception {
-        InputSupplier<InputStream> input = ByteStreams.join(
-                ByteStreams.newInputStreamSupplier("[5,6".getBytes(Charsets.UTF_8)),
+        ByteSource input = ByteSource.concat(
+                ByteSource.wrap("[5,6".getBytes(Charsets.UTF_8)),
                 exceptionStreamSupplier(new TruncatedChunkException("Truncated chunk ( expected size: 3996; actual size: 1760)")));
-        assertThrowsEOFException(input.getInput(), Integer.class);
+        assertThrowsEOFException(input.openStream(), Integer.class);
     }
 
     @Test
@@ -130,10 +129,10 @@ public class JsonStreamingArrayParserTest {
         return new ByteArrayInputStream(json.getBytes(Charsets.UTF_8));
     }
 
-    private InputSupplier<InputStream> exceptionStreamSupplier(final Throwable t) {
-        return new InputSupplier<InputStream>() {
+    private ByteSource exceptionStreamSupplier(final Throwable t) {
+        return new ByteSource() {
             @Override
-            public InputStream getInput() throws IOException {
+            public InputStream openStream() throws IOException {
                 return exceptionStream(t);
             }
         };

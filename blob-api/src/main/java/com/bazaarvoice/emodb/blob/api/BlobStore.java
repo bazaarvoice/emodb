@@ -4,14 +4,15 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.google.common.io.InputSupplier;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public interface BlobStore {
 
@@ -95,7 +96,7 @@ public interface BlobStore {
     Blob get(String table, String blobId, @Nullable RangeSpecification rangeSpec)
             throws BlobNotFoundException, RangeNotSatisfiableException;
 
-    void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes)
+    void put(String table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes)
             throws IOException;
 
     void delete(String table, String blobId);

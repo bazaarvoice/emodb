@@ -272,7 +272,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
 
         return new AbstractIterator<Map<String, Object>>() {
             private String _from = query.getFromTable();
-            private Iterator<Map<String, Object>> _batch = Iterators.emptyIterator();
+            private Iterator<Map<String, Object>> _batch = Collections.emptyIterator();
             private long _limit = 0;
 
             @Override

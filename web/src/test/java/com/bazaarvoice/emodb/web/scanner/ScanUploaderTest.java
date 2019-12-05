@@ -1168,7 +1168,7 @@ public class ScanUploaderTest {
             ScanOptions scanOptions = new ScanOptions("p0")
                     .addDestination(ScanDestination.discard());
 
-            RangeScanUploaderResult result = scanUploader.scanAndUpload("id", 1, scanOptions, "p0", ScanRange.all(), any(Date.class));
+            RangeScanUploaderResult result = scanUploader.scanAndUpload("id", 1, scanOptions, "p0", ScanRange.all(), mock(Date.class));
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.FAILURE);
         } finally {
             uploadService.shutdownNow();

@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Exception thrown when attempting to modify a role which does not exist.
@@ -17,10 +17,14 @@ public class EmoRoleNotFoundException extends RuntimeException {
         this("unknown", "unknown");
     }
 
+    public EmoRoleNotFoundException(String group, String id) {
+        this(group, id,  "Role not found");
+    }
+
     @JsonCreator
-    public EmoRoleNotFoundException(@JsonProperty("group") String group, @JsonProperty("id") String id) {
-        super("Role not found");
-        _group = Objects.firstNonNull(group, EmoRoleKey.NO_GROUP);
+    public EmoRoleNotFoundException(@JsonProperty("group") String group, @JsonProperty("id") String id, @JsonProperty("message") String message) {
+        super(message);
+        _group = MoreObjects.firstNonNull(group, EmoRoleKey.NO_GROUP);
         _id = id;
     }
 

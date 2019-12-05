@@ -22,7 +22,6 @@ import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hasher;
@@ -160,7 +159,7 @@ public class MultiDCCompactionTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
         when(record.passOneIterator()).thenReturn(compactions.iterator()).thenReturn(compactions.iterator());
-        when(record.passTwoIterator()).thenReturn(Iterators.emptyIterator()).thenReturn(Iterators.emptyIterator());
+        when(record.passTwoIterator()).thenReturn(Collections.emptyIterator()).thenReturn(Collections.emptyIterator());
 
         //noinspection unchecked
         Supplier<Record> requeryFn = mock(Supplier.class);

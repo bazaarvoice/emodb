@@ -4,10 +4,12 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.sun.jersey.api.core.HttpRequestContext;
-import com.sun.jersey.api.model.AbstractMethod;
-import com.sun.jersey.spi.container.ResourceFilter;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
+import javax.ws.rs.Priorities;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.DynamicFeature;
+import javax.ws.rs.container.ResourceInfo;
+import javax.ws.rs.core.FeatureContext;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 import org.apache.shiro.mgt.SecurityManager;
@@ -20,10 +22,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
- * {@link ResourceFilterFactory} that places filters on the request for authentication and authorization based
+ * {@link DynamicFeature} that places filters on the request for authentication and authorization based
  * on the presence of {@link RequiresAuthentication} and {@link RequiresPermissions} annotations on the
  * resource class and/or methods.
  *
@@ -34,69 +36,77 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * \@Path ("resource/{id}")
  * \@RequiresPermissions("resource|get|{id}")
  * \@GET
- * public ClientResponse get(@PathParam("id") String id) {
+ * public Response get(@PathParam("id") String id) {
  *     ...
  * }
  *
  * \@Path ("resource/transfer")
  * \@RequiresPermissions({"resource|update|{?from}", "resource|update|{?to}"})
  * \@POST
- * public ClientResponse transfer(@QueryParam("from") String from, @QueryParam("to") to) {
+ * public Response transfer(@QueryParam("from") String from, @QueryParam("to") to) {
  *     ...
  * }
  * </code>
  *
  *
  */
-public class AuthResourceFilterFactory implements ResourceFilterFactory {
+public class AuthDynamicFeature implements DynamicFeature {
 
     private final static Pattern SUBSTITUTION_MATCHER = Pattern.compile("\\{(?<param>(\\?[^}]|[^?}])[^}]*)}");
 
     private final SecurityManager _securityManager;
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
 
-    public AuthResourceFilterFactory(SecurityManager securityManager, AuthenticationTokenGenerator<?> tokenGenerator) {
-        _securityManager = checkNotNull(securityManager, "securityManager");
-        _tokenGenerator = checkNotNull(tokenGenerator, "tokenGenerator");
+    public AuthDynamicFeature(SecurityManager securityManager, AuthenticationTokenGenerator<?> tokenGenerator) {
+        _securityManager = requireNonNull(securityManager, "securityManager");
+        _tokenGenerator = requireNonNull(tokenGenerator, "tokenGenerator");
     }
 
     @Override
-    public List<ResourceFilter> create(AbstractMethod am) {
-
-        LinkedList<ResourceFilter> filters = Lists.newLinkedList();
+    public void configure(ResourceInfo resourceInfo, FeatureContext context) {
+        LinkedList<PrioritizedContainerRequestFilter> filters = Lists.newLinkedList();
 
         // Check the resource
-        RequiresPermissions permAnnotation = am.getResource().getAnnotation(RequiresPermissions.class);
+        RequiresPermissions permAnnotation = resourceInfo.getResourceClass().getAnnotation(RequiresPermissions.class);
         if (permAnnotation != null) {
-            filters.add(new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()), permAnnotation.logical(), createSubstitutionMap(permAnnotation, am)));
+            filters.add(new PrioritizedContainerRequestFilter(
+                    new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
+                            permAnnotation.logical(), createSubstitutionMap(permAnnotation, resourceInfo)),
+                    Priorities.AUTHORIZATION));
         }
 
         // Check the method
-        permAnnotation = am.getAnnotation(RequiresPermissions.class);
+        permAnnotation = resourceInfo.getResourceMethod().getAnnotation(RequiresPermissions.class);
         if (permAnnotation != null) {
-            filters.add(new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()), permAnnotation.logical(), createSubstitutionMap(permAnnotation, am)));
+            filters.add(new PrioritizedContainerRequestFilter(
+                    new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
+                            permAnnotation.logical(), createSubstitutionMap(permAnnotation, resourceInfo)),
+                    Priorities.AUTHORIZATION));
         }
 
-        // If we're doing authorization or if authentication is explicitly requested then add it as the first filter
+        // If we're doing authorization or if authentication is explicitly requested then add it as a higher priority filter
         if (!filters.isEmpty() ||
-                am.getResource().getAnnotation(RequiresAuthentication.class) != null ||
-                am.getAnnotation(RequiresAuthentication.class) != null) {
-            filters.addFirst(new AuthenticationResourceFilter(_securityManager, _tokenGenerator));
+                resourceInfo.getResourceClass().getAnnotation(RequiresAuthentication.class) != null ||
+                resourceInfo.getResourceMethod().getAnnotation(RequiresAuthentication.class) != null) {
+            filters.add(new PrioritizedContainerRequestFilter(
+                    new AuthenticationResourceFilter(_securityManager, _tokenGenerator),
+                    Priorities.AUTHENTICATION));
         }
 
-        return filters;
+        filters.forEach(filter -> context.register(filter.getFilter(), filter.getPriority()));
+
     }
 
-    private Map<String,Function<HttpRequestContext, String>> createSubstitutionMap(RequiresPermissions permAnnotation, AbstractMethod am) {
-        return createSubstitutionMap(permAnnotation.value(), am);
+    private static Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(RequiresPermissions permAnnotation, ResourceInfo resourceInfo) {
+        return createSubstitutionMap(permAnnotation.value(), resourceInfo);
     }
 
     /**
      * Returns a mapping from permissions found in the annotations to functions which can perform any necessary
      * substitutions based on actual values in the request.
      */
-    private Map<String,Function<HttpRequestContext, String>> createSubstitutionMap(String[] permissions, AbstractMethod am) {
-        Map<String, Function<HttpRequestContext, String>> map = Maps.newLinkedHashMap();
+    private static Map<String,Function<ContainerRequestContext, String>> createSubstitutionMap(String[] permissions, ResourceInfo resourceInfo) {
+        Map<String, Function<ContainerRequestContext, String>> map = Maps.newLinkedHashMap();
 
         for (String permission : permissions) {
             Matcher matcher = SUBSTITUTION_MATCHER.matcher(permission);
@@ -107,12 +117,12 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
                 }
 
                 String param = matcher.group("param");
-                Function<HttpRequestContext, String> substitution;
+                Function<ContainerRequestContext, String> substitution;
 
                 if (param.startsWith("?")) {
                     substitution = createQuerySubstitution(param.substring(1));
                 } else {
-                    substitution = createPathSubstitution(param, am);
+                    substitution = createPathSubstitution(param, resourceInfo);
                 }
 
                 map.put(match, substitution);
@@ -126,12 +136,12 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
      * Creates a substitution function for path values, such as
      * <code>@RequiresPermission("resource|update|{id}")</code>
      */
-    private Function<HttpRequestContext, String> createPathSubstitution(final String param, final AbstractMethod am) {
+    private static Function<ContainerRequestContext, String> createPathSubstitution(final String param, final ResourceInfo resourceInfo) {
         int from = 0;
         int segment = -1;
 
         // Get the path from resource then from the method
-        Path[] annotations = new Path[] { am.getResource().getAnnotation(Path.class), am.getAnnotation(Path.class) };
+        Path[] annotations = new Path[] { resourceInfo.getResourceClass().getAnnotation(Path.class), resourceInfo.getResourceMethod().getAnnotation(Path.class) };
 
         for (Path annotation : annotations) {
             if (annotation == null)  {
@@ -152,10 +162,10 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
 
         final int validatedSegment = segment;
 
-        return new Function<HttpRequestContext, String>() {
+        return new Function<ContainerRequestContext, String>() {
             @Override
-            public String apply(HttpRequestContext request) {
-                return request.getPathSegments().get(validatedSegment).getPath();
+            public String apply(ContainerRequestContext request) {
+                return request.getUriInfo().getPathSegments().get(validatedSegment).getPath();
             }
         };
     }
@@ -167,7 +177,7 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
      * assert(getSubstitutionIndex("id", "resource/{id}/move") == 1)
      * assert(getSubstitutionIndex("not_found", "path/with/four/segments") == -4)
      */
-    private int getSubstitutionIndex(String param, String path) {
+    private static int getSubstitutionIndex(String param, String path) {
         final String match = String.format("{%s}", param);
 
         if (path.startsWith("/")) {
@@ -191,11 +201,11 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
      * Creates a substitution function for query param values, such as
      * <code>@RequiresPermission("resource|update|{?id}")</code>
      */
-    private Function<HttpRequestContext, String> createQuerySubstitution(final String param) {
-        return new Function<HttpRequestContext, String>() {
+    private static Function<ContainerRequestContext, String> createQuerySubstitution(final String param) {
+        return new Function<ContainerRequestContext, String>() {
             @Override
-            public String apply(HttpRequestContext request) {
-                MultivaluedMap<String, String> params = request.getQueryParameters();
+            public String apply(ContainerRequestContext request) {
+                MultivaluedMap<String, String> params = request.getUriInfo().getQueryParameters();
                 if (!params.containsKey(param)) {
                     throw new IllegalStateException("Parameter required for authentication is missing: " + param);
                 }
@@ -206,5 +216,23 @@ public class AuthResourceFilterFactory implements ResourceFilterFactory {
                 return values.get(0);
             }
         };
+    }
+
+    private static class PrioritizedContainerRequestFilter {
+        private final ContainerRequestFilter _filter;
+        private final int _priority;
+
+        public PrioritizedContainerRequestFilter(ContainerRequestFilter filter, int priority) {
+            _filter = requireNonNull(filter);
+            _priority = priority;
+        }
+
+        public ContainerRequestFilter getFilter() {
+            return _filter;
+        }
+
+        public int getPriority() {
+            return _priority;
+        }
     }
 }
