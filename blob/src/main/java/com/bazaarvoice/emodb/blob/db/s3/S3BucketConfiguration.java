@@ -1,19 +1,35 @@
 package com.bazaarvoice.emodb.blob.db.s3;
 
+import java.util.StringJoiner;
+
 public class S3BucketConfiguration {
     private String name;
     private String region;
     private String roleArn;
     private String roleExternalId;
     private Boolean accelerateModeEnabled;
+    private int scanBatchSize = 100;
+    private int readRangeSize = 128 * 1024;         //128kb
+    private int writeChunkSize = 5 * 1024 * 1024;   //5mb
     private S3ClientConfiguration s3ClientConfiguration;
 
-    public S3BucketConfiguration(final String name, final String region, final String roleArn, final String roleExternalId, Boolean accelerateModeEnabled, S3ClientConfiguration s3ClientConfiguration) {
+    public S3BucketConfiguration(final String name,
+                                 final String region,
+                                 final String roleArn,
+                                 final String roleExternalId,
+                                 Boolean accelerateModeEnabled,
+                                 int scanBatchSize,
+                                 int readRangeSize,
+                                 int writeChunkSize,
+                                 S3ClientConfiguration s3ClientConfiguration) {
         this.name = name;
         this.region = region;
         this.roleArn = roleArn;
         this.roleExternalId = roleExternalId;
         this.accelerateModeEnabled = accelerateModeEnabled;
+        this.scanBatchSize = scanBatchSize;
+        this.readRangeSize = readRangeSize;
+        this.writeChunkSize = writeChunkSize;
         this.s3ClientConfiguration = s3ClientConfiguration;
     }
 
@@ -68,4 +84,43 @@ public class S3BucketConfiguration {
         this.accelerateModeEnabled = accelerateModeEnabled;
     }
 
+    public int getScanBatchSize() {
+        return scanBatchSize;
+    }
+
+    public void setScanBatchSize(final int scanBatchSize) {
+        this.scanBatchSize = scanBatchSize;
+    }
+
+    public int getReadRangeSize() {
+        return readRangeSize;
+    }
+
+    public void setReadRangeSize(final int readRangeSize) {
+        this.readRangeSize = readRangeSize;
+    }
+
+    public int getWriteChunkSize() {
+        return writeChunkSize;
+    }
+
+    public void setWriteChunkSize(final int writeChunkSize) {
+        this.writeChunkSize = writeChunkSize;
+    }
+
+//    for debug
+    @Override
+    public String toString() {
+        return new StringJoiner(", ", S3BucketConfiguration.class.getSimpleName() + "[", "]")
+                .add("name='" + name + "'")
+                .add("region='" + region + "'")
+                .add("roleArn='" + roleArn + "'")
+                .add("roleExternalId='" + roleExternalId + "'")
+                .add("accelerateModeEnabled=" + accelerateModeEnabled)
+                .add("scanBatchSize=" + scanBatchSize)
+                .add("readRangeSize=" + readRangeSize)
+                .add("writeChunkSize=" + writeChunkSize)
+                .add("s3ClientConfiguration=" + s3ClientConfiguration)
+                .toString();
+    }
 }

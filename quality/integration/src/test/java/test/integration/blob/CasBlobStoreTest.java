@@ -147,7 +147,7 @@ public class CasBlobStoreTest {
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "media_global", new TestCassandraConfiguration("media_global", "ugc_blob")))
                         .setS3Configuration(new S3Configuration()
-                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, null)))
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, 1, 1, 1, null)))
                         )
                 );
 

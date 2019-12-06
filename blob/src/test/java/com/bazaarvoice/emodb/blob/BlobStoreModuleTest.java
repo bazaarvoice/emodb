@@ -114,7 +114,7 @@ public class BlobStoreModuleTest {
                                         "media_global", new KeyspaceConfiguration())))
                         )
                         .setS3Configuration(new S3Configuration()
-                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, null))))
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, 1, 1, 1, null))))
                 );
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");

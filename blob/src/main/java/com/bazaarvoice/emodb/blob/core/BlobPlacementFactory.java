@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.blob.core;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.bazaarvoice.emodb.blob.db.s3.PlacementsToS3BucketNames;
+import com.bazaarvoice.emodb.blob.db.s3.PlacementsToS3BucketConfigurations;
+import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3BucketNamesToS3Clients;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -19,7 +20,6 @@ import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.Composite;
 import com.netflix.astyanax.serializers.SpecificCompositeSerializer;
 import io.dropwizard.lifecycle.Managed;
-import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.AsciiType;
 import org.apache.cassandra.db.marshal.CompositeType;
 import org.apache.cassandra.db.marshal.IntegerType;
@@ -41,7 +41,7 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
     private final Set<String> _validPlacements;
     private final Map<String, CassandraKeyspace> _keyspaceMap;
     private final DataCenters _dataCenters;
-    private final Map<String, String> _placementsToBucketNames;
+    private final Map<String, S3BucketConfiguration> _placementsToBucketConfigurations;
     private final Map<String, AmazonS3> _bucketNamesToS3Clients;
 
     @Inject
@@ -49,12 +49,12 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
                                 @ValidTablePlacements Set<String> validPlacements,
                                 @KeyspaceMap Map<String, CassandraKeyspace> keyspaceMap,
                                 DataCenters dataCenters,
-                                @PlacementsToS3BucketNames final Map<String, String> placementsToBuckets,
+                                @PlacementsToS3BucketConfigurations final Map<String, S3BucketConfiguration> placementsToBucketConfigurations,
                                 @S3BucketNamesToS3Clients final Map<String, AmazonS3> bucketNamesToS3Clients) {
         _validPlacements = validPlacements;
         _keyspaceMap = keyspaceMap;
         _dataCenters = dataCenters;
-        _placementsToBucketNames = Objects.requireNonNull(placementsToBuckets);
+        _placementsToBucketConfigurations = Objects.requireNonNull(placementsToBucketConfigurations);
         _bucketNamesToS3Clients = Objects.requireNonNull(bucketNamesToS3Clients);
         lifeCycle.manage(this);
     }
@@ -103,10 +103,10 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
 
         KeyspaceDefinition keyspaceDef = keyspace.getAstyanaxKeyspace().describeKeyspace();
         ColumnFamily<ByteBuffer, Composite> columnFamily = getColumnFamily(keyspaceDef, cfPrefix, "blob", placement,
-                new SpecificCompositeSerializer(CompositeType.getInstance(Arrays.<AbstractType<?>>asList(
+                new SpecificCompositeSerializer(CompositeType.getInstance(Arrays.asList(
                         AsciiType.instance, IntegerType.instance))));
 
-        return new BlobPlacement(placement, keyspace, columnFamily, getS3Bucket(placement), getS3Client(placement));
+        return new BlobPlacement(placement, keyspace, columnFamily, getS3BucketConfiguration(placement), getS3Client(placement));
     }
 
     @Override
@@ -116,10 +116,10 @@ public class BlobPlacementFactory extends AbstractPlacementFactory implements Ma
     }
 
     private AmazonS3 getS3Client(final String placement) {
-        return _bucketNamesToS3Clients.get(getS3Bucket(placement));
+        return _bucketNamesToS3Clients.get(getS3BucketConfiguration(placement).getName());
     }
 
-    private String getS3Bucket(final String placement) {
-        return _placementsToBucketNames.get(placement);
+    private S3BucketConfiguration getS3BucketConfiguration(final String placement) {
+        return _placementsToBucketConfigurations.get(placement);
     }
 }

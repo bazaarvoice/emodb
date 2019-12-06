@@ -57,10 +57,6 @@ import java.util.stream.Stream;
 public class S3StorageProvider {
     private static final Logger LOGGER = LoggerFactory.getLogger(S3StorageProvider.class);
 
-    private static final int MAX_SCAN_BATCH_SIZE = 100;
-    private static final int DEFAULT_READ_RANGE_LENGTH = 128 * 1024;     //128kb
-    private static final int DEFAULT_WRITE_CHUNK_SIZE = 5 * 1024 * 1024; //5mb
-
     private final PlacementFactory _placementFactory;
     private final LoadingCache<String, BlobPlacement> _placementCache;
 
@@ -70,19 +66,20 @@ public class S3StorageProvider {
         _placementCache = CacheBuilder.newBuilder().build(new CacheLoader<String, BlobPlacement>() {
             @Override
             public BlobPlacement load(final String placement) throws ConnectionException {
-                return (BlobPlacement) _placementFactory.newPlacement(placement);
+                BlobPlacement blobPlacement = (BlobPlacement) _placementFactory.newPlacement(placement);
+                LOGGER.debug("Blob placement: {}", blobPlacement);
+                return blobPlacement;
             }
         });
     }
 
-    private AmazonS3URI getAmazonS3URI(final String tableName, final String tablePlacement, @Nullable final String blobId) {
-        final String bucket = _placementCache.getUnchecked(tablePlacement).getS3Bucket();
+    private static AmazonS3URI getAmazonS3URI(final String bucket, final String tableName, @Nullable final String blobId) {
         final String key = null == blobId ? tableName : tableName + "/" + blobId;
         return new AmazonS3URI(String.format("s3://%s/%s", bucket, key));
     }
 
-    public S3Object getObject(final String tableName, final String tablePlacement, final String blobId, @Nullable final Range range) {
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, blobId);
+    public S3Object getObject(final BlobPlacement blobPlacement, final String tableName, final String blobId, @Nullable final Range range) {
+        final AmazonS3URI uri = getAmazonS3URI(blobPlacement.getS3BucketConfiguration().getName(), tableName, blobId);
         final GetObjectRequest rangeObjectRequest = new GetObjectRequest(uri.getBucket(), uri.getKey());
 
         if (null != range) {
@@ -92,7 +89,7 @@ public class S3StorageProvider {
 
         try {
             LOGGER.debug("Get s3 object: {}, range: {}", uri, range);
-            return _placementCache.getUnchecked(tablePlacement).getS3Client()
+            return blobPlacement.getS3Client()
                     .getObject(rangeObjectRequest);
         } catch (final AmazonS3Exception e) {
             LOGGER.error("Failed to get s3 object: {}, range: {}", uri, range);
@@ -101,10 +98,13 @@ public class S3StorageProvider {
     }
 
     public StreamSupplier getObjectStreamSupplier(final String tableName, final String tablePlacement, final String blobId, @Nullable final Range range) {
-        return out -> toSubRanges(range, DEFAULT_READ_RANGE_LENGTH)
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        S3BucketConfiguration s3BucketConfiguration = blobPlacement.getS3BucketConfiguration();
+
+        return out -> toSubRanges(range, s3BucketConfiguration.getReadRangeSize())
                 .parallelStream()
                 .forEachOrdered(subrange -> {
-                    final S3Object object = getObject(tableName, tablePlacement, blobId, subrange);
+                    final S3Object object = getObject(blobPlacement, tableName, blobId, subrange);
                     LOGGER.debug("Get blob: {}, range: {}", object, subrange);
                     writeTo(object.getObjectContent(), out);
                 });
@@ -158,8 +158,9 @@ public class S3StorageProvider {
     }
 
     public ObjectMetadata getObjectMetadata(final String tableName, final String tablePlacement, final String blobId) {
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, blobId);
-        final AmazonS3 s3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        final AmazonS3URI uri = getAmazonS3URI(blobPlacement.getS3BucketConfiguration().getName(), tableName, blobId);
+        final AmazonS3 s3Client = blobPlacement.getS3Client();
 
         ObjectMetadata metadata;
         try {
@@ -182,10 +183,12 @@ public class S3StorageProvider {
 //        The standard Java AWS SDK will simply buffer all the data in memory so that it can calculate the length,
 //        which consumes RAM and delays the upload.
 //        We can write the data to a temporary file but disk IO is slow.
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, blobId);
-        final AmazonS3 writeS3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        S3BucketConfiguration s3BucketConfiguration = blobPlacement.getS3BucketConfiguration();
+        final AmazonS3URI uri = getAmazonS3URI(s3BucketConfiguration.getName(), tableName, blobId);
+        final AmazonS3 writeS3Client = blobPlacement.getS3Client();
 
-        final byte[] bytes = new byte[DEFAULT_WRITE_CHUNK_SIZE];
+        final byte[] bytes = new byte[s3BucketConfiguration.getWriteChunkSize()];
 
         final int partSize;
         try {
@@ -212,11 +215,12 @@ public class S3StorageProvider {
             putObjectKnownSize(writeS3Client, uri, new ByteArrayInputStream(buf), objectMetadata);
         } else {
             // otherwise, upload stream via multipart
-            putObjectUnknownSize(writeS3Client, uri, bytes, input, attributes);
+            putObjectUnknownSize(writeS3Client, uri, bytes, input, s3BucketConfiguration.getWriteChunkSize(), attributes);
         }
     }
 
-    private void putObjectUnknownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final byte[] firstPart, final InputStream input, final Map<String, String> attributes) {
+    private void putObjectUnknownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final byte[] firstPart, final InputStream lastPart,
+                                      int writeChunkSize, final Map<String, String> metadataAttributes) {
         int partNumber = 1;
         int partSize;
 
@@ -240,12 +244,12 @@ public class S3StorageProvider {
         final List<PartETag> partETags = new ArrayList<>();
         partETags.add(uploadResult.getPartETag());
 
-        byte[] bytes = new byte[DEFAULT_WRITE_CHUNK_SIZE];
-        final DigestInputStream md5In = new DigestInputStream(input, getMessageDigest("MD5"));
+        byte[] bytes = new byte[writeChunkSize];
+        final DigestInputStream md5In = new DigestInputStream(lastPart, getMessageDigest("MD5"));
         final DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
         for (; ; ) {
             try {
-                partSize = ByteStreams.read(sha1In, bytes, 0, DEFAULT_WRITE_CHUNK_SIZE);
+                partSize = ByteStreams.read(sha1In, bytes, 0, writeChunkSize);
             } catch (final IOException e) {
                 throw new RuntimeException(e);
             }
@@ -283,7 +287,7 @@ public class S3StorageProvider {
         final String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
         final String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
 
-        final ObjectMetadata om = getObjectMetadata(md5, sha1, attributes);
+        final ObjectMetadata om = getObjectMetadata(md5, sha1, metadataAttributes);
         overwriteObjectMetadata(amazonS3, uri, om);
     }
 
@@ -314,7 +318,7 @@ public class S3StorageProvider {
     private void putObjectKnownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final InputStream input, final ObjectMetadata objectMetadata) {
         final PutObjectRequest putObjectRequest = new PutObjectRequest(uri.getBucket(), uri.getKey(), input, objectMetadata);
         try {
-            LOGGER.debug("Put object known size, uri:{}, metadata: {}", uri, objectMetadata);
+            LOGGER.debug("Put object known size, uri: {}, metadata: {}", uri, objectMetadata.getRawMetadata());
             amazonS3.putObject(putObjectRequest);
         } catch (final AmazonS3Exception e) {
             LOGGER.error("Failed to put s3 object: {}", uri);
@@ -331,20 +335,23 @@ public class S3StorageProvider {
     }
 
     public Stream<S3ObjectSummary> list(final String tableName, final String tablePlacement, @Nullable final String fromBlobIdExclusive, final long limit) {
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, null);
-        final AmazonS3 s3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        S3BucketConfiguration s3BucketConfiguration = blobPlacement.getS3BucketConfiguration();
 
-        return listObjects(s3Client, uri, fromBlobIdExclusive, limit);
+        final AmazonS3URI uri = getAmazonS3URI(s3BucketConfiguration.getName(), tableName, null);
+        final AmazonS3 s3Client = blobPlacement.getS3Client();
+
+        return listObjects(s3Client, uri, fromBlobIdExclusive, s3BucketConfiguration.getScanBatchSize(), limit);
     }
 
-    private Stream<S3ObjectSummary> listObjects(final AmazonS3 s3Client, final AmazonS3URI uri, @Nullable final String fromBlobIdExclusive, final long limit) {
+    private Stream<S3ObjectSummary> listObjects(final AmazonS3 s3Client, final AmazonS3URI uri, @Nullable final String fromBlobIdExclusive, int scanBatchSize, final long limit) {
         Stream<S3ObjectSummary> summaryStream = Stream.<S3ObjectSummary>builder().build();
 
         final ListObjectsV2Request request = new ListObjectsV2Request()
                 .withBucketName(uri.getBucket())
                 .withPrefix(uri.getKey())
                 .withStartAfter(fromBlobIdExclusive)
-                .withMaxKeys(Math.toIntExact(Math.min(limit, MAX_SCAN_BATCH_SIZE)));
+                .withMaxKeys(Math.toIntExact(Math.min(limit, scanBatchSize)));
         ListObjectsV2Result result;
         do {
             result = s3Client.listObjectsV2(request);
@@ -363,32 +370,35 @@ public class S3StorageProvider {
 
     public void delete(final String tableName, final String tablePlacement) {
         final AtomicInteger counter = new AtomicInteger();
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, null);
-        LOGGER.debug("Delete table uri:{}", uri);
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        S3BucketConfiguration s3BucketConfiguration = blobPlacement.getS3BucketConfiguration();
+        final AmazonS3URI uri = getAmazonS3URI(s3BucketConfiguration.getName(), tableName, null);
+        LOGGER.debug("Delete table uri: {}", uri);
 
-        final AmazonS3 writeS3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
+        final AmazonS3 writeS3Client = blobPlacement.getS3Client();
         list(tableName, tablePlacement, null, Long.MAX_VALUE)
                 .map(s3ObjectSummary -> new AmazonS3URI(String.format("s3://%s/%s", uri.getBucket(), s3ObjectSummary.getKey())))
-                .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / MAX_SCAN_BATCH_SIZE))
+                .collect(Collectors.groupingBy(it -> counter.getAndIncrement() / s3BucketConfiguration.getScanBatchSize()))
                 .forEach((integer, uris) -> delete(writeS3Client, uris));
         delete(writeS3Client, Arrays.asList(uri));
     }
 
     public void delete(final String tableName, final String tablePlacement, final String blobId) {
-        final AmazonS3URI uri = getAmazonS3URI(tableName, tablePlacement, blobId);
-        final AmazonS3 writeS3Client = _placementCache.getUnchecked(tablePlacement).getS3Client();
+        BlobPlacement blobPlacement = _placementCache.getUnchecked(tablePlacement);
+        final AmazonS3URI uri = getAmazonS3URI(blobPlacement.getS3BucketConfiguration().getName(), tableName, blobId);
+        final AmazonS3 writeS3Client = blobPlacement.getS3Client();
         delete(writeS3Client, Arrays.asList(uri));
     }
 
     private void delete(final AmazonS3 s3Client, final List<AmazonS3URI> uris) {
         //TODO consider to use Futures
-        LOGGER.debug("Delete object uris:{}", uris);
+        LOGGER.debug("Delete object uris: {}", uris);
         uris.forEach(uri -> delete(s3Client, uri));
     }
 
     private void delete(final AmazonS3 s3Client, final AmazonS3URI uri) {
         try {
-            LOGGER.debug("Delete object uri:{}", uri);
+            LOGGER.debug("Delete object uri {}", uri);
             s3Client.deleteObject(new DeleteObjectRequest(uri.getBucket(), uri.getKey()));
 
             final DeleteObjectsRequest deleteObjectsRequest = new DeleteObjectsRequest(uri.getBucket())
