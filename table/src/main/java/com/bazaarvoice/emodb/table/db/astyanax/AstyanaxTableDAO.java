@@ -28,9 +28,11 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
@@ -42,6 +44,7 @@ import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
@@ -125,7 +128,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 
-public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO, Managed {
+public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceChecker, StashTableDAO, TableEventRegistry, Managed {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxTableDAO.class);
 
     private static final Ordering<Comparable> NULLS_LAST = Ordering.natural().nullsLast();
@@ -139,22 +142,22 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     /**
      * The server updates its consistency timestamp value at most every 5 minutes.
      */
-    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofMinutes(5);
+    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofSeconds(20);
 
     /**
      * Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid.
      */
-    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofDays(1);
+    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofSeconds(30);
 
     /**
      * Delay between dropping a table and initial purge of all the data in the table, may miss late writes.
      */
-    static final Duration DROP_TO_PURGE_1 = Duration.ofDays(1);
+    static final Duration DROP_TO_PURGE_1 = Duration.ofSeconds(10);
 
     /**
      * Maximum time to wait for full consistency.  By this time, purge will find everything.
      */
-    static final Duration DROP_TO_PURGE_2 = Duration.ofDays(10);
+    static final Duration DROP_TO_PURGE_2 = Duration.ofSeconds(10);
 
     /**
      * Reserved key used by {@link #createTableSet()} to identify bootstrap tables.
@@ -166,6 +169,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     private final String _systemTable;
     private final String _systemTableUuid;
     private final String _systemTableUnPublishedDatabusEvents;
+    private final String _systemTableEventRegistry;
     private final String _selfDataCenter;
     private final int _defaultShardsLog2;
     private final BiMap<String, Long> _bootstrapTables;
@@ -221,11 +225,12 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         _systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
         _systemTableUnPublishedDatabusEvents = systemTableNamespace + ":table_unpublished_databus_events";
+        _systemTableEventRegistry = systemTableNamespace + ":table_event_registry";
 
         // If this table DAO uses itself to store its table metadata (ie. it requires bootstrap tables) then make sure
         // the right bootstrap tables are specified.  This happens when "_dataStore" uses "this" for table metadata.
         if (!_bootstrapTables.isEmpty()) {
-            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable, _systemTableUnPublishedDatabusEvents);
+            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry);
             Set<String> diff = Sets.symmetricDifference(expectedTables, bootstrapTables.keySet());
             checkState(diff.isEmpty(), "Bootstrap tables map is missing tables or has extra tables: %s", diff);
         }
@@ -250,7 +255,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public void start()
             throws Exception {
         // Ensure the basic system tables exist.  For the DataStore these will be bootstrap tables.
-        for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents}) {
+        for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry}) {
             TableOptions options = new TableOptionsBuilder().setPlacement(_systemTablePlacement).build();
             Audit audit = new AuditBuilder().setComment("initial startup").setLocalHost().build();
             _backingStore.createTable(table, options, ImmutableMap.<String, Object>of(), audit);
@@ -289,6 +294,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     public MaintenanceOp getNextMaintenanceOp(String table) {
         TableJson json = readTableJson(table, false);
         return getNextMaintenanceOp(json, false/*don't expose task outside this class*/);
+    }
+
+    @Override
+    public boolean isTableUnderMaintenance(String table) {
+        return getNextMaintenanceOp(table) != null;
     }
 
     // MaintenanceDAO
@@ -696,6 +706,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
         // write about the drop operation (metadata changed info) to a special system table.
         writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_TABLE);
+
+        addDroppedTableEvent(json);
 
         // now, update the Table Metadata
         Delta delta = json.newDropTable();
@@ -1558,5 +1570,30 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         return DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
                 .withZone(ZoneId.of("UTC"))
                 .format(dateTime);
+    }
+
+    @Override
+    public void registerTableListener(String registrationId, Instant newExpirationTime) {
+        Instant now = _clock.instant();
+        Condition isExpired = Conditions.mapBuilder().matches("expirationTime", Conditions.le(now.toEpochMilli())).build();
+
+        Delta registrationDelta = Deltas.mapBuilder()
+                .update(registrationId, Deltas.mapBuilder()
+                        .put("expirationTime", newExpirationTime.toEpochMilli())
+                        .update("tasks", Deltas.conditional(isExpired, Deltas.literal(ImmutableMap.of())))
+                        .build())
+                .build();
+
+        Audit audit = new AuditBuilder()
+                .setComment(String.format("Registering %s", registrationId))
+                .setProgram(registrationId)
+                .build();
+
+        _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(), registrationDelta, audit, WriteConsistency.GLOBAL);
+    }
+
+    public void addDroppedTableEvent(TableJson json) {
+        Iterator<Map<String, Object>> registrants = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+        
     }
 }

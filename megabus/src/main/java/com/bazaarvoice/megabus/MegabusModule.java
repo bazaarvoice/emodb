@@ -18,6 +18,7 @@ import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
+import com.bazaarvoice.megabus.tableevents.TableEventProcessorManager;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.PrivateModule;
@@ -53,6 +54,8 @@ public class MegabusModule extends PrivateModule {
 
         bind(MegabusSource.class).to(DefaultMegabusSource.class).asEagerSingleton();
         expose(MegabusSource.class);
+
+        bind(TableEventProcessorManager.class).asEagerSingleton();
     }
 
     @Provides

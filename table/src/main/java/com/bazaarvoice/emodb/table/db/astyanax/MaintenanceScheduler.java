@@ -46,7 +46,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
      * to complete and an hour is long enough that the underlying failure cause may have cleared up (eg. high load,
      * data center partition) and it's slow enough that we shouldn't spam the logs with zillions of exceptions.
      */
-    private static final Duration RETRY_DELAY = Duration.ofHours(1);
+    private static final Duration RETRY_DELAY = Duration.ofSeconds(10);
 
     private static final ThreadFactory _threadFactory =
             new ThreadFactoryBuilder().setNameFormat("TableMaintenance-%d").build();

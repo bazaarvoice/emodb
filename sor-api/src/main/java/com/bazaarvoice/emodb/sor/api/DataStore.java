@@ -56,7 +56,7 @@ public interface DataStore {
 
     /**
      * Makes a best effort to permanently delete all data from the specified table.  This method is not safe for use
-     * with the databus--it does not generate databus events and resets the version number of all content to zero.
+     * with the databus or megabus--it does not generate events and resets the version number of all content to zero.
      * Useful for debugging/testing, but not intended for use in production.
      */
     void purgeTableUnsafe(String table, Audit audit)

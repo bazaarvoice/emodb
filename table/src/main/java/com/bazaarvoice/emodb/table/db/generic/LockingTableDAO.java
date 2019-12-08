@@ -4,13 +4,12 @@ import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.sor.api.*;
 import com.bazaarvoice.emodb.table.db.*;
 import com.bazaarvoice.emodb.table.db.Table;
+import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceChecker;
 import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceDAO;
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.Response;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -21,16 +20,16 @@ import static java.util.Objects.requireNonNull;
 public class LockingTableDAO implements TableDAO {
 
     private final TableDAO _delegate;
-    private final MaintenanceDAO _maintenanceDAO;
+    private final MaintenanceChecker _maintenanceChecker;
 
     @Inject
-    public LockingTableDAO(@LockingTableDAODelegate TableDAO delegate, MaintenanceDAO maintenanceDAO) {
+    public LockingTableDAO(@LockingTableDAODelegate TableDAO delegate, MaintenanceChecker maintenanceChecker) {
         _delegate = requireNonNull(delegate);
-        _maintenanceDAO = requireNonNull(maintenanceDAO);
+        _maintenanceChecker = requireNonNull(maintenanceChecker);
     }
 
     private void performActionIfNoMaintenance(String table, Runnable action) {
-        if (_maintenanceDAO.getNextMaintenanceOp(table) == null) {
+        if (!_maintenanceChecker.isTableUnderMaintenance(table)) {
             action.run();
         } else {
             throw new IllegalArgumentException(String.format("This table name is currently undergoing maintenance and therefore cannot be modified: %s", table));

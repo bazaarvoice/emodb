@@ -67,6 +67,7 @@ import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
 import com.bazaarvoice.emodb.table.db.generic.*;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -153,6 +154,7 @@ public class DataStoreModule extends PrivateModule {
         bind(SlowQueryLog.class).toProvider(LogbackSlowQueryLogProvider.class);
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
+        bind(MaintenanceChecker.class).to(AstyanaxTableDAO.class).asEagerSingleton();
 
         // The web servers are responsible for updating the ZooKeeper full consistency data.  CLI tools don't need to.
         // Enable updating the ZooKeeper full consistency data if specified
@@ -180,6 +182,11 @@ public class DataStoreModule extends PrivateModule {
             bind(MoveTableTask.class).asEagerSingleton();
         }
 
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
+            bind(TableEventRegistry.class).to(AstyanaxTableDAO.class);
+            expose(TableEventRegistry.class);
+        }
+
         // Stash requires an additional DAO for storing Stash artifacts and provides a custom interface for access.
         if (_serviceMode.specifies(EmoServiceMode.Aspect.scanner) || _serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
             bind(CQLStashTableDAO.class).asEagerSingleton();
@@ -193,7 +200,8 @@ public class DataStoreModule extends PrivateModule {
                 "__system_sor:table", 0x09d7f33f08984b67L,
                 "__system_sor:table_uuid", 0xab33556547b99d25L,
                 "__system_sor:data_center", 0x33f1f082cffc2c2fL,
-                "__system_sor:table_unpublished_databus_events", 0x44ab556547b99dffL));
+                "__system_sor:table_unpublished_databus_events", 0x44ab556547b99dffL,
+                "__system_sor:table_event_registry", 0xb0b2716384a93cc4L));
 
         // Bind all DAOs from the DAO module
         install(new DAOModule());
