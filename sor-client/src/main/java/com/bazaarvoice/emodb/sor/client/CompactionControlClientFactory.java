@@ -5,6 +5,8 @@ import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
+import org.glassfish.jersey.client.ClientProperties;
+
 import javax.ws.rs.client.Client;
 
 /**
@@ -15,6 +17,7 @@ public class CompactionControlClientFactory extends AbstractDataStoreClientFacto
     private final String _apiKey;
 
     public static CompactionControlClientFactory forClusterAndHttpClient(String clusterName, Client client, String apiKey) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new CompactionControlClientFactory(clusterName, new JerseyEmoClient(client), apiKey);
     }
 

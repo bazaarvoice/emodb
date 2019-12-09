@@ -11,13 +11,10 @@ import com.bazaarvoice.emodb.uac.api.UserAccessControl;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.net.HttpHeaders;
-import io.dropwizard.client.JerseyClientBuilder;
-import io.dropwizard.client.JerseyClientConfiguration;
-import io.dropwizard.util.Duration;
-import javax.ws.rs.client.Client;
+import org.glassfish.jersey.client.ClientProperties;
 
+import javax.ws.rs.client.Client;
 import java.net.URI;
 
 /**
@@ -28,26 +25,13 @@ public class UserAccessControlClientFactory implements MultiThreadedServiceFacto
     private final String _clusterName;
     private final EmoClient _client;
 
-    public static UserAccessControlClientFactory forCluster(String clusterName, MetricRegistry metricRegistry) {
-        JerseyClientConfiguration jerseyClientConfiguration = new JerseyClientConfiguration();
-        jerseyClientConfiguration.setKeepAlive(Duration.seconds(1));
-        return new UserAccessControlClientFactory(clusterName, createDefaultJerseyClient(jerseyClientConfiguration, getServiceName(clusterName), metricRegistry));
-    }
-
     /**
      * Connects to the User Access Control service using the specified Jersey client.  If you're using Dropwizard, use this
      * factory method and pass the Dropwizard-constructed Jersey client.
      */
     public static UserAccessControlClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new UserAccessControlClientFactory(clusterName, client);
-    }
-
-    public static UserAccessControlClientFactory forClusterAndHttpConfiguration(String clusterName, JerseyClientConfiguration configuration, MetricRegistry metricRegistry) {
-        return new UserAccessControlClientFactory(clusterName, createDefaultJerseyClient(configuration, getServiceName(clusterName), metricRegistry));
-    }
-
-    private static Client createDefaultJerseyClient(JerseyClientConfiguration configuration, String serviceName, MetricRegistry metricRegistry) {
-        return new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
     }
 
     private UserAccessControlClientFactory(String clusterName, Client jerseyClient) {

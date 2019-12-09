@@ -1,10 +1,8 @@
 package com.bazaarvoice.emodb.queue.client;
 
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
-import com.codahale.metrics.MetricRegistry;
-import io.dropwizard.client.JerseyClientBuilder;
-import io.dropwizard.client.JerseyClientConfiguration;
-import io.dropwizard.util.Duration;
+import org.glassfish.jersey.client.ClientProperties;
+
 import javax.ws.rs.client.Client;
 
 public class DedupQueueClientFactory extends AbstractDedupQueueClientFactory {
@@ -14,6 +12,7 @@ public class DedupQueueClientFactory extends AbstractDedupQueueClientFactory {
      * factory method and pass the Dropwizard-constructed Jersey client.
      */
     public static DedupQueueClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new DedupQueueClientFactory(clusterName, client);
     }
 
