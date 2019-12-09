@@ -2,10 +2,10 @@ package com.bazaarvoice.emodb.common.jersey.dropwizard;
 
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoResource;
-
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
-import java.net.URI;
+
 import javax.ws.rs.client.Client;
+import java.net.URI;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
