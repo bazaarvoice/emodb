@@ -30,6 +30,7 @@ import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -109,6 +110,12 @@ public class TableLifeCycleTest {
     public static final String TABLE4 = "my4:table";
     public static final String TABLE5 = "my5:table";
     public static final String TABLE6 = "my6:table";
+
+    @Test
+    public void testTableEvent() {
+        TableEvent tableEvent = new TableEvent(TableEvent.Action.DROP, "stuff");
+        tableEvent.newFullEventMap();
+    }
 
     @Test
     public void testCreate()
@@ -2219,7 +2226,7 @@ public class TableLifeCycleTest {
                 placementFactory, new PlacementCache(placementFactory),
                 dataCenter, mock(RateLimiterCache.class), dataCopyDAO, dataPurgeDAO,
                 fullConsistencyTimeProvider, tableChangesEnabled, cacheRegistry,
-                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ), clock);
+                ImmutableMap.of(PL_ZZ_MOVING, PL_ZZ), new ObjectMapper(), clock);
         tableDAO.setBackingStore(backingStore);
         return tableDAO;
     }

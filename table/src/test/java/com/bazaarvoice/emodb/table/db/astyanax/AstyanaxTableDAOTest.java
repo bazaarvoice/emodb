@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -116,7 +117,7 @@ public class AstyanaxTableDAOTest {
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
-                ImmutableMap.<String, String>of(), mock(Clock.class));
+                ImmutableMap.<String, String>of(), new ObjectMapper(), mock(Clock.class));
 
         TableBackingStore tableBackingStore = mock(TableBackingStore.class);
         Map<String, Object> tableMap = JsonHelper.fromJson(_tableMetaData, new TypeReference<Map<String, Object>>() {});
