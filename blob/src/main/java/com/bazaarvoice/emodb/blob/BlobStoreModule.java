@@ -15,6 +15,7 @@ import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
 import com.bazaarvoice.emodb.blob.db.s3.PlacementsToS3BucketConfigurations;
 import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3BucketNamesToS3Clients;
+import com.bazaarvoice.emodb.blob.db.s3.S3ClientConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheck;
 import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheckConfiguration;
@@ -406,8 +407,12 @@ public class BlobStoreModule extends PrivateModule {
             return s3Configuration.getS3BucketConfigurations().stream()
                     .collect(Collectors.toMap(
                             s3BucketConfiguration -> s3BucketConfiguration.getName(),
-                            s3BucketConfiguration -> new S3RateLimiter(clock)
-                                    .rateLimit(getAmazonS3(s3BucketConfiguration)))
+                            s3BucketConfiguration -> {
+                                S3ClientConfiguration s3ClientConfiguration = s3BucketConfiguration.getS3ClientConfiguration();
+                                S3ClientConfiguration.RateLimitConfiguration rateLimitConfiguration = s3ClientConfiguration == null ? null : s3ClientConfiguration.getRateLimitConfiguration();
+                                return new S3RateLimiter(clock)
+                                        .rateLimit(getAmazonS3(s3BucketConfiguration), rateLimitConfiguration);
+                            })
                     );
         } else {
             return new HashMap<>();

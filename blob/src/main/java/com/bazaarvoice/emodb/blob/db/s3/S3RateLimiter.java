@@ -19,14 +19,14 @@ import java.util.concurrent.TimeUnit;
 
 public class S3RateLimiter {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(S3RateLimiter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3RateLimiter.class);
 
-    private final static Duration DECREASE_COOLDOWN = Duration.ofSeconds(2);
-    private final static Duration INCREASE_COOLDOWN = Duration.ofSeconds(5);
+    private static final Duration DECREASE_COOLDOWN = Duration.ofSeconds(2);
+    private static final Duration INCREASE_COOLDOWN = Duration.ofSeconds(5);
 
-    private final static int MAX_ATTEMPTS = 5;
-    private final static double MAX_RATE_LIMIT = 50;
-    private final static double MIN_RATE_LIMIT = 1;
+    private static final int MAX_ATTEMPTS = 5;
+    private static final double MAX_RATE_LIMIT = 50;
+    private static final double MIN_RATE_LIMIT = 1;
 
     private final SharedRateLimiter _l;
 
@@ -34,7 +34,8 @@ public class S3RateLimiter {
         _l = new SharedRateLimiter(clock);
     }
 
-    public AmazonS3 rateLimit(final AmazonS3 delegate) {
+//    TODO
+    public AmazonS3 rateLimit(final AmazonS3 delegate, S3ClientConfiguration.RateLimitConfiguration rateLimitConfiguration) {
         return Reflection.newProxy(AmazonS3.class, new AbstractInvocationHandler() {
 
             @Override
@@ -60,7 +61,7 @@ public class S3RateLimiter {
         });
     }
 
-    private final class SharedRateLimiter {
+    private static final class SharedRateLimiter {
 
         private final Clock _clock;
 

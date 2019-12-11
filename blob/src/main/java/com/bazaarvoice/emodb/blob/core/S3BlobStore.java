@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.blob.core;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
@@ -30,6 +31,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -98,7 +100,7 @@ public class S3BlobStore implements BlobStore {
         String tablePlacement = getTablePlacement(getTableMetadata(tableName));
 
         _tableDao.audit(tableName, "purge", audit);
-        _s3StorageProvider.delete(tableName, tablePlacement);
+        _s3StorageProvider.delete(tableName, tablePlacement, false);
     }
 
     @Override
@@ -223,6 +225,15 @@ public class S3BlobStore implements BlobStore {
         return new DefaultBlobMetadata(blobId, om.getLastModified(), om.getContentLength(), om.getUserMetaDataOf("MD5"), om.getUserMetaDataOf("SHA-1"), attributes);
     }
 
+    private static BlobMetadata createBlobMetadata(final S3ObjectSummary summary,
+                                                   final Map<String, String> tableAttributes) {
+        String blobId = summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1);
+        Map<String, String> attributes = new HashMap<>(tableAttributes);
+        attributes.put("contentLength", String.valueOf(summary.getSize()));
+
+        return new DefaultBlobMetadata(blobId, summary.getLastModified(), summary.getSize(), summary.getETag(), null, attributes);
+    }
+
     @Override
     public void put(final String tableName, final String blobId,
                     final InputSupplier<? extends InputStream> in,
@@ -243,7 +254,8 @@ public class S3BlobStore implements BlobStore {
         checkLegalBlobId(blobId);
         String tablePlacement = getTablePlacement(getTableMetadata(tableName));
 
-        _s3StorageProvider.delete(tableName, tablePlacement, blobId);
+        boolean withVersions = false;
+        _s3StorageProvider.delete(tableName, tablePlacement, blobId, withVersions);
     }
 
     @Override

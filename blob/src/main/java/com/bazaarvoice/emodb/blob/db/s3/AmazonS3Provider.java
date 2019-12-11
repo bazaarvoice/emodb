@@ -9,7 +9,8 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 
 public class AmazonS3Provider {
-    public static AmazonS3 getAmazonS3(S3BucketConfiguration s3BucketConfiguration) {
+//    TODO rewrite to factory method
+    public static AmazonS3 getAmazonS3(final S3BucketConfiguration s3BucketConfiguration) {
         AmazonS3ClientBuilder amazonS3ClientBuilder = AmazonS3ClientBuilder.standard()
                 .withCredentials(getAwsCredentialsProvider(s3BucketConfiguration))
                 .withAccelerateModeEnabled(s3BucketConfiguration.getAccelerateModeEnabled());
