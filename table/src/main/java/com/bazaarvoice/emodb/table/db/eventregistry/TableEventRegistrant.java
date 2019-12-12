@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.table.db.astyanax;
+package com.bazaarvoice.emodb.table.db.eventregistry;
 
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
@@ -37,6 +37,14 @@ public class TableEventRegistrant {
 
     public Map<String, TableEvent> getTasks() {
         return _tasks;
+    }
+
+    public Delta markTaskAsReadyIfExists(String table, String uuid) {
+        return Optional.ofNullable(_tasks.get(table))
+                .filter(tableEvent -> tableEvent.getUuid().equals(uuid))
+                .map(tableEvent -> Deltas.mapBuilder().update(TASKS,
+                        Deltas.mapBuilder().update(table, tableEvent.newReadyDelta()).build()).build())
+                .orElse(null);
     }
 
     public Delta newTask(String table, TableEvent task, Instant now) {

@@ -1,5 +1,6 @@
-package com.bazaarvoice.emodb.table.db.astyanax;
+package com.bazaarvoice.emodb.table.db.eventregistry;
 
+import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -12,6 +13,7 @@ import static java.util.Objects.requireNonNull;
 
 public class TableEvent {
 
+    private static final String EVENT_KEY = "eventKey";
     private static final String ACTION = "action";
     private static final String UUID = "uuid";
     private static final String READY = "ready";
@@ -21,21 +23,28 @@ public class TableEvent {
         PROMOTE
     }
 
+    private final String _eventKey;
     private final Action _action;
     private final String _uuid;
     private final boolean _ready;
 
-    public TableEvent(Action action, String uuid) {
-        this(action, uuid, false);
+    public TableEvent(String eventKey, Action action, String uuid) {
+        this(eventKey, action, uuid, false);
     }
 
     @JsonCreator
-    public TableEvent(@JsonProperty(ACTION) Action action,
+    public TableEvent(@JsonProperty(EVENT_KEY) String eventKey,
+                      @JsonProperty(ACTION) Action action,
                       @JsonProperty(UUID) String uuid,
                       @JsonProperty(READY) Boolean ready) {
+        _eventKey = requireNonNull(eventKey);
         _action = requireNonNull(action);
         _uuid = requireNonNull(uuid);
         _ready = requireNonNull(ready);
+    }
+
+    public String getEventKey() {
+        return _eventKey;
     }
 
     public Action getAction() {
@@ -52,6 +61,7 @@ public class TableEvent {
 
     public Map<String, Object> newFullEventMap() {
         return ImmutableMap.of(
+                EVENT_KEY, _eventKey,
                 ACTION, _action.toString(),
                 UUID, _uuid,
                 READY, _ready
@@ -59,10 +69,15 @@ public class TableEvent {
     }
 
     public Delta newReadyDelta() {
-        return Deltas.mapBuilder().put(READY, true).build();
+        return Deltas.conditional(
+                Conditions.mapBuilder().matches(EVENT_KEY, Conditions.equal(_eventKey)).build(),
+                Deltas.mapBuilder().put(READY, true).build());
     }
 
     public Delta newCompleteDelta() {
-        return Deltas.delete();
+        return Deltas.conditional(
+                Conditions.mapBuilder().matches(EVENT_KEY, Conditions.equal(_eventKey)).build(),
+                Deltas.delete()
+        );
     }
 }

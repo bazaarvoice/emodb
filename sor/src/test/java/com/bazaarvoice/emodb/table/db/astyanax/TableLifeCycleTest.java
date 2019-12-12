@@ -111,11 +111,6 @@ public class TableLifeCycleTest {
     public static final String TABLE5 = "my5:table";
     public static final String TABLE6 = "my6:table";
 
-    @Test
-    public void testTableEvent() {
-        TableEvent tableEvent = new TableEvent(TableEvent.Action.DROP, "stuff");
-        tableEvent.newFullEventMap();
-    }
 
     @Test
     public void testCreate()

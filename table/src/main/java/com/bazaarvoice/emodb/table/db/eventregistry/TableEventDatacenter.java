@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.table.db.astyanax;
+package com.bazaarvoice.emodb.table.db.eventregistry;
 
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -10,7 +10,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -39,6 +42,27 @@ public class TableEventDatacenter {
 
     public String getDataCenter() {
         return _dataCenter;
+    }
+
+    public Delta markTableEventAsReady(String table, String uuid) {
+
+        List<Map.Entry<String, Delta>> deltas = new ArrayList<>();
+
+        _registrants.forEach((registrationId, tableEventRegistrant) -> {
+            Optional.ofNullable(tableEventRegistrant.markTaskAsReadyIfExists(table, uuid))
+                    .map(delta -> new AbstractMap.SimpleEntry<>(registrationId, delta))
+                    .ifPresent(deltas::add);
+        });
+
+        if (deltas.isEmpty()) {
+            return null;
+        }
+
+        MapDeltaBuilder mapDeltaBuilder = Deltas.mapBuilder();
+
+        deltas.forEach(delta -> mapDeltaBuilder.update(delta.getKey(), delta.getValue()));
+
+        return Deltas.mapBuilder().update(REGISTRANTS, mapDeltaBuilder.build()).build();
     }
 
     public Delta newTableEvent(String table, TableEvent tableEvent, Instant now) {

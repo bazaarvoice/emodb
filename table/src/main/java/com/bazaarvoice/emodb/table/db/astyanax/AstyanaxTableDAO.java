@@ -44,6 +44,9 @@ import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEvent;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventDatacenter;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistrant;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
@@ -1597,6 +1600,24 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(), registrationDelta, audit, WriteConsistency.GLOBAL);
     }
 
+    @Override
+    public Map.Entry<String, TableEvent> getNextTableEvent(String registrationId) {
+        TableEventDatacenter datacenter = _objectMapper.convertValue(
+                        _backingStore.get(_systemTableEventRegistry, registrationId, ReadConsistency.STRONG),
+                        TableEventDatacenter.class
+                );
+        java.util.Optional<TableEventRegistrant> registrant = java.util.Optional.ofNullable(datacenter.getRegistrants().get(registrationId));
+
+        return registrant
+                .map(TableEventRegistrant::getTasks)
+                .orElse(Collections.emptyMap())
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().isReady())
+                .findAny()
+                .orElse(null);
+    }
+
     private void addDroppedTableEvent(TableJson json) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 //        Iterator<TableEventDatacenter> tableEventDatacenterIterator =_objectMapper.convertValue(registrantIterator, new TypeReference<Iterator<TableEventDatacenter>>() {});
@@ -1616,7 +1637,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .peek(_log::info)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
-                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, json.getUuidString()), Instant.now())
+                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TimeUUIDs.newUUID().toString(), TableEvent.Action.DROP, json.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
@@ -1634,17 +1655,26 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     private void checkTableEventsComplete(String table, String uuid) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 
-        boolean uuidPresent =StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+        List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
                 .map(json -> _objectMapper.convertValue(json, TableEventDatacenter.class))
-                .flatMap(tableEventDatacenter -> tableEventDatacenter.getRegistrants().values().stream())
-                .filter(registrant -> registrant.getExpirationTime().isAfter(_clock.instant()))
-                .flatMap(tableEventRegistrant -> tableEventRegistrant.getTasks().entrySet().stream())
-                .filter(entry -> entry.getKey().equals(table))
-                .map(Map.Entry::getValue)
-                .map(TableEvent::getUuid)
-                .anyMatch(java.util.function.Predicate.isEqual(uuid));
+                .map(tableEventDatacenter -> {
+                    Delta delta = tableEventDatacenter.markTableEventAsReady(table, uuid);
+                    if (delta != null) {
+                        Audit audit = new AuditBuilder()
+                                .setComment(String.format("Marking event ready for table %s", table))
+                                .setLocalHost()
+                                .build();
+                        return new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+                    }
 
-        if (uuidPresent) {
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+
+        if (!updates.isEmpty()) {
+            _backingStore.updateAll(updates);
             throw new IllegalStateException("Table events still pending");
         }
 
