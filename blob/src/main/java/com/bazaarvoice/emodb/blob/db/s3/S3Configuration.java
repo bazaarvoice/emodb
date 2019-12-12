@@ -17,6 +17,10 @@ public class S3Configuration {
     @JsonProperty("client")
     private S3ClientConfiguration _s3ClientConfiguration;
 
+    @Valid
+    @JsonProperty("healthcheck")
+    private S3HealthCheckConfiguration _s3HealthCheckConfiguration = new S3HealthCheckConfiguration();
+
     public List<S3BucketConfiguration> getS3BucketConfigurations() {
         return _s3BucketConfigurations;
     }
@@ -32,5 +36,13 @@ public class S3Configuration {
 
     public void setS3ClientConfiguration(final S3ClientConfiguration s3ClientConfiguration) {
         _s3ClientConfiguration = s3ClientConfiguration;
+    }
+
+    public S3HealthCheckConfiguration getS3HealthCheckConfiguration() {
+        return _s3HealthCheckConfiguration;
+    }
+
+    public void setS3HealthCheckConfiguration(final S3HealthCheckConfiguration s3HealthCheckConfiguration) {
+        this._s3HealthCheckConfiguration = _s3HealthCheckConfiguration;
     }
 }

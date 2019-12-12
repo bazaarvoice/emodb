@@ -20,6 +20,7 @@ import com.bazaarvoice.emodb.blob.db.s3.S3BucketNamesToS3Clients;
 import com.bazaarvoice.emodb.blob.db.s3.S3ClientConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
 import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheck;
+import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheckConfiguration;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
@@ -382,6 +383,17 @@ public class BlobStoreModule extends PrivateModule {
     ConsistencyLevel provideBlobReadConsistency(BlobStoreConfiguration configuration) {
         // By default use local quorum
         return Optional.fromNullable(configuration.getReadConsistency()).or(ConsistencyLevel.CL_LOCAL_QUORUM);
+    }
+
+    @Provides @Singleton
+    S3HealthCheckConfiguration provideS3BucketConfiguration(BlobStoreConfiguration configuration) {
+        S3Configuration s3Configuration = configuration.getS3Configuration();
+
+        if (null != s3Configuration && null != s3Configuration.getS3BucketConfigurations()) {
+            return s3Configuration.getS3HealthCheckConfiguration();
+        } else {
+            return new S3HealthCheckConfiguration();
+        }
     }
 
     @Provides @Singleton @S3BucketNamesToS3Clients
