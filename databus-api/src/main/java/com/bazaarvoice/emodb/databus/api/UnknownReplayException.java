@@ -11,9 +11,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class UnknownReplayException extends RuntimeException {
     private final String _id;
 
+    public UnknownReplayException(String id) {
+        this(id, "Unknown replay: " + id);
+    }
+
     @JsonCreator
-    public UnknownReplayException(@JsonProperty("id") String id) {
-        super("Unknown replay: " + id);
+    public UnknownReplayException(@JsonProperty ("id") String id, @JsonProperty ("message") String message) {
+        super(message);
         _id = id;
     }
 

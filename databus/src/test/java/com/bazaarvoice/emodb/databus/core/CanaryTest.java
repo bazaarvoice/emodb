@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import java.util.Collections;
 import org.mockito.ArgumentCaptor;
 import org.slf4j.Logger;
 import org.testng.annotations.BeforeMethod;
@@ -88,7 +89,7 @@ public class CanaryTest {
     @Test
     public void testIterationWithNoEvents() throws Exception {
         when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
-                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
+                .thenReturn(new PollResult(Collections.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 
@@ -147,9 +148,9 @@ public class CanaryTest {
     @Test
     public void testIterationWithDiscardedEvents() throws Exception {
         when(_databus.poll("__system_bus:canary-cluster", Duration.ofSeconds(30), 50))
-                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
-                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, true))
-                .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false));
+                .thenReturn(new PollResult(Collections.emptyIterator(), 0, true))
+                .thenReturn(new PollResult(Collections.emptyIterator(), 0, true))
+                .thenReturn(new PollResult(Collections.emptyIterator(), 0, false));
 
         _iterationRunnable.run();
 

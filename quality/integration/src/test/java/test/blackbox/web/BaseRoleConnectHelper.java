@@ -1,30 +1,22 @@
 package test.blackbox.web;
 
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
-import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
 import com.bazaarvoice.emodb.blob.client.BlobStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
-import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
-import com.bazaarvoice.emodb.databus.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client.DatabusClientFactory;
 import com.bazaarvoice.emodb.databus.client.DatabusFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
 import com.bazaarvoice.emodb.queue.api.AuthQueueService;
 import com.bazaarvoice.emodb.queue.client.DedupQueueClientFactory;
-import com.bazaarvoice.emodb.queue.client.QueueClient;
 import com.bazaarvoice.emodb.queue.client.QueueClientFactory;
 import com.bazaarvoice.emodb.queue.client.QueueFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.sor.api.AuthDataStore;
-import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
 import com.bazaarvoice.emodb.sor.client.DataStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
-import com.bazaarvoice.ostrich.HostDiscovery;
-import com.bazaarvoice.ostrich.ServiceEndPointBuilder;
-import com.bazaarvoice.ostrich.discovery.FixedHostDiscovery;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
@@ -34,15 +26,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Closer;
 import com.google.common.net.HttpHeaders;
-import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
+import io.dropwizard.configuration.YamlConfigurationFactory;
 import io.dropwizard.jetty.ConnectorFactory;
 import io.dropwizard.jetty.HttpConnectorFactory;
 import io.dropwizard.server.DefaultServerFactory;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Response;
 import org.apache.curator.framework.CuratorFramework;
 import org.testng.Assert;
 
@@ -100,7 +95,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
 
-        ConfigurationFactory<EmoConfiguration> configFactory = new ConfigurationFactory<>(EmoConfiguration.class, validator, mapper, "dw");
+        ConfigurationFactory<EmoConfiguration> configFactory = new YamlConfigurationFactory<>(EmoConfiguration.class, validator, mapper, "dw");
         return configFactory.build(file);
     }
 
@@ -109,8 +104,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthBlobStore getBlobStoreViaOstrich () throws Exception {
 
         BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                BlobStoreClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -128,7 +123,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthBlobStore getBlobStoreViaFixedHost() throws JsonProcessingException {
 
         BlobStoreClientFactory clientFactory =
-                BlobStoreClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                BlobStoreClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthBlobStore.class)
                 .withHostDiscoverySource(new BlobStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -142,8 +137,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDataStore getDataStoreViaOstrich () throws Exception {
 
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -161,8 +156,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDataStore getDataStoreViaFixedHost () throws Exception {
 
         DataStoreClientFactory clientFactory =
-                DataStoreClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DataStoreClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthDataStore.class)
                 .withHostDiscoverySource(new DataStoreFixedHostDiscoverySource(getServiceBaseURI()))
@@ -176,8 +171,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDatabus getDatabusViaOstrich () throws Exception {
 
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -196,7 +191,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDatabus getDatabusViaFixedHost() throws JsonProcessingException {
 
         DatabusClientFactory clientFactory =
-                DatabusClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DatabusClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthDatabus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(getServiceBaseURI()))
@@ -210,8 +205,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthQueueService getQueueServiceViaOstrich () throws Exception {
 
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -229,7 +224,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthQueueService getQueueServiceViaFixedHost() throws JsonProcessingException {
 
         QueueClientFactory clientFactory =
-                QueueClientFactory.forClusterAndHttpConfiguration(_config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                QueueClientFactory.forClusterAndHttpClient(_config.getCluster(), getClient());
 
         return ServicePoolBuilder.create(AuthQueueService.class)
                 .withHostDiscoverySource(new QueueFixedHostDiscoverySource(getServiceBaseURI()))
@@ -243,8 +238,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
     protected AuthDedupQueueService getDedupQueueServiceViaOstrich () throws Exception {
 
         DedupQueueClientFactory clientFactory =
-                DedupQueueClientFactory.forClusterAndHttpConfiguration(
-                        _config.getCluster(), _config.getHttpClientConfiguration(), _metricRegistry);
+                DedupQueueClientFactory.forClusterAndHttpClient(
+                        _config.getCluster(), getClient());
 
         CuratorFramework curator = _config.getZooKeeperConfiguration().newCurator();
         curator.start();
@@ -290,10 +285,14 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         System.out.println (uri.toASCIIString());
 
         Client client = getClient();
-        client.resource(uri)
-                .type(MediaType.APPLICATION_JSON_TYPE)
+        Response response = client.target(uri)
+                .request()
                 .header(HttpHeaders.AUTHORIZATION, null)
-                .post();
+                .post(Entity.json(null));
+
+        if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+            throw new WebApplicationException(response);
+        }
     }
 
     protected List<?> httpGetServicePortAsList(Map<String, Object> params, String... segments) throws Exception {
@@ -308,7 +307,8 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         URI uri = builder.build();
         System.out.println (uri.toASCIIString());
 
-        return client.resource(uri)
+        return client.target(uri)
+                .request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .get(List.class);
     }

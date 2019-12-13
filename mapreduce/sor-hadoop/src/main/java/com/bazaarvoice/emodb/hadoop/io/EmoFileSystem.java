@@ -15,9 +15,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Iterators;
 import com.google.common.io.Closeables;
 import com.google.common.io.Closer;
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -312,7 +312,7 @@ public class EmoFileSystem extends FileSystem implements EmoInputSplittable {
         private EmoSplitInputStream(String table, String split)
                 throws IOException {
             if (isEmptySplit(split)) {
-                _rows = Iterators.emptyIterator();
+                _rows = Collections.emptyIterator();
             } else {
                 // Get the DataStore and begin streaming the split's rows.
                 CloseableDataStore dataStore = HadoopDataStoreManager.getInstance().getDataStore(_uri, _apiKey, _metricRegistry);

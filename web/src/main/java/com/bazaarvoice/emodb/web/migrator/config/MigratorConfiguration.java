@@ -19,7 +19,6 @@ public class MigratorConfiguration {
 
     // If using EmoDB queues, the API key to use
     @Valid
-    @NotNull
     @JsonProperty ("migrateApiKey")
     private Optional<String> _migrateApiKey = Optional.absent();
 
@@ -53,12 +52,10 @@ public class MigratorConfiguration {
     private int _migratorSplitSize = DEFAULT_MIGRATOR_SPLIT_SIZE;
 
     @Valid
-    @NotNull
     @JsonProperty ("pendingMigrationRangeQueueName")
     private Optional<String> _pendingMigrationRangeQueueName = Optional.absent();
 
     @Valid
-    @NotNull
     @JsonProperty ("completeMigrationRangeQueueName")
     private Optional<String> _completeMigrationRangeQueueName = Optional.absent();
 

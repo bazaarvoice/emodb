@@ -42,8 +42,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.io.InputSupplier;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.junit.After;
 import org.junit.Rule;
@@ -52,12 +50,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -66,6 +66,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import static com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest.AUTHENTICATION_HEADER;
 import static org.junit.Assert.assertArrayEquals;
@@ -94,6 +95,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_BLOB_B = "b-blob-key";
 
     private BlobStore _server = mock(BlobStore.class);
+    private DataStore _dataStore = mock(DataStore.class);
     private ScheduledExecutorService _connectionManagementService = mock(ScheduledExecutorService.class);
     private Set<String> _approvedContentTypes = ImmutableSet.of("application/json");
 
@@ -107,7 +109,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         authIdentityManager.createIdentity(APIKEY_BLOB_A, new ApiKeyModification().addRoles("blob-role-a"));
         authIdentityManager.createIdentity(APIKEY_BLOB_B, new ApiKeyModification().addRoles("blob-role-b"));
 
-        final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), _server);
+        final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_dataStore, _server);
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         final RoleManager roleManager = new InMemoryRoleManager(permissionManager);
 
@@ -401,7 +403,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             assertTrue(e instanceof UnauthorizedException);
         }
     }
-    
+
     @Test
     public void testPurgeTableUnsafe() {
         Audit audit = new AuditBuilder().setLocalHost().build();
@@ -692,9 +694,9 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testPut() throws IOException {
-        InputSupplier<InputStream> in = new InputSupplier<InputStream>() {
+        Supplier<InputStream> in = new Supplier<InputStream>() {
             @Override
-            public InputStream getInput() throws IOException {
+            public InputStream get() {
                 return new ByteArrayInputStream("blob-content".getBytes());
             }
         };
@@ -702,7 +704,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         blobClient().put("table-name", "blob-id", in, attributes);
 
         //noinspection unchecked
-        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes));
+        verify(_server).put(eq("table-name"), eq("blob-id"), isA(Supplier.class), eq(attributes));
         verifyNoMoreInteractions(_server);
     }
 
@@ -834,17 +836,18 @@ public class BlobStoreJerseyTest extends ResourceTest {
         // The blob store client doesn't interact directly with the Content-Type header.  Therefore this test must bypass
         // and use the underlying client.
 
-        ClientResponse response = _resourceTestRule.client().resource("/blob/1/table-name/blob-id")
+        Response response = _resourceTestRule.client().target("/blob/1/table-name/blob-id")
+                .request()
                 .accept("*")
                 .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
-                .get(ClientResponse.class);
+                .get();
 
         assertEquals(response.getStatus(), 200);
         assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
-        assertEquals(response.getType().toString(), expectedContentType);
+        assertEquals(response.getMediaType().toString(), expectedContentType);
 
         byte[] actual = new byte[content.length];
-        InputStream in = response.getEntityInputStream();
+        InputStream in = response.readEntity(InputStream.class);
         assertEquals(in.read(actual, 0, content.length), content.length);
         assertEquals(in.read(), -1);
         assertArrayEquals(actual, content);

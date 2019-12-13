@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.jersey;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -14,7 +14,7 @@ public class IllegalArgumentExceptionMapper implements ExceptionMapper<IllegalAr
         return Response.status(Response.Status.BAD_REQUEST)
                 .header("X-BV-Exception", IllegalArgumentException.class.getName())
                 .type(MediaType.TEXT_PLAIN_TYPE)
-                .entity(Objects.firstNonNull(e.getMessage(), "Invalid argument."))
+                .entity(MoreObjects.firstNonNull(e.getMessage(), "Invalid argument."))
                 .type(MediaType.TEXT_PLAIN_TYPE)
                 .build();
     }

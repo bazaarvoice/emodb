@@ -20,8 +20,9 @@ import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Entity;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -84,9 +85,10 @@ public class StashJerseyTest extends ResourceTest {
 
     @Test
     public void testRequestStash() {
-        _resourceTestRule.client().resource("/stash/1/request/id0")
+        _resourceTestRule.client().target("/stash/1/request/id0")
+                .request()
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
-                .put();
+                .put(Entity.json(null));
 
         verify(_stashRequestManager).requestStashOnOrAfter("id0", null, _stashKeyId);
     }
@@ -94,10 +96,11 @@ public class StashJerseyTest extends ResourceTest {
     @Test
     public void testRequestStashNoPermission() {
         try {
-            _resourceTestRule.client().resource("/stash/1/request/id0")
+            _resourceTestRule.client().target("/stash/1/request/id0")
+                    .request()
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, UNAUTH_API_KEY)
-                    .put();
-        } catch (UniformInterfaceException e) {
+                    .put(Entity.json(null));
+        } catch (WebApplicationException e) {
             assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
         }
     }
@@ -109,7 +112,8 @@ public class StashJerseyTest extends ResourceTest {
                 new StashRequest(_stashKeyId, new Date(1511820711000L)),
                 new StashRequest("__otherKey1", new Date(1511820712000L))));
 
-        String response = _resourceTestRule.client().resource("/stash/1/request/id0")
+        String response = _resourceTestRule.client().target("/stash/1/request/id0")
+                .request()
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
                 .get(String.class);
 
@@ -123,10 +127,11 @@ public class StashJerseyTest extends ResourceTest {
         when(_stashRequestManager.getRequestsForStash("id0", null)).thenReturn(ImmutableSet.of());
 
         try {
-            _resourceTestRule.client().resource("/stash/1/request/id0")
+            _resourceTestRule.client().target("/stash/1/request/id0")
+                    .request()
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
                     .get(String.class);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             assertEquals(Response.Status.NOT_FOUND.getStatusCode(), e.getResponse().getStatus());
         }
 
@@ -136,17 +141,19 @@ public class StashJerseyTest extends ResourceTest {
     @Test
     public void testViewRequestStashNoPermission() {
         try {
-            _resourceTestRule.client().resource("/stash/1/request/id0")
+            _resourceTestRule.client().target("/stash/1/request/id0")
+                    .request()
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, UNAUTH_API_KEY)
                     .get(String.class);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
         }
     }
 
     @Test
     public void testUndoRequestStash() {
-        _resourceTestRule.client().resource("/stash/1/request/id0")
+        _resourceTestRule.client().target("/stash/1/request/id0")
+                .request()
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, STASH_API_KEY)
                 .delete();
 
@@ -156,10 +163,11 @@ public class StashJerseyTest extends ResourceTest {
     @Test
     public void testUndoRequestStashNoPermission() {
         try {
-            _resourceTestRule.client().resource("/stash/1/request/id0")
+            _resourceTestRule.client().target("/stash/1/request/id0")
+                    .request()
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, UNAUTH_API_KEY)
                     .delete();
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             assertEquals(Response.Status.FORBIDDEN.getStatusCode(), e.getResponse().getStatus());
         }
     }

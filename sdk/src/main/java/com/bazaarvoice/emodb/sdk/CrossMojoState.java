@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.sdk;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import org.apache.curator.test.TestingServer;
 
@@ -35,7 +35,7 @@ public final class CrossMojoState {
     @SuppressWarnings("unchecked")
     public static List<EmoExec> getEmoProcesses(Map pluginContext) {
         List<EmoExec> processes = (List<EmoExec>) pluginContext.get(EMO_PROCESSES);
-        return Objects.firstNonNull(processes, Collections.<EmoExec>emptyList());
+        return MoreObjects.firstNonNull(processes, Collections.<EmoExec>emptyList());
     }
 
     @SuppressWarnings("unchecked")

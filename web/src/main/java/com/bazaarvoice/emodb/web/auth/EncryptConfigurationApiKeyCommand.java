@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.web.EmoConfiguration;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import io.dropwizard.cli.ConfiguredCommand;
 import io.dropwizard.setup.Bootstrap;
 import net.sourceforge.argparse4j.inf.Namespace;
@@ -30,7 +30,7 @@ public class EncryptConfigurationApiKeyCommand extends ConfiguredCommand<EmoConf
     protected void run(Bootstrap<EmoConfiguration> bootstrap, Namespace namespace, EmoConfiguration configuration)
             throws Exception {
         String apiKey = namespace.getString("api_key");
-        String cluster = Objects.firstNonNull(namespace.getString("cluster"), configuration.getCluster());
+        String cluster = MoreObjects.firstNonNull(namespace.getString("cluster"), configuration.getCluster());
 
         ApiKeyEncryption encryption = new ApiKeyEncryption(cluster);
         System.out.println(encryption.encrypt(apiKey));

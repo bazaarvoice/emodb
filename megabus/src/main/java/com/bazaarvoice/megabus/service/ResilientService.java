@@ -3,12 +3,14 @@ package com.bazaarvoice.megabus.service;
 import com.google.common.util.concurrent.AbstractExecutionThreadService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.Duration;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import static java.util.Objects.requireNonNull;
 
 
@@ -117,7 +119,7 @@ public class ResilientService extends AbstractExecutionThreadService {
             public void failed(State from, Throwable failure) {
                 _semaphore.release();
             }
-        }, MoreExecutors.sameThreadExecutor());
+        }, MoreExecutors.directExecutor());
         return delegate;
     }
 }

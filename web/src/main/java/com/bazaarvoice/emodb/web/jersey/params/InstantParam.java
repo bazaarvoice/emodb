@@ -40,8 +40,8 @@ public class InstantParam extends AbstractParam<Instant> {
     }
 
     @Override
-    protected String errorMessage(String input, Exception e) {
-        return "Invalid ISO8601 timestamp parameter: " + input;
+    protected String errorMessage(Exception e) {
+        return "Invalid ISO8601 timestamp parameter";
     }
 
     @Override

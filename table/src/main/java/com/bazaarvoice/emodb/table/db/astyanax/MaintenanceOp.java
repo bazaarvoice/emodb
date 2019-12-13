@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import java.time.Instant;
@@ -21,7 +22,7 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     }
 
     static MaintenanceOp forData(String name, Instant when, String dataCenter, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.DATA, Objects.firstNonNull(dataCenter, "<n/a>"), checkNotNull(task, "task"));
+        return new MaintenanceOp(name, when, MaintenanceType.DATA, MoreObjects.firstNonNull(dataCenter, "<n/a>"), checkNotNull(task, "task"));
     }
 
     static MaintenanceOp reschedule(MaintenanceOp op, Instant when) {

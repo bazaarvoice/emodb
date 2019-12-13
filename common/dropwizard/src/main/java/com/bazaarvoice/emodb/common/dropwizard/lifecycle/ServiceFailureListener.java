@@ -19,7 +19,7 @@ public class ServiceFailureListener extends Service.Listener {
     private final Service _service;
 
     public static void listenTo(Service service, MetricRegistry metricRegistry) {
-        service.addListener(new ServiceFailureListener(service, metricRegistry), MoreExecutors.sameThreadExecutor());
+        service.addListener(new ServiceFailureListener(service, metricRegistry), MoreExecutors.directExecutor());
     }
 
     public ServiceFailureListener(Service service, MetricRegistry metricRegistry) {

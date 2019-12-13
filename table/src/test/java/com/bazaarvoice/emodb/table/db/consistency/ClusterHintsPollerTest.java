@@ -15,8 +15,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import java.util.Collections;
 import org.hamcrest.Description;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -173,11 +173,11 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);
-        when(targetIdQueryNode2.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode2.iterator()).thenReturn(Collections.emptyIterator());
 
         // The following line mocks all the results we will get back from our CQL queries
         doReturn(targetIdQueryNode1).when(mockSession).execute(argThat(getHostStatementMatcher(node1,
@@ -231,7 +231,7 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);

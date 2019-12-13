@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 
 /**
  * Exception thrown when attempting to create a role which already exists.
@@ -17,10 +17,14 @@ public class EmoRoleExistsException extends RuntimeException {
         this("unknown", "unknown");
     }
 
+    public EmoRoleExistsException(String group, String id) {
+        this(group, id, "Role exists");
+    }
+
     @JsonCreator
-    public EmoRoleExistsException(@JsonProperty("group") String group, @JsonProperty("id") String id) {
-        super("Role exists");
-        _group = Objects.firstNonNull(group, EmoRoleKey.NO_GROUP);
+    public EmoRoleExistsException(@JsonProperty("group") String group, @JsonProperty("id") String id, @JsonProperty("message") String message) {
+        super(message);
+        _group = MoreObjects.firstNonNull(group, EmoRoleKey.NO_GROUP);
         _id = id;
     }
 

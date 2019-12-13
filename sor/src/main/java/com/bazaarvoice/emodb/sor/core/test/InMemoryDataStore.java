@@ -30,7 +30,7 @@ public class InMemoryDataStore extends DefaultDataStore {
 
     public InMemoryDataStore(DatabusEventWriterRegistry eventWriterRegistry, InMemoryDataReaderDAO dataDao, MetricRegistry metricRegistry) {
         super(eventWriterRegistry, new InMemoryTableDAO(), dataDao, dataDao,
-                new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), new InMemoryHistoryStore(),
+                new NullSlowQueryLog(), MoreExecutors.newDirectExecutorService(), new InMemoryHistoryStore(),
                 Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
                 new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
     }

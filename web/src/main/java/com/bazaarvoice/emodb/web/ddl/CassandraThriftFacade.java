@@ -24,7 +24,7 @@ final class CassandraThriftFacade implements Closeable {
     public static CassandraThriftFacade forSeedsAndPort(String seeds, int defaultPort) {
         final String seed = seeds.contains(",") ? seeds.substring(0, seeds.indexOf(',')) : seeds;
         HostAndPort host = HostAndPort.fromString(seed).withDefaultPort(defaultPort);
-        return new CassandraThriftFacade(new TFramedTransport(new TSocket(host.getHostText(), host.getPort())));
+        return new CassandraThriftFacade(new TFramedTransport(new TSocket(host.getHost(), host.getPort())));
     }
 
     private static final String CQL_VERSION = "3.0.0";

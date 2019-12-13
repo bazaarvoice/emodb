@@ -3,7 +3,10 @@ package com.bazaarvoice.emodb.common.dropwizard.jetty;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.ImmutableList;
 import io.dropwizard.jetty.HttpConnectorFactory;
+import java.util.Collections;
+import java.util.List;
 import org.eclipse.jetty.io.ByteBufferPool;
 import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.io.EndPoint;
@@ -90,6 +93,11 @@ public class InstrumentedHttpConnectorFactory extends HttpConnectorFactory {
                 }
             });
             return connection;
+        }
+
+        @Override
+        public List<String> getProtocols() {
+            return Collections.singletonList(getProtocol());
         }
     }
 }

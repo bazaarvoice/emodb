@@ -14,7 +14,7 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
@@ -100,7 +100,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                             return metadata.getDefaultValue();
                         }
                         Object value;
-                        int version = Objects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
+                        int version = MoreObjects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
                         if (version == CURRENT_SETTING_VERSION) {
                             String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
                             value = JsonHelper.fromJson(rawValue, metadata.getTypeReference());

@@ -9,7 +9,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -215,7 +215,7 @@ public class LocationUtil {
         if (matcher.group("universe") != null) {
             // Normal host discovery
             String universe = matcher.group("universe");
-            Region region = getRegion(Objects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
+            Region region = getRegion(MoreObjects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
             namespace = format("%s/%s", universe, region);
             defaultConnectionString = DEFAULT_ZK_CONNECTION_STRING;
         } else {
@@ -253,7 +253,7 @@ public class LocationUtil {
             clusterPrefix = "local";
         }
 
-        String group = Objects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
+        String group = MoreObjects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
         return format("%s_%s", clusterPrefix, group);
     }
 
@@ -323,14 +323,14 @@ public class LocationUtil {
         Matcher matcher = getLocatorMatcher(location);
         if (matcher.matches()) {
             // Stash is only available for the default group.  Make sure that's the case here
-            String group = Objects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
+            String group = MoreObjects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
             checkArgument(DEFAULT_GROUP.equals(group), "Stash not available for group: %s", group);
 
             // Stash it not available for local
             String universe = matcher.group("universe");
             checkArgument(universe != null, "Stash not available for local");
 
-            Region region = getRegion(Objects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
+            Region region = getRegion(MoreObjects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
 
             host = getS3BucketForRegion(region);
             path = getS3PathForUniverse(universe);

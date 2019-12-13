@@ -44,7 +44,7 @@ import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -65,7 +65,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
-import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +79,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Spliterators;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
@@ -524,7 +524,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         ByteBufferRange keyRange = storage.getSplitRange(splitRange, fromKeyExclusive, split);
         // The fromKeyExclusive might be equal to the end token of the split.  If so, there's nothing to return.
         if (keyRange.getStart().equals(keyRange.getEnd())) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         return recordScan(placement, table, keyRange, consistency);
@@ -586,7 +586,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         String placementName = checkNotNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
 
-        ScanRange scanRange = Objects.firstNonNull(query.getScanRange(), ScanRange.all());
+        ScanRange scanRange = MoreObjects.firstNonNull(query.getScanRange(), ScanRange.all());
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> ranges = scanRange.unwrapped();
@@ -698,7 +698,7 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Iterable<Row>>emptyIterator());
+                return Iterators.peekingIterator(Collections.emptyIterator());
             }
         });
     }
@@ -807,14 +807,14 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
         ConsistencyLevel consistency = SorConsistencies.toCql(readConsistency);
 
         // Read Delta and Compaction objects
-        Iterator<Change> deltas = Iterators.emptyIterator();
+        Iterator<Change> deltas = Collections.emptyIterator();
         if (includeContentData) {
             TableDDL deltaDDL = placement.getDeltaTableDDL();
             deltas = decodeColumns(columnScan(placement, deltaDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
         }
 
         // Read History objects
-        Iterator<Change> deltaHistory = Iterators.emptyIterator();
+        Iterator<Change> deltaHistory = Collections.emptyIterator();
         TableDDL deltaHistoryDDL = placement.getDeltaHistoryTableDDL();
         deltaHistory = decodeColumns(columnScan(placement, deltaHistoryDDL, rowKey, columnRange, !reversed, scaledLimit, consistency).iterator());
 
@@ -905,9 +905,9 @@ public class CqlDataReaderDAO implements DataReaderDAO, MigratorReaderDAO {
      */
     private Record emptyRecord(Key key) {
         return new RecordImpl(key,
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator(),
-                Iterators.emptyIterator());
+                Collections.emptyIterator(),
+                Collections.emptyIterator(),
+                Collections.emptyIterator());
     }
 
     @VisibleForTesting

@@ -11,9 +11,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class UnknownMoveException extends RuntimeException {
     private final String _id;
 
+    public UnknownMoveException(String id) {
+        this(id, "Unknown move: " + id);
+    }
+
     @JsonCreator
-    public UnknownMoveException(@JsonProperty ("id") String id) {
-        super("Unknown move: " + id);
+    public UnknownMoveException(@JsonProperty ("id") String id, @JsonProperty ("message") String message) {
+        super(message);
         _id = id;
     }
 

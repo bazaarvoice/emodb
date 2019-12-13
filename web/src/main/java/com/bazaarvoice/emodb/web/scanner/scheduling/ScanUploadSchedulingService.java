@@ -54,12 +54,7 @@ public class ScanUploadSchedulingService extends LeaderService {
                                        final MetricRegistry metricRegistry,
                                        final Clock clock) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                new Supplier<Service>() {
-                    @Override
-                    public Service get() {
-                        return new DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock);
-                    }
-                });
+                () -> new DelegateSchedulingService(scanUploader, stashRequestManager, scheduledScans, scanCountListener, clock));
 
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);

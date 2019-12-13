@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.sdk;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.eclipse.aether.resolution.ArtifactResult;
 
@@ -78,7 +78,7 @@ public final class ArtifactItem {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).
+        return MoreObjects.toStringHelper(this).
                 add("groupId", groupId).
                 add("artifactId", artifactId).
                 add("version", version).

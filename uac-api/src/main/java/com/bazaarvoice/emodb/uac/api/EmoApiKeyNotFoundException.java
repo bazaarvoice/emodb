@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.uac.api;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * Exception thrown when attempting to modify an API key which does not exist.
@@ -9,5 +11,10 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 public class EmoApiKeyNotFoundException extends RuntimeException {
     public EmoApiKeyNotFoundException() {
         super("API Key not found");
+    }
+
+    @JsonCreator
+    public EmoApiKeyNotFoundException(@JsonProperty("message") String message) {
+        super(message);
     }
 }
