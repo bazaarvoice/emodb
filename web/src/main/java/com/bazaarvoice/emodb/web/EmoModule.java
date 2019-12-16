@@ -161,7 +161,6 @@ import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.glassfish.jersey.logging.LoggingFeature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -308,9 +307,6 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton
         Client provideJerseyClient(JerseyClientConfiguration configuration, Environment environment) {
             return new JerseyClientBuilder(environment)
-                // TODO:  remove this, it's just tmp logging for debug reasons
-                .withProperty(LoggingFeature.LOGGING_FEATURE_VERBOSITY_CLIENT, LoggingFeature.Verbosity.PAYLOAD_ANY)
-                .withProperty(LoggingFeature.LOGGING_FEATURE_LOGGER_LEVEL_CLIENT, "WARNING")
                 .using(configuration)
                 .using(environment)
                 .build("emodb");
