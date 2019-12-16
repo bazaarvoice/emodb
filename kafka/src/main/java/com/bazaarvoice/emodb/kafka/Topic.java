@@ -25,6 +25,8 @@ public class Topic {
         this._replicationFactor = replicationFactor;
     }
 
+    private Topic() { }
+
     public String getName() {
         return _name;
     }

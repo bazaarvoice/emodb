@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.guice.MegabusTopic;
 import com.bazaarvoice.megabus.guice.MegabusZookeeper;
+import com.bazaarvoice.megabus.guice.TableEventRegistrationService;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.guice.MegabusRefResolverService;
 import com.bazaarvoice.megabus.guice.MissingRefDelayService;
@@ -31,6 +32,7 @@ public class MegabusBootWorkflowManager implements Managed {
     private final Service _bootInitiater;
     private final Service _refResolverService;
     private final Service _missingRefDelayService;
+    private final Service _tableEventRegistrationService;
     private final Managed _refProducerManager;
     private final MegabusBootDAO _megabusBootDAO;
     private final ScheduledExecutorService _bootCoordinator;
@@ -45,26 +47,28 @@ public class MegabusBootWorkflowManager implements Managed {
                                       LeaderServiceTask leaderServiceTask,
                                       @MegabusRefResolverService Service refResolverService,
                                       @MissingRefDelayService Service missingRefDelayService,
+                                      @TableEventRegistrationService Service tableEventRegistrationService,
                                       MegabusBootDAO megabusBootDAO,
                                       @MegabusApplicationId String megabusApplicationId,
                                       @MegabusTopic Topic megabusTopic,
                                       MegabusRefProducerManager refProducerManager,
                                       MegabusBootDAO statusDAO) {
         _applicationId = megabusApplicationId;
-         _bootInitiater = new LeaderService(curator, LEADER_DIR, selfHostAndPort.toString(),
-                 MegabusBootInitiater.SERVICE_NAME, 1, TimeUnit.MINUTES,
+        _bootInitiater = new LeaderService(curator, LEADER_DIR, selfHostAndPort.toString(),
+                MegabusBootInitiater.SERVICE_NAME, 1, TimeUnit.MINUTES,
                 () -> new MegabusBootInitiater(megabusBootDAO, megabusApplicationId, megabusTopic, refProducerManager));
-         _megabusBootDAO = megabusBootDAO;
-         _missingRefDelayService = missingRefDelayService;
-         _refResolverService = refResolverService;
-         _refProducerManager = refProducerManager;
-         _bootCoordinator = Executors.newSingleThreadScheduledExecutor();
-         lifeCycle.manage(this);
+        _megabusBootDAO = megabusBootDAO;
+        _missingRefDelayService = missingRefDelayService;
+        _refResolverService = refResolverService;
+        _tableEventRegistrationService = tableEventRegistrationService;
+        _refProducerManager = refProducerManager;
+        _bootCoordinator = Executors.newSingleThreadScheduledExecutor();
+        lifeCycle.manage(this);
     }
 
     @Override
     public void start() throws Exception {
-
+        _tableEventRegistrationService.startAsync().awaitRunning();
         _bootInitiater.startAsync().awaitRunning();
 
         _bootCoordinator.scheduleAtFixedRate(() -> {

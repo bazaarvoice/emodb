@@ -12,6 +12,7 @@ import com.bazaarvoice.megabus.guice.MissingRefDelayService;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
 import com.bazaarvoice.megabus.guice.RefResolverConsumerGroup;
 import com.bazaarvoice.megabus.guice.RetryRefTopic;
+import com.bazaarvoice.megabus.guice.TableEventRegistrationService;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
@@ -19,6 +20,7 @@ import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
 import com.bazaarvoice.megabus.tableevents.TableEventProcessorManager;
+import com.bazaarvoice.megabus.tableevents.TableEventRegistrar;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.PrivateModule;
@@ -47,6 +49,7 @@ public class MegabusModule extends PrivateModule {
 
         bind(Service.class).annotatedWith(MegabusRefResolverService.class).to(ResilientMegabusRefResolver.class).asEagerSingleton();
         bind(Service.class).annotatedWith(MissingRefDelayService.class).to(ResilientMissingRefDelayProcessor.class).asEagerSingleton();
+        bind(Service.class).annotatedWith(TableEventRegistrationService.class).to(TableEventRegistrar.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
 
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
@@ -54,8 +57,11 @@ public class MegabusModule extends PrivateModule {
 
         bind(MegabusSource.class).to(DefaultMegabusSource.class).asEagerSingleton();
         expose(MegabusSource.class);
-
+        
+        // TODO: bind this into the boot workflow to prevent race conditions
         bind(TableEventProcessorManager.class).asEagerSingleton();
+        
+        bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }
 
     @Provides

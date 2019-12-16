@@ -1603,7 +1603,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     @Override
     public Map.Entry<String, TableEvent> getNextTableEvent(String registrationId) {
         TableEventDatacenter datacenter = _objectMapper.convertValue(
-                        _backingStore.get(_systemTableEventRegistry, registrationId, ReadConsistency.STRONG),
+                        _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
                         TableEventDatacenter.class
                 );
         java.util.Optional<TableEventRegistrant> registrant = java.util.Optional.ofNullable(datacenter.getRegistrants().get(registrationId));
