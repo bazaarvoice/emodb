@@ -1,0 +1,28 @@
+applicationId: megabus-local
+refResolverConsumerGroupName: emodb.megabus.resolver
+delayProcessorConsumerGroupName: emodb.megabus.delay
+megabusRefTopic:
+  name: emodb.internal.megabus.ref
+  partitions: 8
+  replicationFactor: 1
+megabusTopic:
+  name: emodb.megabus
+  partitions: 8
+  replicationFactor: 1
+missingRefTopic:
+  name: emodb.internal.megabus.missing
+  partitions: 8
+  replicationFactor: 1
+retryRefTopic:
+  name: emodb.internal.megabus.retry
+  partitions: 8
+  replicationFactor: 1
+boot:
+  queueServiceApiKey: local_admin
+  scanStatusTable: __system_megabus_boot
+  pendingScanRangeQueueName: megabus-boot-pending-scan-ranges
+  completeScanRangeQueueName: megabus-boot-complete-scan-ranges
+refProducer:
+  batchSize: 400
+  skipWaitThreshold: 250
+  pollIntervalMs: 100
