@@ -68,6 +68,7 @@ import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
 import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventTools;
 import com.bazaarvoice.emodb.table.db.generic.*;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -183,7 +184,9 @@ public class DataStoreModule extends PrivateModule {
         }
 
         if (_serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
-            bind(TableEventRegistry.class).to(AstyanaxTableDAO.class);
+            bind(TableEventTools.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            bind(TableEventRegistry.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            expose(TableEventTools.class);
             expose(TableEventRegistry.class);
         }
 

@@ -6,6 +6,7 @@ import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
 import com.bazaarvoice.emodb.sor.db.cql.CqlWriterDAODelegate;
 import com.bazaarvoice.emodb.table.db.astyanax.DataCopyDAO;
 import com.bazaarvoice.emodb.table.db.astyanax.DataPurgeDAO;
+import com.bazaarvoice.emodb.table.db.eventregistry.StorageReaderDAO;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -45,10 +46,13 @@ public class DAOModule extends PrivateModule {
         bind(AstyanaxBlockedDataReaderDAO.class).asEagerSingleton();
         bind(CqlBlockedDataReaderDAO.class).asEagerSingleton();
 
+        bind(StorageReaderDAO.class).to(CqlBlockedDataReaderDAO.class);
+
         expose(DataReaderDAO.class);
         expose(DataWriterDAO.class);
         expose(DataCopyDAO.class);
         expose(DataPurgeDAO.class);
+        expose(StorageReaderDAO.class);
     }
 
     @Provides

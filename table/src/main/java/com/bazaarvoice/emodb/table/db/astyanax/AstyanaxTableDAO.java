@@ -44,10 +44,12 @@ import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.eventregistry.StorageReaderDAO;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEvent;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventDatacenter;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistrant;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventTools;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
@@ -128,7 +130,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceChecker, StashTableDAO, TableEventRegistry, Managed {
+public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceChecker, StashTableDAO, TableEventRegistry, TableEventTools, Managed {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxTableDAO.class);
 
     private static final Ordering<Comparable> NULLS_LAST = Ordering.natural().nullsLast();
@@ -179,6 +181,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     private final RateLimiterCache _rateLimiterCache;
     private final DataCopyDAO _dataCopyDAO;
     private final DataPurgeDAO _dataPurgeDAO;
+    private StorageReaderDAO _storageReaderDAO;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
     private final ValueStore<Boolean> _tableChangesEnabled;
     private final CacheHandle _tableCacheHandle;
@@ -253,6 +256,15 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     public void setCQLStashTableDAO(CQLStashTableDAO stashTableDao) {
         _stashTableDao = stashTableDao;
     }
+
+    /**
+     * Optional binding, required only if this tableDAO is for SoR and not Blob.
+     */
+    @Inject (optional = true)
+    public void setStorageReaderDAO(StorageReaderDAO storageReaderDAO) {
+        _storageReaderDAO = storageReaderDAO;
+    }
+
 
     @Override
     public void start()
@@ -1618,9 +1630,21 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                 .orElse(null);
     }
 
+    @Override
+    public Stream<String> getIdsForStorage(String table, String uuid) {
+
+        checkNotNull(_storageReaderDAO);
+
+        Storage uuidStorage = readTableJson(table, false).getStorages().stream()
+                .filter(storage -> storage.getUuidString().equals(uuid))
+                .findFirst()
+                .get();
+
+        return _storageReaderDAO.getIdsForStorage(newAstyanaxStorage(uuidStorage, table));
+    }
+
     private void addDroppedTableEvent(TableJson json) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
-//        Iterator<TableEventDatacenter> tableEventDatacenterIterator =_objectMapper.convertValue(registrantIterator, new TypeReference<Iterator<TableEventDatacenter>>() {});
         Set<Storage> storages = json.getStorages().stream()
                 .filter(storage -> !storage.isDropped())
                 .filter(storage -> storage.equals(json.getMasterStorage()) || storage.isFacade())
@@ -1634,7 +1658,6 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                     .filter(storage -> _placementFactory.getDataCenters(storage.getPlacement())
                             .stream()
                             .map(DataCenter::getName)
-                            .peek(_log::info)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
                         tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TimeUUIDs.newUUID().toString(), TableEvent.Action.DROP, json.getUuidString()), Instant.now())
@@ -1677,6 +1700,5 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
             _backingStore.updateAll(updates);
             throw new IllegalStateException("Table events still pending");
         }
-
     }
 }
