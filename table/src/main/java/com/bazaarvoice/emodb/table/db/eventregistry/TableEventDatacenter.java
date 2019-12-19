@@ -65,6 +65,15 @@ public class TableEventDatacenter {
         return Deltas.mapBuilder().update(REGISTRANTS, mapDeltaBuilder.build()).build();
     }
 
+    public Delta markTableEventAsComplete(String registrationId, String table, String uuid) {
+        MapDeltaBuilder mapDeltaBuilder = Deltas.mapBuilder();
+
+        Optional.ofNullable(_registrants.get(registrationId))
+                .map(registrant -> mapDeltaBuilder.update(REGISTRANTS, Deltas.mapBuilder().update(registrationId, registrant.markTaskAsCompleteIfExists(table, uuid)).build()));
+
+        return mapDeltaBuilder.build();
+    }
+
     public Delta newTableEvent(String table, TableEvent tableEvent, Instant now) {
         MapDeltaBuilder mapDeltaBuilder = Deltas.mapBuilder();
 

@@ -26,14 +26,17 @@ public class MegabusRef {
     private final String _key;
     private final UUID _changeId;
     private final Instant _readTime;
+    private final boolean _deleted;
 
     @JsonCreator
     public MegabusRef(@JsonProperty("table") String table, @JsonProperty("key") String key,
-                     @JsonProperty("changeId") UUID changeId, @JsonProperty("readTime") @Nullable Instant readTime) {
+                     @JsonProperty("changeId") UUID changeId,@JsonProperty("readTime") @Nullable Instant readTime,
+                      @JsonProperty("deleted") boolean deleted) {
         _table = requireNonNull(table, "table");
         _key = requireNonNull(key, "key");
         _changeId = requireNonNull(changeId, "changeId");
         _readTime = readTime;
+        _deleted = deleted;
     }
 
     public String getTable() {
@@ -46,6 +49,10 @@ public class MegabusRef {
 
     public UUID getChangeId() {
         return _changeId;
+    }
+
+    public boolean isDeleted() {
+        return _deleted;
     }
 
     @Nullable

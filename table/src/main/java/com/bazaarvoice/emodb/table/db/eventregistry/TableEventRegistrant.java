@@ -47,6 +47,14 @@ public class TableEventRegistrant {
                 .orElse(null);
     }
 
+    public Delta markTaskAsCompleteIfExists(String table, String uuid) {
+        return Optional.ofNullable(_tasks.get(table))
+                .filter(tableEvent -> tableEvent.getUuid().equals(uuid))
+                .map(tableEvent -> Deltas.mapBuilder().update(TASKS,
+                        Deltas.mapBuilder().update(table, tableEvent.newCompleteDelta()).build()).build())
+                .orElse(null);
+    }
+
     public Delta newTask(String table, TableEvent task, Instant now) {
         MapDeltaBuilder mapDeltaBuilder = Deltas.mapBuilder();
         mapDeltaBuilder.put(table, task.newFullEventMap());

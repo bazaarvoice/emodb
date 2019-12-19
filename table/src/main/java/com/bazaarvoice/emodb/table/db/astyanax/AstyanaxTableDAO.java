@@ -1660,7 +1660,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .map(DataCenter::getName)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
-                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TimeUUIDs.newUUID().toString(), TableEvent.Action.DROP, json.getUuidString()), Instant.now())
+                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, json.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
@@ -1673,6 +1673,28 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         });
 
         _backingStore.updateAll(updates);
+    }
+
+    @Override
+    public void markTableEventAsComplete(String registrationId, String table, String uuid) {
+
+        TableEventDatacenter datacenter = _objectMapper.convertValue(
+                _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
+                TableEventDatacenter.class
+        );
+
+        Audit audit = new AuditBuilder()
+                .setComment(String.format("Marking event as complete for table %s and uuid %s", table, uuid))
+                .setLocalHost()
+                .build();
+
+        Delta delta = datacenter.markTableEventAsComplete(registrationId, table, uuid);
+        _log.info(delta.toString());
+
+        _log.info("marking event as complete {} {} {}", registrationId, table, uuid);
+        _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(),
+                delta, audit, WriteConsistency.GLOBAL);
+
     }
 
     private void checkTableEventsComplete(String table, String uuid) {

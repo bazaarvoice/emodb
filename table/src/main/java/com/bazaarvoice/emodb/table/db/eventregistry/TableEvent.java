@@ -23,28 +23,21 @@ public class TableEvent {
         PROMOTE
     }
 
-    private final String _eventKey;
     private final Action _action;
     private final String _uuid;
     private final boolean _ready;
 
-    public TableEvent(String eventKey, Action action, String uuid) {
-        this(eventKey, action, uuid, false);
+    public TableEvent(Action action, String uuid) {
+        this(action, uuid, false);
     }
 
     @JsonCreator
-    public TableEvent(@JsonProperty(EVENT_KEY) String eventKey,
-                      @JsonProperty(ACTION) Action action,
+    public TableEvent(@JsonProperty(ACTION) Action action,
                       @JsonProperty(UUID) String uuid,
                       @JsonProperty(READY) Boolean ready) {
-        _eventKey = requireNonNull(eventKey);
         _action = requireNonNull(action);
         _uuid = requireNonNull(uuid);
         _ready = requireNonNull(ready);
-    }
-
-    public String getEventKey() {
-        return _eventKey;
     }
 
     public Action getAction() {
@@ -61,7 +54,6 @@ public class TableEvent {
 
     public Map<String, Object> newFullEventMap() {
         return ImmutableMap.of(
-                EVENT_KEY, _eventKey,
                 ACTION, _action.toString(),
                 UUID, _uuid,
                 READY, _ready
@@ -70,13 +62,13 @@ public class TableEvent {
 
     public Delta newReadyDelta() {
         return Deltas.conditional(
-                Conditions.mapBuilder().matches(EVENT_KEY, Conditions.equal(_eventKey)).build(),
+                Conditions.mapBuilder().matches(UUID, Conditions.equal(_uuid)).build(),
                 Deltas.mapBuilder().put(READY, true).build());
     }
 
     public Delta newCompleteDelta() {
         return Deltas.conditional(
-                Conditions.mapBuilder().matches(EVENT_KEY, Conditions.equal(_eventKey)).build(),
+                Conditions.mapBuilder().matches(UUID, Conditions.equal(_uuid)).build(),
                 Deltas.delete()
         );
     }
