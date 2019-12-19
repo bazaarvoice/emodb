@@ -1689,9 +1689,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                 .build();
 
         Delta delta = datacenter.markTableEventAsComplete(registrationId, table, uuid);
-        _log.info(delta.toString());
 
-        _log.info("marking event as complete {} {} {}", registrationId, table, uuid);
         _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(),
                 delta, audit, WriteConsistency.GLOBAL);
 

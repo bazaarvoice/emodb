@@ -14,20 +14,26 @@ import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
 public class TableEventProcessor extends AbstractScheduledService {
 
-    private static final Logger _log = LoggerFactory.getLogger(TableEventProcessor.class);
+    private static final int FUTURE_BATCH_SIZE = 10000;
 
+    private static final Logger _log = LoggerFactory.getLogger(TableEventProcessor.class);
 
     private final TableEventRegistry _tableEventRegistry;
     private final MetricRegistry _metricRegistry;
@@ -76,7 +82,8 @@ public class TableEventProcessor extends AbstractScheduledService {
     }
 
     private void processDropEvent(String table, String uuid) {
-        _tableEventTools.getIdsForStorage(table, uuid)
+
+        Iterator<Future<RecordMetadata>> futures =  _tableEventTools.getIdsForStorage(table, uuid)
                 .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, true))
                 .map(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
@@ -85,7 +92,19 @@ public class TableEventProcessor extends AbstractScheduledService {
                             TimeUUIDs.newUUID().toString(),_objectMapper.valueToTree(Collections.singletonList(ref)));
                 })
                 .map(_producer::send)
-                .forEach(Futures::getUnchecked);
+                .iterator();
+
+        List<Future<RecordMetadata>> futureBatch = new ArrayList<>(FUTURE_BATCH_SIZE);
+
+        while (futures.hasNext()) {
+            futureBatch.add(futures.next());
+            if (futureBatch.size() == FUTURE_BATCH_SIZE) {
+                futureBatch.forEach(Futures::getUnchecked);
+                futureBatch = new ArrayList<>(FUTURE_BATCH_SIZE);
+            }
+        }
+
+        futureBatch.forEach(Futures::getUnchecked);
     }
 
     @Override
