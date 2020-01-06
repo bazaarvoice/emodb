@@ -70,12 +70,6 @@ public class DefaultBlobStore implements BlobStore {
      */
     private final Meter _metaDataNotPresentMeter;
 
-    /**
-     * This meter was created to provide visibility for inconsistency
-     * when metadata storage contains data but blob storage doesn't.
-     */
-    private final Meter _dataNotPresentMeter;
-
     @Inject
     public DefaultBlobStore(TableDAO tableDao,
                             StorageProvider storageProvider,
@@ -85,7 +79,6 @@ public class DefaultBlobStore implements BlobStore {
         _storageProvider = checkNotNull(storageProvider, "storageProvider");
         _metadataProvider = checkNotNull(metadataProvider, "metadataProvider");
         _metaDataNotPresentMeter = metricRegistry.meter(getMetricName("data-inconsistency"));
-        _dataNotPresentMeter = metricRegistry.meter(getMetricName("metadata-inconsistency"));
     }
 
     private static String getMetricName(String name) {
@@ -170,7 +163,7 @@ public class DefaultBlobStore implements BlobStore {
                 LOGGER.info("Table: {} has been purged successfully, removed {} rows.", table.getName(), totalCounter.get());
             }
         } else {
-            LOGGER.info("Attempting to purge able: {} that is already empty.", table.getName());
+            LOGGER.info("Attempting to purge table: {} that is already empty.", table.getName());
         }
 
     }
@@ -443,7 +436,7 @@ public class DefaultBlobStore implements BlobStore {
                 _metadataProvider.writeMetadata(table, blobId, storageSummary);
             } catch (Exception e1) {
                 LOGGER.error("Failed to revert metadata deletion for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", table.getName(), blobId, e1.getMessage());
-                _dataNotPresentMeter.mark();
+                _metaDataNotPresentMeter.mark();
             } finally {
                 Throwables.propagate(t);
             }
