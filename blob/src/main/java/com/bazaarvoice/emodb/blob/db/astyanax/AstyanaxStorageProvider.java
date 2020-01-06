@@ -105,12 +105,12 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
     private final ConsistencyLevel _readConsistency;
     private final Token.TokenFactory _tokenFactory;
     private final Meter _blobReadMeter;
-    private final Meter _blobWriteMeter;
-    private final Meter _blobDeleteMeter;
-    private final Meter _blobCopyMeter;
     private final Meter _blobMetadataReadMeter;
+    private final Meter _blobWriteMeter;
     private final Meter _blobMetadataWriteMeter;
+    private final Meter _blobDeleteMeter;
     private final Meter _blobMetadataDeleteMeter;
+    private final Meter _blobCopyMeter;
     private final Meter _blobMetadataCopyMeter;
     private final Timer _scanBatchTimer;
     private final Meter _scanReadMeter;
@@ -208,7 +208,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                     .getKey(storage.getRowKey(blobId))
                     .withColumnRange(start, end, false, Integer.MAX_VALUE));
 
-            deleteBlobColumns(table, blobId, columns, CONSISTENCY_STRONG, null);
+            deleteDataColumns(table, blobId, columns, CONSISTENCY_STRONG, null);
             _blobDeleteMeter.mark();
         }
     }
@@ -250,8 +250,9 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
             return null;
         }
 
-        // Cleanup older versions of the blob, if any (unlikely).
-        deleteBlobColumns(table, blobId, columns, ConsistencyLevel.CL_ANY, summary.getTimestamp());
+//      TODO should be removed for blob s3 migration
+//      Cleanup older versions of the blob, if any (unlikely).
+        deleteDataColumns(table, blobId, columns, ConsistencyLevel.CL_ANY, summary.getTimestamp());
 
         _blobMetadataReadMeter.mark();
         return summary;
@@ -357,8 +358,9 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                         continue;  // Partial blob, parts may still be replicating.
                     }
 
+                    // TODO should be removed for blob s3 migration
                     // Cleanup older versions of the blob, if any (unlikely).
-                    deleteBlobColumns(table, blobId, columns, ConsistencyLevel.CL_ANY, summary.getTimestamp());
+                    deleteDataColumns(table, blobId, columns, ConsistencyLevel.CL_ANY, summary.getTimestamp());
 
                     return Maps.immutableEntry(blobId, summary);
                 }
@@ -408,12 +410,12 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         Iterator<ByteBufferRange> scanIter = source.scanIterator(null);
         while (scanIter.hasNext()) {
             ByteBufferRange range = scanIter.next();
-//          we will need to split blob and metadata copy operations for s3 migration
+//        metadata copy will be conditional for s3 migration
             copyRange(range, source, dest, true, true, progress);
         }
     }
 
-    private void copyRange(ByteBufferRange keyRange, AstyanaxStorage source, AstyanaxStorage dest, boolean copyBlobMetadata, boolean copyBlobData, Runnable progress) {
+    private void copyRange(ByteBufferRange keyRange, AstyanaxStorage source, AstyanaxStorage dest, boolean copyMetadata, boolean copyData, Runnable progress) {
         BlobPlacement sourcePlacement = (BlobPlacement) source.getPlacement();
         BlobPlacement destPlacement = (BlobPlacement) dest.getPlacement();
         ConsistencyLevel consistency = CONSISTENCY_STRONG;
@@ -441,13 +443,13 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                     ColumnGroup group = ColumnGroup.valueOf(name.get(0, AsciiSerializer.get()));
                     int chunkId = name.get(1, IntegerSerializer.get());
 
-                    if (copyBlobMetadata && group == ColumnGroup.A) {
+                    if (copyMetadata && group == ColumnGroup.A) {
                         // Found a blob summary.  Copy the summaries for multiple rows together in a batch.
                         summaryMutation.withRow(destPlacement.getBlobColumnFamily(), newRowKey)
                                 .setTimestamp(column.getTimestamp())
                                 .putColumn(name, column.getByteBufferValue(), column.getTtl());
 
-                    } else if (copyBlobData && group == ColumnGroup.B) {
+                    } else if (copyData && group == ColumnGroup.B) {
                         // Found a chunk presence column.  Fetch and copy the chunk data, one chunk at a time.
                         // Make sure chunk presence columns and data columns are paired together at all times.
                         ColumnQuery<Composite> query = sourcePlacement.getKeyspace()
@@ -478,6 +480,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
             if (!summaryMutation.isEmpty()) {
                 progress.run();
                 execute(summaryMutation);
+                _blobMetadataCopyMeter.mark(summaryMutation.getRowCount());
             }
 
             _blobCopyMeter.mark(rows.size());
@@ -487,10 +490,11 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
     // DataPurgeDAO
     @Override
     public void purge(AstyanaxStorage storage, Runnable progress) {
+//        metadata purge will be conditional for s3 migration
         purge(storage, true, true, progress);
     }
 
-    private void purge(AstyanaxStorage storage, boolean deleteBlobMetadata, boolean deleteBlobData, Runnable progress) {
+    private void purge(AstyanaxStorage storage, boolean deleteMetadata, boolean deleteData, Runnable progress) {
         BlobPlacement placement = (BlobPlacement) storage.getPlacement();
         CassandraKeyspace keyspace = placement.getKeyspace();
         ColumnFamily<ByteBuffer, Composite> cf = placement.getBlobColumnFamily();
@@ -514,15 +518,15 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                     continue;  // don't bother deleting range ghosts
                 }
 
-                if (deleteBlobMetadata && deleteBlobData) {
+                if (deleteMetadata && deleteData) {
                     mutation.withRow(cf, row.getKey()).delete();
                 } else {
-                    if (deleteBlobMetadata) {
+                    if (deleteMetadata) {
                         mutation.withRow(cf, row.getKey())
                                 .deleteColumn(getColumn(ColumnGroup.A, 0));
                     }
 
-                    if (deleteBlobData) {
+                    if (deleteData) {
                         mutation.withRow(cf, row.getKey())
                                 .deleteColumn(getColumn(ColumnGroup.B, 1))
                                 .deleteColumn(getColumn(ColumnGroup.Z, 2));
@@ -540,14 +544,6 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
             progress.run();
             execute(mutation);
         }
-    }
-
-    private void purgeBlobData(AstyanaxStorage storage, Runnable progress) {
-        purge(storage, false, true, progress);
-    }
-
-    private void purgeBlobMetadata(AstyanaxStorage storage, Runnable progress) {
-        purge(storage, true, false, progress);
     }
 
     /**
@@ -619,7 +615,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         return DEFAULT_CHUNK_SIZE;
     }
 
-    private static void deleteBlobColumns(AstyanaxTable table, String blobId, ColumnList<Composite> columns, ConsistencyLevel consistency, Long timestamp) {
+    private static void deleteDataColumns(AstyanaxTable table, String blobId, ColumnList<Composite> columns, ConsistencyLevel consistency, Long timestamp) {
         for (AstyanaxStorage storage : table.getWriteStorage()) {
             BlobPlacement placement = (BlobPlacement) storage.getPlacement();
 
@@ -691,11 +687,5 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         // is sufficient for the iterator implementations used by this DAO class...
         iter.hasNext();
         return iter;
-    }
-
-    private static Runnable noop() {
-        return () -> {
-            // Do nothing
-        };
     }
 }

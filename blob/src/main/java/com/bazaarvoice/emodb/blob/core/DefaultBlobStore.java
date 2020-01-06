@@ -66,12 +66,15 @@ public class DefaultBlobStore implements BlobStore {
 
     /**
      * This meter was created to provide visibility for inconsistency
-     * when metadata storage contains data but blob storage doesn't.
-     * Opposite inconsistency(blob storage contains data but metadata storage doesn't)
-     * is not so bad as blob data is accessible only by id,
-     * but not via scan operation.
+     * when blob storage contains data but metadata storage doesn't.
      */
-    private final Meter _metadataInconsistencyMeter;
+    private final Meter _metaDataNotPresentMeter;
+
+    /**
+     * This meter was created to provide visibility for inconsistency
+     * when metadata storage contains data but blob storage doesn't.
+     */
+    private final Meter _dataNotPresentMeter;
 
     @Inject
     public DefaultBlobStore(TableDAO tableDao,
@@ -81,7 +84,8 @@ public class DefaultBlobStore implements BlobStore {
         _tableDao = checkNotNull(tableDao, "tableDao");
         _storageProvider = checkNotNull(storageProvider, "storageProvider");
         _metadataProvider = checkNotNull(metadataProvider, "metadataProvider");
-        _metadataInconsistencyMeter = metricRegistry.meter(getMetricName("metadata-inconsistency"));
+        _metaDataNotPresentMeter = metricRegistry.meter(getMetricName("data-inconsistency"));
+        _dataNotPresentMeter = metricRegistry.meter(getMetricName("metadata-inconsistency"));
     }
 
     private static String getMetricName(String name) {
@@ -145,17 +149,30 @@ public class DefaultBlobStore implements BlobStore {
         _tableDao.audit(tableName, "purge", audit);
 
         AtomicLong failedCounter = new AtomicLong();
-        _metadataProvider.scanMetadata(table, null, new LimitCounter(Long.MAX_VALUE)).forEachRemaining(entry -> {
+        AtomicLong totalCounter = new AtomicLong();
+
+        _metadataProvider.scanMetadata(table, null, LimitCounter.max()).forEachRemaining(entry -> {
             try {
-                delete(tableName, entry.getKey());
+                delete(table, entry.getKey(), entry.getValue());
             } catch (Throwable t) {
-                failedCounter.addAndGet(1);
+                failedCounter.getAndAdd(1);
+            } finally {
+                totalCounter.getAndAdd(1);
             }
         });
 
-        if (failedCounter.get() > 0) {
-            throw new RuntimeException("Table wasn't purged completely, check logs and consider to retry.");
+        if(totalCounter.get() > 0) {
+            if (failedCounter.get() > 0) {
+                String message = String.format("Failed to purge %s of %s rows for table: %s.", failedCounter.get(), totalCounter.get(), table.getName());
+                LOGGER.error(message);
+                throw new RuntimeException(message);
+            } else {
+                LOGGER.info("Table: {} has been purged successfully, removed {} rows.", table.getName(), totalCounter.get());
+            }
+        } else {
+            LOGGER.info("Attempting to purge able: {} that is already empty.", table.getName());
         }
+
     }
 
     @Override
@@ -346,7 +363,7 @@ public class DefaultBlobStore implements BlobStore {
 
         Table table = _tableDao.get(tableName);
 
-        StorageSummary summary = putBlobObject(table, blobId, in, attributes);
+        StorageSummary summary = putObject(table, blobId, in, attributes);
 
         try {
             _metadataProvider.writeMetadata(table, blobId, summary);
@@ -357,14 +374,14 @@ public class DefaultBlobStore implements BlobStore {
                 _storageProvider.deleteObject(table, blobId);
             } catch (Exception e1) {
                 LOGGER.error("Failed to delete blob for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", tableName, blobId, e1.getMessage());
-                _metadataInconsistencyMeter.mark();
+                _metaDataNotPresentMeter.mark();
             } finally {
                 Throwables.propagate(t);
             }
         }
     }
 
-    private StorageSummary putBlobObject(Table table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
+    private StorageSummary putObject(Table table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
         long timestamp = _storageProvider.getCurrentTimestamp(table);
         int chunkSize = _storageProvider.getDefaultChunkSize();
         checkArgument(chunkSize > 0);
@@ -381,6 +398,7 @@ public class DefaultBlobStore implements BlobStore {
             try {
                 chunkLength = ByteStreams.read(sha1In, bytes, 0, bytes.length);
             } catch (IOException e) {
+                LOGGER.error("Failed to read input stream", e);
                 throw Throwables.propagate(e);
             }
             if (chunkLength == 0) {
@@ -408,19 +426,24 @@ public class DefaultBlobStore implements BlobStore {
 
         StorageSummary storageSummary = _metadataProvider.readMetadata(table, blobId);
 
+        delete(table, blobId, storageSummary);
+    }
+
+    private void delete(Table table, String blobId, StorageSummary storageSummary) {
         if (storageSummary == null) {
+            LOGGER.error("Metadata isn't present for table: {}, blobId: {}", table.getName(), blobId);
             throw new BlobNotFoundException(blobId);
         }
         _metadataProvider.deleteMetadata(table, blobId);
         try {
             _storageProvider.deleteObject(table, blobId);
         } catch (Throwable t) {
-            LOGGER.error("Failed to delete blob for table: {}, blobId: {}, attempt to revert metadata deletion. Exception: {}", tableName, blobId, t.getMessage());
+            LOGGER.error("Failed to delete blob for table: {}, blobId: {}, attempt to revert metadata deletion. Exception: {}", table.getName(), blobId, t.getMessage());
             try {
                 _metadataProvider.writeMetadata(table, blobId, storageSummary);
             } catch (Exception e1) {
-                LOGGER.error("Failed to revert metadata deletion for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", tableName, blobId, e1.getMessage());
-                _metadataInconsistencyMeter.mark();
+                LOGGER.error("Failed to revert metadata deletion for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", table.getName(), blobId, e1.getMessage());
+                _dataNotPresentMeter.mark();
             } finally {
                 Throwables.propagate(t);
             }
