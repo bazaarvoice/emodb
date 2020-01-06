@@ -26,7 +26,6 @@ import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.api.FacadeOptions;
 import com.bazaarvoice.emodb.sor.api.TableAvailability;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
@@ -81,6 +80,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -116,7 +116,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
-            Collections.<Object>singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
+            Collections.singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
             authIdentityManager,
             permissionManager);
     }
@@ -145,7 +145,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         final DefaultTable bTable1 = new DefaultTable("b-table-1", options, ImmutableMap.of("key", "value2"), availability);
         final DefaultTable bTable2 = new DefaultTable("b-table-2", options, ImmutableMap.of("key", "value2"), availability);
         final DefaultTable aTable3 = new DefaultTable("a-table-3", options, ImmutableMap.of("key", "value1"), availability);
-        final List<Table> expected = ImmutableList.<Table>of(aTable1, aTable2, bTable1, bTable2, aTable3);
+        final List<Table> expected = ImmutableList.of(aTable1, aTable2, bTable1, bTable2, aTable3);
 
         when(_server.listTables(null, Long.MAX_VALUE)).thenAnswer(invocation -> expected.iterator());
 
@@ -179,7 +179,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     }
 
     @Test public void getTableOptionsRestricted() {
-        final TableOptions expected = new TableOptionsBuilder().setFacades(ImmutableList.<FacadeOptions>of()).setPlacement("asdf").build();
+        final TableOptions expected = new TableOptionsBuilder().setFacades(ImmutableList.of()).setPlacement("asdf").build();
         when(_server.getTableOptions("a-table")).thenReturn(expected);
 
         {
@@ -263,7 +263,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     }
 
     @Test public void scanTableRestricted() {
-        final List<BlobMetadata> expected = ImmutableList.<BlobMetadata>of(new DefaultBlobMetadata("asdf", new Date(), 1234L, "deadbeef", "qwerpoiu", ImmutableMap.of("key", "value")));
+        final List<BlobMetadata> expected = ImmutableList.of(new DefaultBlobMetadata("asdf", new Date(), 1234L, "deadbeef", "qwerpoiu", ImmutableMap.of("key", "value")));
         when(_server.scanMetadata("a-table", null, 10L)).thenAnswer(new Answer<Iterator<BlobMetadata>>() {
             @Override public Iterator<BlobMetadata> answer(final InvocationOnMock invocation) throws Throwable {
                 return expected.iterator();
@@ -309,7 +309,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
             ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
             try { actual.writeTo(actualBytes); } catch (IOException e) { throw new RuntimeException(e); }
-            assertArrayEquals(actualBytes.toByteArray(), expected);
+            assertArrayEquals(expected, actualBytes.toByteArray());
         }
 
         {
@@ -328,7 +328,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     public void testListTables() {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
-        List<Table> expected = ImmutableList.<Table>of(
+        List<Table> expected = ImmutableList.of(
             new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
             new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
@@ -345,7 +345,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
     public void testListTablesFrom() {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
-        List<Table> expected = ImmutableList.<Table>of(
+        List<Table> expected = ImmutableList.of(
             new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
             new DefaultTable("blob-id-2", options, ImmutableMap.of("key", "value2"), availability));
         when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
@@ -353,7 +353,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         List<Table> actual = Lists.newArrayList(
             BlobStoreStreaming.listTables(blobClient(), "from-key", 1234L));
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
         verify(_server).listTables("from-key", Long.MAX_VALUE);
         verifyNoMoreInteractions(_server);
     }
@@ -401,7 +401,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             assertTrue(e instanceof UnauthorizedException);
         }
     }
-    
+
     @Test
     public void testPurgeTableUnsafe() {
         Audit audit = new AuditBuilder().setLocalHost().build();
@@ -423,24 +423,22 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableExists() {
-        boolean expected = true;
-        when(_server.getTableAttributes("table-name")).thenReturn(ImmutableMap.<String, String>of());
+        when(_server.getTableAttributes("table-name")).thenReturn(ImmutableMap.of());
 
         boolean actual = blobClient().getTableExists("table-name");
 
-        assertEquals(actual, expected);
+        assertTrue(actual);
         verify(_server).getTableAttributes("table-name");
         verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testGetTableNotExists() {
-        boolean expected = false;
         when(_server.getTableAttributes("table-name")).thenThrow(new UnknownTableException());
 
         boolean actual = blobClient().getTableExists("table-name");
 
-        assertEquals(actual, expected);
+        assertFalse(actual);
         verify(_server).getTableAttributes("table-name");
         verifyNoMoreInteractions(_server);
     }
@@ -456,7 +454,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         boolean actual = blobClient().isTableAvailable("table-name");
 
-        assertEquals(actual, expected);
+        assertTrue(actual);
         verify(_server).getTableMetadata("table-name");
         verifyNoMoreInteractions(_server);
     }
@@ -472,7 +470,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         boolean actual = blobClient().isTableAvailable("table-name");
 
-        assertEquals(actual, expected);
+        assertFalse(actual);
         verify(_server).getTableMetadata("table-name");
         verifyNoMoreInteractions(_server);
     }
@@ -520,7 +518,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         long actual = blobClient().getTableApproximateSize("table-name");
 
-        assertEquals(actual, expected);
+        assertEquals(expected, actual);
         verify(_server).getTableApproximateSize("table-name");
         verifyNoMoreInteractions(_server);
     }
@@ -540,7 +538,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testScanMetadata() {
-        List<BlobMetadata> expected = ImmutableList.<BlobMetadata>of(
+        List<BlobMetadata> expected = ImmutableList.of(
             new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
             new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
         when(_server.scanMetadata("table-name", null, Long.MAX_VALUE)).thenReturn(expected.iterator());
@@ -558,7 +556,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testScanMetadataFrom() {
-        List<BlobMetadata> expected = ImmutableList.<BlobMetadata>of(
+        List<BlobMetadata> expected = ImmutableList.of(
             new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
             new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
         when(_server.scanMetadata("table-name", "from-key", 1234L)).thenReturn(expected.iterator());
@@ -715,13 +713,28 @@ public class BlobStoreJerseyTest extends ResourceTest {
     }
 
     @Test
+    public void testDeleteNotExistingBlob() {
+        doThrow(new BlobNotFoundException("blob-id"))
+                .when(_server)
+                .delete("table-name", "blob-id");
+        try {
+            blobClient().delete("table-name", "blob-id");
+            fail();
+        } catch (BlobNotFoundException e) {
+            assertEquals("blob-id", e.getBlobId());
+        }
+        verify(_server).delete("table-name", "blob-id");
+        verifyNoMoreInteractions(_server);
+    }
+
+    @Test
     public void testBlobNotFound() {
         when(_server.get("table-name", "blob-id", null)).thenThrow(new BlobNotFoundException("blob-id"));
         try {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (BlobNotFoundException e) {
-            assertEquals(e.getBlobId(), "blob-id");
+            assertEquals("blob-id", e.getBlobId());
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -735,7 +748,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             fail();
         } catch (BlobNotFoundException e) {
             // Expected.
-            assertEquals(e.getBlobId(), "blob-id");
+            assertEquals("blob-id", e.getBlobId());
         }
         verify(_server).getMetadata("table-name", "blob-id");
         verifyNoMoreInteractions(_server);
@@ -749,8 +762,8 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (RangeNotSatisfiableException e) {
-            assertEquals(e.getOffset(), 1);
-            assertEquals(e.getLength(), 2);
+            assertEquals(1, e.getOffset());
+            assertEquals(2, e.getLength());
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -770,7 +783,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().createTable("table-name", options, attributes, audit);
             fail();
         } catch (TableExistsException e) {
-            assertEquals(e.getTable(), "table-name");
+            assertEquals("table-name", e.getTable());
         }
         verify(_server).createTable("table-name", options, attributes, audit);
         verifyNoMoreInteractions(_server);
@@ -783,7 +796,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (UnknownTableException e) {
-            assertEquals(e.getTable(), "table-name");
+            assertEquals("table-name", e.getTable());
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -807,8 +820,8 @@ public class BlobStoreJerseyTest extends ResourceTest {
         try {
             blobClient().get("table-name", "blob-id");
             fail();
-        } catch (UnknownPlacementException e) {
-            assertEquals(e.getPlacement(), "placement-name");
+        } catch (final UnknownPlacementException e) {
+            assertEquals("placement-name", e.getPlacement());
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -839,20 +852,20 @@ public class BlobStoreJerseyTest extends ResourceTest {
                 .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
                 .get(ClientResponse.class);
 
-        assertEquals(response.getStatus(), 200);
-        assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
-        assertEquals(response.getType().toString(), expectedContentType);
+        assertEquals(200, response.getStatus());
+        assertEquals(metadataContentType, response.getHeaders().getFirst("X-BVA-content-type"));
+        assertEquals(expectedContentType, response.getType().toString());
 
         byte[] actual = new byte[content.length];
         InputStream in = response.getEntityInputStream();
-        assertEquals(in.read(actual, 0, content.length), content.length);
-        assertEquals(in.read(), -1);
+        assertEquals(content.length, in.read(actual, 0, content.length));
+        assertEquals(-1, in.read());
         assertArrayEquals(actual, content);
 
         verify(_server).get("table-name", "blob-id", null);
     }
 
-    private void assertMetadataEquals(BlobMetadata expected, BlobMetadata actual) {
+    private static void assertMetadataEquals(BlobMetadata expected, BlobMetadata actual) {
         assertEquals(actual.getId(), expected.getId());
         assertEquals(actual.getLength(), expected.getLength());
         assertEquals(actual.getMD5(), expected.getMD5());
@@ -860,7 +873,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         assertEquals(actual.getAttributes(), expected.getAttributes());
     }
 
-    private byte[] read(Blob actual) throws IOException {
+    private static byte[] read(Blob actual) throws IOException {
         ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
         actual.writeTo(actualBytes);
         return actualBytes.toByteArray();
