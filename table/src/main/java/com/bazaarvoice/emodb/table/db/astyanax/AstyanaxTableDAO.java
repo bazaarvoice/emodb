@@ -144,22 +144,22 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     /**
      * The server updates its consistency timestamp value at most every 5 minutes.
      */
-    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofSeconds(20);
+    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofMinutes(5);
 
     /**
      * Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid.
      */
-    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofSeconds(30);
+    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofDays(1);
 
     /**
      * Delay between dropping a table and initial purge of all the data in the table, may miss late writes.
      */
-    static final Duration DROP_TO_PURGE_1 = Duration.ofSeconds(10);
+    static final Duration DROP_TO_PURGE_1 = Duration.ofDays(1);
 
     /**
      * Maximum time to wait for full consistency.  By this time, purge will find everything.
      */
-    static final Duration DROP_TO_PURGE_2 = Duration.ofSeconds(10);
+    static final Duration DROP_TO_PURGE_2 = Duration.ofDays(10);
 
     /**
      * Reserved key used by {@link #createTableSet()} to identify bootstrap tables.

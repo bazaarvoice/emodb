@@ -141,7 +141,7 @@ public class DataStoreModule extends PrivateModule {
         requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
-        // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
+        // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> LockingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
         bind(TableDAO.class).annotatedWith(MutexTableDAODelegate.class).to(CachingTableDAO.class).asEagerSingleton();
         bind(TableDAO.class).annotatedWith(CachingTableDAODelegate.class).to(LockingTableDAO.class).asEagerSingleton();

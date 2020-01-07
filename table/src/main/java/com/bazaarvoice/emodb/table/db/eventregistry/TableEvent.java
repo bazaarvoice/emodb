@@ -13,7 +13,6 @@ import static java.util.Objects.requireNonNull;
 
 public class TableEvent {
 
-    private static final String EVENT_KEY = "eventKey";
     private static final String ACTION = "action";
     private static final String UUID = "uuid";
     private static final String READY = "ready";

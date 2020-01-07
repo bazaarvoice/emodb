@@ -2231,6 +2231,7 @@ public class TableLifeCycleTest {
         store.createTable("__system:table", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
         store.createTable("__system:table_uuid", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
         store.createTable("__system:table_unpublished_databus_events", newOptions(PL_GLOBAL), ImmutableMap.<String, Object>of(), newAudit());
+        store.createTable("__system:table_event_registry", newOptions(PL_GLOBAL), ImmutableMap.of(), newAudit());
         return store;
     }
 

@@ -109,11 +109,12 @@ public class AstyanaxTableDAOTest {
         String systemTablePlacement = "systemTablePlacement";
         String systemTable = systemTableNamespace + ":table";
         String systemTableMetadataChanges = systemTableNamespace + ":table_unpublished_databus_events";
+        String systemTableEventRegistry = systemTableNamespace + ":table_event_registry";
         String systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
         AstyanaxTableDAO tableDAO = new AstyanaxTableDAO(mock(LifeCycleRegistry.class),
                 systemTableNamespace, systemTablePlacement, 16,
-                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L),
+                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L, systemTableEventRegistry, 246L),
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
