@@ -12,6 +12,7 @@ import com.bazaarvoice.megabus.guice.MissingRefDelayService;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
 import com.bazaarvoice.megabus.guice.RefResolverConsumerGroup;
 import com.bazaarvoice.megabus.guice.RetryRefTopic;
+import com.bazaarvoice.megabus.guice.TableEventProcessorService;
 import com.bazaarvoice.megabus.guice.TableEventRegistrationService;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
@@ -50,6 +51,7 @@ public class MegabusModule extends PrivateModule {
         bind(Service.class).annotatedWith(MegabusRefResolverService.class).to(ResilientMegabusRefResolver.class).asEagerSingleton();
         bind(Service.class).annotatedWith(MissingRefDelayService.class).to(ResilientMissingRefDelayProcessor.class).asEagerSingleton();
         bind(Service.class).annotatedWith(TableEventRegistrationService.class).to(TableEventRegistrar.class).asEagerSingleton();
+        bind(Service.class).annotatedWith(TableEventProcessorService.class).to(TableEventProcessorManager.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
 
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();

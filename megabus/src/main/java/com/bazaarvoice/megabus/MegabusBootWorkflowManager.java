@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.megabus.guice.MegabusTopic;
 import com.bazaarvoice.megabus.guice.MegabusZookeeper;
+import com.bazaarvoice.megabus.guice.TableEventProcessorService;
 import com.bazaarvoice.megabus.guice.TableEventRegistrationService;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.guice.MegabusRefResolverService;
@@ -33,6 +34,7 @@ public class MegabusBootWorkflowManager implements Managed {
     private final Service _refResolverService;
     private final Service _missingRefDelayService;
     private final Service _tableEventRegistrationService;
+    private final Service _tableEventProcessorService;
     private final Managed _refProducerManager;
     private final MegabusBootDAO _megabusBootDAO;
     private final ScheduledExecutorService _bootCoordinator;
@@ -52,6 +54,7 @@ public class MegabusBootWorkflowManager implements Managed {
                                       @MegabusApplicationId String megabusApplicationId,
                                       @MegabusTopic Topic megabusTopic,
                                       MegabusRefProducerManager refProducerManager,
+                                      @TableEventProcessorService Service tableEventProcessorService,
                                       MegabusBootDAO statusDAO) {
         _applicationId = megabusApplicationId;
         _bootInitiater = new LeaderService(curator, LEADER_DIR, selfHostAndPort.toString(),
@@ -61,6 +64,7 @@ public class MegabusBootWorkflowManager implements Managed {
         _missingRefDelayService = missingRefDelayService;
         _refResolverService = refResolverService;
         _tableEventRegistrationService = tableEventRegistrationService;
+        _tableEventProcessorService = tableEventProcessorService;
         _refProducerManager = refProducerManager;
         _bootCoordinator = Executors.newSingleThreadScheduledExecutor();
         lifeCycle.manage(this);
@@ -82,6 +86,7 @@ public class MegabusBootWorkflowManager implements Managed {
             if (bootStatus == MegabusBootDAO.BootStatus.COMPLETE) {
                 _missingRefDelayService.startAsync();
                 _refResolverService.startAsync();
+                _tableEventProcessorService.startAsync();
                 try {
                     _log.info("starting ref producer manager");
                     _refProducerManager.start();

@@ -3,8 +3,6 @@ package com.bazaarvoice.megabus.tableevents;
 import com.bazaarvoice.curator.recipes.leader.LeaderService;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
@@ -28,8 +26,7 @@ public class TableEventProcessorManager extends LeaderService {
     private static final String LEADER_DIR = "/leader/table-event";
 
     @Inject
-    public TableEventProcessorManager(LifeCycleRegistry lifecycle,
-                                      LeaderServiceTask leaderServiceTask,
+    public TableEventProcessorManager(LeaderServiceTask leaderServiceTask,
                                       @MegabusZookeeper CuratorFramework curator,
                                       @SelfHostAndPort HostAndPort selfHostAndPort,
                                       @MegabusApplicationId String applicationId,
@@ -44,6 +41,5 @@ public class TableEventProcessorManager extends LeaderService {
                         kafkaCluster.producer(), objectMapper, refTopic));
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);
-        lifecycle.manage(new ManagedGuavaService(this));
     }
 }
