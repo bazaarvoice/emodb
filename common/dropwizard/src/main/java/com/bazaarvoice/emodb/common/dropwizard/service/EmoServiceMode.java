@@ -22,8 +22,6 @@ import java.util.EnumSet;
  *      A typical use case for this is running command-line tools, such as reports.</li>
  * <li>SCANNER:
  *      Only services, tasks, and resources required to support the scan and upload server.</li>
- * <li>SCANNER:
- *      Only services, tasks, and resources required to migrate all delta from old tables to new "blocked" tables.</li>
  * </ul>
  */
 public enum EmoServiceMode {

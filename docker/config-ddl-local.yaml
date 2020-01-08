@@ -25,10 +25,6 @@ systemOfRecord:
                keyspace: app_global
                table.delta_v2: sys_delta_v2
                table.history: sys_history
-            migration:
-               keyspace: app_global
-               table.delta_v2: migration_delta_v2
-               table.history: migration_history
       pii_us:
          replicationFactor: 1
          tables:
