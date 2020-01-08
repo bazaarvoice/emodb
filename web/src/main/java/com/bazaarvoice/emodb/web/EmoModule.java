@@ -92,7 +92,6 @@ import com.bazaarvoice.emodb.web.auth.SecurityModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
 import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
-import com.bazaarvoice.emodb.web.migrator.MigratorModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
@@ -181,7 +180,6 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataCenter;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
@@ -225,7 +223,6 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(delta_migrator, new MigratorSetup());
         evaluate(report, new ReportSetup());
         evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
@@ -695,19 +692,6 @@ public class EmoModule extends AbstractModule {
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideScannerZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "scanner");
-        }
-    }
-
-    private class MigratorSetup extends AbstractModule  {
-        @Override
-        protected void configure() {
-            install(new MigratorModule(_configuration));
-        }
-
-        /** Provide ZooKeeper namespaced to delta_migrator data. */
-        @Provides @Singleton @ScannerZooKeeper
-        CuratorFramework provideMigratorZooKeeperConnection(@Global CuratorFramework curator) {
-            return withComponentNamespace(curator, "delta_migrator");
         }
     }
 

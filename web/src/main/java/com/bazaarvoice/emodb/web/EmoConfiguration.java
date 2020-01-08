@@ -12,7 +12,6 @@ import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.queue.QueueConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
-import com.bazaarvoice.emodb.web.migrator.config.MigratorConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
 import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -94,11 +93,6 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty ("scanner")
     private Optional<ScannerConfiguration> _scanner = Optional.absent();
-
-    @Valid
-    @NotNull
-    @JsonProperty ("deltaMigrator")
-    private Optional<MigratorConfiguration> _migrator = Optional.absent();
 
     @Valid
     @NotNull
@@ -237,10 +231,6 @@ public class EmoConfiguration extends Configuration {
         return _scanner;
     }
 
-    public Optional<MigratorConfiguration> getDeltaMigrator() {
-        return _migrator;
-    }
-
     public Optional<KafkaConfiguration> getKafkaConfiguration() {
         return _kafkaConfiguration;
     }
@@ -252,11 +242,6 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setScanner(Optional<ScannerConfiguration> scanner) {
         _scanner = scanner;
-        return this;
-    }
-
-    public EmoConfiguration setDeltaMigrator(Optional<MigratorConfiguration> migrator) {
-        _migrator = migrator;
         return this;
     }
 

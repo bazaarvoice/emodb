@@ -32,8 +32,6 @@ import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
-import com.bazaarvoice.emodb.web.migrator.BlockMigratorResource1;
-import com.bazaarvoice.emodb.web.migrator.DeltaMigrator;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
@@ -103,7 +101,6 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.delta_migrator;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
@@ -217,7 +214,6 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateThrottling();
         evaluateSecurity();
         evaluateScanner();
-        evaluateDeltaMigrator();
         evaluateMegabus();
         evaluateServiceStartedListeners();
         evaluateSwagger();
@@ -335,16 +331,6 @@ public class EmoService extends Application<EmoConfiguration> {
 
         resources.addResource(_cluster, "emodb-stash-1", new StashResource1(scanUploader, stashRequestManager));
         // No admin tasks are registered automatically in SCANNER ServiceMode
-        _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
-    }
-
-    private void evaluateDeltaMigrator()
-            throws Exception {
-        if (!runPerServiceMode(delta_migrator)) {
-            return;
-        }
-        _environment.jersey().register(new BlockMigratorResource1(_injector.getInstance(DeltaMigrator.class)));
-        // No admin tasks are registered automatically in DELTA_MIGRATOR ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 

@@ -12,7 +12,6 @@ import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Map;
@@ -36,19 +35,19 @@ public class MinSplitSizeCleanupMonitor extends LeaderService {
                                       LeaderServiceTask leaderServiceTask, LifeCycleRegistry lifecycle,
                                       @MinSplitSizeMap MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
-                () -> new MigratorCleanupService(minSplitSizeMap, clock));
+                () -> new MinSplitSizeCleanupService(minSplitSizeMap, clock));
         leaderServiceTask.register(SERVICE_NAME, this);
         lifecycle.manage(new ManagedGuavaService(this));
     }
 
-    private static class MigratorCleanupService extends AbstractScheduledService {
+    private static class MinSplitSizeCleanupService extends AbstractScheduledService {
 
-        private final Logger _log = LoggerFactory.getLogger(MigratorCleanupService.class);
+        private final Logger _log = LoggerFactory.getLogger(MinSplitSizeCleanupService.class);
 
         private final MapStore<DataStoreMinSplitSize> _minSplitSizeMap;
         private final Clock _clock;
 
-        public MigratorCleanupService(MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
+        public MinSplitSizeCleanupService(MapStore<DataStoreMinSplitSize> minSplitSizeMap, Clock clock) {
             _minSplitSizeMap = checkNotNull(minSplitSizeMap);
             _clock = checkNotNull(clock);
         }

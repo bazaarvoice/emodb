@@ -83,11 +83,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
     private final Meter _oversizeUpdateMeter;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
     private final DAOUtils _daoUtils;
-    private final int _deltaBlockSize;
     private final String _deltaPrefix;
     private final int _deltaPrefixLength;
-    private final boolean _writeToLegacyDeltaTable;
-    private final boolean _writeToBlockedDeltaTable;
 
 
     // The difference between full consistency and "raw" consistency provider is that full consistency also includes
@@ -103,11 +100,7 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                                  HintsConsistencyTimeProvider rawConsistencyTimeProvider,
                                  ChangeEncoder changeEncoder, MetricRegistry metricRegistry,
                                  DAOUtils daoUtils, @BlockSize int deltaBlockSize,
-                                 @PrefixLength int deltaPrefixLength,
-                                 @WriteToLegacyDeltaTable boolean writeToLegacyDeltaTable,
-                                 @WriteToBlockedDeltaTable boolean writeToBlockedDeltaTable) {
-
-        checkArgument(writeToLegacyDeltaTable || writeToBlockedDeltaTable, "writeToLegacyDeltaTable and writeToBlockedDeltaTables cannot both be false");
+                                 @PrefixLength int deltaPrefixLength) {
 
         _cqlWriterDAO = checkNotNull(delegate, "delegate");
         _keyScanner = checkNotNull(keyScanner, "keyScanner");
@@ -118,11 +111,8 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         _updateMeter = metricRegistry.meter(getMetricName("updates"));
         _oversizeUpdateMeter = metricRegistry.meter(getMetricName("oversizeUpdates"));
         _daoUtils = daoUtils;
-        _deltaBlockSize = deltaBlockSize;
         _deltaPrefix = StringUtils.repeat('0', deltaPrefixLength);
         _deltaPrefixLength = deltaPrefixLength;
-        _writeToLegacyDeltaTable = writeToLegacyDeltaTable;
-        _writeToBlockedDeltaTable = writeToBlockedDeltaTable;
     }
 
     private String getMetricName(String name) {
@@ -235,33 +225,25 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
             ByteBuffer encodedDelta = encodedBlockDelta.duplicate();
             encodedDelta.position(encodedDelta.position() + _deltaPrefixLength);
 
-            int deltaSize = _writeToLegacyDeltaTable ? encodedDelta.remaining(): 0;
-            int blockDeltaSize = _writeToBlockedDeltaTable ? encodedBlockDelta.remaining() : 0;
+            int blockDeltaSize = encodedBlockDelta.remaining();
 
             UUID changeId = update.getChangeId();
 
             // Validate sizes of individual deltas
-            if (deltaSize > MAX_DELTA_SIZE) {
+            if (blockDeltaSize > MAX_DELTA_SIZE) {
                 _oversizeUpdateMeter.mark();
-                throw new DeltaSizeLimitException("Delta exceeds size limit of " + MAX_DELTA_SIZE + ": " + deltaSize, deltaSize);
+                throw new DeltaSizeLimitException("Delta exceeds size limit of " + MAX_DELTA_SIZE + ": " + blockDeltaSize, blockDeltaSize);
             }
 
             // Perform a quick validation that the size of the mutation batch as a whole won't exceed the thrift threshold.
             // This validation is inexact and overly-conservative but it is cheap and fast.
-            if (!mutation.isEmpty() && approxMutationSize + deltaSize + blockDeltaSize > MAX_DELTA_SIZE) {
+            if (!mutation.isEmpty() && approxMutationSize + blockDeltaSize > MAX_DELTA_SIZE) {
                 // Adding the next row may exceed the Thrift threshold.  Check definitively now.  This is fairly expensive
                 // which is why we don't do it unless the cheap check above passes.
                 MutationBatch potentiallyOversizeMutation = placement.getKeyspace().prepareMutationBatch(batchKey.getConsistency());
                 potentiallyOversizeMutation.mergeShallow(mutation);
 
-                if (_writeToLegacyDeltaTable) {
-                    //this will be removed in the next version
-                    potentiallyOversizeMutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
-                }
-
-                if (_writeToBlockedDeltaTable) {
-                    putBlockedDeltaColumn(potentiallyOversizeMutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
-                }
+                putBlockedDeltaColumn(potentiallyOversizeMutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
 
                 if (getMutationBatchSize(potentiallyOversizeMutation) >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
                     // Execute the mutation batch now.  As a side-effect this empties the mutation batch
@@ -272,21 +254,9 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
                 }
             }
 
-            // this will be removed in the next version
-            if (_writeToLegacyDeltaTable) {
-                mutation.withRow(placement.getDeltaColumnFamily(), rowKey).putColumn(changeId, encodedDelta, null);
-                approxMutationSize += deltaSize;
-            }
+            putBlockedDeltaColumn(mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
+            approxMutationSize += blockDeltaSize;
 
-            if (deltaSize + blockDeltaSize >= MAX_THRIFT_FRAMED_TRANSPORT_SIZE) {
-                execute(mutation, "update large record in old table in placement %s", placement.getName());
-                approxMutationSize = 0;
-            }
-
-            if (_writeToBlockedDeltaTable) {
-                putBlockedDeltaColumn(mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey), changeId, encodedBlockDelta);
-                approxMutationSize += blockDeltaSize;
-            }
             updateCount += 1;
         }
 
@@ -364,7 +334,6 @@ public class AstyanaxDataWriterDAO implements DataWriterDAO, DataPurgeDAO {
         Iterator<String> keyIter = _keyScanner.scanKeys(storage, ReadConsistency.STRONG);
         while (keyIter.hasNext()) {
             ByteBuffer rowKey = storage.getRowKey(keyIter.next());
-            mutation.withRow(placement.getDeltaColumnFamily(), rowKey).delete();
             mutation.withRow(placement.getBlockedDeltaColumnFamily(), rowKey).delete();
             if (mutation.getRowCount() >= 100) {
                 progress.run();

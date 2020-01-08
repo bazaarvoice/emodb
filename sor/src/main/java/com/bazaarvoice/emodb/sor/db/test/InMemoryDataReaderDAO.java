@@ -50,7 +50,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 /**
  * In-memory implementation of {@link DataWriterDAO}, for testing.
  */
-public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, MigratorReaderDAO, MigratorWriterDAO {
+public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
     public final Map<String, NavigableMap<String, Map<UUID, Change>>> _contentChanges = Maps.newHashMap();
     private int _fullConsistencyDelayMillis = Integer.MAX_VALUE;
@@ -480,15 +480,5 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO, Migr
         } catch (DecoderException e) {
             throw new IllegalArgumentException("Invalid hex string: " + string);
         }
-    }
-
-    @Override
-    public void writeRows(String placement, Iterator<MigrationScanResult> results, RateLimiter rateLimiter) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterator<MigrationScanResult> readRows(String placement, ScanRange scanRange) {
-        throw new UnsupportedOperationException();
     }
 }

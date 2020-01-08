@@ -132,8 +132,8 @@ public class CasDataStoreTest {
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
-                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
-                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
+                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
+                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Duration.ofDays(2));
 
                 bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);

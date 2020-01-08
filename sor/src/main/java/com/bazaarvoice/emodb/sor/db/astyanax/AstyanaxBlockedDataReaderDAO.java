@@ -110,7 +110,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class AstyanaxBlockedDataReaderDAO implements DataReaderDAO, DataCopyReaderDAO, AstyanaxKeyScanner {
 
-    private final Logger _log = LoggerFactory.getLogger(AstyanaxDataReaderDAO.class);
+    private final Logger _log = LoggerFactory.getLogger(AstyanaxBlockedDataReaderDAO.class);
 
     private static final int MAX_RANDOM_ROWS_BATCH = 50;
     private static final int MAX_SCAN_ROWS_BATCH = 250;

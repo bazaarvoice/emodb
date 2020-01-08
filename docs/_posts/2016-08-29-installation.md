@@ -160,37 +160,32 @@ systemOfRecord:
          tables:
             logs:
                keyspace: data_global
-               table.audit: logs_audit
-               table.delta: logs_delta
+               table.delta_v2: logs_delta_v2
                table.history: logs_history
             app:
                keyspace: data_global
-               table.audit: app_audit
-               table.delta: app_delta
+               table.delta_v2: app_delta_v2
                table.history: app_history
       data_us:
          replicationFactor: 3
          tables:
             app:
                keyspace: data_us
-               table.audit: app_audit
-               table.delta: app_delta
+               table.delta_v2: app_delta_v2
                table.history: app_history
       social_global:
          replicationFactor: 3
          tables:
             app:
                keyspace: social_global
-               table.audit: social_audit
-               table.delta: social_delta
+               table.delta_v2: social_delta_v2
                table.history: social_history
       social_us:
          replicationFactor: 3
          tables:
             app:
                keyspace: social_us
-               table.audit: social_audit
-               table.delta: social_delta
+               table.delta_v2: social_delta_v2
                table.history: social_history
 ```
 
