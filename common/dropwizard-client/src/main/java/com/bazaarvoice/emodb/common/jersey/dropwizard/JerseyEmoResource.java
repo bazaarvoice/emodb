@@ -5,6 +5,8 @@ import com.bazaarvoice.emodb.client.EmoResource;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.EntityHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.WebApplicationException;
@@ -25,6 +27,8 @@ public class JerseyEmoResource implements EmoResource {
     private WebTarget _target;
     private Invocation.Builder _builder;
     private MediaType _type;
+
+    private static final Logger LOG = LoggerFactory.getLogger(JerseyEmoResource.class);
 
     JerseyEmoResource(WebTarget resource) {
         _target = requireNonNull(resource, "target");
@@ -86,6 +90,9 @@ public class JerseyEmoResource implements EmoResource {
             // This is as per jax-rs invocation builder code.
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
                 throw new WebApplicationException(response);
+            } else {
+                LOG.error("AYYYYYY, we closed the connection");
+                response.close();
             }
 
             return null;
@@ -114,10 +121,12 @@ public class JerseyEmoResource implements EmoResource {
 
             // This is as per jax-rs invocation builder code.
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+//                response.close();
                 throw new WebApplicationException(response);
             }
 
             if (!response.getMediaType().equals(MediaType.APPLICATION_JSON_TYPE)) {
+                LOG.error("response type is {} [{}]", responseType.toString(), responseType.toGenericString());
                 return response.readEntity(responseType);
             }
             return EntityHelper.getEntity(response.readEntity(InputStream.class), responseType);

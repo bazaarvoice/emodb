@@ -237,6 +237,7 @@ server:
   applicationConnectors:
     - type: instrumentedHttp
       port: 8080
+      idleTimeout: 60 seconds
   adminConnectors:
     - type: instrumentedHttp
       port: 8081

@@ -31,10 +31,8 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.util.function.Supplier;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.http.client.utils.URIBuilder;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -54,6 +52,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -696,6 +695,7 @@ public class BlobStoreClient implements AuthBlobStore {
                 try {
                     Closeables.close(_stream, true);
                 } catch (IOException e) {
+                    throw new RuntimeException(e);
                     // Already caught and logged
                 }
             }
