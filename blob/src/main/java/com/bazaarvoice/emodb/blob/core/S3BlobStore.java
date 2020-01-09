@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.blob.core;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
@@ -13,38 +12,65 @@ import com.bazaarvoice.emodb.blob.api.Names;
 import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.api.RangeSpecification;
 import com.bazaarvoice.emodb.blob.api.Table;
+import com.bazaarvoice.emodb.blob.db.MetadataProvider;
+import com.bazaarvoice.emodb.blob.db.StorageSummary;
 import com.bazaarvoice.emodb.blob.db.s3.S3StorageProvider;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableAvailability;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.MetricRegistry;
+import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class S3BlobStore implements BlobStore {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(S3BlobStore.class);
+
     private final TableDAO _tableDao;
     private final S3StorageProvider _s3StorageProvider;
+    private final MetadataProvider _metadataProvider;
+
+    /**
+     * This meter was created to provide visibility for inconsistency
+     * when blob storage contains data but metadata storage doesn't.
+     */
+    private final Meter _metaDataNotPresentMeter;
 
     @Inject
     public S3BlobStore(final TableDAO tableDao,
-                       final S3StorageProvider s3StorageProvider) {
+                       final S3StorageProvider s3StorageProvider,
+                       final MetadataProvider metadataProvider,
+                       final MetricRegistry metricRegistry) {
         _tableDao = Objects.requireNonNull(tableDao);
         _s3StorageProvider = Objects.requireNonNull(s3StorageProvider);
+        _metadataProvider = Objects.requireNonNull(metadataProvider, "metadataProvider");
+        _metaDataNotPresentMeter = metricRegistry.meter(getMetricName("data-inconsistency"));
+    }
+
+    private static String getMetricName(String name) {
+        return MetricRegistry.name("bv.emodb.blob", "s3", name);
     }
 
     @Override
@@ -90,17 +116,44 @@ public class S3BlobStore implements BlobStore {
         checkLegalTableName(tableName);
         Objects.requireNonNull(audit, "audit");
 
-        purgeTableUnsafe(tableName, audit);
         _tableDao.drop(tableName, audit);
     }
 
     @Override
     public void purgeTableUnsafe(final String tableName, final Audit audit) {
         checkLegalTableName(tableName);
-        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
 
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
         _tableDao.audit(tableName, "purge", audit);
-        _s3StorageProvider.delete(tableName, tablePlacement, false);
+
+        AtomicLong failedCounter = new AtomicLong();
+        AtomicLong totalCounter = new AtomicLong();
+
+        _metadataProvider.scanMetadata(table, null, LimitCounter.max()).forEachRemaining(entry -> {
+            try {
+                delete(table, entry.getKey(), entry.getValue());
+            } catch (Throwable t) {
+                failedCounter.getAndAdd(1);
+            } finally {
+                totalCounter.getAndAdd(1);
+            }
+        });
+
+//TODO consider to remove everything in S3
+//        String tablePlacement = getTablePlacement(toDefaultTable(table));
+//        _s3StorageProvider.deleteTable(tableName, tablePlacement);
+
+        if (totalCounter.get() > 0) {
+            if (failedCounter.get() > 0) {
+                String message = String.format("Failed to purge %s of %s rows for table: %s.", failedCounter.get(), totalCounter.get(), table.getName());
+                LOGGER.error(message);
+                throw new RuntimeException(message);
+            } else {
+                LOGGER.info("Table: {} has been purged successfully, removed {} rows.", table.getName(), totalCounter.get());
+            }
+        } else {
+            LOGGER.info("Attempting to purge table: {} that is already empty.", table.getName());
+        }
     }
 
     @Override
@@ -145,36 +198,44 @@ public class S3BlobStore implements BlobStore {
     @Override
     public long getTableApproximateSize(final String tableName) {
         checkLegalTableName(tableName);
-        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
-
-        return _s3StorageProvider.count(tableName, tablePlacement);
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
+        return _metadataProvider.countMetadata(table);
     }
 
     @Override
     public BlobMetadata getMetadata(final String tableName, final String blobId) {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
-        Table tableMetadata = getTableMetadata(tableName);
-        String tablePlacement = getTablePlacement(tableMetadata);
 
-        ObjectMetadata objectMetadata = _s3StorageProvider.getObjectMetadata(tableName, tablePlacement, blobId);
-        return createBlobMetadata(blobId, objectMetadata, tableMetadata.getAttributes());
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
+        return createBlobMetadata(blobId, _metadataProvider.readMetadata(table, blobId), getAttributes(table));
     }
 
     @Override
     public Iterator<BlobMetadata> scanMetadata(final String tableName, @Nullable final String fromBlobIdExclusive, final long limit) {
         checkLegalTableName(tableName);
+        checkArgument(fromBlobIdExclusive == null || Names.isLegalBlobId(fromBlobIdExclusive), "fromBlobIdExclusive");
+        checkArgument(limit > 0, "Limit must be >0");
 
-        Table tableMetadata = getTableMetadata(tableName);
-        String tablePlacement = getTablePlacement(tableMetadata);
-        Map<String, String> attributes = tableMetadata.getAttributes();
+        final com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
 
-        return _s3StorageProvider.list(tableName, tablePlacement, fromBlobIdExclusive, limit)
-                .map(summary -> {
-                    String blobId = summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1);
-                    return createBlobMetadata(blobId, _s3StorageProvider.getObjectMetadata(tableName, tablePlacement, blobId), attributes);
-                })
-                .iterator();
+        // Stream back results.  Don't hold them all in memory at once.
+        LimitCounter remaining = new LimitCounter(limit);
+        Map<String, String> tableAttributes = getAttributes(table);
+
+        return remaining.limit(Iterators.transform(_metadataProvider.scanMetadata(table, fromBlobIdExclusive, remaining),
+                entry -> createBlobMetadata(entry.getKey(), entry.getValue(), tableAttributes)));
+    }
+
+    private static BlobMetadata createBlobMetadata(String blobId, StorageSummary s, Map<String, String> tableAttributes) {
+        if (s == null) {
+            throw new BlobNotFoundException(blobId);
+        }
+        Map<String, String> attributes = Maps.newTreeMap();
+        attributes.putAll(s.getAttributes());
+        attributes.putAll(tableAttributes);
+        Date timestamp = new Date(s.getTimestamp() / 1000); // Convert from microseconds
+        return new DefaultBlobMetadata(blobId, timestamp, s.getLength(), s.getMD5(), s.getSHA1(), attributes);
     }
 
     @Override
@@ -209,31 +270,6 @@ public class S3BlobStore implements BlobStore {
         return range;
     }
 
-    private static BlobMetadata createBlobMetadata(final String blobId,
-                                                   final ObjectMetadata om,
-                                                   final Map<String, String> tableAttributes) {
-        if (null == om) {
-            throw new BlobNotFoundException(blobId);
-        }
-
-        Map<String, String> attributes = new HashMap<>();
-        attributes.putAll(om.getUserMetadata());
-        attributes.putAll(tableAttributes);
-        attributes.put("contentType", om.getContentType());
-        attributes.put("contentLength", String.valueOf(om.getContentLength()));
-
-        return new DefaultBlobMetadata(blobId, om.getLastModified(), om.getContentLength(), om.getUserMetaDataOf("MD5"), om.getUserMetaDataOf("SHA-1"), attributes);
-    }
-
-    private static BlobMetadata createBlobMetadata(final S3ObjectSummary summary,
-                                                   final Map<String, String> tableAttributes) {
-        String blobId = summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1);
-        Map<String, String> attributes = new HashMap<>(tableAttributes);
-        attributes.put("contentLength", String.valueOf(summary.getSize()));
-
-        return new DefaultBlobMetadata(blobId, summary.getLastModified(), summary.getSize(), summary.getETag(), null, attributes);
-    }
-
     @Override
     public void put(final String tableName, final String blobId,
                     final InputSupplier<? extends InputStream> in,
@@ -243,19 +279,76 @@ public class S3BlobStore implements BlobStore {
         checkLegalBlobId(blobId);
         Objects.requireNonNull(in, "in");
         Objects.requireNonNull(attributes, "attributes");
-        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
 
-        _s3StorageProvider.putObject(tableName, tablePlacement, blobId, in.getInput(), attributes);
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
+        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
+        ObjectMetadata om = _s3StorageProvider.putObject(tableName, tablePlacement, blobId, in.getInput(), attributes);
+        try {
+            StorageSummary storageSummary = createStorageSummary(blobId, om);
+            _metadataProvider.writeMetadata(table, blobId, storageSummary);
+        } catch (Throwable t) {
+            LOGGER.error("Failed to upload metadata for table: {}, blobId: {}, attempt to delete blob. Exception: {}", tableName, blobId, t.getMessage());
+
+            try {
+                _s3StorageProvider.deleteObject(tableName, tablePlacement, blobId);
+            } catch (Exception e1) {
+                LOGGER.error("Failed to delete blob for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", tableName, blobId, e1.getMessage());
+                _metaDataNotPresentMeter.mark();
+            } finally {
+                Throwables.propagate(t);
+            }
+        }
+    }
+
+    private static StorageSummary createStorageSummary(final String blobId,
+                                                   final ObjectMetadata om) {
+        if (null == om) {
+            throw new BlobNotFoundException(blobId);
+        }
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.putAll(om.getUserMetadata());
+        String md5 = attributes.remove("md5");
+        String sha1 = attributes.remove("sha-1");
+
+        long contentLength = om.getContentLength();
+        attributes.put("contentType", om.getContentType());
+        attributes.put("contentLength", String.valueOf(contentLength));
+
+        return new StorageSummary(contentLength, 1, Math.toIntExact(contentLength), md5, sha1, attributes, om.getLastModified().getTime());
     }
 
     @Override
     public void delete(final String tableName, final String blobId) {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
-        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
 
-        boolean withVersions = false;
-        _s3StorageProvider.delete(tableName, tablePlacement, blobId, withVersions);
+        StorageSummary storageSummary = _metadataProvider.readMetadata(table, blobId);
+        delete(table, blobId, storageSummary);
+    }
+
+    private void delete(com.bazaarvoice.emodb.table.db.Table table, String blobId, StorageSummary storageSummary) {
+        if (storageSummary == null) {
+            LOGGER.error("Metadata isn't present for table: {}, blobId: {}", table.getName(), blobId);
+            throw new BlobNotFoundException(blobId);
+        }
+        _metadataProvider.deleteMetadata(table, blobId);
+        String tablePlacement = getTablePlacement(toDefaultTable(table));
+
+        try {
+            _s3StorageProvider.deleteObject(table.getName(), tablePlacement, blobId);
+        } catch (Throwable t) {
+            LOGGER.error("Failed to delete blob for table: {}, blobId: {}, attempt to revert metadata deletion. Exception: {}", table.getName(), blobId, t.getMessage());
+            try {
+                _metadataProvider.writeMetadata(table, blobId, storageSummary);
+            } catch (Exception e1) {
+                LOGGER.error("Failed to revert metadata deletion for table: {}, blobId: {}. Inconsistency between blob and metadata storages. Exception: {}", table.getName(), blobId, e1.getMessage());
+                _metaDataNotPresentMeter.mark();
+            } finally {
+                Throwables.propagate(t);
+            }
+        }
     }
 
     @Override

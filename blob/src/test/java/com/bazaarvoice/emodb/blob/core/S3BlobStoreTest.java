@@ -1,9 +1,10 @@
 package com.bazaarvoice.emodb.blob.core;
 
+import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
-import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
+import com.bazaarvoice.emodb.blob.db.s3.S3StorageProvider;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
@@ -15,7 +16,9 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -37,38 +40,42 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 
-public class DefaultBlobStoreTest {
+public class S3BlobStoreTest {
 
+    private static final String TABLE = "table1";
     private InMemoryTableDAO tableDao;
-    private StorageProvider storageProvider;
+    private S3StorageProvider storageProvider;
     private MetadataProvider metadataProvider;
     private MetricRegistry metricRegistry;
     private BlobStore blobStore;
-    private static final String TABLE = "table1";
 
     @BeforeMethod
     public void setup() {
         tableDao = new InMemoryTableDAO();
-        storageProvider = mock(StorageProvider.class);
+        storageProvider = mock(S3StorageProvider.class);
         metadataProvider = mock(MetadataProvider.class);
         metricRegistry = mock(MetricRegistry.class);
-        blobStore = new CassandraBlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
+        blobStore = new S3BlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
         tableDao.create(TABLE, new TableOptionsBuilder().setPlacement("placement").build(), new HashMap<String, String>(), new AuditBuilder().setComment("create table").build());
     }
 
     @AfterTest
     public void tearDown() {
-        tableDao.drop(TABLE, new AuditBuilder().setComment("drop table").build());
+        if (null != tableDao) {
+            tableDao.drop(TABLE, new AuditBuilder().setComment("drop table").build());
+        }
     }
 
     @Test
     public void testPut() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
-        String blobId = UUID.randomUUID().toString();
+        final String blobId = UUID.randomUUID().toString();
+        ObjectMetadata om = new ObjectMetadata();
+        om.setLastModified(new Date());
+        when(storageProvider.putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class))).thenReturn(om);
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
-        } catch (Exception e) {
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+        } catch (final Exception e) {
+            verify(storageProvider, times(1)).putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -77,20 +84,17 @@ public class DefaultBlobStoreTest {
     }
 
     @Test
-    public void testPut_FailedStorageWriteChunk() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
-        String blobId = UUID.randomUUID().toString();
-        doThrow(new RuntimeException("Cannot write chunk"))
+    public void testPut_FailedStoragePutObject() {
+        final String blobId = UUID.randomUUID().toString();
+        doThrow(new RuntimeException("Cannot put object"))
                 .when(storageProvider)
-                .writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+                .putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
 
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("blob-content".getBytes()), new HashMap<>());
             fail();
-        } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+        } catch (final Exception e) {
+            verify(storageProvider, times(1)).putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, never()).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -100,19 +104,19 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut_FailedWriteMetadata() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
-        String blobId = UUID.randomUUID().toString();
+        final String blobId = UUID.randomUUID().toString();
+        ObjectMetadata om = new ObjectMetadata();
+        om.setLastModified(new Date());
+        when(storageProvider.putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class))).thenReturn(om);
         doThrow(new RuntimeException("Cannot write metadata"))
                 .when(metadataProvider)
                 .writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
             fail();
-        } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
-            verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId));
+        } catch (final Exception e) {
+            verify(storageProvider, times(1)).putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
+            verify(storageProvider, times(1)).deleteObject(eq(TABLE), anyString(), eq(blobId));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -122,22 +126,22 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut_FailedDeleteObject() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
-        String blobId = UUID.randomUUID().toString();
+        final String blobId = UUID.randomUUID().toString();
+        ObjectMetadata om = new ObjectMetadata();
+        om.setLastModified(new Date());
+        when(storageProvider.putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class))).thenReturn(om);
         doThrow(new RuntimeException("Cannot write metadata"))
                 .when(metadataProvider)
                 .writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
         doThrow(new RuntimeException("Cannot delete object"))
                 .when(storageProvider)
-                .deleteObject(any(Table.class), eq(blobId));
+                .deleteObject(eq(TABLE), anyString(), eq(blobId));
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
             fail();
-        } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
-            verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId));
+        } catch (final Exception e) {
+            verify(storageProvider, times(1)).putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
+            verify(storageProvider, times(1)).deleteObject(eq(TABLE), anyString(), eq(blobId));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -147,14 +151,14 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testDelete_FailedReadMetadata() {
-        String blobId = UUID.randomUUID().toString();
+        final String blobId = UUID.randomUUID().toString();
         doThrow(new RuntimeException("Cannot read metadata"))
                 .when(metadataProvider)
                 .readMetadata(any(Table.class), eq(blobId));
         try {
             blobStore.delete("table1", blobId);
             fail();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
@@ -164,14 +168,14 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testDelete_FailedDeleteMetadata() {
-        String blobId = UUID.randomUUID().toString();
+        final String blobId = UUID.randomUUID().toString();
         doThrow(new RuntimeException("Cannot delete metadata"))
                 .when(metadataProvider)
                 .deleteMetadata(any(Table.class), eq(blobId));
         try {
             blobStore.delete("table1", blobId);
             fail();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
@@ -183,13 +187,13 @@ public class DefaultBlobStoreTest {
     public void testDelete_FailedDeleteObject() {
         doThrow(new RuntimeException("Cannot delete object"))
                 .when(storageProvider)
-                .deleteObject(any(Table.class), anyString());
-        String blobId = UUID.randomUUID().toString();
+                .deleteObject(anyString(), anyString(), anyString());
+        final String blobId = UUID.randomUUID().toString();
         try {
             blobStore.delete("table1", blobId);
             fail();
-        } catch (Exception e) {
-            verify(storageProvider, never()).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+        } catch (final Exception e) {
+            verify(storageProvider, never()).putObject(eq(TABLE), anyString(), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
@@ -199,10 +203,10 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPurgeTableUnsafe() {
-        String blobId1 = UUID.randomUUID().toString();
-        String blobId2 = UUID.randomUUID().toString();
+        final String blobId1 = UUID.randomUUID().toString();
+        final String blobId2 = UUID.randomUUID().toString();
 
-        Map<String, StorageSummary> map = new HashMap<String, StorageSummary>() {{
+        final Map<String, StorageSummary> map = new HashMap<String, StorageSummary>() {{
             put(blobId1, new StorageSummary(1, 1, 1, "md5_1", "sha1_1", new HashMap<>(), 1));
             put(blobId2, new StorageSummary(2, 1, 2, "md5_2", "sha1_2", new HashMap<>(), 2));
         }};
@@ -214,8 +218,8 @@ public class DefaultBlobStoreTest {
         verify(metadataProvider, times(1)).deleteMetadata(any(Table.class), eq(blobId2));
         verifyNoMoreInteractions(metadataProvider);
 
-        verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId1));
-        verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId2));
+        verify(storageProvider, times(1)).deleteObject(eq(TABLE), anyString(), eq(blobId1));
+        verify(storageProvider, times(1)).deleteObject(eq(TABLE), anyString(), eq(blobId2));
         verifyNoMoreInteractions(storageProvider);
     }
 
@@ -235,7 +239,7 @@ public class DefaultBlobStoreTest {
         try {
             blobStore.purgeTableUnsafe(TABLE, new AuditBuilder().setComment("purge").build());
             fail();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));
             verifyNoMoreInteractions(metadataProvider);
             verifyNoMoreInteractions(metadataProvider);
@@ -244,10 +248,10 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPurgeTableUnsafe_FailedDelete() {
-        String blobId1 = UUID.randomUUID().toString();
-        String blobId2 = UUID.randomUUID().toString();
+        final String blobId1 = UUID.randomUUID().toString();
+        final String blobId2 = UUID.randomUUID().toString();
 
-        Map<String, StorageSummary> map = new HashMap<String, StorageSummary>() {{
+        final Map<String, StorageSummary> map = new HashMap<String, StorageSummary>() {{
             put(blobId1, new StorageSummary(1, 1, 1, "md5_1", "sha1_1", new HashMap<>(), 1));
             put(blobId2, new StorageSummary(2, 1, 2, "md5_2", "sha1_2", new HashMap<>(), 2));
         }};
@@ -259,9 +263,9 @@ public class DefaultBlobStoreTest {
         try {
             blobStore.purgeTableUnsafe(TABLE, new AuditBuilder().setComment("purge").build());
             fail();
-        } catch (Exception e) {
+        } catch (final Exception e) {
             assertEquals("Failed to purge 1 of 2 rows for table: table1.", e.getMessage());
-            verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId2));
+            verify(storageProvider, times(1)).deleteObject(eq(TABLE), anyString(), eq(blobId2));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));

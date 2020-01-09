@@ -221,7 +221,7 @@ public class CassandraBlobStore implements BlobStore {
 
         Table table = _tableDao.get(tableName);
 
-        return newMetadata(table, blobId, _metadataProvider.readMetadata(table, blobId));
+        return newMetadata(blobId, _metadataProvider.readMetadata(table, blobId), getAttributes(table));
     }
 
     @Override
@@ -234,22 +234,24 @@ public class CassandraBlobStore implements BlobStore {
 
         // Stream back results.  Don't hold them all in memory at once.
         LimitCounter remaining = new LimitCounter(limit);
+        Map<String, String> tableAttributes = getAttributes(table);
+
         return remaining.limit(Iterators.transform(_metadataProvider.scanMetadata(table, fromBlobIdExclusive, remaining),
                 new Function<Map.Entry<String, StorageSummary>, BlobMetadata>() {
                     @Override
                     public BlobMetadata apply(Map.Entry<String, StorageSummary> entry) {
-                        return newMetadata(table, entry.getKey(), entry.getValue());
+                        return newMetadata(entry.getKey(), entry.getValue(), tableAttributes);
                     }
                 }));
     }
 
-    private static BlobMetadata newMetadata(Table table, String blobId, StorageSummary s) {
+    private static BlobMetadata newMetadata(String blobId, StorageSummary s, Map<String, String> tableAttributes) {
         if (s == null) {
             throw new BlobNotFoundException(blobId);
         }
         Map<String, String> attributes = Maps.newTreeMap();
         attributes.putAll(s.getAttributes());
-        attributes.putAll(getAttributes(table));
+        attributes.putAll(tableAttributes);
         Date timestamp = new Date(s.getTimestamp() / 1000); // Convert from microseconds
         return new DefaultBlobMetadata(blobId, timestamp, s.getLength(), s.getMD5(), s.getSHA1(), attributes);
     }
@@ -269,7 +271,7 @@ public class CassandraBlobStore implements BlobStore {
 
         // Read the metadata for the blob.  This should verify that all chunks are present and available for reading.
         final StorageSummary summary = _metadataProvider.readMetadata(table, blobId);
-        BlobMetadata metadata = newMetadata(table, blobId, summary);
+        BlobMetadata metadata = newMetadata(blobId, summary, getTableAttributes(tableName));
 
         // Support returning a specific byte range within the blob.
         final Range range;
