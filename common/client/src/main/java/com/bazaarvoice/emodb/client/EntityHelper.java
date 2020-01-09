@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.client;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Throwables;
 import com.google.common.collect.PeekingIterator;
 
 import java.io.IOException;
@@ -29,7 +28,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, clazz);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -53,7 +52,7 @@ abstract public class EntityHelper {
         try {
             return JsonHelper.readJson(in, reference);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
