@@ -43,7 +43,7 @@
             <version>${ostrich.version}</version>
         </dependency>
 
-        <!-- Third party dependencies (required but NOT shaded) -->
+        <!-- Third party dependencies -->
         <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
@@ -97,6 +97,10 @@
                         <relocation>
                             <pattern>com.amazonaws</pattern>
                             <shadedPattern>shaded.emodb.com.amazonaws</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>org.apache</pattern>
+                            <shadedPattern>shaded.emodb.org.apache</shadedPattern>
                         </relocation>
                         <relocation>
                             <pattern>com.codahale</pattern>
