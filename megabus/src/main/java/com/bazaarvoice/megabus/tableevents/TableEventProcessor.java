@@ -61,24 +61,23 @@ public class TableEventProcessor extends AbstractScheduledService {
 
     @Override
     protected void runOneIteration() throws Exception {
-        Map.Entry<String, TableEvent> tableEventPair = _tableEventRegistry.getNextTableEvent(_applicationId);
+        Map.Entry<String, TableEvent> tableEventPair;
 
-        if (tableEventPair == null) {
-            return;
+        while ((tableEventPair = _tableEventRegistry.getNextTableEvent(_applicationId)) != null) {
+
+            String table = tableEventPair.getKey();
+            TableEvent tableEvent = tableEventPair.getValue();
+
+            switch (tableEvent.getAction()) {
+                case DROP:
+                    processDropEvent(table, tableEvent.getUuid());
+                    break;
+                case PROMOTE:
+                    break;
+            }
+
+            _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getUuid());
         }
-
-        String table = tableEventPair.getKey();
-        TableEvent tableEvent = tableEventPair.getValue();
-
-        switch (tableEvent.getAction()) {
-            case DROP:
-                processDropEvent(table, tableEvent.getUuid());
-                break;
-            case PROMOTE:
-                break;
-        }
-
-        _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getUuid());
     }
 
     private void processDropEvent(String table, String uuid) {
@@ -109,6 +108,6 @@ public class TableEventProcessor extends AbstractScheduledService {
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedRateSchedule(0, 5, TimeUnit.SECONDS);
+        return Scheduler.newFixedDelaySchedule(0, 1, TimeUnit.HOURS);
     }
 }
