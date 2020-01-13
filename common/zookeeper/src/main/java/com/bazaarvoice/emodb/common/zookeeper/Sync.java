@@ -26,7 +26,7 @@ public class Sync {
                         latch.countDown();
                     }
                 }
-            }).forPath(curator.getNamespace().isEmpty() ? "/" : "");
+            }).forPath("/" + curator.getNamespace());
 
             // Wait for sync to complete.
             return latch.await(timeout.toMillis(), TimeUnit.MILLISECONDS);
