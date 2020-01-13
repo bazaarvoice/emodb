@@ -496,12 +496,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                     @Override
                     public void run(Runnable progress) {
 
-                        checkTableEventsComplete(json.getTable(), storage.getUuidString());
+                        // Delay the purge until we're confident we'll catch everything.
+                        checkPlacementConsistent(storage.getPlacement(), droppedAt);
 
-                        // Delay the final purge until we're confident we'll catch everything.
-                        if (iteration == 2) {
-                            checkPlacementConsistent(storage.getPlacement(), droppedAt);
-                        }
+                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString());
 
                         purgeData(json, storage, iteration, progress);
 
@@ -724,6 +722,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         // write about the drop operation (metadata changed info) to a special system table.
         writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_TABLE);
 
+        // write events to the table events registry so that listeners (like the megabus) can process them
         addDroppedTableEvent(json);
 
         // now, update the Table Metadata
@@ -1695,7 +1694,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
 
     }
 
-    private void checkTableEventsComplete(String table, String uuid) {
+    private void checkForAnyNonCompleteTableEvents(String table, String uuid) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 
         List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)

@@ -81,11 +81,4 @@ public class DAOModule extends PrivateModule {
     boolean provideCellTombstoneCompactionEnabled(DataStoreConfiguration configuration) {
         return configuration.isCellTombstoneCompactionEnabled();
     }
-
-
-
-
-
-
-
 }
