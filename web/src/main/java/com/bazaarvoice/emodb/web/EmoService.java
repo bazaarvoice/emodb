@@ -61,6 +61,8 @@ import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
 import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
+import com.bazaarvoice.megabus.MegabusSource;
+import com.bazaarvoice.megabus.resource.MegabusResource1;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -339,6 +341,13 @@ public class EmoService extends Application<EmoConfiguration> {
         if (!runPerServiceMode(megabus)) {
             return;
         }
+
+        ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
+        MegabusSource megabusSource = _injector.getInstance(MegabusSource.class);
+        resources.addResource(_cluster, "emodb-megabus-1", new MegabusResource1(megabusSource));
+
+        // No admin tasks are registered automatically in MEGABUS ServiceMode
+        _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
     }
 
     private void evaluateBlackList()
