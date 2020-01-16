@@ -1,5 +1,7 @@
 package com.bazaarvoice.megabus;
 
+import com.bazaarvoice.megabus.resource.Coordinate;
+
 import java.util.Iterator;
 
 /**
@@ -9,7 +11,7 @@ public interface MegabusSource {
 
     void touch(String table, String key);
 
-    void touchAll(Iterator<MegabusRef> refs);
+    void touchAll(Iterator<Coordinate> coordinates);
 
     /** any other operations **/
 }

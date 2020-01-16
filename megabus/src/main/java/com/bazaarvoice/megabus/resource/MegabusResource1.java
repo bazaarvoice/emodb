@@ -1,7 +1,6 @@
 package com.bazaarvoice.megabus.resource;
 
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
-import com.bazaarvoice.megabus.MegabusRef;
 import com.bazaarvoice.megabus.MegabusSource;
 import com.google.common.base.Strings;
 
@@ -44,16 +43,16 @@ public class MegabusResource1 {
 
     /**
      * Touch multiple documents deliberately to send them to Megabus.
-     * Imports an arbitrary size stream of an array of JSON {@link MegabusRef} objects.
+     * Imports an arbitrary size stream of an array of JSON {@link Coordinate} objects.
      */
     @POST
     @Path ("_stream")
     @Consumes (MediaType.APPLICATION_JSON)
     public SuccessResponse touchAll(InputStream in) {
 
-        Iterator<MegabusRef> allRefs = new JsonStreamingArrayParser<>(in, MegabusRef.class);
+        Iterator<Coordinate> allCoordinates = new JsonStreamingArrayParser<>(in, Coordinate.class);
 
-        _megabusSource.touchAll(allRefs);
+        _megabusSource.touchAll(allCoordinates);
 
         return SuccessResponse.instance();
     }

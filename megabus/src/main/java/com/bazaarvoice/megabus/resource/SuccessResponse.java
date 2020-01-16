@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import javax.annotation.Nullable;
 import java.util.Map;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonInclude (JsonInclude.Include.NON_NULL)
 public class SuccessResponse {
 
     private static final SuccessResponse INSTANCE = new SuccessResponse(null);
