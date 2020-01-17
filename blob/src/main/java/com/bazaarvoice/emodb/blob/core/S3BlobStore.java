@@ -205,9 +205,13 @@ public class S3BlobStore implements BlobStore {
     @Override
     public BlobMetadata getMetadata(final String tableName, final String blobId) {
         checkLegalTableName(tableName);
-        checkLegalBlobId(blobId);
-
         com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
+
+        return getMetadata(table, blobId);
+    }
+
+    private BlobMetadata getMetadata(com.bazaarvoice.emodb.table.db.Table table, String blobId) {
+        checkLegalBlobId(blobId);
         return createBlobMetadata(blobId, _metadataProvider.readMetadata(table, blobId), getAttributes(table));
     }
 
@@ -248,10 +252,13 @@ public class S3BlobStore implements BlobStore {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
 
-        String tablePlacement = getTablePlacement(getTableMetadata(tableName));
-        final BlobMetadata metadata = getMetadata(tableName, blobId);
+        com.bazaarvoice.emodb.table.db.Table table = _tableDao.get(tableName);
+
+        final BlobMetadata metadata = getMetadata(table, blobId);
 
         final Range range = getRange(rangeSpec, metadata.getLength());
+        final String tablePlacement = getTablePlacement(toDefaultTable(table));
+
         return new DefaultBlob(metadata, range, _s3StorageProvider.getObjectStreamSupplier(tableName, tablePlacement, blobId, range));
     }
 
@@ -301,7 +308,7 @@ public class S3BlobStore implements BlobStore {
     }
 
     private static StorageSummary createStorageSummary(final String blobId,
-                                                   final ObjectMetadata om) {
+                                                       final ObjectMetadata om) {
         if (null == om) {
             throw new BlobNotFoundException(blobId);
         }

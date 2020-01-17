@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.blob.core;
 
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.api.Range;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
 import com.bazaarvoice.emodb.blob.db.s3.S3StorageProvider;
@@ -17,17 +19,15 @@ import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
@@ -63,6 +63,88 @@ public class S3BlobStoreTest {
     public void tearDown() {
         if (null != tableDao) {
             tableDao.drop(TABLE, new AuditBuilder().setComment("drop table").build());
+        }
+    }
+
+    @Test
+    public void testGet() {
+        final String blobId = UUID.randomUUID().toString();
+        when(metadataProvider.readMetadata(any(Table.class), eq(blobId))).thenReturn(new StorageSummary(1, 1, 1, "1", "1", new HashMap<>(), 1));
+        when(storageProvider.getObjectStreamSupplier(eq(TABLE), anyString(), eq(blobId), any(Range.class))).thenReturn(out -> {
+            //PASS
+        });
+
+        blobStore.get(TABLE, blobId, null);
+        verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
+        verifyNoMoreInteractions(metadataProvider);
+
+        verify(storageProvider, times(1)).getObjectStreamSupplier(eq(TABLE), anyString(), eq(blobId), any(Range.class));
+        verifyNoMoreInteractions(storageProvider);
+    }
+
+    @Test
+    public void testGet_BlobNotFound() {
+        final String blobId = UUID.randomUUID().toString();
+        when(metadataProvider.readMetadata(any(Table.class), eq(blobId))).thenReturn(null);
+
+        try {
+            blobStore.get(TABLE, blobId, null);
+            fail();
+        } catch (final Exception e) {
+            assertTrue(e instanceof BlobNotFoundException);
+            assertEquals(blobId, e.getMessage());
+            verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
+            verifyNoMoreInteractions(metadataProvider);
+
+            verifyNoMoreInteractions(storageProvider);
+        }
+    }
+
+    @Test
+    public void testGet_NullBlobStream() {
+        final String blobId = UUID.randomUUID().toString();
+        when(metadataProvider.readMetadata(any(Table.class), eq(blobId))).thenReturn(new StorageSummary(1, 1, 1, "1", "1", new HashMap<>(), 1));
+        when(storageProvider.getObjectStreamSupplier(eq(TABLE), anyString(), eq(blobId), any(Range.class))).thenReturn(null);
+
+        try {
+            blobStore.get(TABLE, blobId, null);
+            fail();
+        } catch (final Exception e) {
+            assertTrue(e instanceof NullPointerException);
+            assertEquals("streamSupplier", e.getMessage());
+
+            verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
+            verifyNoMoreInteractions(metadataProvider);
+
+            verify(storageProvider, times(1)).getObjectStreamSupplier(eq(TABLE), anyString(), eq(blobId), any(Range.class));
+            verifyNoMoreInteractions(storageProvider);
+        }
+    }
+
+
+    @Test
+    public void testGetMetadata() {
+        final String blobId = UUID.randomUUID().toString();
+        when(metadataProvider.readMetadata(any(Table.class), eq(blobId))).thenReturn(new StorageSummary(1, 1, 1, "1", "1", new HashMap<>(), 1));
+        blobStore.getMetadata(TABLE, blobId);
+        verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
+        verifyNoMoreInteractions(metadataProvider);
+    }
+
+    @Test
+    public void testGetMetadata_BlobNotFound() {
+        final String blobId = UUID.randomUUID().toString();
+        when(metadataProvider.readMetadata(any(Table.class), eq(blobId))).thenReturn(null);
+
+        try {
+            blobStore.getMetadata(TABLE, blobId);
+            fail();
+        } catch (final Exception e) {
+            assertTrue(e instanceof BlobNotFoundException);
+            assertEquals(blobId, e.getMessage());
+
+            verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));
+            verifyNoMoreInteractions(metadataProvider);
         }
     }
 
