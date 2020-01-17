@@ -15,7 +15,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
@@ -63,6 +65,13 @@ public class TableEventDatacenter {
         deltas.forEach(delta -> mapDeltaBuilder.update(delta.getKey(), delta.getValue()));
 
         return Deltas.mapBuilder().update(REGISTRANTS, mapDeltaBuilder.build()).build();
+    }
+
+    public List<TableEvent> getTableEventsForTableAndStorage(String table, String storage) {
+        return _registrants.values().stream()
+                .map(tableEventRegistrant -> tableEventRegistrant.getTableEventForTableAndStorage(table, storage))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     public Delta markTableEventAsComplete(String registrationId, String table, String uuid) {

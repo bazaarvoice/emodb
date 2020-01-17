@@ -35,11 +35,11 @@ systemOfRecord:
                      
 databus:
    keyspaces:
-      databus:
+      databusdc2:
          replicationFactor: 1
          tables:
             default:
-               keyspace: databus
+               keyspace: databusdc2
 
 queue:
    keyspaces:

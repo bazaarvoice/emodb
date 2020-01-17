@@ -288,12 +288,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     public Iterator<Map.Entry<String, MaintenanceOp>> listMaintenanceOps() {
         final Iterator<Map<String, Object>> tableIter =
                 _backingStore.scan(_systemTable, null, LimitCounter.max(), ReadConsistency.STRONG);
+        final Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier = Suppliers.memoize(this::getTableEventDatacenters);
         return new AbstractIterator<Map.Entry<String, MaintenanceOp>>() {
             @Override
             protected Map.Entry<String, MaintenanceOp> computeNext() {
                 while (tableIter.hasNext()) {
                     TableJson json = new TableJson(tableIter.next());
-                    MaintenanceOp op = getNextMaintenanceOp(json, false/*don't expose task outside this class*/);
+                    MaintenanceOp op = getNextMaintenanceOp(json, false/*don't expose task outside this class*/, tableEventDatacenterSupplier);
                     if (op != null) {
                         return Maps.immutableEntry(json.getTable(), op);
                     }
@@ -308,7 +309,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     @Override
     public MaintenanceOp getNextMaintenanceOp(String table) {
         TableJson json = readTableJson(table, false);
-        return getNextMaintenanceOp(json, false/*don't expose task outside this class*/);
+        return getNextMaintenanceOp(json, false/*don't expose task outside this class*/, Suppliers.memoize(this::getTableEventDatacenters));
     }
 
     @Override
@@ -320,7 +321,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     @Override
     public void performMetadataMaintenance(String table) {
         TableJson json = readTableJson(table, false);
-        MaintenanceOp op = getNextMaintenanceOp(json, true);
+
+        MaintenanceOp op = getNextMaintenanceOp(json, true, Suppliers.memoize(this::getTableEventDatacenters));
         if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.METADATA) {
             return;  // Nothing to do
         }
@@ -333,7 +335,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     @Override
     public void performDataMaintenance(String table, Runnable progress) {
         TableJson json = readTableJson(table, false);
-        MaintenanceOp op = getNextMaintenanceOp(json, true);
+        MaintenanceOp op = getNextMaintenanceOp(json, true, Suppliers.memoize(this::getTableEventDatacenters));
         if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.DATA ||
                 !_selfDataCenter.equals(op.getDataCenter())) {
             return;  // Nothing to do
@@ -347,7 +349,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
      * Returns the next maintenance operation that should be performed on the specified table.
      */
     @Nullable
-    private MaintenanceOp getNextMaintenanceOp(final TableJson json, boolean includeTask) {
+    private MaintenanceOp getNextMaintenanceOp(final TableJson json, boolean includeTask, Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier) {
         if (json.isDeleted() || json.getStorages().isEmpty()) {
             return null;
         }
@@ -356,7 +358,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         MaintenanceOp op = NULLS_LAST.min(Iterables.transform(json.getStorages(), new Function<Storage, MaintenanceOp>() {
             @Override
             public MaintenanceOp apply(Storage storage) {
-                return getNextMaintenanceOp(json, storage);
+                return getNextMaintenanceOp(json, storage, tableEventDatacenterSupplier);
             }
         }));
         // Don't expose the MaintenanceOp Runnable to most callers.  It may only be run from the right data center
@@ -371,12 +373,33 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
      * Helper returns the next maintenance operation that should be performed on the specified table uuid/storage.
      */
     @Nullable
-    private MaintenanceOp getNextMaintenanceOp(final TableJson json, final Storage storage) {
+    private MaintenanceOp getNextMaintenanceOp(final TableJson json, final Storage storage, Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier) {
         final StorageState from = storage.getState();
+        _log.info("running maintanence table {} with storage {} and state {}", json.getTable(), storage.getUuidString(), from);
         switch (from) {
-            case PRIMARY:
-                return null;  // Nothing to do.  This is the common case.
+            case PRIMARY: {
+                List<TableEvent> tableEvents = getTableEventsForStorage(json.getTable(), storage.getUuidString(), tableEventDatacenterSupplier.get());
 
+                // Nothing to do.  This is the common case.
+                if (tableEvents.isEmpty()) {
+                    return null;
+                }
+
+                Instant when = tableEvents.stream()
+                        .map(TableEvent::getEventTime)
+                        .map(TimeUUIDs::getTimeMillis)
+                        .max(Long::compare)
+                        .map(Instant::ofEpochMilli)
+                        .get()
+                        .plus(MIN_CONSISTENCY_DELAY);
+
+                return MaintenanceOp.forMetadata("TableEvent:mark-ready", when, new MaintenanceTask() {
+                    @Override
+                    public void run(Runnable progress) {
+                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString());
+                    }
+                });
+            }
             case MIRROR_CREATED: {  // Initial mirror create/activate failed, retry the operation.
                 from.getTransitionedAt(storage);
                 Instant when = _clock.instant();  // Retry immediately.
@@ -1031,6 +1054,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         // write about the update attributes operation (metadata changed info) to a special system table.
         writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.UPDATE_ATTRIBUTES);
 
+        addTableTemplateEvent(json);
+
         // Write the new table attributes to Cassandra
         Delta delta = json.newSetAttributes(attributes);
 
@@ -1644,10 +1669,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
 
     private void addDroppedTableEvent(TableJson json) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
-        Set<Storage> storages = json.getStorages().stream()
-                .filter(storage -> !storage.isDropped())
-                .filter(storage -> storage.equals(json.getMasterStorage()) || storage.isFacade())
-                .collect(Collectors.toSet());
+        Set<Storage> storages = getLiveStoragesForTable(json);
 
         List<Update> updates = new ArrayList<>();
 
@@ -1660,6 +1682,35 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
                         tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, json.getUuidString()), Instant.now())
+                    )
+                    .map(delta -> {
+                        Audit audit = new AuditBuilder()
+                                .setComment(String.format("Adding events for table %s", json.getTable()))
+                                .setLocalHost()
+                                .build();
+                        return new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+                    })
+                    .forEach(updates::add);
+        });
+
+        _backingStore.updateAll(updates);
+    }
+
+    private void addTableTemplateEvent(TableJson json) {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+        Set<Storage> storages = getLiveStoragesForTable(json);
+
+        List<Update> updates = new ArrayList<>();
+
+        tableEventDatacenterIterator.forEachRemaining(tableEventDatacenterMap -> {
+            TableEventDatacenter tableEventDatacenter = _objectMapper.convertValue(tableEventDatacenterMap, TableEventDatacenter.class);
+            storages.stream()
+                    .filter(storage -> _placementFactory.getDataCenters(storage.getPlacement())
+                            .stream()
+                            .map(DataCenter::getName)
+                            .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
+                    .map(storage ->
+                            tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, json.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
@@ -1692,6 +1743,28 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(),
                 delta, audit, WriteConsistency.GLOBAL);
 
+    }
+
+    private Set<Storage> getLiveStoragesForTable(TableJson json) {
+        return json.getStorages().stream()
+                .filter(storage -> !storage.isDropped())
+                .filter(storage -> storage.equals(json.getMasterStorage()) || storage.isFacade())
+                .collect(Collectors.toSet());
+    }
+
+    private List<TableEvent> getTableEventsForStorage(String table, String uuid, List<TableEventDatacenter> tableEventDatacenters) {
+        return tableEventDatacenters.stream()
+                .flatMap(tableEventDatacenter -> tableEventDatacenter.getTableEventsForTableAndStorage(table, uuid).stream())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private List<TableEventDatacenter> getTableEventDatacenters() {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+                .map(json -> _objectMapper.convertValue(json, TableEventDatacenter.class))
+                .collect(Collectors.toList());
     }
 
     private void checkForAnyNonCompleteTableEvents(String table, String uuid) {

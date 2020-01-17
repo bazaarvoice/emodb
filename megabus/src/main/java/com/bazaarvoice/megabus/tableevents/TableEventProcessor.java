@@ -70,13 +70,14 @@ public class TableEventProcessor extends AbstractScheduledService {
 
             switch (tableEvent.getAction()) {
                 case DROP:
-                    processDropEvent(table, tableEvent.getUuid());
+                    processDropEvent(table, tableEvent.getStorage());
                     break;
                 case PROMOTE:
+                    _log.info("process promote event here");
                     break;
             }
 
-            _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getUuid());
+            _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getStorage());
         }
     }
 

@@ -39,9 +39,16 @@ public class TableEventRegistrant {
         return _tasks;
     }
 
+    public TableEvent getTableEventForTableAndStorage(String table, String uuid) {
+        return Optional.ofNullable(_tasks.get(table))
+                .filter(tableEvent -> tableEvent.getStorage().equals(uuid))
+                .orElse(null);
+
+    }
+
     public Delta markTaskAsReadyIfExists(String table, String uuid) {
         return Optional.ofNullable(_tasks.get(table))
-                .filter(tableEvent -> tableEvent.getUuid().equals(uuid))
+                .filter(tableEvent -> tableEvent.getStorage().equals(uuid))
                 .map(tableEvent -> Deltas.mapBuilder().update(TASKS,
                         Deltas.mapBuilder().update(table, tableEvent.newReadyDelta()).build()).build())
                 .orElse(null);
@@ -49,7 +56,7 @@ public class TableEventRegistrant {
 
     public Delta markTaskAsCompleteIfExists(String table, String uuid) {
         return Optional.ofNullable(_tasks.get(table))
-                .filter(tableEvent -> tableEvent.getUuid().equals(uuid))
+                .filter(tableEvent -> tableEvent.getStorage().equals(uuid))
                 .map(tableEvent -> Deltas.mapBuilder().update(TASKS,
                         Deltas.mapBuilder().update(table, tableEvent.newCompleteDelta()).build()).build())
                 .orElse(null);
