@@ -194,8 +194,7 @@ public class S3StorageProvider {
             mdSHA1.update(bytes);
             final String sha1 = Hex.encodeHexString(mdSHA1.digest());
 
-            objectMetadata = getObjectMetadata(sha1, md5, attributes);
-            objectMetadata.setContentLength(buf.length);
+            objectMetadata = getObjectMetadata(sha1, md5, buf.length, attributes);
 
             putObjectKnownSize(s3Client, uri, new ByteArrayInputStream(buf), objectMetadata);
             return objectMetadata;
@@ -210,7 +209,7 @@ public class S3StorageProvider {
                                                        int writeChunkSize, final Map<String, String> metadataAttributes) {
         int partNumber = 1;
         int partSize;
-
+        long contentLength = 0;
         LOGGER.debug("Started to put S3 object unknown size, uri: {}", uri);
         // Initiate the multipart upload.
         final InitiateMultipartUploadRequest initRequest = new InitiateMultipartUploadRequest(uri.getBucket(), uri.getKey());
@@ -225,6 +224,7 @@ public class S3StorageProvider {
                 .withPartSize(firstPart.length);
 
         UploadPartResult uploadResult = amazonS3.uploadPart(uploadRequest);
+        contentLength += firstPart.length;
         LOGGER.debug("Uploaded S3 object part, uri: {}, part: {}", uri, partNumber);
 
         // Create a list of ETag objects. You retrieve ETags for each object part uploaded,
@@ -260,6 +260,7 @@ public class S3StorageProvider {
 
                 // Upload the part and add the response's ETag to our list.
                 uploadResult = amazonS3.uploadPart(uploadRequest);
+                contentLength += partSize;
                 partETags.add(uploadResult.getPartETag());
                 LOGGER.debug("Uploaded S3 object part, uri: {}, part: {}", uri, partNumber);
             } catch (final Exception ex) {
@@ -278,14 +279,13 @@ public class S3StorageProvider {
         final String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
         final String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
 
-        final ObjectMetadata om = getObjectMetadata(md5, sha1, metadataAttributes);
-        //TODO do we really need?
+        final ObjectMetadata om = getObjectMetadata(md5, sha1, contentLength, metadataAttributes);
         ObjectMetadata objectMetadata = overwriteObjectMetadata(amazonS3, uri, om);
-        LOGGER.debug("S3 object has been uploaded, uri: {}", uri);
+        LOGGER.debug("S3 object has been uploaded, uri: {}, length: {}", uri, om.getContentLength());
         return objectMetadata;
     }
 
-    private static ObjectMetadata getObjectMetadata(final String md5, final String sha1, final Map<String, String> attributes) {
+    private static ObjectMetadata getObjectMetadata(final String md5, final String sha1, long contentLenght, final Map<String, String> attributes) {
         final ObjectMetadata om = new ObjectMetadata();
         attributes.put("sha-1", sha1);
         attributes.put("md5", md5);
@@ -294,6 +294,7 @@ public class S3StorageProvider {
         }
         om.setUserMetadata(attributes);
         om.setLastModified(new Date());
+        om.setContentLength(contentLenght);
         return om;
     }
 
@@ -313,12 +314,12 @@ public class S3StorageProvider {
         }
     }
 
-    private static void putObjectKnownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final InputStream input, final ObjectMetadata objectMetadata) {
-        final PutObjectRequest putObjectRequest = new PutObjectRequest(uri.getBucket(), uri.getKey(), input, objectMetadata);
+    private static void putObjectKnownSize(final AmazonS3 amazonS3, final AmazonS3URI uri, final InputStream input, final ObjectMetadata om) {
+        final PutObjectRequest putObjectRequest = new PutObjectRequest(uri.getBucket(), uri.getKey(), input, om);
         try {
             LOGGER.debug("Put object known size, uri: {}", uri);
             amazonS3.putObject(putObjectRequest);
-            LOGGER.debug("S3 object has been uploaded, uri: {}", uri);
+            LOGGER.debug("S3 object has been uploaded, uri: {}, length: {}", uri, om.getContentLength());
         } catch (final AmazonS3Exception e) {
             LOGGER.error("Failed to put S3 object: {}", uri);
             throw new RuntimeException(e);

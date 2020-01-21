@@ -373,10 +373,10 @@ public class BlobStoreModule extends PrivateModule {
         return new RateLimiterCache(rateLimits, 1000);
     }
 
-    private Map<String, String> validateMoveMap(Map<String, String> moveMap, Set<String> validPlacements) {
+    private static Map<String, String> validateMoveMap(Map<String, String> moveMap, Set<String> validPlacements) {
         for (Map.Entry<String, String> entry : moveMap.entrySet()) {
-            checkArgument(validPlacements.contains(entry.getKey()), "Invalid move-from placement");
-            checkArgument(validPlacements.contains(entry.getValue()), "Invalid move-to placement");
+            checkArgument(validPlacements.contains(entry.getKey()), String.format("Invalid move-from placement: %s", entry.getKey()));
+            checkArgument(validPlacements.contains(entry.getValue()), String.format("Invalid move-to placement: %s", entry.getValue()));
             // Prevent chained moves
             checkArgument(!moveMap.containsKey(entry.getValue()), "Chained moves are not allowed");
         }
