@@ -68,23 +68,16 @@ public class TableEventProcessor extends AbstractScheduledService {
             String table = tableEventPair.getKey();
             TableEvent tableEvent = tableEventPair.getValue();
 
-            switch (tableEvent.getAction()) {
-                case DROP:
-                    processDropEvent(table, tableEvent.getStorage());
-                    break;
-                case PROMOTE:
-                    _log.info("process promote event here");
-                    break;
-            }
+            processTableEvent(table, tableEvent.getStorage(), tableEvent.getAction() == TableEvent.Action.DROP);
 
             _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getStorage());
         }
     }
 
-    private void processDropEvent(String table, String uuid) {
+    private void processTableEvent(String table, String uuid, boolean deleted) {
 
         Iterator<Future<RecordMetadata>> futures =  _tableEventTools.getIdsForStorage(table, uuid)
-                .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, true))
+                .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, deleted))
                 .map(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     return new ProducerRecord<String, JsonNode>(_topic.getName(),
