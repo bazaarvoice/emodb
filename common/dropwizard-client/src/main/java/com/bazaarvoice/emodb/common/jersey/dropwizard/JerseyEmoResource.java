@@ -91,8 +91,12 @@ public class JerseyEmoResource implements EmoResource {
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
                 throw new WebApplicationException(response);
             } else {
-                LOG.error("AYYYYYY, we closed the connection");
-                response.close();
+                LOG.info("AYYYYYY, we closed the connection");
+                // hack: we can call response.close but it generates errors on the server
+                // this way, we read the entire response and _then_ close, always, even
+                // though we don't need to read the response
+                response.readEntity(Object.class);
+//                response.close();
             }
 
             return null;
