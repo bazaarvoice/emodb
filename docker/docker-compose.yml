@@ -22,6 +22,8 @@ services:
         build:
             dockerfile: cassandra-Dockerfile
             context: .
+        environment:
+            - CASSANDRA_DC=datacenter1
         ports:
             - '7000:7000'
             - '7001:7001'
@@ -32,50 +34,106 @@ services:
             - 'cassandra_data:/var/lib/cassandra/data'
         depends_on:
             - zookeeper
-    kafka:
-        image: 'confluentinc/cp-kafka:5.3.1'
+    cassandra-dc2:
+        image: 'bazaarvoice/cassandra:2.2.4'
         networks:
             - emodb
-        ports:
-            - '9092:9092'
-        volumes:
-            - 'kafka_data:/var/lib/kafka/data'
+        build:
+            dockerfile: cassandra-Dockerfile
+            context: .
         environment:
-            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-            - ALLOW_PLAINTEXT_LISTENER=yes
-            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+            - CASSANDRA_DC=datacenter2
+        ports:
+            - '7002:7000'
+            - '7003:7001'
+            - '8000:7199'
+            - '9043:9042'
+            - '9161:9160'
+        volumes:
+            - 'cassandra-dc2_data:/var/lib/cassandra/data'
         depends_on:
             - zookeeper
-    emodb-web:
+#    kafka:
+#        image: 'confluentinc/cp-kafka:5.3.1'
+#        networks:
+#            - emodb
+#        ports:
+#            - '9092:9092'
+#        volumes:
+#            - 'kafka_data:/var/lib/kafka/data'
+#        environment:
+#            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+#            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+#            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+#            - ALLOW_PLAINTEXT_LISTENER=yes
+#            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+#        depends_on:
+#            - zookeeper
+    emodb-web-dc1:
         image: 'bazaarvoice/emodb-web:latest'
         networks:
             - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=web
+                - DATACENTER=dc1
+                - PORTS=8080 8081
+                - STARTUP_DELAY=30
+
         ports:
             - '8080:8080'
             - '8081:8081'
         depends_on:
             - zookeeper
             - cassandra
-    emodb-megabus:
-        image: 'bazaarvoice/emodb-megabus:latest'
+    emodb-web-dc2:
+        image: 'bazaarvoice/emodb-web-dc2:latest'
         networks:
             - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=web
+                - DATACENTER=dc2
+                - PORTS=9090 9091
+                - STARTUP_DELAY=35
         ports:
-            - '8082:8082'
-            - '8083:8083'
-            # If you build the image with attachment options,
-            # you can uncomment the following line and attach
-            # a debugger. Extremely useful for tracing what
-            # java.net does in a container when you're not
-            # looking.
-            # - '5005:5005'
+            - '9090:9090'
+            - '9091:9091'
         depends_on:
             - zookeeper
-            - cassandra
-            - emodb-web
-            - kafka
+            - cassandra-dc2
+            - emodb-web-dc1
+#    emodb-megabus:
+#        image: 'bazaarvoice/emodb-megabus:latest'
+#        networks:
+#            - emodb
+#        build:
+#            dockerfile: docker/Dockerfile
+#            context: ../
+#            args:
+#                - APP_ROLE=web
+#                - DATACENTER=dc1
+#                - PORTS=8082 8083
+#                - STARTUP_DELAY=45
+#        ports:
+#            - '8082:8082'
+#            - '8083:8083'
+#            # If you build the image with attachment options,
+#            # you can uncomment the following line and attach
+#            # a debugger. Extremely useful for tracing what
+#            # java.net does in a container when you're not
+#            # looking.
+#            # - '5005:5005'
+#        depends_on:
+#            - zookeeper
+#            - cassandra
+#            - cassandra-dc2
+#            - emodb-web_dc1
+#            - kafka
 
 volumes:
   zookeeper_data:
@@ -83,4 +141,6 @@ volumes:
   kafka_data:
     driver: local
   cassandra_data:
+    driver: local
+  cassandra-dc2_data:
     driver: local

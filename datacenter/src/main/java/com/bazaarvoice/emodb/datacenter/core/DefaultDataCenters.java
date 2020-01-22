@@ -80,7 +80,7 @@ public class DefaultDataCenters implements DataCenters {
                 }
                 return new CachedInfo(dataCenters);
             }
-        }, 10, TimeUnit.MINUTES);
+        }, 1, TimeUnit.MINUTES);
     }
 
     @Override
