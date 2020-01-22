@@ -413,7 +413,7 @@ public class EmoModule extends AbstractModule {
 
         /** Provides a BlobStore client that delegates to the remote system center blob store. */
         @Provides @Singleton @SystemBlobStore
-        BlobStore provideSystemBlobStore (DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
+        BlobStore provideSystemBlobStore(DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
 
             ServiceFactory<BlobStore> clientFactory = BlobStoreClientFactory
                     .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)
