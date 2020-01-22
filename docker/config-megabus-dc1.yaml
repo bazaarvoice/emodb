@@ -19,14 +19,14 @@ dataCenter:
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8080
+  dataCenterServiceUri: http://emodb-web-dc1:8080
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8081
+  dataCenterAdminUri: http://emodb-web-dc1:8081
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
-  systemDataCenterServiceUri: http://localhost:8080
+  systemDataCenterServiceUri: http://emodb-web-dc1:8080
 
 kafka:
   bootstrapServers: kafka:9092
@@ -231,12 +231,10 @@ auth:
   anonymousRoles:
   - anonymous
 
+# Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
- #namespace: datacenter1
-
- # ZooKeeper connection string that looks like "host:port,host:port,...".
- # It should include all members of the ZooKeeper ensemble.
- connectString: zookeeper:2181
+  namespace: datacenter1
+  connectString: zookeeper:2181
 
 # Configure the HTTP server that listens for inbound requests
 server:

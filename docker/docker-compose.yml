@@ -53,22 +53,22 @@ services:
             - 'cassandra-dc2_data:/var/lib/cassandra/data'
         depends_on:
             - zookeeper
-#    kafka:
-#        image: 'confluentinc/cp-kafka:5.3.1'
-#        networks:
-#            - emodb
-#        ports:
-#            - '9092:9092'
-#        volumes:
-#            - 'kafka_data:/var/lib/kafka/data'
-#        environment:
-#            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-#            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-#            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-#            - ALLOW_PLAINTEXT_LISTENER=yes
-#            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-#        depends_on:
-#            - zookeeper
+    kafka:
+        image: 'confluentinc/cp-kafka:5.3.1'
+        networks:
+            - emodb
+        ports:
+            - '9092:9092'
+        volumes:
+            - 'kafka_data:/var/lib/kafka/data'
+        environment:
+            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+            - ALLOW_PLAINTEXT_LISTENER=yes
+            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+        depends_on:
+            - zookeeper
     emodb-web-dc1:
         image: 'bazaarvoice/emodb-web:latest'
         networks:
@@ -107,33 +107,32 @@ services:
             - zookeeper
             - cassandra-dc2
             - emodb-web-dc1
-#    emodb-megabus:
-#        image: 'bazaarvoice/emodb-megabus:latest'
-#        networks:
-#            - emodb
-#        build:
-#            dockerfile: docker/Dockerfile
-#            context: ../
-#            args:
-#                - APP_ROLE=web
-#                - DATACENTER=dc1
-#                - PORTS=8082 8083
-#                - STARTUP_DELAY=45
-#        ports:
-#            - '8082:8082'
-#            - '8083:8083'
-#            # If you build the image with attachment options,
-#            # you can uncomment the following line and attach
-#            # a debugger. Extremely useful for tracing what
-#            # java.net does in a container when you're not
-#            # looking.
-#            # - '5005:5005'
-#        depends_on:
-#            - zookeeper
-#            - cassandra
-#            - cassandra-dc2
-#            - emodb-web_dc1
-#            - kafka
+    emodb-megabus:
+        image: 'bazaarvoice/emodb-megabus:latest'
+        networks:
+            - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=megabus
+                - DATACENTER=dc1
+                - PORTS=8082 8083
+                - STARTUP_DELAY=45
+        ports:
+            - '8082:8082'
+            - '8083:8083'
+            # If you build the image with attachment options,
+            # you can uncomment the following line and attach
+            # a debugger. Extremely useful for tracing what
+            # java.net does in a container when you're not
+            # looking.
+            # - '5005:5005'
+        depends_on:
+            - zookeeper
+            - cassandra
+            - emodb-web-dc1
+            - kafka
 
 volumes:
   zookeeper_data:
