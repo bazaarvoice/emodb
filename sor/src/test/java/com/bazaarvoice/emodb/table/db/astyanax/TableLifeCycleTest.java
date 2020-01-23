@@ -241,6 +241,15 @@ public class TableLifeCycleTest {
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
 
+            // The purge is delayed until full consistency is achieved relative to the time of the drop.
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (FullConsistencyException e) {
+                // Expected
+            }
+            fct.setTime(droppedAt.toEpochMilli() + 1);
+
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
             usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
@@ -276,15 +285,6 @@ public class TableLifeCycleTest {
             DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
-
-            // The 2nd purge is delayed until full consistency is achieved relative to the time of the drop.
-            try {
-                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
-                fail();
-            } catch (FullConsistencyException e) {
-                // Expected
-            }
-            fct.setTime(droppedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
@@ -441,6 +441,7 @@ public class TableLifeCycleTest {
             DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
+            fct.setTime(droppedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
@@ -476,7 +477,6 @@ public class TableLifeCycleTest {
             DataCopyDAO usDataCopyDAO = mock(DataCopyDAO.class);
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
-            fct.setTime(droppedAt.toEpochMilli() + 1);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
