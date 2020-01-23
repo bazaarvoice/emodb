@@ -774,6 +774,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         // write about the drop operation (metadata changed info) to a special system table.
         writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_FACADE);
 
+        // write events to the table events registry so that listeners (like the megabus) can process them
+        addDroppedTableEvent(json);
+
         // Find the facade for the specified placement.
         Storage facadeStorage = json.getFacadeForPlacement(placement);
 
@@ -951,6 +954,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         // Pick a unique table uuid that will be the target of the move.
         String destUuid = newTableUuidString(table, audit);
 
+        // Add appropriate events to the event registry so that listeners such as the megabus will be notified
         addMoveTableEvent(json, srcStorage, destUuid, destPlacement);
 
         // Update the table metadata for step 1.
