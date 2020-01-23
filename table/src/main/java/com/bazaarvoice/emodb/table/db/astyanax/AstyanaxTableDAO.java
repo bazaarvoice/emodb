@@ -378,7 +378,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         _log.info("running maintanence table {} with storage {} and state {}", json.getTable(), storage.getUuidString(), from);
         switch (from) {
             case PRIMARY: {
-                List<TableEvent> tableEvents = getTableEventsForStorage(json.getTable(), storage.getUuidString(), tableEventDatacenterSupplier.get());
+                List<TableEvent> tableEvents = getTableEvents(json.getTable(), storage.getUuidString(), tableEventDatacenterSupplier.get(), TableEvent.Action.PROMOTE);
 
                 // Nothing to do.  This is the common case.
                 if (tableEvents.isEmpty()) {
@@ -396,7 +396,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                 return MaintenanceOp.forMetadata("TableEvent:mark-ready", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable progress) {
-                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString());
+                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString(), TableEvent.Action.PROMOTE);
                     }
                 });
             }
@@ -522,7 +522,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                         // Delay the purge until we're confident we'll catch everything.
                         checkPlacementConsistent(storage.getPlacement(), droppedAt);
 
-                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString());
+                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString(), TableEvent.Action.DROP);
 
                         purgeData(json, storage, iteration, progress);
 
@@ -950,6 +950,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
 
         // Pick a unique table uuid that will be the target of the move.
         String destUuid = newTableUuidString(table, audit);
+
+        addMoveTableEvent(json, srcStorage, destUuid, destPlacement);
 
         // Update the table metadata for step 1.
         moveStart(json, srcStorage, destUuid, destPlacement, shardsLog2, op, Optional.of(audit), moveType);
@@ -1681,7 +1683,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .map(DataCenter::getName)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
-                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, json.getUuidString()), Instant.now())
+                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, storage.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
@@ -1710,7 +1712,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .map(DataCenter::getName)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
-                            tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, json.getUuidString()), Instant.now())
+                            tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, storage.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
@@ -1725,6 +1727,53 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
         _backingStore.updateAll(updates);
     }
 
+    private void addMoveTableEvent(TableJson json, Storage srcStorage, String destUuid, String destPlacement) {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        Collection<DataCenter> srcDatacenters = _placementFactory.getDataCenters(srcStorage.getPlacement());
+
+        Collection<DataCenter> destDatacenters = _placementFactory.getDataCenters(destPlacement);
+
+        Collection<String> dropDatacenters = srcDatacenters
+                .stream()
+                .filter(datacenter -> !destDatacenters.contains(datacenter))
+                .map(DataCenter::getName)
+                .collect(Collectors.toList());
+
+        Collection<String> promoteDatacenters = destDatacenters
+                .stream()
+                .filter(datacenter -> !srcDatacenters.contains(datacenter))
+                .map(DataCenter::getName)
+                .collect(Collectors.toList());
+
+        _log.info("promote datacenters: {}", promoteDatacenters);
+        _log.info("drop datacenters: {}", dropDatacenters);
+
+        List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+                .map(datacenter -> _objectMapper.convertValue(datacenter, TableEventDatacenter.class))
+                .flatMap(tableEventDatacenter -> {
+
+                    Delta delta = null;
+
+                    if (dropDatacenters.contains(tableEventDatacenter.getDataCenter())) {
+                        delta = tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, srcStorage.getUuidString()), Instant.now());
+                    } else if (promoteDatacenters.contains(tableEventDatacenter.getDataCenter())) {
+                        delta = tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, destUuid), Instant.now());
+                    } else {
+                        return Stream.empty();
+                    }
+
+                    Audit audit = new AuditBuilder()
+                            .setComment(String.format("Adding events for table %s", json.getTable()))
+                            .setLocalHost()
+                            .build();
+
+                    return Stream.of(new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL));
+                })
+                .collect(Collectors.toList());
+
+       _backingStore.updateAll(updates);
+    }
     @Override
     public void markTableEventAsComplete(String registrationId, String table, String uuid) {
 
@@ -1752,10 +1801,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                 .collect(Collectors.toSet());
     }
 
-    private List<TableEvent> getTableEventsForStorage(String table, String uuid, List<TableEventDatacenter> tableEventDatacenters) {
+    private List<TableEvent> getTableEvents(String table, String uuid, List<TableEventDatacenter> tableEventDatacenters, TableEvent.Action action) {
         return tableEventDatacenters.stream()
                 .flatMap(tableEventDatacenter -> tableEventDatacenter.getTableEventsForTableAndStorage(table, uuid).stream())
                 .filter(Objects::nonNull)
+                .filter(tableEvent -> tableEvent.getAction().equals(action))
                 .collect(Collectors.toList());
     }
 
@@ -1767,13 +1817,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                 .collect(Collectors.toList());
     }
 
-    private void checkForAnyNonCompleteTableEvents(String table, String uuid) {
+    private void checkForAnyNonCompleteTableEvents(String table, String uuid, TableEvent.Action action) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 
         List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
                 .map(json -> _objectMapper.convertValue(json, TableEventDatacenter.class))
                 .map(tableEventDatacenter -> {
-                    Delta delta = tableEventDatacenter.markTableEventAsReady(table, uuid);
+                    Delta delta = tableEventDatacenter.markTableEventAsReady(table, uuid, action);
                     if (delta != null) {
                         Audit audit = new AuditBuilder()
                                 .setComment(String.format("Marking event ready for table %s", table))

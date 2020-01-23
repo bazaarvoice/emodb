@@ -46,12 +46,12 @@ public class TableEventDatacenter {
         return _dataCenter;
     }
 
-    public Delta markTableEventAsReady(String table, String uuid) {
+    public Delta markTableEventAsReady(String table, String uuid, TableEvent.Action action) {
 
         List<Map.Entry<String, Delta>> deltas = new ArrayList<>();
 
         _registrants.forEach((registrationId, tableEventRegistrant) -> {
-            Optional.ofNullable(tableEventRegistrant.markTaskAsReadyIfExists(table, uuid))
+            Optional.ofNullable(tableEventRegistrant.markTaskAsReadyIfExists(table, uuid, action))
                     .map(delta -> new AbstractMap.SimpleEntry<>(registrationId, delta))
                     .ifPresent(deltas::add);
         });

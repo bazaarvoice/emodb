@@ -46,9 +46,9 @@ public class TableEventRegistrant {
 
     }
 
-    public Delta markTaskAsReadyIfExists(String table, String uuid) {
+    public Delta markTaskAsReadyIfExists(String table, String uuid, TableEvent.Action action) {
         return Optional.ofNullable(_tasks.get(table))
-                .filter(tableEvent -> tableEvent.getStorage().equals(uuid))
+                .filter(tableEvent -> tableEvent.getStorage().equals(uuid) && tableEvent.getAction().equals(action))
                 .map(tableEvent -> Deltas.mapBuilder().update(TASKS,
                         Deltas.mapBuilder().update(table, tableEvent.newReadyDelta()).build()).build())
                 .orElse(null);
