@@ -1674,35 +1674,14 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
     }
 
     private void addDroppedTableEvent(TableJson json) {
-        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
-        Set<Storage> storages = getLiveStoragesForTable(json);
-
-        List<Update> updates = new ArrayList<>();
-
-        tableEventDatacenterIterator.forEachRemaining(tableEventDatacenterMap -> {
-            TableEventDatacenter tableEventDatacenter = _objectMapper.convertValue(tableEventDatacenterMap, TableEventDatacenter.class);
-            storages.stream()
-                    .filter(storage -> _placementFactory.getDataCenters(storage.getPlacement())
-                            .stream()
-                            .map(DataCenter::getName)
-                            .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
-                    .map(storage ->
-                        tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, storage.getUuidString()), Instant.now())
-                    )
-                    .map(delta -> {
-                        Audit audit = new AuditBuilder()
-                                .setComment(String.format("Adding events for table %s", json.getTable()))
-                                .setLocalHost()
-                                .build();
-                        return new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
-                    })
-                    .forEach(updates::add);
-        });
-
-        _backingStore.updateAll(updates);
+        addTableEvent(json, TableEvent.Action.DROP);
     }
 
     private void addTableTemplateEvent(TableJson json) {
+        addTableEvent(json, TableEvent.Action.PROMOTE);
+    }
+
+    private void addTableEvent(TableJson json, TableEvent.Action action) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
         Set<Storage> storages = getLiveStoragesForTable(json);
 
@@ -1716,7 +1695,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, MaintenanceCh
                             .map(DataCenter::getName)
                             .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
                     .map(storage ->
-                            tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, storage.getUuidString()), Instant.now())
+                            tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(action, storage.getUuidString()), Instant.now())
                     )
                     .map(delta -> {
                         Audit audit = new AuditBuilder()
