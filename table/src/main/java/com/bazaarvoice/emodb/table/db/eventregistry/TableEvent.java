@@ -72,13 +72,13 @@ public class TableEvent {
 
     public Delta newReadyDelta() {
         return Deltas.conditional(
-                Conditions.mapBuilder().matches(STORAGE, Conditions.equal(_storage)).build(),
+                Conditions.mapBuilder().matches(EVENT_TIME, Conditions.equal(_eventTime.toString())).build(),
                 Deltas.mapBuilder().put(READY, true).build());
     }
 
     public Delta newCompleteDelta() {
         return Deltas.conditional(
-                Conditions.mapBuilder().matches(STORAGE, Conditions.equal(_storage)).build(),
+                Conditions.mapBuilder().matches(EVENT_TIME, Conditions.equal(_eventTime.toString())).build(),
                 Deltas.delete()
         );
     }
