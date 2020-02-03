@@ -82,4 +82,14 @@ public class TableEvent {
                 Deltas.delete()
         );
     }
+
+    @Override
+    public String toString() {
+        return "TableEvent{" +
+                "_action=" + _action +
+                ", _storage='" + _storage + '\'' +
+                ", _ready=" + _ready +
+                ", _eventTime=" + _eventTime +
+                '}';
+    }
 }

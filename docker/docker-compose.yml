@@ -133,6 +133,32 @@ services:
             - cassandra
             - emodb-web-dc1
             - kafka
+    emodb-megabus-dc2:
+        image: 'bazaarvoice/emodb-megabus-dc2:latest'
+        networks:
+            - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=megabus
+                - DATACENTER=dc2
+                - PORTS=8182 8183
+                - STARTUP_DELAY=50
+        ports:
+            - '8182:8182'
+            - '8183:8183'
+            # If you build the image with attachment options,
+            # you can uncomment the following line and attach
+            # a debugger. Extremely useful for tracing what
+            # java.net does in a container when you're not
+            # looking.
+            # - '5005:5005'
+        depends_on:
+            - zookeeper
+            - cassandra-dc2
+            - emodb-web-dc2
+            - kafka
 
 volumes:
   zookeeper_data:

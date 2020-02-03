@@ -17,7 +17,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 public class MegabusRefSubscriptionMonitorManager {
 
-    private static final String LEADER_DIR = "/leader/leader/ref-subscription-monitor";
+    private static final String LEADER_DIR = "/leader/ref-subscription-monitor";
 
     @Inject
     MegabusRefSubscriptionMonitorManager(LifeCycleRegistry lifeCycle,

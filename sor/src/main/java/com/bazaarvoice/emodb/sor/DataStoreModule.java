@@ -141,11 +141,10 @@ public class DataStoreModule extends PrivateModule {
         requireBinding(Key.get(String.class, SystemTablePlacement.class));
 
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
-        // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> LockingTableDAO -> AstyanaxTableDAO.
+        // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
         bind(TableDAO.class).annotatedWith(MutexTableDAODelegate.class).to(CachingTableDAO.class).asEagerSingleton();
-        bind(TableDAO.class).annotatedWith(CachingTableDAODelegate.class).to(LockingTableDAO.class).asEagerSingleton();
-        bind(TableDAO.class).annotatedWith(LockingTableDAODelegate.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+        bind(TableDAO.class).annotatedWith(CachingTableDAODelegate.class).to(AstyanaxTableDAO.class).asEagerSingleton();
         bind(String.class).annotatedWith(SystemTableNamespace.class).toInstance("__system_sor");
         bind(PlacementFactory.class).to(DeltaPlacementFactory.class).asEagerSingleton();
         bind(DeltaPlacementFactory.class).asEagerSingleton();
@@ -155,7 +154,6 @@ public class DataStoreModule extends PrivateModule {
         bind(SlowQueryLog.class).toProvider(LogbackSlowQueryLogProvider.class);
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
-        bind(MaintenanceChecker.class).to(AstyanaxTableDAO.class).asEagerSingleton();
 
         // The web servers are responsible for updating the ZooKeeper full consistency data.  CLI tools don't need to.
         // Enable updating the ZooKeeper full consistency data if specified

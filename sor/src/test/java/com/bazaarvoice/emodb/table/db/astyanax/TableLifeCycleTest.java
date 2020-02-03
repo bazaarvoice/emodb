@@ -26,14 +26,18 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.test.InMemoryDataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
+import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEvent;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -53,14 +57,17 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_ACTIVATED;
@@ -73,6 +80,8 @@ import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.MIRROR_EXPIRI
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PRIMARY;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_1;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_2;
+import static com.bazaarvoice.emodb.table.db.eventregistry.TableEvent.Action.DROP;
+import static com.bazaarvoice.emodb.table.db.eventregistry.TableEvent.Action.PROMOTE;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
 import static org.mockito.Mockito.mock;
@@ -216,6 +225,7 @@ public class TableLifeCycleTest {
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+        registerTableEventListeners(backingStore);
         String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
         tableDAO.drop(TABLE, newAudit());
         Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), uuid)
@@ -249,6 +259,21 @@ public class TableLifeCycleTest {
                 // Expected
             }
             fct.setTime(droppedAt.toEpochMilli() + 1);
+
+            assertReadyTableEventAbsent(backingStore, DC_US);
+            assertReadyTableEventAbsent(backingStore, DC_EU);
+            assertReadyTableEventAbsent(backingStore, DC_SA);
+            assertReadyTableEventAbsent(backingStore, DC_ZZ);
+
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (PendingTableEventsException e) {
+                // Expected
+            }
+
+            assertReadyTableEventPresent(backingStore, DC_US, TABLE, uuid, DROP);
+            assertReadyTableEventAbsent(backingStore, DC_US);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
@@ -414,6 +439,7 @@ public class TableLifeCycleTest {
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
         Date fct = new Date(0);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
+        registerTableEventListeners(backingStore);
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
         TableJson table = tableDAO.readTableJson(TABLE, true);
@@ -442,6 +468,24 @@ public class TableLifeCycleTest {
             DataPurgeDAO usDataPurgeDAO = mock(DataPurgeDAO.class);
             AstyanaxTableDAO usTableDAO = newTableDAO(backingStore, DC_US, usDataCopyDAO, usDataPurgeDAO, fct);
             fct.setTime(droppedAt.toEpochMilli() + 1);
+
+            assertReadyTableEventAbsent(backingStore, DC_US);
+            assertReadyTableEventAbsent(backingStore, DC_EU);
+            assertReadyTableEventAbsent(backingStore, DC_SA);
+            assertReadyTableEventAbsent(backingStore, DC_ZZ);
+
+
+            try {
+                usTableDAO.performDataMaintenance(TABLE, mock(Runnable.class));
+                fail();
+            } catch (PendingTableEventsException e) {
+                // Expected
+            }
+
+            assertReadyTableEventPresent(backingStore, DC_US, TABLE, facadeUuid, DROP);
+            assertReadyTableEventAbsent(backingStore, DC_EU);
+            assertReadyTableEventAbsent(backingStore, DC_SA);
+            assertReadyTableEventAbsent(backingStore, DC_ZZ);
 
             // Next do data maintenance from the US.  It should do the purge and nothing else.
             Instant start = Instant.now();
@@ -556,7 +600,9 @@ public class TableLifeCycleTest {
     @Test
     public void testMoveStart()
             throws Exception {
-        AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, backingStore);
+        registerTableEventListeners(backingStore);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         String srcUuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
 
@@ -565,6 +611,7 @@ public class TableLifeCycleTest {
         Instant end = Instant.now();
 
         TableJson table = tableDAO.readTableJson(TABLE, true);
+        String destUuid = table.getMasterStorage().getMoveTo().getUuidString();
         AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
 
         // Verify top-level attributes.
@@ -605,6 +652,9 @@ public class TableLifeCycleTest {
         MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
         assertMaintenance(maintenanceOp, "Move:copy-data", MaintenanceType.DATA, DC_US);
         assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+
+        assertTableEventsPresent(backingStore, ImmutableSet.of(DC_EU, DC_SA, DC_ZZ), TABLE, destUuid, PROMOTE);
+        assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, srcUuid);
     }
 
     /**
@@ -627,7 +677,9 @@ public class TableLifeCycleTest {
     @Test
     public void testMoveFacadeStart()
             throws Exception {
-        AstyanaxTableDAO tableDAO = newTableDAO(DC_EU);
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        registerTableEventListeners(backingStore);
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_EU, backingStore);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
         TableJson table = tableDAO.readTableJson(TABLE, true);
@@ -688,6 +740,10 @@ public class TableLifeCycleTest {
         MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
         assertMaintenance(maintenanceOp, "Move:copy-data", MaintenanceType.DATA, DC_EU);
         assertBetween(start, maintenanceOp.getWhen(), end, AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+
+        assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, srcUuid);
+        assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, dest.getUuidString());
+
     }
 
     @Test
@@ -695,6 +751,7 @@ public class TableLifeCycleTest {
             throws Exception {
         Date fct = new Date(0);
         InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        registerTableEventListeners(backingStore);
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
@@ -703,6 +760,10 @@ public class TableLifeCycleTest {
         String destUuid = table.getMasterStorage().getMoveTo().getUuidString();
         Instant mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
         Instant mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+
+        assertTableEventsPresent(backingStore, ImmutableSet.of(DC_EU, DC_SA, DC_ZZ), TABLE, destUuid, PROMOTE);
+        assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, srcUuid);
+        assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US), TABLE, destUuid);
 
         // Before the elapsed time has passed, doing maintenance shouldn't change anything.
         assertNoopMetadataMaintenance(backingStore, DC_US, TABLE);
@@ -918,10 +979,50 @@ public class TableLifeCycleTest {
             assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
             assertStorageUuids(astyanaxTable.getWriteStorage(), dest.getUuid(), src.getUuid());
 
+            // Verify that the table events are correct
+            assertTableEventsPresent(backingStore, ImmutableSet.of(DC_EU, DC_SA, DC_ZZ), TABLE, destUuid, PROMOTE);
+            assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, srcUuid);
+            assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US), TABLE, destUuid);
+
+            // Hack the table event json to allow the table events to be marked ready
+            Instant tableEventMaxTimestamp = tableDAO.getTableEvents(TABLE, destUuid, tableDAO.getTableEventDatacenters())
+                    .map(Map.Entry::getValue)
+                    .map(TableEvent::getEventTime)
+                    .map(TimeUUIDs::getTimeMillis)
+                    .max(Long::compare)
+                    .map(Instant::ofEpochMilli)
+                    .get();
+
+            Instant expectedPrimaryMaintanenceTime = tableEventMaxTimestamp.plus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+
             // Verify that the next step in the move was scheduled as expected.
             MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
+            assertMaintenance(maintenanceOp, "TableEvent:mark-ready", MaintenanceType.METADATA, "<system>");
+            assertEquals(maintenanceOp.getWhen(), expectedPrimaryMaintanenceTime);
+
+            patchTableEventJsonTimestamp(backingStore, TABLE, DC_EU, ImmutableSet.of(DC_EU), tableEventMaxTimestamp.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+            patchTableEventJsonTimestamp(backingStore, TABLE, DC_SA, ImmutableSet.of(DC_SA), tableEventMaxTimestamp.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+            patchTableEventJsonTimestamp(backingStore, TABLE, DC_ZZ, ImmutableSet.of(DC_ZZ), tableEventMaxTimestamp.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY));
+
+            try {
+                tableDAO.performMetadataMaintenance(TABLE);
+                fail();
+            } catch (PendingTableEventsException e) {
+
+            }
+
+            assertReadyTableEventPresent(backingStore, DC_EU, TABLE, destUuid, PROMOTE);
+            assertReadyTableEventPresent(backingStore, DC_SA, TABLE, destUuid, PROMOTE);
+            assertReadyTableEventPresent(backingStore, DC_ZZ, TABLE, destUuid, PROMOTE);
+            assertReadyTableEventAbsent(backingStore, DC_US);
+            assertReadyTableEventAbsent(backingStore, DC_EU);
+            assertReadyTableEventAbsent(backingStore, DC_SA);
+            assertReadyTableEventAbsent(backingStore, DC_ZZ);
+
+            maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
             assertMaintenance(maintenanceOp, "Move:expire-mirror", MaintenanceType.METADATA, "<system>");
             assertEquals(maintenanceOp.getWhen(), mirrorExpiresAt);
+
         }
 
         // Do maintenance when the mirror expires.  It should drop the src table uuid.
@@ -990,99 +1091,12 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String srcUuid = checkNotNull(table.getUuidString());
-        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
-        Instant mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
-        Instant mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
 
-        {
-            // Cancel the move by executing a new move that takes us back to the original settings.
+        try {
             tableDAO.move(TABLE, PL_US, Optional.of(16), newAudit(), MoveType.SINGLE_TABLE);
-
-            table = tableDAO.readTableJson(TABLE, true);
-
-            // Verify top-level attributes.
-            assertEquals(table.getUuidString(), srcUuid);
-            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-            assertEquals(table.getStorages().size(), 2);
-
-            // Verify storage-level attributes.
-            Storage src = checkNotNull(table.getMasterStorage());
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            assertEquals(src.getUuidString(), srcUuid);
-            assertEquals(src.getState(), PRIMARY);
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .build());
-            assertNull(src.getMoveTo());
-            assertEquals(dest.getState(), MIRROR_EXPIRED);
-            assertNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));  // The primary changed, not the mirror.
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
-                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
-                    .build());
-
-            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
-
-            // Verify that read mirroring is turned off.
-            assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
-            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid());
-
-            // Verify that the next step in the move was scheduled as expected.
-            Instant start = Instant.now();
-            MaintenanceOp maintenanceOp = tableDAO.getNextMaintenanceOp(TABLE);
-            Instant end = Instant.now();
-            assertMaintenance(maintenanceOp, "Move:expire-mirror", MaintenanceType.METADATA, "<system>");
-            assertBetween(start, maintenanceOp.getWhen(), end);
-        }
-
-        // Do maintenance and make sure the abandoned mirror gets dropped
-        Instant mirrorExpiredAt, droppedAt;
-        {
-            Instant start = Instant.now();
-            tableDAO.performMetadataMaintenance(TABLE);
-            Instant end = Instant.now();
-
-            table = tableDAO.readTableJson(TABLE, true);
-            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
-
-            // Verify top-level attributes.
-            assertEquals(table.getUuidString(), srcUuid);
-            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-            assertEquals(table.getStorages().size(), 2);
-
-            // Verify storage-level attributes.
-            Storage src = checkNotNull(table.getMasterStorage());
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            mirrorExpiredAt = checkNotNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));
-            droppedAt = checkNotNull(dest.getTransitionedTimestamp(DROPPED));
-            assertEquals(src.getUuidString(), srcUuid);
-            assertEquals(src.getState(), PRIMARY);
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .build());
-            assertNull(src.getMoveTo());
-            assertEquals(dest.getState(), DROPPED);
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(mirrorCreatedAt))
-                    .put("mirrorActivatedAt", formatTimestamp(mirrorActivatedAt))
-                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
-                    .put("droppedAt", formatTimestamp(droppedAt))
-                    .build());
-            assertBetween(start, mirrorExpiredAt, end);
-            assertBetween(start, droppedAt, end);
-
-            // Verify that read/write mirroring is turned off.
-            assertTrue(astyanaxTable.getReadStorage().hasUUID(src.getUuid()));
-            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid());
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1104,99 +1118,11 @@ public class TableLifeCycleTest {
         // Hack the table JSON to get to the state where promote has occurred.
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
 
-        // Here lies the test!! Cancel the move by executing a new move that takes us back to the original settings.
-        Instant mirrorConsistentAt;
-        {
-            Instant start = Instant.now();
+        try {
             tableDAO.move(TABLE, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
-            Instant end = Instant.now();
-
-            // Verify top-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getUuidString(), destUuid);
-            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-            assertEquals(table.getStorages().size(), 2);
-
-            Storage storage = getStorage(table, srcUuid);
-
-            // Verify storage-level attributes.
-            Storage src = checkNotNull(getStorage(table, srcUuid));
-            Storage dest = checkNotNull(table.getMasterStorage());
-            mirrorConsistentAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
-            assertEquals(storage.getState(), MIRROR_CONSISTENT);
-            assertNull(src.getMoveTo());
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
-                    .build());
-            assertBetween(start, mirrorConsistentAt, end);
-
-            assertEquals(dest.getUuidString(), destUuid);
-            assertEquals(dest.getState(), PRIMARY);
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("moveTo", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", dest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
-                    .build());
-        }
-
-        // We need one step of maintenance for the move to actually take effect.
-        Instant primaryAt;
-        {
-            mirrorConsistentAt = mirrorConsistentAt.minus(AstyanaxTableDAO.MIN_DELAY);
-            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorConsistentAt", srcUuid), mirrorConsistentAt);
-
-            Instant start = Instant.now();
-            tableDAO.performMetadataMaintenance(TABLE);
-            Instant end = Instant.now();
-
-            // Verify top-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getUuidString(), srcUuid);
-            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-            assertEquals(table.getStorages().size(), 2);
-
-            // Verify storage-level attributes.
-            Storage src = checkNotNull(table.getMasterStorage());
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            UUID promotionId = src.getPromotionId();
-            primaryAt = src.getTransitionedTimestamp(PRIMARY);
-            assertEquals(src.getUuidString(), srcUuid);
-            assertEquals(src.getState(), PRIMARY);
-            assertNull(src.getMoveTo());
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .put("mirrorConsistentAt", formatTimestamp(mirrorConsistentAt))
-                    .put("promotionId", promotionId.toString())
-                    .put("primaryAt", formatTimestamp(primaryAt))
-                    .build());
-            assertBetween(start, TimeUUIDs.getDate(promotionId).toInstant(), end);
-            assertBetween(start, primaryAt, end);
-
-            Instant mirrorDemotedAt = dest.getTransitionedTimestamp(MIRROR_DEMOTED);
-            assertEquals(dest.getState(), MIRROR_DEMOTED);
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("moveTo", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", dest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
-                    .build());
-            assertBetween(start, mirrorDemotedAt, end);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1282,49 +1208,12 @@ public class TableLifeCycleTest {
         String srcUuid = checkNotNull(table.getUuidString());
         String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
 
-        // Execute a new move that supersedes the old move.
-        Instant start = Instant.now();
-        tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
-        Instant end = Instant.now();
-
-        table = tableDAO.readTableJson(TABLE, true);
-
-        // Verify top-level attributes.
-        assertEquals(table.getUuidString(), srcUuid);
-        assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-        assertEquals(table.getStorages().size(), 3);
-
-        // Verify storage-level attributes.
-        Storage src = checkNotNull(table.getMasterStorage());
-        Storage dest = checkNotNull(getStorage(table, destUuid));
-        Storage newDest = checkNotNull(table.getMasterStorage().getMoveTo());
-        assertEquals(src.getUuidString(), srcUuid);
-        assertEquals(src.getState(), PRIMARY);
-        assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                .put("placement", PL_US)
-                .put("shards", 16)
-                .put("moveTo", newDest.getUuidString())
-                .build());
-
-        assertEquals(dest.getState(), MIRROR_EXPIRED);
-        assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                .put("placement", PL_GLOBAL)
-                .put("shards", 16)
-                .put("groupId", srcUuid)
-                .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                .build());
-        assertNull(dest.getTransitionedTimestamp(MIRROR_EXPIRED));
-
-        assertEquals(newDest.getState(), MIRROR_ACTIVATED);
-        assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
-                .put("placement", PL_US)
-                .put("shards", 32)
-                .put("groupId", srcUuid)
-                .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
-                .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                .build());
-        assertBetween(start, newDest.getTransitionedTimestamp(MIRROR_ACTIVATED), end);
+        try {
+            tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
+        }
     }
 
 
@@ -1391,239 +1280,11 @@ public class TableLifeCycleTest {
         // Hack the table JSON to get to the state where promote has occurred.
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
 
-        // Here lies the test!! Cancel the move by executing a new move that takes us to a 3rd set of settings.
-        Instant srcExpiresAt;
-        String newDestUuid;
-        {
-            // Schedule a new move.
+        try {
             tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
-
-            // Verify top-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getUuidString(), destUuid);
-            assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of());
-            assertEquals(table.getStorages().size(), 3);
-            assertEquals(table.getMasterStorage().getMirrors().size(), 2);
-
-            // Verify storage-level attributes.
-            Storage src = checkNotNull(getStorage(table, srcUuid));
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            Storage newDest = checkNotNull(dest.getMoveTo());
-            newDestUuid = newDest.getUuidString();
-
-            srcExpiresAt = src.getMirrorExpiresAt();
-            assertEquals(src.getState(), MIRROR_EXPIRING);
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .put("moveTo", destUuid)
-                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
-                    .build());
-
-            assertEquals(dest.getUuidString(), destUuid);
-            assertEquals(dest.getState(), PRIMARY);
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("moveTo", newDest.getUuidString())
-                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", dest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
-                    .build());
-
-            assertEquals(newDest.getUuidString(), newDestUuid);
-            assertEquals(newDest.getState(), MIRROR_ACTIVATED);
-            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 32)
-                    .put("groupId", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .build());
-
-            // Verify that read/write mirroring is going to the right place.
-            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
-            assertTrue(astyanaxTable.getReadStorage().hasUUID(dest.getUuid()));
-            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid(), newDest.getUuid());
-        }
-
-        Instant destExpiresAt;
-        {
-            // Hack the table JSON to get to the state where second promotion has occurred.
-            advanceActivatedToPromoted(newDestUuid, tableDAO, backingStore, fct);
-
-            // Verify storage-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            Storage src = checkNotNull(getStorage(table, srcUuid));
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
-            newDestUuid = newDest.getUuidString();
-            assertEquals(table.getMasterStorage().getMirrors().size(), 2);
-
-            assertEquals(src.getState(), MIRROR_EXPIRING);
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .put("moveTo", destUuid)
-                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
-                    .build());
-
-            assertEquals(dest.getUuidString(), destUuid);
-            assertEquals(dest.getState(), MIRROR_EXPIRING);
-            destExpiresAt = dest.getMirrorExpiresAt();
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("moveTo", newDest.getUuidString())
-                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", dest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
-                    .put("mirrorExpiresAt", formatTimestamp(destExpiresAt))
-                    .build());
-
-            assertEquals(newDest.getUuidString(), newDestUuid);
-            assertEquals(newDest.getState(), PRIMARY);
-            assertNull(newDest.getMoveTo());
-            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 32)
-                    .put("groupId", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", newDest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(newDest.getTransitionedTimestamp(PRIMARY)))
-                    .build());
-
-            // Verify that read/write mirroring is going to the right place.
-            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
-            assertTrue(astyanaxTable.getReadStorage().hasUUID(newDest.getUuid()));
-            assertStorageUuids(astyanaxTable.getWriteStorage(), src.getUuid(), dest.getUuid(), newDest.getUuid());
-        }
-
-        {
-            // Hack the table JSON to get to the state where the original source expires.
-            srcExpiresAt = srcExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
-            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", srcUuid), srcExpiresAt);
-
-            Instant start = Instant.now();
-            tableDAO.performMetadataMaintenance(TABLE);
-            Instant end = Instant.now();
-
-            // Verify storage-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getUuidString(), newDestUuid);
-            assertEquals(table.getStorages().size(), 3);
-            assertEquals(table.getMasterStorage().getMirrors().size(), 1);
-
-            Storage src = checkNotNull(getStorage(table, srcUuid));
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
-            Instant mirrorExpiredAt = src.getTransitionedTimestamp(MIRROR_EXPIRED);
-            Instant droppedAt = src.getTransitionedTimestamp(DROPPED);
-            assertEquals(src.getState(), DROPPED);
-            assertEquals(src.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 16)
-                    .put("moveTo", destUuid)
-                    .put("mirrorExpiresAt", formatTimestamp(srcExpiresAt))
-                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
-                    .put("droppedAt", formatTimestamp(droppedAt))
-                    .build());
-            assertBetween(start, mirrorExpiredAt, end);
-            assertBetween(start, droppedAt, end);
-
-            assertEquals(dest.getState(), MIRROR_EXPIRING);
-            assertEquals(newDest.getState(), PRIMARY);
-        }
-
-        {
-            // Hack the table JSON to get to the state where the original source is deleted, original dest expires.
-            Instant purgedAt = Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
-            destExpiresAt = destExpiresAt.minus(AstyanaxTableDAO.MOVE_DEMOTE_TO_EXPIRE);
-            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", srcUuid), purgedAt);
-            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.mirrorExpiresAt", destUuid), destExpiresAt);
-
-            // Perform maintenance twice.  One will delete the original source, the other will drop the original dest. (Order is unspecified.)
-            Instant start = Instant.now();
-            tableDAO.performMetadataMaintenance(TABLE);
-            tableDAO.performMetadataMaintenance(TABLE);
-            Instant end = Instant.now();
-
-            // Verify storage-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getUuidString(), newDestUuid);
-            assertEquals(table.getStorages().size(), 2);
-            assertEquals(table.getMasterStorage().getMirrors().size(), 0);
-            Storage src = getStorage(table, srcUuid);
-            Storage dest = checkNotNull(getStorage(table, destUuid));
-            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
-
-            assertNull(src);
-
-            Instant mirrorExpiredAt = dest.getTransitionedTimestamp(MIRROR_EXPIRED);
-            Instant droppedAt = dest.getTransitionedTimestamp(DROPPED);
-            assertEquals(dest.getState(), DROPPED);
-            assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_GLOBAL)
-                    .put("shards", 16)
-                    .put("groupId", srcUuid)
-                    .put("moveTo", newDest.getUuidString())
-                    .put("mirrorCreatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(dest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", dest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(dest.getTransitionedTimestamp(PRIMARY)))
-                    .put("mirrorExpiresAt", formatTimestamp(destExpiresAt))
-                    .put("mirrorExpiredAt", formatTimestamp(mirrorExpiredAt))
-                    .put("droppedAt", formatTimestamp(droppedAt))
-                    .build());
-            assertBetween(start, mirrorExpiredAt, end);
-            assertBetween(start, droppedAt, end);
-
-            assertEquals(newDest.getState(), PRIMARY);
-        }
-
-        {
-            // Hack the table JSON to get to the state where the original dest is deleted.
-            Instant purgedAt = Instant.now().minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
-            patchTableJsonTimestamp(backingStore, TABLE, format("storage.%s.purgedAt2", destUuid), purgedAt);
-
-            // Perform metadata maintenance to delete the original dest.
-            tableDAO.performMetadataMaintenance(TABLE);
-
-            // Verify storage-level attributes.
-            table = tableDAO.readTableJson(TABLE, true);
-            assertEquals(table.getStorages().size(), 1);
-            assertEquals(table.getMasterStorage().getMirrors().size(), 0);
-            assertEquals(table.getUuidString(), newDestUuid);
-            Storage newDest = checkNotNull(getStorage(table, newDestUuid));
-            assertEquals(newDest.getRawJson(), ImmutableMap.<String, Object>builder()
-                    .put("placement", PL_US)
-                    .put("shards", 32)
-                    .put("groupId", srcUuid)
-                    .put("mirrorCreatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CREATED)))
-                    .put("mirrorActivatedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_ACTIVATED)))
-                    .put("mirrorCopiedAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_COPIED)))
-                    .put("mirrorConsistentAt", formatTimestamp(newDest.getTransitionedTimestamp(MIRROR_CONSISTENT)))
-                    .put("promotionId", newDest.getPromotionId().toString())
-                    .put("primaryAt", formatTimestamp(newDest.getTransitionedTimestamp(PRIMARY)))
-                    .build());
-
-            // Verify that read/write mirroring is going to the right place.
-            AstyanaxTable astyanaxTable = (AstyanaxTable) tableDAO.tableFromJson(table);
-            assertTrue(astyanaxTable.getReadStorage().hasUUID(newDest.getUuid()));
-            assertStorageUuids(astyanaxTable.getWriteStorage(), newDest.getUuid());
+            fail();
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1710,15 +1371,15 @@ public class TableLifeCycleTest {
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
             fail();
-        } catch (IllegalArgumentException e) {
-            assertEquals(e.getMessage(), "Cannot create a facade in the same placement as its table: apac");
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
         // And can't create a facade that overlaps with the new location.
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
             fail();
-        } catch (IllegalArgumentException e) {
-            assertEquals(e.getMessage(), "Cannot create a facade in the same placement as its table: global");
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1733,27 +1394,28 @@ public class TableLifeCycleTest {
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
         tableDAO.moveFacade(TABLE, PL_EU, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
 
-        // Move hasn't completed yet, creating a facade in the old location is idempotent.
-        tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+        // Move hasn't completed yet, creating a facade anywhere isn't allowed
+        try {
+            tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
+            fail();
+        } catch (IllegalStateException e)
+        {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
+        }
 
-        // Move hasn't completed yet, can't create a facade in the new location (if you tried you might
-        // not be able to write to it yet).
+        // Move hasn't completed yet, can't create a facade in the new location
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
             fail();
-        } catch (FacadeExistsException e) {
-            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on eu)");
-            assertEquals(e.getTable(), TABLE);
-            assertEquals(e.getPlacement(), "eu");
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
         // And can't create a facade that overlaps with the new location.
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
             fail();
-        } catch (FacadeExistsException e) {
-            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on global)");
-            assertEquals(e.getTable(), TABLE);
-            assertEquals(e.getPlacement(), "eu");
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1773,10 +1435,8 @@ public class TableLifeCycleTest {
         try {
             tableDAO.moveFacade(TABLE, PL_APAC, PL_US_EU, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (FacadeExistsException e) {
-            assertEquals(e.getMessage(), "Cannot move a facade to a placement for which another facade already exists: us-eu");
-            assertEquals(e.getTable(), TABLE);
-            assertEquals(e.getPlacement(), PL_US_EU);
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1796,10 +1456,8 @@ public class TableLifeCycleTest {
         try {
             tableDAO.moveFacade(TABLE, PL_APAC, PL_EU_APAC, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (FacadeExistsException e) {
-            assertEquals(e.getMessage(), "Cannot create a facade in this placement as it will overlap with other facade placements: my:table (on us-eu)");
-            assertEquals(e.getTable(), TABLE);
-            assertEquals(e.getPlacement(), PL_US);
+        } catch (IllegalStateException e) {
+            assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
 
@@ -1812,10 +1470,13 @@ public class TableLifeCycleTest {
         final Clock clock = mock(Clock.class);
         Instant nowInstant = from.plus(Duration.ofMinutes(1)); // adding a second just to make sure that the delta was written after the "from" time.
         when(clock.instant()).thenReturn(nowInstant);
-        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, clock);
+        InMemoryDataStore backingStore = newBackingStore(new MetricRegistry());
+        Date fct = new Date(0);
+        AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, clock, fct);
 
         // create a table.
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
 
         Iterator<Table> tableIterator = tableDAO.list(null, LimitCounter.max());
         assertTrue(tableIterator.hasNext());
@@ -1834,6 +1495,8 @@ public class TableLifeCycleTest {
         // create a second table
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
 
+        String table2Uuid = checkNotNull(tableDAO.readTableJson(TABLE2, true).getUuidString());
+
         // drop the second table
         tableDAO.drop(TABLE2, newAudit());
 
@@ -1845,8 +1508,29 @@ public class TableLifeCycleTest {
         List<String> expectedTables = Lists.newArrayList(unpublishedDatabusEvent2.getTable(), unpublishedDatabusEvent3.getTable());
         Assertions.assertThat(expectedTables).containsOnly(TABLE, TABLE2);
 
+        // Hack the table maintanence process to complete purge and final deletion
+        {
+            Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE2, false), table2Uuid)
+                    .getTransitionedTimestamp(DROPPED);
+
+            droppedAt = droppedAt.minus(AstyanaxTableDAO.DROP_TO_PURGE_2);
+            patchTableJsonTimestamp(backingStore, TABLE2, format("storage.%s.droppedAt", table2Uuid), droppedAt);
+
+            fct.setTime(droppedAt.toEpochMilli() + 1);
+            tableDAO.performDataMaintenance(TABLE2, mock(Runnable.class));
+
+            Instant purgedAt = getStorage(tableDAO.readTableJson(TABLE2, false), table2Uuid)
+                    .getTransitionedTimestamp(PURGED_2);
+            purgedAt = purgedAt.minus(AstyanaxTableDAO.MIN_CONSISTENCY_DELAY);
+
+            patchTableJsonTimestamp(backingStore, TABLE2, format("storage.%s.purgedAt2", table2Uuid), purgedAt);
+
+            tableDAO.performMetadataMaintenance(TABLE2);
+        }
+
         // recreate the second table.
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
+
 
         // unpublished databus events still should have 2 tables.
         Iterator<UnpublishedDatabusEvent> unpublishedDatabusEventsIterator3 = tableDAO.listUnpublishedDatabusEvents(Date.from(from), Date.from(to));
@@ -2158,6 +1842,42 @@ public class TableLifeCycleTest {
         assertTrue(expected.isEmpty());
     }
 
+    private void assertReadyTableEventPresent(TableBackingStore backingStore, String datacenter, String table, String uuid,
+                                              TableEvent.Action action) throws Exception {
+        TableEventRegistry tableEventRegistry = newTableDAO(datacenter, backingStore);
+        Map.Entry<String, TableEvent> tableEvent = tableEventRegistry.getNextTableEvent(datacenter);
+
+        assertEquals(tableEvent.getKey(), TABLE);
+        assertEquals(tableEvent.getValue().getAction(), action);
+        assertEquals(tableEvent.getValue().getStorage(), uuid);
+
+        tableEventRegistry.markTableEventAsComplete(datacenter, tableEvent.getKey(), tableEvent.getValue().getStorage());
+    }
+
+    private void assertTableEventsPresent(TableBackingStore backingStore, Set<String> datacenters, String table,
+                                          String uuid, TableEvent.Action action) throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, backingStore);
+        Set<String> tableEventDatacenters = tableDAO.getTableEvents(table, uuid, tableDAO.getTableEventDatacenters())
+                .peek(entry -> assertEquals(entry.getValue().getAction(), action))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        assertEquals(tableEventDatacenters, datacenters);
+    }
+
+    private void assertTableEventsAbsent(TableBackingStore backingStore, Set<String> datacenters, String table,
+                                         String uuid) throws Exception {
+        AstyanaxTableDAO tableDAO = newTableDAO(DC_US, backingStore);
+        tableDAO.getTableEvents(table, uuid, tableDAO.getTableEventDatacenters())
+                .filter(entry -> datacenters.contains(entry.getKey()))
+                .forEach(entry -> fail());
+    }
+
+    private void assertReadyTableEventAbsent(TableBackingStore backingStore, String datacenter) throws Exception {
+        assertNull(newTableDAO(datacenter, backingStore).getNextTableEvent(datacenter));
+    }
+
+
     private TableOptions newOptions(String placement) {
         return new TableOptionsBuilder().setPlacement(placement).build();
     }
@@ -2178,15 +1898,49 @@ public class TableLifeCycleTest {
         backingStore.update("__system:table", table, TimeUUIDs.newUUID(), delta, newAudit(), WriteConsistency.GLOBAL);
     }
 
-    private AstyanaxTableDAO newTableDAO(String placement)
-            throws Exception {
-        return newTableDAO(placement, null);
+    private void patchTableEventJsonTimestamp(TableBackingStore backingStore, String table, String datacenter, Set<String> registrants, Instant when) {
+        UUID uuid = TimeUUIDs.uuidForTimeMillis(when.toEpochMilli());
+        Delta delta = Deltas.mapBuilder().update("eventTime", Deltas.literal(uuid.toString())).build();
+        delta = Deltas.mapBuilder().update(table, delta).build();
+        delta = Deltas.mapBuilder().update("tasks", delta).build();
+        MapDeltaBuilder mapDeltaBuilder = Deltas.mapBuilder();
+        for (String registrant : registrants) {
+            mapDeltaBuilder.update(registrant, delta);
+        }
+
+        Delta finalDelta = Deltas.mapBuilder().update("registrants", mapDeltaBuilder.build()).build();
+
+        backingStore.update("__system:table_event_registry", datacenter, TimeUUIDs.newUUID(), finalDelta, newAudit(), WriteConsistency.GLOBAL);
     }
 
-    private AstyanaxTableDAO newTableDAO(String placement, Clock clock)
+    private void registerTableEventListeners(TableBackingStore backingStore) throws Exception {
+        Instant expirationTime = Instant.now().plus(30, ChronoUnit.DAYS);
+        newTableDAO(DC_US, backingStore).registerTableListener(DC_US, expirationTime);
+        newTableDAO(DC_EU, backingStore).registerTableListener(DC_EU, expirationTime);
+        newTableDAO(DC_SA, backingStore).registerTableListener(DC_SA, expirationTime);
+        newTableDAO(DC_ZZ, backingStore).registerTableListener(DC_ZZ, expirationTime);
+
+    }
+
+    private AstyanaxTableDAO newTableDAO(String dataCenter)
             throws Exception {
-        return newTableDAO(newBackingStore(new MetricRegistry()), placement,
-                mock(DataCopyDAO.class), mock(DataPurgeDAO.class), new Date(0), clock);
+        return newTableDAO(dataCenter, (Clock) null);
+    }
+
+    private AstyanaxTableDAO newTableDAO(String dataCenter, Clock clock)
+            throws Exception {
+        return newTableDAO(newBackingStore(new MetricRegistry()), dataCenter, clock, new Date(0));
+    }
+
+    private AstyanaxTableDAO newTableDAO(TableBackingStore backingStore, String dataCenter, Clock clock, Date date)
+            throws Exception {
+        return newTableDAO(backingStore, dataCenter,
+                mock(DataCopyDAO.class), mock(DataPurgeDAO.class), date, clock);
+    }
+
+    private AstyanaxTableDAO newTableDAO(String datacenter, TableBackingStore backingStore)
+            throws Exception{
+        return newTableDAO(backingStore, datacenter, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), new Date(0), null);
     }
 
     private AstyanaxTableDAO newTableDAO(TableBackingStore backingStore, String dataCenter,
@@ -2244,7 +1998,7 @@ public class TableLifeCycleTest {
         DataCenter dc3 = newDataCenter(DC_SA, false);
         DataCenter dc4 = newDataCenter(DC_ZZ, false);
 
-        when(placementFactory.getDataCenters(PL_GLOBAL)).thenReturn(ImmutableList.of(dc1, dc2, dc3));
+        when(placementFactory.getDataCenters(PL_GLOBAL)).thenReturn(ImmutableList.of(dc1, dc2, dc3, dc4));
         when(placementFactory.getDataCenters(PL_US_EU)).thenReturn(ImmutableList.of(dc1, dc2));
         when(placementFactory.getDataCenters(PL_EU_APAC)).thenReturn(ImmutableList.of(dc2, dc3));
         when(placementFactory.getDataCenters(PL_US)).thenReturn(ImmutableList.of(dc1));

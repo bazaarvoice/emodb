@@ -205,6 +205,9 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
             //  curl -s -XPOST 'localhost:8081/tasks/compaction-lag?all=PT0.001S'
             _log.info("Waiting for full consistency before proceeding with '{}' maintenance on table: {}, {}",
                     op.getName(), table, t.getMessage());
+        } catch (PendingTableEventsException t) {
+            _log.info("Waiting for pending table events to complete before proceeding with {} on table {}, {}",
+                    op.getName(), table, t.getMessage());
         } catch (Throwable t) {
             _log.error("Unexpected exception performing '{}' maintenance on table: {}", op.getName(), table, t);
         } finally {
