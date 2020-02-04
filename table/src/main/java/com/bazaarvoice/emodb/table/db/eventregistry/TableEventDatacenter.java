@@ -92,4 +92,13 @@ public class TableEventDatacenter {
 
         return Deltas.mapBuilder().update(REGISTRANTS, mapDeltaBuilder.build()).build();
     }
+
+    public static Delta newRegistrant(String registrationId, Instant now, Instant expirationTime) {
+
+        Delta delta = Deltas.mapBuilder()
+                .update(registrationId, TableEventRegistrant.newRegistrant(now, expirationTime))
+                .build();
+
+        return Deltas.mapBuilder().update(REGISTRANTS, delta).build();
+    }
 }

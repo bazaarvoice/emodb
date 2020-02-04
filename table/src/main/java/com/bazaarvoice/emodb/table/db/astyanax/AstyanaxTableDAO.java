@@ -29,7 +29,6 @@ import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.condition.Condition;
-import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
@@ -1634,16 +1633,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     @Override
     public void registerTableListener(String registrationId, Instant newExpirationTime) {
         Instant now = _clock.instant();
-        Condition isExpired = Conditions.mapBuilder().matches("expirationTime", Conditions.le(now.toEpochMilli())).build();
 
-        Delta registrationDelta = Deltas.mapBuilder()
-                .update(registrationId, Deltas.mapBuilder()
-                        .put("expirationTime", newExpirationTime.toEpochMilli())
-                        .update("tasks", Deltas.conditional(isExpired, Deltas.literal(ImmutableMap.of())))
-                        .build())
-                .build();
-
-        registrationDelta = Deltas.mapBuilder().update("registrants", registrationDelta).build();
+        Delta registrationDelta = TableEventDatacenter.newRegistrant(registrationId, now, newExpirationTime);
 
         Audit audit = new AuditBuilder()
                 .setComment(String.format("Registering %s", registrationId))

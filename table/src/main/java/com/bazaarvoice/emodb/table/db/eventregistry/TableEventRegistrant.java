@@ -7,6 +7,7 @@ import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
@@ -67,5 +68,15 @@ public class TableEventRegistrant {
         mapDeltaBuilder.put(table, task.newFullEventMap());
         Condition isNotExpired = Conditions.mapBuilder().matches(EXPIRATION_TIME, Conditions.ge(now.toEpochMilli())).build();
         return Deltas.conditional(isNotExpired, Deltas.mapBuilder().update(TASKS, mapDeltaBuilder.build()).build(), Deltas.delete());
+    }
+
+    public static Delta newRegistrant(Instant now, Instant expirationTime) {
+
+        Condition isExpired = Conditions.mapBuilder().matches("expirationTime", Conditions.le(now.toEpochMilli())).build();
+
+        return Deltas.mapBuilder()
+                .put("expirationTime", expirationTime.toEpochMilli())
+                .update("tasks", Deltas.conditional(isExpired, Deltas.literal(ImmutableMap.of())))
+                .build();
     }
 }
