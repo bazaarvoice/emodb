@@ -108,7 +108,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
     /** The amount of time to wait for services to start for fast operations like peek, poll. */
     private static final Duration SERVICE_FAST_WAIT_DURATION = Duration.ofMillis(100);
     /** The amount of time to wait for services to start for slow operations like copy, purge. */
-    private static final Duration SERVICE_SLOW_WAIT_DURATION = Duration.ofSeconds(3);
+    private static final Duration SERVICE_SLOW_WAIT_DURATION = Duration.ofSeconds(30);
     private static final int COPY_BATCH_SIZE = 2000;
 
     private final EventStore _delegate;

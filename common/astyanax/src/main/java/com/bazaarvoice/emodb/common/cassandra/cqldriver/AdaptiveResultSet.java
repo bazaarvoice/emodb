@@ -10,8 +10,6 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.FrameTooLongException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.core.exceptions.OperationTimedOutException;
-import com.datastax.driver.core.exceptions.ReadTimeoutException;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -19,13 +17,14 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import java.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -75,8 +74,8 @@ public class AdaptiveResultSet implements ResultSet {
                 _log.debug("Repeating previous query with fetch size {} due to {}", reducedFetchSize, t.getMessage());
                 return executeAdaptiveQueryAsync(session, statement, reducedFetchSize, remainingAdaptations - 1);
             }
-            throw Throwables.propagate(t);
-        });
+            throw new RuntimeException(t);
+        }, Executors.newSingleThreadExecutor());
     }
 
     /**
