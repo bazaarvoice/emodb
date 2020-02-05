@@ -36,7 +36,9 @@ public class MegabusResource1 {
         checkArgument(!Strings.isNullOrEmpty(table), "table is required");
         checkArgument(!Strings.isNullOrEmpty(key), "key is required");
 
-        _megabusSource.touch(table, key);
+        Coordinate coordinate = new Coordinate(table, key);
+
+        _megabusSource.touch(coordinate);
 
         return SuccessResponse.instance();
     }
@@ -44,6 +46,8 @@ public class MegabusResource1 {
     /**
      * Touch multiple documents deliberately to send them to Megabus.
      * Imports an arbitrary size stream of an array of JSON {@link Coordinate} objects.
+     * Note that megabus ultimately gets the latest version of the available in the datacenter.
+     * If the document doesn't exist, this action will result in a NULL in the megabus kafka topic for each doc.
      */
     @POST
     @Path ("_stream")

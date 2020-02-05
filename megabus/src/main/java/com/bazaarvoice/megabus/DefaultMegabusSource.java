@@ -7,6 +7,7 @@ import com.bazaarvoice.megabus.guice.MegabusRefTopic;
 import com.bazaarvoice.megabus.resource.Coordinate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Inject;
@@ -40,9 +41,15 @@ public class DefaultMegabusSource implements MegabusSource {
     @Inject
     public DefaultMegabusSource(KafkaCluster kafkaCluster, @MegabusRefTopic Topic topic,
                                 ObjectMapper objectMapper, Clock clock) {
-        _producer = requireNonNull(kafkaCluster.producer(), "producer");
-        _objectMapper = requireNonNull(objectMapper, "objectMapper");
+        this(kafkaCluster.producer(), topic, objectMapper, clock);
+    }
+
+    @VisibleForTesting
+    public DefaultMegabusSource(Producer<String, JsonNode> producer, Topic topic,
+                                ObjectMapper objectMapper, Clock clock) {
+        _producer = requireNonNull(producer, "producer");
         _topic = requireNonNull(topic, "topic");
+        _objectMapper = requireNonNull(objectMapper, "objectMapper");
         _clock = requireNonNull(clock, "clock");
     }
 
@@ -50,8 +57,7 @@ public class DefaultMegabusSource implements MegabusSource {
      * Send the given co-ordinate to the Megabus Ref Topic.
      */
     @Override
-    public void touch(String table, String key) {
-        Coordinate coordinate = new Coordinate(table, key);
+    public void touch(Coordinate coordinate) {
         touchAll(Collections.singletonList(coordinate).iterator());
     }
 
@@ -64,7 +70,15 @@ public class DefaultMegabusSource implements MegabusSource {
         coordinates.forEachRemaining(coordinateList::add);
 
         _LOG.info("Sending {} coordinate(s) to Megabus Ref Topic: {}", coordinateList.size(), _topic.getName());
-        List<Future> futures = coordinateList.stream()
+        List<Future> futures = getSendFutures(coordinateList);
+        _producer.flush();
+        futures.forEach(Futures::getUnchecked);
+    }
+
+    @VisibleForTesting
+    public List<Future> getSendFutures(List<Coordinate> coordinateList) {
+        List<Future> futures = coordinateList
+                .stream()
                 // Using the minimum UUID here to make sure the time is always beyond the FCL so that the resolver is certain to put the document in to actual Megabus.
                 // This way we wouldn't be in a situation where there is a ref in Ref topic but not in the Megabus topic.
                 .map(coordinate -> new MegabusRef(coordinate.getTable(), coordinate.getKey(), TimeUUIDs.minimumUuid(), _clock.instant()))
@@ -78,8 +92,6 @@ public class DefaultMegabusSource implements MegabusSource {
                         _objectMapper.valueToTree(entry.getValue()))))
                 .collect(Collectors.toList());
 
-        _producer.flush();
-
-        futures.forEach(Futures::getUnchecked);
+        return futures;
     }
 }

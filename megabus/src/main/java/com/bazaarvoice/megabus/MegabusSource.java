@@ -9,7 +9,7 @@ import java.util.Iterator;
  */
 public interface MegabusSource {
 
-    void touch(String table, String key);
+    void touch(Coordinate coordinate);
 
     void touchAll(Iterator<Coordinate> coordinates);
 
