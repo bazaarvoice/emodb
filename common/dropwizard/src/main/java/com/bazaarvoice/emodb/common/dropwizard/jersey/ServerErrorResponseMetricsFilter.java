@@ -40,9 +40,9 @@ public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
         if (responseContext.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR) {
-            LOG.error("request[{}] hasEntity[{}] response hasEntity[{}] bytes[{}]",
-                requestContext.getUriInfo().getRequestUri().toASCIIString(),
-                requestContext.hasEntity(), responseContext.hasEntity(), responseContext.getLength());
+//            LOG.error("request[{}] hasEntity[{}] response hasEntity[{}] bytes[{}]",
+//                requestContext.getUriInfo().getRequestUri().toASCIIString(),
+//                requestContext.hasEntity(), responseContext.hasEntity(), responseContext.getLength());
             switch (responseContext.getStatus()) {
                 case 500:
                     _meter500.mark();
