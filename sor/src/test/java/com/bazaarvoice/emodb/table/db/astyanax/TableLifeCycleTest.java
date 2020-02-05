@@ -1095,7 +1095,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.move(TABLE, PL_US, Optional.of(16), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1121,7 +1121,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.move(TABLE, PL_US, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1211,7 +1211,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1283,7 +1283,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1371,14 +1371,14 @@ public class TableLifeCycleTest {
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_APAC), newAudit());
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
         // And can't create a facade that overlaps with the new location.
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1398,7 +1398,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
             fail();
-        } catch (IllegalStateException e)
+        } catch (IllegalArgumentException e)
         {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
@@ -1407,14 +1407,14 @@ public class TableLifeCycleTest {
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_GLOBAL), newAudit());
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
         // And can't create a facade that overlaps with the new location.
         try {
             tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1435,7 +1435,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.moveFacade(TABLE, PL_APAC, PL_US_EU, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }
@@ -1456,7 +1456,7 @@ public class TableLifeCycleTest {
         try {
             tableDAO.moveFacade(TABLE, PL_APAC, PL_EU_APAC, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
             fail();
-        } catch (IllegalStateException e) {
+        } catch (IllegalArgumentException e) {
             assertEquals(e.getMessage(), "This table name is currently undergoing maintenance and therefore cannot be modified: my:table");
         }
     }

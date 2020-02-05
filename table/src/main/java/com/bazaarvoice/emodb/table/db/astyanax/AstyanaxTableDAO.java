@@ -313,7 +313,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     private void checkNoExistingMaintenance(String table) {
         if (getNextMaintenanceOp(table) != null) {
-            throw new IllegalStateException(String.format("This table name is currently undergoing maintenance and therefore cannot be modified: %s", table));
+            throw new IllegalArgumentException(String.format("This table name is currently undergoing maintenance and therefore cannot be modified: %s", table));
         }
     }
 

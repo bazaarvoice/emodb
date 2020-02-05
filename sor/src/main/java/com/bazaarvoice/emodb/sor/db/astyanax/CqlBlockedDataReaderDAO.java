@@ -938,8 +938,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
     public Stream<String> getIdsForStorage(AstyanaxStorage storage) {
 
         // Loop over all the range prefixes (2^shardsLog2 of them) and, for each, execute Cassandra queries to
-        // page through the records with that prefix.
-        final Iterator<ByteBufferRange> scanIter = storage.scanIterator(null);
+        // page through the rowkeys with that prefix.
         final DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
         BlockedDeltaTableDDL tableDDL = placement.getBlockedDeltaTableDDL();
 
