@@ -45,7 +45,7 @@ public class DefaultMegabusSource implements MegabusSource {
     }
 
     @VisibleForTesting
-    public DefaultMegabusSource(Producer<String, JsonNode> producer, Topic topic,
+    protected DefaultMegabusSource(Producer<String, JsonNode> producer, Topic topic,
                                 ObjectMapper objectMapper, Clock clock) {
         _producer = requireNonNull(producer, "producer");
         _topic = requireNonNull(topic, "topic");
