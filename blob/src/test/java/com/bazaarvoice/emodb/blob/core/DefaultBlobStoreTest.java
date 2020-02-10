@@ -15,7 +15,7 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
-import java.nio.ByteBuffer;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -23,8 +23,6 @@ import java.util.UUID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Matchers.isNull;
@@ -63,12 +61,11 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
         String blobId = UUID.randomUUID().toString();
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
         } catch (Exception e) {
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+            verify(storageProvider, times(1)).putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -78,19 +75,16 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut_FailedStorageWriteChunk() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
         String blobId = UUID.randomUUID().toString();
         doThrow(new RuntimeException("Cannot write chunk"))
                 .when(storageProvider)
-                .writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+                .putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
 
         try {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("blob-content".getBytes()), new HashMap<>());
             fail();
         } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+            verify(storageProvider, times(1)).putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, never()).writeMetadata(any(Table.class), eq(blobId), any(StorageSummary.class));
@@ -100,7 +94,6 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut_FailedWriteMetadata() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
         String blobId = UUID.randomUUID().toString();
         doThrow(new RuntimeException("Cannot write metadata"))
                 .when(metadataProvider)
@@ -109,9 +102,7 @@ public class DefaultBlobStoreTest {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
             fail();
         } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+            verify(storageProvider, times(1)).putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
             verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId));
             verifyNoMoreInteractions(storageProvider);
 
@@ -122,7 +113,6 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPut_FailedDeleteObject() {
-        when(storageProvider.getDefaultChunkSize()).thenReturn(1);
         String blobId = UUID.randomUUID().toString();
         doThrow(new RuntimeException("Cannot write metadata"))
                 .when(metadataProvider)
@@ -134,9 +124,7 @@ public class DefaultBlobStoreTest {
             blobStore.put(TABLE, blobId, () -> new ByteArrayInputStream("b".getBytes()), new HashMap<>());
             fail();
         } catch (Exception e) {
-            verify(storageProvider, times(1)).getCurrentTimestamp(any(Table.class));
-            verify(storageProvider, times(1)).getDefaultChunkSize();
-            verify(storageProvider, times(1)).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+            verify(storageProvider, times(1)).putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
             verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId));
             verifyNoMoreInteractions(storageProvider);
 
@@ -189,7 +177,7 @@ public class DefaultBlobStoreTest {
             blobStore.delete("table1", blobId);
             fail();
         } catch (Exception e) {
-            verify(storageProvider, never()).writeChunk(any(Table.class), eq(blobId), anyInt(), any(ByteBuffer.class), anyLong());
+            verify(storageProvider, never()).putObject(any(Table.class), eq(blobId), any(InputStream.class), any(Map.class));
             verifyNoMoreInteractions(storageProvider);
 
             verify(metadataProvider, times(1)).readMetadata(any(Table.class), eq(blobId));

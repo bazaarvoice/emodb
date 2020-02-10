@@ -1,8 +1,12 @@
 package com.bazaarvoice.emodb.blob.db;
 
+import com.bazaarvoice.emodb.blob.api.Range;
+import com.bazaarvoice.emodb.blob.api.StreamSupplier;
 import com.bazaarvoice.emodb.table.db.Table;
 
-import java.nio.ByteBuffer;
+import javax.annotation.Nullable;
+import java.io.InputStream;
+import java.util.Map;
 
 /**
  * Chunked storage provider based on the Astyanax {@link com.netflix.astyanax.recipes.storage.ChunkedStorageProvider}
@@ -13,13 +17,10 @@ import java.nio.ByteBuffer;
  */
 public interface StorageProvider {
 
-    long getCurrentTimestamp(Table table);
+    StorageSummary putObject(final Table table, final String blobId, final InputStream input, final Map<String, String> attributes);
 
-    void writeChunk(Table table, String blobId, int chunkId, ByteBuffer data, long timestamp);
-
-    ByteBuffer readChunk(Table table, String blobId, int chunkId, long timestamp);
+    StreamSupplier getObjectStreamSupplier(Table table, String blobId, StorageSummary summary, @Nullable Range range);
 
     void deleteObject(Table table, String blobId);
 
-    int getDefaultChunkSize();
 }

@@ -2,6 +2,8 @@ package com.bazaarvoice.emodb.blob.db.astyanax;
 
 import com.bazaarvoice.emodb.blob.BlobReadConsistency;
 import com.bazaarvoice.emodb.blob.api.Names;
+import com.bazaarvoice.emodb.blob.api.Range;
+import com.bazaarvoice.emodb.blob.api.StreamSupplier;
 import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.StorageSummary;
@@ -22,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Execution;
@@ -44,15 +47,25 @@ import com.netflix.astyanax.serializers.IntegerSerializer;
 import com.netflix.astyanax.util.RangeBuilder;
 import org.apache.cassandra.dht.ByteOrderedPartitioner;
 import org.apache.cassandra.dht.Token;
+import org.apache.commons.codec.binary.Hex;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.lang.String.format;
 
 /**
  * A single row Cassandra implementation of {@link com.bazaarvoice.emodb.blob.db.StorageProvider}.
@@ -91,6 +104,8 @@ import static com.google.common.base.Preconditions.checkArgument;
  * likely have better performance than this does.
  */
 public class AstyanaxStorageProvider implements StorageProvider, MetadataProvider, DataCopyDAO, DataPurgeDAO {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AstyanaxStorageProvider.class);
 
     private enum ColumnGroup {
         A,  // Metadata encoded as JSON
@@ -135,8 +150,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         return MetricRegistry.name("bv.emodb.blob", "AstyanaxStorageProvider", name);
     }
 
-    @Override
-    public long getCurrentTimestamp(Table tbl) {
+    private long getCurrentTimestamp(Table tbl) {
         AstyanaxTable table = (AstyanaxTable) Objects.requireNonNull(tbl, "table");
         AstyanaxStorage storage = table.getReadStorage();
         CassandraKeyspace keyspace = storage.getPlacement().getKeyspace();
@@ -145,8 +159,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
     }
 
     @ParameterizedTimed(type = "AstyanaxStorageProvider")
-    @Override
-    public void writeChunk(Table tbl, String blobId, int chunkId, ByteBuffer data, long timestamp) {
+    private void writeChunk(Table tbl, String blobId, int chunkId, ByteBuffer data, long timestamp) {
         AstyanaxTable table = (AstyanaxTable) Objects.requireNonNull(tbl, "table");
         for (AstyanaxStorage storage : table.getWriteStorage()) {
             BlobPlacement placement = (BlobPlacement) storage.getPlacement();
@@ -164,9 +177,107 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         }
     }
 
-    @ParameterizedTimed(type = "AstyanaxStorageProvider")
     @Override
-    public ByteBuffer readChunk(Table tbl, String blobId, int chunkId, long timestamp) {
+    public StorageSummary putObject(Table table, String blobId, InputStream input, Map<String, String> attributes) {
+        long timestamp = getCurrentTimestamp(table);
+        int chunkSize = getDefaultChunkSize();
+        checkArgument(chunkSize > 0);
+        DigestInputStream md5In = new DigestInputStream(input, getMessageDigest("MD5"));
+        DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
+
+        // A more aggressive solution like the Astyanax ObjectWriter recipe would improve performance by pipelining
+        // reading the input stream and writing chunks, and issuing the writes in parallel.
+        byte[] bytes = new byte[chunkSize];
+        long length = 0;
+        int chunkCount = 0;
+        for (; ; ) {
+            int chunkLength;
+            try {
+                chunkLength = ByteStreams.read(sha1In, bytes, 0, bytes.length);
+            } catch (IOException e) {
+                LOGGER.error("Failed to read input stream", e);
+                throw Throwables.propagate(e);
+            }
+            if (chunkLength == 0) {
+                break;
+            }
+            ByteBuffer buffer = ByteBuffer.wrap(bytes, 0, chunkLength);
+            writeChunk(table, blobId, chunkCount, buffer, timestamp);
+            length += chunkLength;
+            chunkCount++;
+        }
+
+        // Include two types of hash: md5 (because it's common) and sha1 (because it's secure)
+        String md5 = Hex.encodeHexString(md5In.getMessageDigest().digest());
+        String sha1 = Hex.encodeHexString(sha1In.getMessageDigest().digest());
+
+        return new StorageSummary(length, chunkCount, chunkSize, md5, sha1, attributes, timestamp);
+    }
+
+    @Override
+    public StreamSupplier getObjectStreamSupplier(Table table, String blobId, StorageSummary summary, Range range) {
+        return out -> readChunks(table, blobId, range, summary, out);
+    }
+
+    private void readChunks(Table table, String blobId, Range range, StorageSummary summary, OutputStream out)
+            throws IOException {
+        if (range.getLength() == 0) {
+            return; // Nothing to do
+        }
+        // Calculate the location of the first byte
+        long start = range.getOffset();
+        int startChunk = (int) (start / summary.getChunkSize());
+        int startOffset = (int) (start % summary.getChunkSize());
+        // Calculate the location of the last byte
+        long end = range.getOffset() + range.getLength() - 1; // Inclusive
+        int endChunk = (int) (end / summary.getChunkSize());
+        int endLimit = (int) (end % summary.getChunkSize()) + 1; // Exclusive
+
+        // A more aggressive solution like the Astyanax ObjectReader recipe would improve performance by issuing
+        // the reads in parallel.
+        for (int i = startChunk; i <= endChunk; i++) {
+            ByteBuffer chunk = readChunk(table, blobId, i, summary.getTimestamp());
+            if (chunk == null) {
+                throw new IOException(format("Blob chunk %d is missing: %s", i, blobId));
+            }
+
+            // Adjust the start and end of the byte buffer if fetching a range of bytes, not the entire blob.
+            int position = chunk.position();
+            if (i == startChunk) {
+                chunk.position(position + startOffset);
+            }
+            if (i == endChunk) {
+                chunk.limit(position + endLimit);
+            }
+
+            // Copy the chunk bytes to the output stream.
+            copyTo(chunk, out);
+        }
+    }
+
+
+    /**
+     * Copy the contents of a ByteBuffer to an OutputStream.
+     */
+    private static void copyTo(ByteBuffer buf, OutputStream out) throws IOException {
+        if (!buf.hasRemaining()) {
+            return;
+        }
+        if (buf.hasArray()) {
+            // Fast copy if the buffer is backed by an array (which should be the case)
+            out.write(buf.array(), buf.arrayOffset() + buf.position(), buf.remaining());
+        } else {
+            // Slow copy otherwise
+            byte[] bytes = new byte[4096];
+            do {
+                buf.get(bytes, 0, Math.min(bytes.length, buf.remaining()));
+                out.write(bytes);
+            } while (buf.hasRemaining());
+        }
+    }
+
+    @ParameterizedTimed(type = "AstyanaxStorageProvider")
+    private ByteBuffer readChunk(Table tbl, String blobId, int chunkId, long timestamp) {
         AstyanaxTable table = (AstyanaxTable) Objects.requireNonNull(tbl, "table");
         AstyanaxStorage storage = table.getReadStorage();
         BlobPlacement placement = (BlobPlacement) storage.getPlacement();
@@ -245,7 +356,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
                 .getKey(storage.getRowKey(blobId))
                 .withColumnRange(start, end, false, Integer.MAX_VALUE));
 
-        StorageSummary summary = toStorageSummary(columns);
+        StorageSummary summary = toStorageSummary(columns, true);
         if (summary == null) {
             return null;
         }
@@ -280,7 +391,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         return countRowsInColumn(tbl, ColumnGroup.A);
     }
 
-    private static StorageSummary toStorageSummary(ColumnList<Composite> columns) {
+    private static StorageSummary toStorageSummary(ColumnList<Composite> columns, boolean checkDataConsistency) {
         if (columns.size() == 0) {
             return null;
         }
@@ -292,16 +403,18 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         }
         StorageSummary summary = JsonHelper.fromJson(summaryColumn.getStringValue(), StorageSummary.class);
 
-        // Check that all the chunks are available.  Some may still be in the process of being written or replicated.
-        if (columns.size() < 1 + summary.getChunkCount()) {
-            return null;
-        }
-        for (int chunkId = 0; chunkId < summary.getChunkCount(); chunkId++) {
-            Column<Composite> presence = columns.getColumnByIndex(chunkId + 1);
-            if (presence == null ||
-                    !matches(presence.getName(), ColumnGroup.B, chunkId) ||
-                    presence.getTimestamp() != summary.getTimestamp()) {
+        if (checkDataConsistency) {
+            // Check that all the chunks are available.  Some may still be in the process of being written or replicated.
+            if (columns.size() < 1 + summary.getChunkCount()) {
                 return null;
+            }
+            for (int chunkId = 0; chunkId < summary.getChunkCount(); chunkId++) {
+                Column<Composite> presence = columns.getColumnByIndex(chunkId + 1);
+                if (presence == null ||
+                        !matches(presence.getName(), ColumnGroup.B, chunkId) ||
+                        presence.getTimestamp() != summary.getTimestamp()) {
+                    return null;
+                }
             }
         }
         return summary;
@@ -334,7 +447,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
             protected Iterator<Map.Entry<String, StorageSummary>> computeNext() {
                 if (scanIter.hasNext()) {
                     ByteBufferRange keyRange = scanIter.next();
-                    return decodeMetadataRows(scanInternal(placement, keyRange, columnRange, limit), table);
+                    return decodeMetadataRows(scanInternal(placement, keyRange, columnRange, limit), table, true);
                 }
                 return endOfData();
             }
@@ -342,7 +455,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
     }
 
     private static Iterator<Map.Entry<String, StorageSummary>> decodeMetadataRows(
-            final Iterator<Row<ByteBuffer, Composite>> rowIter, final AstyanaxTable table) {
+            final Iterator<Row<ByteBuffer, Composite>> rowIter, final AstyanaxTable table, boolean checkConsistency) {
         return new AbstractIterator<Map.Entry<String, StorageSummary>>() {
             @Override
             protected Map.Entry<String, StorageSummary> computeNext() {
@@ -353,7 +466,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
 
                     String blobId = AstyanaxStorage.getContentKey(key);
 
-                    StorageSummary summary = toStorageSummary(columns);
+                    StorageSummary summary = toStorageSummary(columns, checkConsistency);
                     if (summary == null) {
                         continue;  // Partial blob, parts may still be replicating.
                     }
@@ -610,8 +723,7 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         });
     }
 
-    @Override
-    public int getDefaultChunkSize() {
+    private int getDefaultChunkSize() {
         return DEFAULT_CHUNK_SIZE;
     }
 
@@ -687,5 +799,13 @@ public class AstyanaxStorageProvider implements StorageProvider, MetadataProvide
         // is sufficient for the iterator implementations used by this DAO class...
         iter.hasNext();
         return iter;
+    }
+
+    private static MessageDigest getMessageDigest(String algorithmName) {
+        try {
+            return MessageDigest.getInstance(algorithmName);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

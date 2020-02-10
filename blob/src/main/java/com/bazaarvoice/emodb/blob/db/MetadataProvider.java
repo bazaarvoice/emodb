@@ -42,7 +42,8 @@ public interface MetadataProvider {
 
     /**
      * Delete metadata.
-     *  @param table  the table
+     *
+     * @param table  the table
      * @param blobId the blob id
      */
     void deleteMetadata(Table table, String blobId);
@@ -50,7 +51,7 @@ public interface MetadataProvider {
     /**
      * Count metadata.
      *
-     * @param table  the table
+     * @param table the table
      */
     long countMetadata(Table table);
 }
