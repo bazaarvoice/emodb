@@ -38,11 +38,11 @@ public class GuavaServiceController implements Managed, ValueStoreListener {
 
         if (enabled && _service == null) {
             _service = _factory.get();
-            _service.startAsync().awaitRunning();
+            _service.startAsync();
 
         } else if (!enabled && _service != null) {
             try {
-                _service.stopAsync().awaitTerminated();
+                _service.stopAsync();
             } finally {
                 _service = null;
             }
