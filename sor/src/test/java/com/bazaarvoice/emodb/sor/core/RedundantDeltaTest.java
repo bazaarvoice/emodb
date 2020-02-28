@@ -37,10 +37,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
-import java.time.Clock;
 import org.testng.annotations.Test;
 
 import java.net.URI;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.Iterator;
@@ -115,6 +115,43 @@ public class RedundantDeltaTest {
         assertRedundantDelta(store, TABLE, KEY, uuid7);
         dataDao.setFullConsistencyDelayMillis(Integer.MAX_VALUE);
         assertUnknownDelta(store, TABLE, KEY, TimeUUIDs.newUUID());
+    }
+
+    @Test
+    public void testMinUUIDDelta() throws Exception {
+        InMemoryDataReaderDAO dataDao = new InMemoryDataReaderDAO();
+        DefaultDataStore store = new DefaultDataStore(new DatabusEventWriterRegistry(), new InMemoryTableDAO(), dataDao, dataDao,
+                new NullSlowQueryLog(), new DiscardingExecutorService(), new InMemoryHistoryStore(),
+                Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                new DiscardingAuditWriter(), new InMemoryMapStore<>(), new MetricRegistry(), Clock.systemUTC());
+
+        TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
+        store.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
+
+        UUID uuid1 = TimeUUIDs.newUUID();
+        UUID uuid2 = TimeUUIDs.minimumUuid();
+
+        store.update(TABLE, KEY, uuid1, Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
+
+        // now try to update the delta with minUUID. This will result in a failed write, however we want to check that the resultant event to the databus
+        // will not get Discarded during resolving (checks we have in resolvePeekOrPollEvents() in DefaultDatabus).
+        try {
+            store.update(TABLE, KEY, uuid2, Deltas.fromString("{\"name\":\"Tom\"}"), newAudit("submit"), WriteConsistency.STRONG);
+        } catch (Exception e) {
+            // this is expected as we have to fail with the changeId too far in the past.
+        }
+
+        // the final state is still the UUID1 delta content.
+        Map<String, String> expectedFinalState = ImmutableMap.of("name", "Bob");
+
+        assertChange(store, TABLE, KEY, uuid1, expectedFinalState);
+
+        assertChange(store, TABLE, KEY, uuid2, expectedFinalState);
+
+        // check explicitly for isChangeDeltaPending and isChangeRedundant checks, although above assertChange for uuid2 should also do these checks internally.
+        // This means the events don't get discarded in any possible way during resolving.
+        assertFalse(getAnnotated(store, TABLE, KEY, ReadConsistency.STRONG).isChangeDeltaPending(uuid2));
+        assertFalse(getAnnotated(store, TABLE, KEY, ReadConsistency.STRONG).isChangeDeltaRedundant(uuid2));
     }
 
     @Test
