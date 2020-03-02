@@ -1,6 +1,6 @@
 package com.bazaarvoice.megabus;
 
-import com.bazaarvoice.megabus.resource.Coordinate;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
 
 import java.util.Iterator;
 

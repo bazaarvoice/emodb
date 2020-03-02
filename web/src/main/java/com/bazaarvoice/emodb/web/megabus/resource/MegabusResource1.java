@@ -1,6 +1,8 @@
-package com.bazaarvoice.megabus.resource;
+package com.bazaarvoice.emodb.web.megabus.resource;
 
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
+import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.megabus.MegabusSource;
 import com.google.common.base.Strings;
 
@@ -30,13 +32,13 @@ public class MegabusResource1 {
      * Touch a document deliberately to send it to Megabus.
      */
     @POST
-    @Path ("{table}/{key}")
+    @Path ("_touch/{table}/{id}")
     public SuccessResponse touch(@PathParam ("table") String table,
-                                 @PathParam ("key") String key) {
+                                 @PathParam ("id") String id) {
         checkArgument(!Strings.isNullOrEmpty(table), "table is required");
-        checkArgument(!Strings.isNullOrEmpty(key), "key is required");
+        checkArgument(!Strings.isNullOrEmpty(id), "id is required");
 
-        Coordinate coordinate = new Coordinate(table, key);
+        Coordinate coordinate = Coordinate.of(table, id);
 
         _megabusSource.touch(coordinate);
 
@@ -50,7 +52,7 @@ public class MegabusResource1 {
      * If the document doesn't exist, this action will result in a NULL in the megabus kafka topic for each doc.
      */
     @POST
-    @Path ("_stream")
+    @Path ("_touch/_stream")
     @Consumes (MediaType.APPLICATION_JSON)
     public SuccessResponse touchAll(InputStream in) {
 

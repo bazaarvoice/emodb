@@ -3,8 +3,8 @@ package com.bazaarvoice.megabus;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.megabus.guice.MegabusRefTopic;
-import com.bazaarvoice.megabus.resource.Coordinate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
@@ -70,18 +70,18 @@ public class DefaultMegabusSource implements MegabusSource {
         coordinates.forEachRemaining(coordinateList::add);
 
         _LOG.info("Sending {} coordinate(s) to Megabus Ref Topic: {}", coordinateList.size(), _topic.getName());
-        List<Future> futures = getSendFutures(coordinateList);
+        List<Future> futures = asyncSendFutures(coordinateList);
         _producer.flush();
         futures.forEach(Futures::getUnchecked);
     }
 
     @VisibleForTesting
-    public List<Future> getSendFutures(List<Coordinate> coordinateList) {
+    public List<Future> asyncSendFutures(List<Coordinate> coordinateList) {
         List<Future> futures = coordinateList
                 .stream()
                 // Using the minimum UUID here to make sure the time is always beyond the FCL so that the resolver is certain to put the document in to actual Megabus.
                 // This way we wouldn't be in a situation where there is a ref in Ref topic but not in the Megabus topic.
-                .map(coordinate -> new MegabusRef(coordinate.getTable(), coordinate.getKey(), TimeUUIDs.minimumUuid(), _clock.instant()))
+                .map(coordinate -> new MegabusRef(coordinate.getTable(), coordinate.getId(), TimeUUIDs.minimumUuid(), _clock.instant()))
                 .collect(Collectors.groupingBy(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();

@@ -2,7 +2,7 @@ package com.bazaarvoice.megabus;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.kafka.Topic;
-import com.bazaarvoice.megabus.resource.Coordinate;
+import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.Producer;
@@ -35,7 +35,7 @@ public class MegabusSourceTest {
 
         Coordinate coordinate = Coordinate.of(table, documentId);
         DefaultMegabusSource megabusSource = new DefaultMegabusSource(producer1, topic, objectMapper, clock);
-        megabusSource.getSendFutures(Collections.singletonList(coordinate));
+        megabusSource.asyncSendFutures(Collections.singletonList(coordinate));
 
         ArgumentCaptor<ProducerRecord> argument = ArgumentCaptor.forClass(ProducerRecord.class);
 
@@ -54,7 +54,7 @@ public class MegabusSourceTest {
 
         List<Coordinate> coordinates = Stream.of(Coordinate.of(table1, documentId1), Coordinate.of(table2, documentId2)).collect(Collectors.toList());
         DefaultMegabusSource megabusSource = new DefaultMegabusSource(producer2, topic, objectMapper, clock);
-        megabusSource.getSendFutures(coordinates);
+        megabusSource.asyncSendFutures(coordinates);
 
         ArgumentCaptor<ProducerRecord> argument = ArgumentCaptor.forClass(ProducerRecord.class);
 

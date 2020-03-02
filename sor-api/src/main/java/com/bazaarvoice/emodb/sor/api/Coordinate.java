@@ -1,5 +1,8 @@
 package com.bazaarvoice.emodb.sor.api;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
@@ -39,7 +42,8 @@ public final class Coordinate {
         return new Coordinate(table, id);
     }
 
-    private Coordinate(String table, String id) {
+    @JsonCreator
+    private Coordinate(@JsonProperty(Intrinsic.TABLE) String table, @JsonProperty(Intrinsic.ID) String id) {
         _table = checkNotNull(table, "table");
         _id = checkNotNull(id, "id");
     }
@@ -55,6 +59,7 @@ public final class Coordinate {
     /**
      * Returns a Json map with two entries, one for "~table" and one for "~id", similar to all System of Record objects.
      */
+    @JsonIgnore
     public Map<String, Object> asJson() {
         return ImmutableMap.<String, Object>of(
                 Intrinsic.TABLE, _table,
