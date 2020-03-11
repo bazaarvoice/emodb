@@ -43,7 +43,7 @@ public final class Coordinate {
     }
 
     @JsonCreator
-    private Coordinate(@JsonProperty(Intrinsic.TABLE) String table, @JsonProperty(Intrinsic.ID) String id) {
+    private Coordinate(@JsonProperty("table") String table, @JsonProperty("id") String id) {
         _table = checkNotNull(table, "table");
         _id = checkNotNull(id, "id");
     }
