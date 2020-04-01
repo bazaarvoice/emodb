@@ -107,7 +107,18 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoField;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
+import java.util.Spliterators;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -1781,7 +1792,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
     }
 
-    private Set<Storage> getLiveStoragesForTable(TableJson json) {
+    private static Set<Storage> getLiveStoragesForTable(TableJson json) {
         return json.getStorages().stream()
                 .filter(storage -> !storage.isDropped())
                 .filter(storage -> storage.equals(json.getMasterStorage()) || storage.isFacade())

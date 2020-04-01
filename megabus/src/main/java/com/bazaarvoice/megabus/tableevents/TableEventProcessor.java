@@ -10,6 +10,7 @@ import com.bazaarvoice.megabus.MegabusRef;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Futures;
 import org.apache.kafka.clients.producer.Producer;
@@ -87,17 +88,11 @@ public class TableEventProcessor extends AbstractScheduledService {
                 .map(_producer::send)
                 .iterator();
 
-        List<Future<RecordMetadata>> futureBatch = new ArrayList<>(FUTURE_BATCH_SIZE);
+        Iterator<List<Future<RecordMetadata>>> partitionedFutures = Iterators.partition(futures, FUTURE_BATCH_SIZE);
 
-        while (futures.hasNext()) {
-            futureBatch.add(futures.next());
-            if (futureBatch.size() == FUTURE_BATCH_SIZE) {
-                futureBatch.forEach(Futures::getUnchecked);
-                futureBatch = new ArrayList<>(FUTURE_BATCH_SIZE);
-            }
+        while (partitionedFutures.hasNext()) {
+            partitionedFutures.next().forEach(Futures::getUnchecked);
         }
-
-        futureBatch.forEach(Futures::getUnchecked);
     }
 
     @Override

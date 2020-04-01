@@ -1,7 +1,12 @@
 package com.bazaarvoice.emodb.table.db;
 
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
-import com.bazaarvoice.emodb.sor.api.*;
+import com.bazaarvoice.emodb.sor.api.Audit;
+import com.bazaarvoice.emodb.sor.api.ReadConsistency;
+import com.bazaarvoice.emodb.sor.api.TableExistsException;
+import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.Update;
+import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 
 import javax.annotation.Nullable;

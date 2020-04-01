@@ -72,11 +72,11 @@ public class TableEventRegistrant {
 
     public static Delta newRegistrant(Instant now, Instant expirationTime) {
 
-        Condition isExpired = Conditions.mapBuilder().matches("expirationTime", Conditions.le(now.toEpochMilli())).build();
+        Condition isExpired = Conditions.mapBuilder().matches(EXPIRATION_TIME, Conditions.le(now.toEpochMilli())).build();
 
         return Deltas.mapBuilder()
-                .put("expirationTime", expirationTime.toEpochMilli())
-                .update("tasks", Deltas.conditional(isExpired, Deltas.literal(ImmutableMap.of())))
+                .put(EXPIRATION_TIME, expirationTime.toEpochMilli())
+                .update(TASKS, Deltas.conditional(isExpired, Deltas.literal(ImmutableMap.of())))
                 .build();
     }
 }
