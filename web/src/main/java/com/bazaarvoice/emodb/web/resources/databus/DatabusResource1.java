@@ -44,6 +44,7 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Iterator;
@@ -123,7 +124,13 @@ public class DatabusResource1 {
             tableFilter = new ConditionParam(conditionString).get();
         }
 
-        _databus.subscribe(subject, subscription, tableFilter, subscriptionTtl.get(), eventTtl.get(), includeDefaultJoinFilter);
+        Duration subscriptionTtlDuration = subscriptionTtl.get();
+        checkArgument(subscriptionTtlDuration.compareTo(Duration.ofDays(365 * 3)) < 0, "Subscription TTL duration limit is 3 years. The value cannot go beyond that.");
+
+        Duration eventTtlDuration = eventTtl.get();
+        checkArgument(eventTtlDuration.compareTo(Duration.ofDays(365)) < 0, "Event TTL duration limit is 365 days. The value cannot go beyond that.");
+
+        _databus.subscribe(subject, subscription, tableFilter, subscriptionTtlDuration, eventTtlDuration, includeDefaultJoinFilter);
         return SuccessResponse.instance();
     }
 

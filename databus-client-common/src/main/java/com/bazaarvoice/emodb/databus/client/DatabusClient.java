@@ -104,8 +104,8 @@ public class DatabusClient implements AuthDatabus {
         try {
             URI uri = _databus.clone()
                     .segment(subscription)
-                    .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, (int) Duration.ofDays(30).getSeconds()))
-                    .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                    .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, Integer.MAX_VALUE))
+                    .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, Integer.MAX_VALUE))
                     .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
                     .build();
             _client.resource(uri)
