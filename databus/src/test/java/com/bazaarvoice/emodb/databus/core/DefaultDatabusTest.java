@@ -422,6 +422,38 @@ public class DefaultDatabusTest {
                 .build());
     }
 
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testSubscribeWithBadSubscriptionTTLCreation() {
+        Supplier<Condition> ignoreReEtl = Suppliers.ofInstance(
+                Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build()));
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
+                mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
+                1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
+        Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
+        Duration subscriptionTtl = Duration.ofDays(365 * 10).plus(Duration.ofDays(1));
+        Duration eventTtl = Duration.ofDays(2);
+
+        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void testSubscribeWithBadEventTTLCreation() {
+        Supplier<Condition> ignoreReEtl = Suppliers.ofInstance(
+                Conditions.not(Conditions.mapBuilder().matches(UpdateRef.TAGS_NAME, Conditions.containsAny("re-etl")).build()));
+        DefaultDatabus testDatabus = new DefaultDatabus(
+                mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), mock(DataProvider.class), mock(SubscriptionDAO.class),
+                mock(DatabusEventStore.class), mock(SubscriptionEvaluator.class), mock(JobService.class),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "replication", ignoreReEtl, mock(ExecutorService.class),
+                1, key -> 0, mock(MetricRegistry.class), Clock.systemUTC());
+        Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(365).plus(Duration.ofDays(1));
+
+        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
+    }
+
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {
         return newEvent(id, table, key, changeId, ImmutableSet.<String>of());
     }

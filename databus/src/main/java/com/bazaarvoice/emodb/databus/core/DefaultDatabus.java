@@ -120,6 +120,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
     /* This is how long we submit tasks to drain the queue for each subscription from one poll request */
     private static final Duration MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION = Duration.ofMinutes(1);
 
+    /* We don't allow subscriptions to be created beyond this number. */
+    private static final Duration MAX_SUBSCRIPTION_TTL = Duration.ofDays(365 * 10);
+    /* We don't allow subscriptions to be created with event TTLs beyond this number. */
+    public static final Duration MAX_EVENT_TTL = Duration.ofDays(365);
+
     private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final SubscriptionDAO _subscriptionDao;
     private final DatabusEventStore _eventStore;
@@ -340,7 +345,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         checkSubscriptionOwner(ownerId, subscription);
         checkNotNull(tableFilter, "tableFilter");
         checkArgument(subscriptionTtl.compareTo(Duration.ZERO) > 0, "SubscriptionTtl must be >0");
+        checkArgument(subscriptionTtl.compareTo(MAX_SUBSCRIPTION_TTL) <= 0, "Subscription TTL duration limit is 10 years. The value cannot go beyond that.");
         checkArgument(eventTtl.compareTo(Duration.ZERO) > 0, "EventTtl must be >0");
+        checkArgument(eventTtl.compareTo(MAX_EVENT_TTL) <= 0, "Event TTL duration limit is 365 days. The value cannot go beyond that.");
         SubscriptionConditionValidator.checkAllowed(tableFilter);
 
         if (includeDefaultJoinFilter) {

@@ -940,24 +940,6 @@ public class DatabusJerseyTest extends ResourceTest {
         verifyNoMoreInteractions(_local);
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSubscribeWithBadSubscriptionTTL() {
-        Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.ofDays(365 * 3).plus(Duration.ofDays(1));
-        Duration eventTtl = Duration.ofDays(2);
-
-        databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testSubscribeWithBadEventTTL() {
-        Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.ofDays(15);
-        Duration eventTtl = Duration.ofDays(365).plus(Duration.ofDays(1));
-
-        databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
-    }
-
     private void assertSubscriptionEquals(Subscription expected, Subscription actual) {
         assertEquals(actual.getName(), expected.getName());
         assertEquals(actual.getTableFilter(), expected.getTableFilter());
