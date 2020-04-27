@@ -1845,7 +1845,7 @@ public class TableLifeCycleTest {
     private void assertReadyTableEventPresent(TableBackingStore backingStore, String datacenter, String table, String uuid,
                                               TableEvent.Action action) throws Exception {
         TableEventRegistry tableEventRegistry = newTableDAO(datacenter, backingStore);
-        Map.Entry<String, TableEvent> tableEvent = tableEventRegistry.getNextTableEvent(datacenter);
+        Map.Entry<String, TableEvent> tableEvent = tableEventRegistry.getNextReadyTableEvent(datacenter);
 
         assertEquals(tableEvent.getKey(), TABLE);
         assertEquals(tableEvent.getValue().getAction(), action);
@@ -1874,7 +1874,7 @@ public class TableLifeCycleTest {
     }
 
     private void assertReadyTableEventAbsent(TableBackingStore backingStore, String datacenter) throws Exception {
-        assertNull(newTableDAO(datacenter, backingStore).getNextTableEvent(datacenter));
+        assertNull(newTableDAO(datacenter, backingStore).getNextReadyTableEvent(datacenter));
     }
 
 

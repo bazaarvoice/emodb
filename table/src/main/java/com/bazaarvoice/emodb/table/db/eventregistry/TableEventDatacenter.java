@@ -21,6 +21,11 @@ import java.util.stream.Collectors;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * Defines the interface for registering for table events in a given datacenter
+ * <p/>
+ * It's used by the megabus to get notified a about table updates
+ */
 @JsonIgnoreProperties (ignoreUnknown = true)
 public class TableEventDatacenter {
 

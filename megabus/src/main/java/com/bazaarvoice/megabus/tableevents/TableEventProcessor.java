@@ -20,7 +20,6 @@ import org.apache.kafka.common.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -30,6 +29,10 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
+/**
+ * this is the leader elected process to send the READY table events to Megabus Ref topic, and then updating the events
+ * as complete in the system table.
+ */
 public class TableEventProcessor extends AbstractScheduledService {
 
     private static final int FUTURE_BATCH_SIZE = 10000;
@@ -64,7 +67,7 @@ public class TableEventProcessor extends AbstractScheduledService {
     protected void runOneIteration() throws Exception {
         Map.Entry<String, TableEvent> tableEventPair;
 
-        while ((tableEventPair = _tableEventRegistry.getNextTableEvent(_applicationId)) != null) {
+        while ((tableEventPair = _tableEventRegistry.getNextReadyTableEvent(_applicationId)) != null) {
 
             String table = tableEventPair.getKey();
             TableEvent tableEvent = tableEventPair.getValue();

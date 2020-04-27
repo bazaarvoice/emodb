@@ -935,7 +935,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
     }
 
     @Override
-    public Stream<String> getIdsForStorage(AstyanaxStorage storage) {
+    public Stream<String> getKeysForStorage(AstyanaxStorage storage) {
 
         // Loop over all the range prefixes (2^shardsLog2 of them) and, for each, execute Cassandra queries to
         // page through the rowkeys with that prefix.

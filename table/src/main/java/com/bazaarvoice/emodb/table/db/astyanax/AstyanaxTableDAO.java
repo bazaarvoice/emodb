@@ -411,7 +411,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                         checkPlacementConsistent(_systemTablePlacement, maxTimestamp);
                         checkPlacementConsistent(storage.getPlacement(), maxTimestamp);
 
-                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString(), TableEvent.Action.PROMOTE);
+                        updateAnyNonCompleteTableEventToReady(json.getTable(), storage.getUuidString(), TableEvent.Action.PROMOTE);
                     }
                 });
             }
@@ -537,7 +537,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                         // Delay the purge until we're confident we'll catch everything.
                         checkPlacementConsistent(storage.getPlacement(), droppedAt);
 
-                        checkForAnyNonCompleteTableEvents(json.getTable(), storage.getUuidString(), TableEvent.Action.DROP);
+                        updateAnyNonCompleteTableEventToReady(json.getTable(), storage.getUuidString(), TableEvent.Action.DROP);
 
                         purgeData(json, storage, iteration, progress);
 
@@ -629,6 +629,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
             throw new TableExistsException(format("May not modify system tables: %s", name), name);
         }
         checkTableChangesAllowed(name);
+
+        // Because there the megabus may still be processing table events downstream, we may not recreate a table until
+        // all maintenance is complete
         checkNoExistingMaintenance(name);
 
         // If placement move is in progress, create the new table in its new placement
@@ -1657,7 +1660,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     @Override
-    public Map.Entry<String, TableEvent> getNextTableEvent(String registrationId) {
+    public Map.Entry<String, TableEvent> getNextReadyTableEvent(String registrationId) {
         TableEventDatacenter datacenter = _objectMapper.convertValue(
                         _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
                         TableEventDatacenter.class
@@ -1684,7 +1687,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 .findFirst()
                 .get();
 
-        return _storageReaderDAO.getIdsForStorage(newAstyanaxStorage(uuidStorage, table));
+        return _storageReaderDAO.getKeysForStorage(newAstyanaxStorage(uuidStorage, table));
     }
 
     private void addDroppedTableEvent(TableJson json) {
@@ -1824,7 +1827,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                 .collect(Collectors.toList());
     }
 
-    private void checkForAnyNonCompleteTableEvents(String table, String uuid, TableEvent.Action action) {
+    private void updateAnyNonCompleteTableEventToReady(String table, String uuid, TableEvent.Action action) {
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 
         List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)

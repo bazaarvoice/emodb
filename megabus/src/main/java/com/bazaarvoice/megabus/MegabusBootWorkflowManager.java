@@ -102,9 +102,13 @@ public class MegabusBootWorkflowManager implements Managed {
     public void stop() throws Exception {
         _refResolverService.stopAsync();
         _missingRefDelayService.stopAsync();
+        _tableEventProcessorService.stopAsync();
+        _bootInitiater.stopAsync();
         _refProducerManager.stop();
 
         _refResolverService.awaitTerminated();
         _missingRefDelayService.awaitTerminated();
+        _tableEventProcessorService.awaitTerminated();
+        _bootInitiater.awaitTerminated();
     }
 }

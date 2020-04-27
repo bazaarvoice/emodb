@@ -8,5 +8,5 @@ public interface TableEventRegistry {
 
     void markTableEventAsComplete(String registrationId, String table, String uuid);
 
-    Map.Entry<String, TableEvent> getNextTableEvent(String registrationId);
+    Map.Entry<String, TableEvent> getNextReadyTableEvent(String registrationId);
 }

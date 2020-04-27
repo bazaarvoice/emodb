@@ -5,5 +5,5 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import java.util.stream.Stream;
 
 public interface StorageReaderDAO {
-    Stream<String> getIdsForStorage(AstyanaxStorage storage);
+    Stream<String> getKeysForStorage(AstyanaxStorage storage);
 }
