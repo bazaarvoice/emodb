@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.blob.db.s3;
+package com.bazaarvoice.emodb.blob.db.s3.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

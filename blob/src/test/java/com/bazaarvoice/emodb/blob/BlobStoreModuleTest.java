@@ -4,8 +4,8 @@ import com.amazonaws.regions.Regions;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
-import com.bazaarvoice.emodb.blob.db.s3.S3BucketConfiguration;
-import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3BucketConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
@@ -114,7 +114,7 @@ public class BlobStoreModuleTest {
                                         "media_global", new KeyspaceConfiguration())))
                         )
                         .setS3Configuration(new S3Configuration()
-                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false))))
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, 1, 1, 1, null))))
                 );
 
                 bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");
