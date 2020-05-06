@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.blob.db.s3;
 
-import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3HealthCheckConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.common.cache.CacheBuilder;
@@ -9,20 +9,19 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 import javax.inject.Inject;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class S3HealthCheck extends HealthCheck {
-    private final Map<String, AmazonS3> _bucketNamesToS3Clients;
+    private final AmazonS3Provider _amazonS3Provider;
     private final S3HealthCheckConfiguration _healthCheckConfiguration;
     private final LoadingCache<String, Result> _healthCheckCache;
 
     @Inject
-    public S3HealthCheck(@S3BucketNamesToS3Clients Map<String, AmazonS3> bucketNamesToS3Clients,
+    public S3HealthCheck(AmazonS3Provider amazonS3Provider,
                          S3HealthCheckConfiguration s3HealthCheckConfiguration,
                          HealthCheckRegistry healthCheckRegistry) {
-        _bucketNamesToS3Clients = Objects.requireNonNull(bucketNamesToS3Clients);
+        _amazonS3Provider = Objects.requireNonNull(amazonS3Provider);
         _healthCheckConfiguration = Objects.requireNonNull(s3HealthCheckConfiguration);
         _healthCheckCache = CacheBuilder.newBuilder()
                 .expireAfterWrite(_healthCheckConfiguration.getDuration().getSeconds(), TimeUnit.SECONDS)
@@ -42,7 +41,7 @@ public class S3HealthCheck extends HealthCheck {
     }
 
     private Result getResult() {
-        return _bucketNamesToS3Clients.entrySet().parallelStream()
+        return _amazonS3Provider.getS3BucketNamesToS3Clients().entrySet().parallelStream()
                 .map(entry -> {
                     try {
                         entry.getValue().listObjectsV2(new ListObjectsV2Request()

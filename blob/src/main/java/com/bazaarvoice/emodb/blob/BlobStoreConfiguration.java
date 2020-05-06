@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.blob;
 
-import com.bazaarvoice.emodb.blob.db.s3.S3Configuration;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
