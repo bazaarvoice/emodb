@@ -94,7 +94,7 @@ public class DataStoreProviderProxy implements DataStore {
 
     @Override
     public void setTableTemplate(String table, Map<String, ?> template, Audit audit) throws UnknownTableException {
-        _local.get().setTableTemplate(table, template, audit);
+        _system.get().setTableTemplate(table, template, audit);
     }
 
     @Override
