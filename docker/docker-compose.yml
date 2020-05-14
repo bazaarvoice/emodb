@@ -34,25 +34,6 @@ services:
             - 'cassandra_data:/var/lib/cassandra/data'
         depends_on:
             - zookeeper
-    cassandra-dc2:
-        image: 'bazaarvoice/cassandra:2.2.4'
-        networks:
-            - emodb
-        build:
-            dockerfile: cassandra-Dockerfile
-            context: .
-        environment:
-            - CASSANDRA_DC=datacenter2
-        ports:
-            - '7002:7000'
-            - '7003:7001'
-            - '8000:7199'
-            - '9043:9042'
-            - '9161:9160'
-        volumes:
-            - 'cassandra-dc2_data:/var/lib/cassandra/data'
-        depends_on:
-            - zookeeper
     kafka:
         image: 'confluentinc/cp-kafka:5.3.1'
         networks:
@@ -88,25 +69,6 @@ services:
         depends_on:
             - zookeeper
             - cassandra
-    emodb-web-dc2:
-        image: 'bazaarvoice/emodb-web-dc2:latest'
-        networks:
-            - emodb
-        build:
-            dockerfile: docker/Dockerfile
-            context: ../
-            args:
-                - APP_ROLE=web
-                - DATACENTER=dc2
-                - PORTS=9090 9091
-                - STARTUP_DELAY=35
-        ports:
-            - '9090:9090'
-            - '9091:9091'
-        depends_on:
-            - zookeeper
-            - cassandra-dc2
-            - emodb-web-dc1
     emodb-megabus:
         image: 'bazaarvoice/emodb-megabus:latest'
         networks:
@@ -133,32 +95,6 @@ services:
             - cassandra
             - emodb-web-dc1
             - kafka
-    emodb-megabus-dc2:
-        image: 'bazaarvoice/emodb-megabus-dc2:latest'
-        networks:
-            - emodb
-        build:
-            dockerfile: docker/Dockerfile
-            context: ../
-            args:
-                - APP_ROLE=megabus
-                - DATACENTER=dc2
-                - PORTS=8182 8183
-                - STARTUP_DELAY=50
-        ports:
-            - '8182:8182'
-            - '8183:8183'
-            # If you build the image with attachment options,
-            # you can uncomment the following line and attach
-            # a debugger. Extremely useful for tracing what
-            # java.net does in a container when you're not
-            # looking.
-            # - '5005:5005'
-        depends_on:
-            - zookeeper
-            - cassandra-dc2
-            - emodb-web-dc2
-            - kafka
 
 volumes:
   zookeeper_data:
@@ -166,6 +102,4 @@ volumes:
   kafka_data:
     driver: local
   cassandra_data:
-    driver: local
-  cassandra-dc2_data:
     driver: local
