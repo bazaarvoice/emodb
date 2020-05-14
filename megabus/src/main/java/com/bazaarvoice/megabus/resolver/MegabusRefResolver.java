@@ -44,6 +44,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -139,8 +140,8 @@ public class MegabusRefResolver extends KafkaStreamsService {
         private List<MegabusRef> _missingRefs;
 
         public ResolutionResult(Map<Coordinate, Optional<Map<String, Object>>> resolvedDocs, List<MegabusRef> missingRefs) {
-            _resolvedDocs = resolvedDocs;
-            _missingRefs = missingRefs;
+            _resolvedDocs = checkNotNull(resolvedDocs);
+            _missingRefs = checkNotNull(missingRefs);
         }
 
         public List<MegabusRef> getMissingRefs() {
