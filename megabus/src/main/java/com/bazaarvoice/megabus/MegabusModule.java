@@ -63,10 +63,7 @@ public class MegabusModule extends PrivateModule {
 
         bind(MegabusSource.class).to(DefaultMegabusSource.class).asEagerSingleton();
         expose(MegabusSource.class);
-        
-        // TODO: bind this into the boot workflow to prevent race conditions
-        bind(TableEventProcessorManager.class).asEagerSingleton();
-        
+
         bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }
 

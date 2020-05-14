@@ -81,7 +81,7 @@ public class DefaultMegabusSource implements MegabusSource {
                 .stream()
                 // Using the minimum UUID here to make sure the time is always beyond the FCL so that the resolver is certain to put the document in to actual Megabus.
                 // This way we wouldn't be in a situation where there is a ref in Ref topic but not in the Megabus topic.
-                .map(coordinate -> new MegabusRef(coordinate.getTable(), coordinate.getId(), TimeUUIDs.minimumUuid(), _clock.instant()))
+                .map(coordinate -> new MegabusRef(coordinate.getTable(), coordinate.getId(), TimeUUIDs.minimumUuid(), _clock.instant(), MegabusRef.RefType.TOUCH))
                 .collect(Collectors.groupingBy(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();
