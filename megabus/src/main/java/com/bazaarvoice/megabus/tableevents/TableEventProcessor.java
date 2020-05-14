@@ -41,13 +41,13 @@ public class TableEventProcessor extends AbstractScheduledService {
 
     private final TableEventRegistry _tableEventRegistry;
     private final MetricRegistry _metricRegistry;
-    private final String _applicationId;
+    private final String _tableEventRegistrationId;
     private final TableEventTools _tableEventTools;
     private final Producer<String, JsonNode> _producer;
     private final Topic _topic;
     private final ObjectMapper _objectMapper;
 
-    public TableEventProcessor(String applicationId,
+    public TableEventProcessor(String tableEventRegistrationId,
                                TableEventRegistry tableEventRegistry,
                                MetricRegistry metricRegistry,
                                TableEventTools tableEventTools,
@@ -56,7 +56,7 @@ public class TableEventProcessor extends AbstractScheduledService {
                                Topic topic) {
         _tableEventRegistry = requireNonNull(tableEventRegistry);
         _metricRegistry = requireNonNull(metricRegistry);
-        _applicationId = requireNonNull(applicationId);
+        _tableEventRegistrationId = requireNonNull(tableEventRegistrationId);
         _tableEventTools = requireNonNull(tableEventTools);
         _producer = requireNonNull(producer);
         _objectMapper = requireNonNull(objectMapper);
@@ -67,21 +67,22 @@ public class TableEventProcessor extends AbstractScheduledService {
     protected void runOneIteration() throws Exception {
         Map.Entry<String, TableEvent> tableEventPair;
 
-        while ((tableEventPair = _tableEventRegistry.getNextReadyTableEvent(_applicationId)) != null) {
+        while ((tableEventPair = _tableEventRegistry.getNextReadyTableEvent(_tableEventRegistrationId)) != null) {
 
             String table = tableEventPair.getKey();
             TableEvent tableEvent = tableEventPair.getValue();
 
-            processTableEvent(table, tableEvent.getStorage(), tableEvent.getAction() == TableEvent.Action.DROP);
+            processTableEvent(table, tableEvent.getStorage(),
+                    tableEvent.getAction() == TableEvent.Action.DROP ? MegabusRef.RefType.DELETED : MegabusRef.RefType.TOUCH);
 
-            _tableEventRegistry.markTableEventAsComplete(_applicationId, table, tableEvent.getStorage());
+            _tableEventRegistry.markTableEventAsComplete(_tableEventRegistrationId, table, tableEvent.getStorage());
         }
     }
 
-    private void processTableEvent(String table, String uuid, boolean deleted) {
+    private void processTableEvent(String table, String uuid, MegabusRef.RefType refType) {
 
         Iterator<Future<RecordMetadata>> futures =  _tableEventTools.getIdsForStorage(table, uuid)
-                .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, deleted))
+                .map(key -> new MegabusRef(table, key, TimeUUIDs.minimumUuid(), null, refType))
                 .map(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     return new ProducerRecord<String, JsonNode>(_topic.getName(),

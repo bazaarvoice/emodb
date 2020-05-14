@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.Topic;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventTools;
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
-import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.bazaarvoice.megabus.guice.MegabusRefTopic;
 import com.bazaarvoice.megabus.guice.MegabusZookeeper;
 import com.codahale.metrics.MetricRegistry;
@@ -29,7 +28,7 @@ public class TableEventProcessorManager extends LeaderService {
     public TableEventProcessorManager(LeaderServiceTask leaderServiceTask,
                                       @MegabusZookeeper CuratorFramework curator,
                                       @SelfHostAndPort HostAndPort selfHostAndPort,
-                                      @MegabusApplicationId String applicationId,
+                                      @TableEventRegistrationId String tableEventRegistrationId,
                                       TableEventRegistry tableEventRegistry,
                                       TableEventTools tableEventTools,
                                       KafkaCluster kafkaCluster,
@@ -37,7 +36,7 @@ public class TableEventProcessorManager extends LeaderService {
                                       ObjectMapper objectMapper,
                                       MetricRegistry metricRegistry) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 10, TimeUnit.MINUTES,
-                () -> new TableEventProcessor(applicationId, tableEventRegistry, metricRegistry, tableEventTools,
+                () -> new TableEventProcessor(tableEventRegistrationId, tableEventRegistry, metricRegistry, tableEventTools,
                         kafkaCluster.producer(), objectMapper, refTopic));
         ServiceFailureListener.listenTo(this, metricRegistry);
         leaderServiceTask.register(SERVICE_NAME, this);

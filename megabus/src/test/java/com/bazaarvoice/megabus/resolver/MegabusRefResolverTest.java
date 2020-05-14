@@ -94,7 +94,7 @@ public class MegabusRefResolverTest {
             put("~lastMutateAt", ISO8601Utils.format(new Date()));
         }};
 
-        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), false);
+        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), MegabusRef.RefType.NORMAL);
 
         ((TestDataProvider) dataProvider).addTable(testTableName, new InMemoryTable(testTableName, new TableOptionsBuilder().setPlacement("app_global").build(), new HashMap<>()));
         ((TestDataProvider) dataProvider).add(testContents);
@@ -129,7 +129,7 @@ public class MegabusRefResolverTest {
             put("~lastMutateAt", ISO8601Utils.format(new Date()));
         }};
 
-        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), false);
+        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), MegabusRef.RefType.NORMAL);
 
         ((TestDataProvider) dataProvider).addTable(testTableName, new InMemoryTable(testTableName, new TableOptionsBuilder().setPlacement("app_global").build(), new HashMap<>()));
         ((TestDataProvider) dataProvider).addPending(testContents);
@@ -168,7 +168,7 @@ public class MegabusRefResolverTest {
             put("~lastMutateAt", ISO8601Utils.format(new Date()));
         }};
 
-        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), false);
+        MegabusRef megabusRef = new MegabusRef(testTableName, testId, TimeUUIDs.newUUID(), Instant.now(), MegabusRef.RefType.NORMAL);
 
         ((TestDataProvider) dataProvider).addTable(testTableName, new InMemoryTable(testTableName, new TableOptionsBuilder().setPlacement("app_global").build(), new HashMap<>()));
         ((TestDataProvider) dataProvider).add(testContents);

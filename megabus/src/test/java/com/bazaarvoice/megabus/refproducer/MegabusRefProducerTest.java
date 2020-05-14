@@ -64,7 +64,7 @@ public class MegabusRefProducerTest {
         ArgumentCaptor<ProducerRecord> argument = ArgumentCaptor.forClass(ProducerRecord.class);
 
         verify(producer).send(argument.capture());
-        assertEquals(argument.getValue().value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(tableName, documentId, documentUuid, staticInstant, false)))) );
+        assertEquals(argument.getValue().value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(tableName, documentId, documentUuid, staticInstant, MegabusRef.RefType.NORMAL)))) );
         assertEquals(argument.getValue().partition(), partitionId);
         assertEquals(argument.getValue().topic(), topic.getName());
 

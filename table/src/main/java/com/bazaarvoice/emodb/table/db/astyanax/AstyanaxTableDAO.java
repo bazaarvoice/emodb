@@ -323,7 +323,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     private void checkNoExistingMaintenance(String table) {
-        if (getNextMaintenanceOp(table) != null) {
+        if (!isInternalTable(table) && getNextMaintenanceOp(table) != null) {
             throw new IllegalArgumentException(String.format("This table name is currently undergoing maintenance and therefore cannot be modified: %s", table));
         }
     }
@@ -938,6 +938,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
 
         // Operations that manipulate the table metadata json in a non-trivial way are confined to the system data
         // center so they can grab system-wide locks and ensure there are no race conditions with drop table, etc.
+
+        checkArgument(!isInternalTable(table));
 
         int shardsLog2 = numShards.isPresent() ? RowKeyUtils.computeShardsLog2(numShards.get(), "<move>") : _defaultShardsLog2;
 
@@ -1665,11 +1667,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
                         _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
                         TableEventDatacenter.class
                 );
-        java.util.Optional<TableEventRegistrant> registrant = java.util.Optional.ofNullable(datacenter.getRegistrants().get(registrationId));
+
+        TableEventRegistrant registrant = datacenter.getRegistrants().get(registrationId);
+
+        checkState(registrant != null);
 
         return registrant
-                .map(TableEventRegistrant::getTasks)
-                .orElse(Collections.emptyMap())
+                .getTasks()
                 .entrySet()
                 .stream()
                 .filter(entry -> entry.getValue().isReady())
@@ -1690,6 +1694,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
         return _storageReaderDAO.getKeysForStorage(newAstyanaxStorage(uuidStorage, table));
     }
 
+    private static boolean isInternalTable(String name) {
+        return name.startsWith("__");
+    }
+
     private void addDroppedTableEvent(TableJson json) {
         addTableEvent(json.getTable(), getLiveStoragesForTable(json), TableEvent.Action.DROP);
     }
@@ -1703,6 +1711,12 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO
     }
 
     private void addTableEvent(String table, Set<Storage> storages, TableEvent.Action action) {
+
+        // databus, megabus, and therefore table events are not available for internal tables
+        if (isInternalTable(table)) {
+            return;
+        }
+
         Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
 
         List<Update> updates = new ArrayList<>();

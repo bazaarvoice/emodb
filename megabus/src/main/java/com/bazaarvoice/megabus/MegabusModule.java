@@ -22,8 +22,10 @@ import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
 import com.bazaarvoice.megabus.tableevents.TableEventProcessorManager;
 import com.bazaarvoice.megabus.tableevents.TableEventRegistrar;
+import com.bazaarvoice.megabus.tableevents.TableEventRegistrationId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
+import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -47,6 +49,8 @@ public class MegabusModule extends PrivateModule {
         bind(Integer.class).annotatedWith(NumRefPartitions.class).toInstance(REF_PARTITIONS);
 
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
+
+        bind(String.class).annotatedWith(TableEventRegistrationId.class).to(Key.get(String.class, MegabusApplicationId.class));
 
         bind(Service.class).annotatedWith(MegabusRefResolverService.class).to(ResilientMegabusRefResolver.class).asEagerSingleton();
         bind(Service.class).annotatedWith(MissingRefDelayService.class).to(ResilientMissingRefDelayProcessor.class).asEagerSingleton();

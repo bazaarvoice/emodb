@@ -44,7 +44,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
@@ -159,9 +158,9 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
         // If isDeleted() is true, then this batch was the result of a table event, and we should propogate null's. Additionally,
         // all refs in the batch should have isDeleted() == true. A batch having some refs with true and some with false is an invalid state.
-        if (refs.stream().anyMatch(MegabusRef::isDeleted)) {
+        if (refs.stream().anyMatch(ref -> ref.getRefType() == MegabusRef.RefType.DELETED)) {
             Map<Coordinate, Optional<Map<String, Object>>> resolvedRefs = refs.stream()
-                    .peek(ref -> checkState(ref.isDeleted()))
+                    .peek(ref -> checkState(ref.getRefType() == MegabusRef.RefType.DELETED))
                     .collect(Collectors.toMap(ref -> Coordinate.of(ref.getTable(), ref.getKey()), ref -> Optional.empty()));
             return new ResolutionResult(resolvedRefs, Collections.emptyList());
         }

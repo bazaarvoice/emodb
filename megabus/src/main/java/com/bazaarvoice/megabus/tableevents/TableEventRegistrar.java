@@ -1,7 +1,6 @@
 package com.bazaarvoice.megabus.tableevents;
 
 import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
-import com.bazaarvoice.megabus.MegabusApplicationId;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
@@ -16,16 +15,16 @@ public class TableEventRegistrar extends AbstractScheduledService {
 
     private final TableEventRegistry _tableEventRegistry;
     private final MetricRegistry _metricRegistry;
-    private final String _applicationId;
+    private final String _tableEventRegistrationId;
 
 
     @Inject
-    public TableEventRegistrar(@MegabusApplicationId String applicationId,
+    public TableEventRegistrar(@TableEventRegistrationId String tableEventRegistrationId,
                                TableEventRegistry tableEventRegistry,
                                MetricRegistry metricRegistry) {
         _tableEventRegistry = requireNonNull(tableEventRegistry);
         _metricRegistry = requireNonNull(metricRegistry);
-        _applicationId = requireNonNull(applicationId);
+        _tableEventRegistrationId = requireNonNull(tableEventRegistrationId);
     }
 
     @Override
@@ -48,7 +47,7 @@ public class TableEventRegistrar extends AbstractScheduledService {
     }
 
     private void register() {
-        _tableEventRegistry.registerTableListener(_applicationId, Instant.now().plus(7, ChronoUnit.DAYS));
+        _tableEventRegistry.registerTableListener(_tableEventRegistrationId, Instant.now().plus(7, ChronoUnit.DAYS));
     }
 
     @Override
