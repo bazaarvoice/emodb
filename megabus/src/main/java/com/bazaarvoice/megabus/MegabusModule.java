@@ -12,14 +12,20 @@ import com.bazaarvoice.megabus.guice.MissingRefDelayService;
 import com.bazaarvoice.megabus.guice.MissingRefTopic;
 import com.bazaarvoice.megabus.guice.RefResolverConsumerGroup;
 import com.bazaarvoice.megabus.guice.RetryRefTopic;
+import com.bazaarvoice.megabus.guice.TableEventProcessorService;
+import com.bazaarvoice.megabus.guice.TableEventRegistrationService;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerConfiguration;
 import com.bazaarvoice.megabus.refproducer.MegabusRefProducerManager;
 import com.bazaarvoice.megabus.refproducer.MegabusRefSubscriptionMonitorManager;
 import com.bazaarvoice.megabus.refproducer.NumRefPartitions;
 import com.bazaarvoice.megabus.resolver.ResilientMegabusRefResolver;
 import com.bazaarvoice.megabus.resolver.ResilientMissingRefDelayProcessor;
+import com.bazaarvoice.megabus.tableevents.TableEventProcessorManager;
+import com.bazaarvoice.megabus.tableevents.TableEventRegistrar;
+import com.bazaarvoice.megabus.tableevents.TableEventRegistrationId;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
+import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -44,8 +50,12 @@ public class MegabusModule extends PrivateModule {
 
         bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
 
+        bind(String.class).annotatedWith(TableEventRegistrationId.class).to(Key.get(String.class, MegabusApplicationId.class));
+
         bind(Service.class).annotatedWith(MegabusRefResolverService.class).to(ResilientMegabusRefResolver.class).asEagerSingleton();
         bind(Service.class).annotatedWith(MissingRefDelayService.class).to(ResilientMissingRefDelayProcessor.class).asEagerSingleton();
+        bind(Service.class).annotatedWith(TableEventRegistrationService.class).to(TableEventRegistrar.class).asEagerSingleton();
+        bind(Service.class).annotatedWith(TableEventProcessorService.class).to(TableEventProcessorManager.class).asEagerSingleton();
         bind(MegabusRefProducerManager.class).asEagerSingleton();
 
         bind(MegabusBootWorkflowManager.class).asEagerSingleton();
@@ -53,6 +63,8 @@ public class MegabusModule extends PrivateModule {
 
         bind(MegabusSource.class).to(DefaultMegabusSource.class).asEagerSingleton();
         expose(MegabusSource.class);
+
+        bind(MegabusRefSubscriptionMonitorManager.class).asEagerSingleton();
     }
 
     @Provides

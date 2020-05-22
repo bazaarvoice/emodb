@@ -7,6 +7,7 @@ import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
@@ -22,18 +23,29 @@ import static java.util.Objects.requireNonNull;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class MegabusRef {
+
+    public enum RefType {
+        NORMAL,
+        TOUCH,
+        DELETED
+    }
+
     private final String _table;
     private final String _key;
     private final UUID _changeId;
     private final Instant _readTime;
+    private final RefType _refType;
 
     @JsonCreator
     public MegabusRef(@JsonProperty("table") String table, @JsonProperty("key") String key,
-                     @JsonProperty("changeId") UUID changeId, @JsonProperty("readTime") @Nullable Instant readTime) {
+                     @JsonProperty("changeId") UUID changeId, @JsonProperty("readTime") @Nullable Instant readTime,
+                      @Nullable @JsonProperty("refType") RefType refType) {
         _table = requireNonNull(table, "table");
         _key = requireNonNull(key, "key");
         _changeId = requireNonNull(changeId, "changeId");
         _readTime = readTime;
+        _refType = Optional.ofNullable(refType).orElse(RefType.NORMAL);
+
     }
 
     public String getTable() {
@@ -48,6 +60,10 @@ public class MegabusRef {
         return _changeId;
     }
 
+    public RefType getRefType() {
+        return _refType;
+    }
+
     @Nullable
     public Instant getReadTime() {
         return _readTime;
@@ -55,17 +71,25 @@ public class MegabusRef {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof MegabusRef)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
         MegabusRef that = (MegabusRef) o;
-        return Objects.equal(_table, that._table) &&
-                Objects.equal(_key, that._key) &&
-                Objects.equal(_changeId, that._changeId) &&
-                Objects.equal(_readTime, that._readTime);
+        return getTable().equals(that.getTable()) &&
+                getKey().equals(that.getKey()) &&
+                getChangeId().equals(that.getChangeId()) &&
+                java.util.Objects.equals(getReadTime(), that.getReadTime()) &&
+                getRefType() == that.getRefType();
+    }
+
+    @Override
+    public String toString() {
+        return "MegabusRef{" +
+                "_table='" + _table + '\'' +
+                ", _key='" + _key + '\'' +
+                ", _changeId=" + _changeId +
+                ", _readTime=" + _readTime +
+                ", _refType=" + _refType +
+                '}';
     }
 
     @Override

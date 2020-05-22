@@ -18,6 +18,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxStorage;
 import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTable;
 import com.bazaarvoice.emodb.table.db.astyanax.Placement;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
+import com.bazaarvoice.emodb.table.db.eventregistry.StorageReaderDAO;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
@@ -29,6 +30,7 @@ import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.*;
@@ -46,6 +48,8 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -53,7 +57,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 // Delegates to AstyanaxReaderDAO for non-CQL stuff
 // Once we transition fully, we will stop delegating to Astyanax
-public class CqlBlockedDataReaderDAO implements DataReaderDAO {
+public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO {
 
     private final Logger _log = LoggerFactory.getLogger(CqlBlockedDataReaderDAO.class);
 
@@ -928,6 +932,33 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO {
     @Override
     public long count(Table table, @Nullable Integer limit, ReadConsistency consistency) {
         return _astyanaxReaderDAO.count(table, limit, consistency);
+    }
+
+    @Override
+    public Stream<String> getKeysForStorage(AstyanaxStorage storage) {
+
+        // Loop over all the range prefixes (2^shardsLog2 of them) and, for each, execute Cassandra queries to
+        // page through the rowkeys with that prefix.
+        final DeltaPlacement placement = (DeltaPlacement) storage.getPlacement();
+        BlockedDeltaTableDDL tableDDL = placement.getBlockedDeltaTableDDL();
+
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(storage.scanIterator(null), 0), false)
+                .map(keyRange ->
+                        QueryBuilder.select()
+                            .distinct()
+                            .column(tableDDL.getRowKeyColumnName())
+                            .from(tableDDL.getTableMetadata())
+                            .where(gt(token(tableDDL.getRowKeyColumnName()), keyRange.getStart()))
+                            .and(lte(token(tableDDL.getRowKeyColumnName()), keyRange.getEnd()))
+                            .setConsistencyLevel(ConsistencyLevel.ALL))
+                .flatMap(statement ->
+                        StreamSupport.stream(
+                                Spliterators.spliteratorUnknownSize(
+                                        deltaQuery(placement, statement, false, "Failed to scan keys for storage %s", storage.toString()),
+                                        0),
+                                false))
+                .map(this::getRawKeyFromRowGroup)
+                .map(AstyanaxStorage::getContentKey);
     }
 
 }

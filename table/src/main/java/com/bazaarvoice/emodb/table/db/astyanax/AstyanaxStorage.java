@@ -96,4 +96,15 @@ public class AstyanaxStorage {
     public static int compareKeys(ByteBuffer leftRowKey, ByteBuffer rightRowKey) {
         return RowKeyUtils.compareKeys(leftRowKey, rightRowKey);
     }
+
+    @Override
+    public String toString() {
+        return "AstyanaxStorage{" +
+                "_uuid=" + _uuid +
+                ", _shardsLog2=" + _shardsLog2 +
+                ", _readsAllowed=" + _readsAllowed +
+                ", _placement=" + _placement +
+                ", _placementName='" + _placementName + '\'' +
+                '}';
+    }
 }

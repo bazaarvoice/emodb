@@ -144,7 +144,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
         List<Future> futures = result.stream()
                 .map(eventData -> UpdateRefSerializer.fromByteBuffer(eventData.getData()))
-                .map(ref -> new MegabusRef(ref.getTable(), ref.getKey(), ref.getChangeId(), _clock.instant()))
+                .map(ref -> new MegabusRef(ref.getTable(), ref.getKey(), ref.getChangeId(), _clock.instant(), MegabusRef.RefType.NORMAL))
                 .collect(Collectors.groupingBy(ref -> {
                     String key = Coordinate.of(ref.getTable(), ref.getKey()).toString();
                     return Utils.toPositive(Utils.murmur2(key.getBytes())) % _topic.getPartitions();

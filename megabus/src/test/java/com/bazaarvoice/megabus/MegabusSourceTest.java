@@ -41,7 +41,7 @@ public class MegabusSourceTest {
 
         // verify send is called ONE time with the right values.
         verify(producer1, times(1)).send(argument.capture());
-        assertEquals(argument.getValue().value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table, documentId, TimeUUIDs.minimumUuid(), clock.instant())))));
+        assertEquals(argument.getValue().value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table, documentId, TimeUUIDs.minimumUuid(), clock.instant(), MegabusRef.RefType.TOUCH)))));
         assertEquals(argument.getValue().topic(), topic.getName());
     }
 
@@ -63,10 +63,10 @@ public class MegabusSourceTest {
 
         List<ProducerRecord> allRecords = argument.getAllValues();
 
-        assertEquals(allRecords.get(0).value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table1, documentId1, TimeUUIDs.minimumUuid(), clock.instant())))));
+        assertEquals(allRecords.get(0).value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table1, documentId1, TimeUUIDs.minimumUuid(), clock.instant(), MegabusRef.RefType.TOUCH)))));
         assertEquals(allRecords.get(0).topic(), topic.getName());
 
-        assertEquals(allRecords.get(1).value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table2, documentId2, TimeUUIDs.minimumUuid(), clock.instant())))));
+        assertEquals(allRecords.get(1).value(), objectMapper.valueToTree(Collections.singletonList((new MegabusRef(table2, documentId2, TimeUUIDs.minimumUuid(), clock.instant(), MegabusRef.RefType.TOUCH)))));
         assertEquals(allRecords.get(1).topic(), topic.getName());
     }
 }

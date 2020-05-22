@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -108,15 +109,16 @@ public class AstyanaxTableDAOTest {
         String systemTablePlacement = "systemTablePlacement";
         String systemTable = systemTableNamespace + ":table";
         String systemTableMetadataChanges = systemTableNamespace + ":table_unpublished_databus_events";
+        String systemTableEventRegistry = systemTableNamespace + ":table_event_registry";
         String systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
         AstyanaxTableDAO tableDAO = new AstyanaxTableDAO(mock(LifeCycleRegistry.class),
                 systemTableNamespace, systemTablePlacement, 16,
-                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L),
+                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L, systemTableEventRegistry, 246L),
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
-                ImmutableMap.<String, String>of(), mock(Clock.class));
+                ImmutableMap.<String, String>of(), new ObjectMapper(), mock(Clock.class));
 
         TableBackingStore tableBackingStore = mock(TableBackingStore.class);
         Map<String, Object> tableMap = JsonHelper.fromJson(_tableMetaData, new TypeReference<Map<String, Object>>() {});

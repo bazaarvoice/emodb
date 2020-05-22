@@ -28,6 +28,7 @@ import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
 import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -92,7 +93,7 @@ public class CasStashTableTest  {
         _astyanaxTableDAO = new AstyanaxTableDAO(_lifeCycleRegistry, "__system_sor", "app_global:sys",
                 8, ImmutableMap.of(), placementFactory, placementCache, "datacenter1",
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class), mock(FullConsistencyTimeProvider.class),
-                mock(ValueStore.class), mock(CacheRegistry.class), ImmutableMap.of(), mock(Clock.class));
+                mock(ValueStore.class), mock(CacheRegistry.class), ImmutableMap.of(), new ObjectMapper(), mock(Clock.class));
         _astyanaxTableDAO.setCQLStashTableDAO(cqlStashTableDAO);
         // Don't store table definitions in the actual backing store so as not to interrupt other tests.  Use a
         // private in-memory implementation.

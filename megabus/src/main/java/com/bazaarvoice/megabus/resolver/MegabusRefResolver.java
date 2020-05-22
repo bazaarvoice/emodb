@@ -32,14 +32,20 @@ import org.slf4j.LoggerFactory;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 public class MegabusRefResolver extends KafkaStreamsService {
@@ -103,7 +109,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
         // resolve refs into documents
         KStream<String, ResolutionResult> resolutionResults = refStream.mapValues(value -> {
             try {
-                return resolveRefs(value.iterator());
+                return resolveRefs(value);
             } catch (Throwable t) {
                 _errorProcessingMeter.mark();
                 throw t;
@@ -114,7 +120,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
                 // extract the resolved documents
                 .flatMap((key, value) -> value.getKeyedResolvedDocs())
                 // convert deleted documents to null
-                .mapValues(doc -> !Intrinsic.isDeleted(doc) ? doc : null)
+                .mapValues(doc -> Optional.ofNullable(doc).map(Intrinsic::isDeleted).orElse(true) ? null : doc)
                 // send to megabus
                 .to(_megabusResolvedTopic.getName(), Produced.with(Serdes.String(), new JsonPOJOSerde<>(new TypeReference<Map<String, Object>>() {})));
 
@@ -130,12 +136,12 @@ public class MegabusRefResolver extends KafkaStreamsService {
 
     private static class ResolutionResult {
 
-        private List<Map<String, Object>> _resolvedDocs;
+        private Map<Coordinate, Optional<Map<String, Object>>> _resolvedDocs;
         private List<MegabusRef> _missingRefs;
 
-        public ResolutionResult(List<Map<String, Object>> resolvedDocs, List<MegabusRef> missingRefs) {
-            _resolvedDocs = resolvedDocs;
-            _missingRefs = missingRefs;
+        public ResolutionResult(Map<Coordinate, Optional<Map<String, Object>>> resolvedDocs, List<MegabusRef> missingRefs) {
+            _resolvedDocs = checkNotNull(resolvedDocs);
+            _missingRefs = checkNotNull(missingRefs);
         }
 
         public List<MegabusRef> getMissingRefs() {
@@ -143,15 +149,25 @@ public class MegabusRefResolver extends KafkaStreamsService {
         }
 
         public Iterable<KeyValue<String, Map<String, Object>>> getKeyedResolvedDocs() {
-            return _resolvedDocs.stream().
-                    map(doc -> new KeyValue<>(Coordinate.fromJson(doc).toString(), doc))
+            return _resolvedDocs.entrySet().stream()
+                    .map(entry -> new KeyValue<>(entry.getKey().toString(), entry.getValue().orElse(null)))
                     .collect(Collectors.toList());
         }
     }
 
-    private ResolutionResult resolveRefs(Iterator<MegabusRef> refs) {
+    private ResolutionResult resolveRefs(Collection<MegabusRef> refs) {
+
+        // If isDeleted() is true, then this batch was the result of a table event, and we should propogate null's. Additionally,
+        // all refs in the batch should have isDeleted() == true. A batch having some refs with true and some with false is an invalid state.
+        if (refs.stream().anyMatch(ref -> ref.getRefType() == MegabusRef.RefType.DELETED)) {
+            Map<Coordinate, Optional<Map<String, Object>>> resolvedRefs = refs.stream()
+                    .peek(ref -> checkState(ref.getRefType() == MegabusRef.RefType.DELETED))
+                    .collect(Collectors.toMap(ref -> Coordinate.of(ref.getTable(), ref.getKey()), ref -> Optional.empty()));
+            return new ResolutionResult(resolvedRefs, Collections.emptyList());
+        }
+
         Table<Coordinate, UUID, MegabusRef> refTable = HashBasedTable.create();
-        refs.forEachRemaining(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
+        refs.forEach(ref -> refTable.put(Coordinate.of(ref.getTable(), ref.getKey()), ref.getChangeId(), ref));
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
 
@@ -165,14 +181,16 @@ public class MegabusRefResolver extends KafkaStreamsService {
         }
 
         Iterator<DataProvider.AnnotatedContent> readResultIter = annotatedGet.execute();
-        List<Map<String, Object>> resolvedDocuments = new ArrayList<>();
+        Map<Coordinate, Optional<Map<String, Object>>> resolvedDocuments = new HashMap<>();
         List<MegabusRef> missingRefs = new ArrayList<>();
 
         readResultIter.forEachRemaining(result -> {
             Map<String, Object> content = result.getContent();
             AtomicBoolean triggerEvent = new AtomicBoolean(false);
 
-            refTable.row(Coordinate.fromJson(content)).forEach((changeId, ref) -> {
+            Coordinate coordinate = Coordinate.fromJson(content);
+
+            refTable.row(coordinate).forEach((changeId, ref) -> {
 
                 if (result.isChangeDeltaPending(changeId)) {
                     _pendingMeter.mark();
@@ -196,7 +214,7 @@ public class MegabusRefResolver extends KafkaStreamsService {
             });
 
             if (triggerEvent.get()) {
-                resolvedDocuments.add(content);
+                resolvedDocuments.put(coordinate, Optional.of(content));
             }
         });
 

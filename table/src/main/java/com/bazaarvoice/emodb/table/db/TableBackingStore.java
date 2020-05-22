@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 
@@ -22,6 +23,8 @@ public interface TableBackingStore {
             throws TableExistsException;
 
     void update(String table, String key, UUID changeId, Delta delta, Audit audit, WriteConsistency consistency);
+
+    void updateAll(Iterable<Update> updates);
 
     Map<String, Object> get(String table, String key, ReadConsistency consistency);
 

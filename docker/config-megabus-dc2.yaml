@@ -10,23 +10,23 @@ systemTablePlacement: app_global:sys
 
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter1
+  currentDataCenter: datacenter2
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  cassandraDataCenter: datacenter1
+  cassandraDataCenter: datacenter2
 
   # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8080
+  dataCenterServiceUri: http://emodb-web-dc2:9090
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8081
+  dataCenterAdminUri: http://emodb-web-dc2:9091
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
-  systemDataCenterServiceUri: http://localhost:8080
+  systemDataCenterServiceUri: http://emodb-web-dc1:8080
 
 kafka:
   bootstrapServers: kafka:9092
@@ -34,30 +34,30 @@ kafka:
     lingerMs: 5
 
 megabus:
-  applicationId: megabus-local
-  refResolverConsumerGroupName: emodb.megabus.resolver
-  delayProcessorConsumerGroupName: emodb.megabus.delay
+  applicationId: megabus-dc2
+  refResolverConsumerGroupName: emodb.dc2.megabus.resolver
+  delayProcessorConsumerGroupName: emodb.dc2.megabus.delay
   megabusRefTopic:
-    name: emodb.internal.megabus.ref
+    name: emodb.dc2.internal.megabus.ref
     partitions: 8
     replicationFactor: 1
   megabusTopic:
-    name: emodb.megabus
+    name: emodb.dc2.megabus
     partitions: 8
     replicationFactor: 1
   missingRefTopic:
-    name: emodb.internal.megabus.missing
+    name: emodb.dc2.internal.megabus.missing
     partitions: 8
     replicationFactor: 1
   retryRefTopic:
-    name: emodb.internal.megabus.retry
+    name: emodb.dc2.internal.megabus.retry
     partitions: 8
     replicationFactor: 1
   boot:
     queueServiceApiKey: local_admin
-    scanStatusTable: __system_megabus_boot
-    pendingScanRangeQueueName: megabus-boot-pending-scan-ranges
-    completeScanRangeQueueName: megabus-boot-complete-scan-ranges
+    scanStatusTable: __system_megabus_boot-dc2
+    pendingScanRangeQueueName: megabus-boot-pending-scan-ranges-dc2
+    completeScanRangeQueueName: megabus-boot-complete-scan-ranges-dc2
   refProducer:
     batchSize: 400
     skipWaitThreshold: 250
@@ -96,8 +96,8 @@ systemOfRecord:
     emo_cluster:
       cluster: emo_cluster
       clusterMetric: emo_sor_metric_name
-      dataCenter: datacenter1
-      seeds: cassandra
+      dataCenter: datacenter2
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -110,7 +110,7 @@ systemOfRecord:
         app_global: {}
         ugc_global: {}
         catalog_global:  {}
-        pii_us: {}
+        pii_eu: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -127,8 +127,8 @@ databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
-    dataCenter: datacenter1
-    seeds: cassandra
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -138,7 +138,7 @@ databus:
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databus: {}
+      databusdc2: {}
 
 
 blobStore:
@@ -163,8 +163,8 @@ blobStore:
     media:
       cluster: emo_cluster
       clusterMetric: emo_media_metric_name
-      dataCenter: datacenter1
-      seeds: cassandra
+      dataCenter: datacenter2
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -203,8 +203,8 @@ queueService:
   cassandra:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
-    dataCenter: datacenter1
-    seeds: cassandra
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -214,7 +214,7 @@ queueService:
     healthCheck:
       name: queue-cassandra
     keyspaces:
-      queue: {}
+      queuedc2: {}
 
 
 cqlDriver:
@@ -231,21 +231,19 @@ auth:
   anonymousRoles:
   - anonymous
 
+# Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
- #namespace: datacenter1
-
- # ZooKeeper connection string that looks like "host:port,host:port,...".
- # It should include all members of the ZooKeeper ensemble.
- connectString: zookeeper:2181
+  namespace: datacenter2
+  connectString: zookeeper:2181
 
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:
     - type: instrumentedHttp
-      port: 8082
+      port: 8182
   adminConnectors:
     - type: instrumentedHttp
-      port: 8083
+      port: 8183
 
   shutdownGracePeriod: 60s
 

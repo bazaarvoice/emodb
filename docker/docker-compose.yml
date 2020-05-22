@@ -22,6 +22,8 @@ services:
         build:
             dockerfile: cassandra-Dockerfile
             context: .
+        environment:
+            - CASSANDRA_DC=datacenter1
         ports:
             - '7000:7000'
             - '7001:7001'
@@ -48,10 +50,19 @@ services:
             - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
         depends_on:
             - zookeeper
-    emodb-web:
+    emodb-web-dc1:
         image: 'bazaarvoice/emodb-web:latest'
         networks:
             - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=web
+                - DATACENTER=dc1
+                - PORTS=8080 8081
+                - STARTUP_DELAY=30
+
         ports:
             - '8080:8080'
             - '8081:8081'
@@ -62,6 +73,14 @@ services:
         image: 'bazaarvoice/emodb-megabus:latest'
         networks:
             - emodb
+        build:
+            dockerfile: docker/Dockerfile
+            context: ../
+            args:
+                - APP_ROLE=megabus
+                - DATACENTER=dc1
+                - PORTS=8082 8083
+                - STARTUP_DELAY=45
         ports:
             - '8082:8082'
             - '8083:8083'
@@ -74,7 +93,7 @@ services:
         depends_on:
             - zookeeper
             - cassandra
-            - emodb-web
+            - emodb-web-dc1
             - kafka
 
 volumes:

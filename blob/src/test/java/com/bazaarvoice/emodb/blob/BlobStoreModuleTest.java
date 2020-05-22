@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -141,6 +142,7 @@ public class BlobStoreModuleTest {
                 bind(MetricRegistry.class).toInstance(metricRegistry);
 
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
+                bind(ObjectMapper.class).toInstance(mock(ObjectMapper.class));
 
                 install(new BlobStoreModule(serviceMode, "bv.emodb.blob", metricRegistry));
             }
