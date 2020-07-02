@@ -20,8 +20,6 @@ persistence and cross-data center replication.
 Documentation
 -------------
 
-[Release Notes](markdowns/ReleaseNotes.md)
-
 [System of Record API](https://bazaarvoice.github.io/emodb/sor/)
 
 [System of Record Deltas](https://bazaarvoice.github.io/emodb/deltas/)
