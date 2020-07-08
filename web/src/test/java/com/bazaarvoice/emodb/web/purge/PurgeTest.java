@@ -144,9 +144,7 @@ public class PurgeTest {
         assertTrue(purgeStatus.get("status").toString().equals("IN_PROGRESS"));
 
         // calling job directly via calling purgeTableAsync on DataStoreResource1
-        Subject subject = mock(Subject.class);
-        when(subject.hasPermission(Permissions.unlimited())).thenReturn(true);
-        Map<String, Object> jobID3Map = _dataStoreResource.purgeTableAsync(TABLE3, new AuditParam("audit=comment:'purgetest+comment'"), subject);
+        Map<String, Object> jobID3Map = _dataStoreResource.purgeTableAsync(TABLE3, new AuditParam("audit=comment:'purgetest+comment'"));
         Map<String, Object> purgeStatus3 = _dataStoreResource.getPurgeStatus(TABLE3, jobID3Map.get("id").toString());
         assertTrue(purgeStatus3.get("status").toString().equals("IN_PROGRESS"));
     }

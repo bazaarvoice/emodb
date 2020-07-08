@@ -115,7 +115,6 @@ public class DataStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_REVIEWS_ONLY = "reviews-only-key";
     private static final String APIKEY_STANDARD = "standard-key";
     private static final String APIKEY_STANDARD_UPDATE = "standard-update";
-    private static final String APIKEY_ADMIN = "standard-admin";
 
     private DataStore _server = mock(DataStore.class);
     private DataCenters _dataCenters = mock(DataCenters.class);
@@ -132,7 +131,6 @@ public class DataStoreJerseyTest extends ResourceTest {
         authIdentityManager.createIdentity(APIKEY_REVIEWS_ONLY, new ApiKeyModification().addRoles("reviews-only-role"));
         authIdentityManager.createIdentity(APIKEY_STANDARD, new ApiKeyModification().addRoles("standard"));
         authIdentityManager.createIdentity(APIKEY_STANDARD_UPDATE, new ApiKeyModification().addRoles("update-with-events"));
-        authIdentityManager.createIdentity(APIKEY_ADMIN, new ApiKeyModification().addRoles("admin-role"));
 
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_server, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
@@ -145,7 +143,6 @@ public class DataStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "reviews-only-role", ImmutableSet.of("sor|*|if({..,\"type\":\"review\"})"));
         createRole(roleManager, null, "standard", DefaultRoles.standard.getPermissions());
         createRole(roleManager, null, "update-with-events", ImmutableSet.of("sor|update|*"));
-        createRole(roleManager, null, "admin-role", ImmutableSet.of("*"));
 
         return setupResourceTestRule(Collections.<Object>singletonList(
                 new DataStoreResource1(_server, mock(DataStoreAsync.class), new InMemoryCompactionControlSource(), new UnlimitedDataStoreUpdateThrottler())),
@@ -563,28 +560,10 @@ public class DataStoreJerseyTest extends ResourceTest {
         when(dataCenter.isSystem()).thenReturn(true);
 
         Audit audit = new AuditBuilder().setLocalHost().build();
-        sorClient(APIKEY_ADMIN).dropTable("table-name", audit);
+        sorClient(APIKEY_TABLE).dropTable("table-name", audit);
 
         verify(_server).dropTable("table-name", audit);
         verify(_dataCenters, never()).getSelf();
-        verifyNoMoreInteractions(_server, _dataCenters);
-    }
-
-    @Test
-    public void testDropTableForbiddenIfNotAdmin() {
-        DataCenter dataCenter = mock(DataCenter.class);
-        when(dataCenter.getName()).thenReturn("mock-datacenter");
-        when(_dataCenters.getSelf()).thenReturn(dataCenter);
-        when(dataCenter.isSystem()).thenReturn(true);
-
-        Audit audit = new AuditBuilder().setLocalHost().build();
-        try {
-            sorClient(APIKEY_TABLE).dropTable("table-name", audit);
-            fail();
-        } catch (Exception e) {
-            assertTrue(e instanceof UnauthorizedException);
-        }
-
         verifyNoMoreInteractions(_server, _dataCenters);
     }
 
@@ -793,7 +772,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testSetTableTemplate() {
         Audit audit = new AuditBuilder().setLocalHost().build();
-        sorClient(APIKEY_ADMIN).setTableTemplate("table-name", ImmutableMap.<String, Object>of("key", "value"), audit);
+        sorClient(APIKEY_TABLE).setTableTemplate("table-name", ImmutableMap.<String, Object>of("key", "value"), audit);
 
         verify(_server).setTableTemplate("table-name", ImmutableMap.<String, Object>of("key", "value"), audit);
         verifyNoMoreInteractions(_server);
