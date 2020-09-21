@@ -69,6 +69,8 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
+  - "yulias_testplacement:default"
+  - "yulias_testplacement:ugc"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.

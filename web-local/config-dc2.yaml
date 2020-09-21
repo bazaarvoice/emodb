@@ -64,6 +64,8 @@ systemOfRecord:
   - "app_global:default"
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "catalog_global:cat"
+  - "yulias_testplacement:default"
+  - "yulias_testplacement:ugc"
 
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:

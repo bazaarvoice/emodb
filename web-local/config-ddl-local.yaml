@@ -32,6 +32,17 @@ systemOfRecord:
                keyspace: pii_us
                table.delta_v2: pii_delta_v2
                table.history: pii_history
+      yulias_testplacement:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: yulias_testplacement
+               table.delta_v2: default_delta_v2
+               table.history: default_history
+            ugc:
+               keyspace: yulias_testplacement
+               table.delta_v2: ugc_delta_v2
+               table.history: ugc_history
 
 databus:
    keyspaces:

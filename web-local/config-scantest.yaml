@@ -72,6 +72,8 @@ systemOfRecord:
   - "catalog_global:cat"
   - "pii_us:pii"
   - "pii_eu:pii"
+  - "yulias_testplacement:default"
+  - "yulias_testplacement:ugc"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
