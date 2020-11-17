@@ -540,7 +540,7 @@ public class PersistentSortedQueue implements SortedQueue {
 
         // Sort the segments from min to max.  If there are ties, prefer shorter segments then newer segments.
         final Map<UUID, ByteBuffer> maxRecords = _dao.findMaxRecords(dataIds);
-        Collections.sort(segments, new Comparator<Segment>() {
+        segments.sort(new Comparator<Segment>() {
             @Override
             public int compare(Segment left, Segment right) {
                 ByteBuffer leftMax = maxRecords.get(left.getDataId());
@@ -548,7 +548,7 @@ public class PersistentSortedQueue implements SortedQueue {
                 return ComparisonChain.start()
                         .compare(left.getMin(), right.getMin(), ORDERING)  // Ascending
                         .compare(leftMax, rightMax, ORDERING)                     // Ascending
-                        .compare(right.getDataId(), left.getDataId(), TimeUUIDs.ordering())  // Descending
+                        .compare(right.getDataId(), left.getDataId(), TimeUUIDs.comparator())  // Descending
                         .result();
             }
         });

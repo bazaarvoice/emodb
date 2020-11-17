@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
 import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import io.dropwizard.jackson.AnnotationSensitivePropertyNamingStrategy;
 import io.dropwizard.jackson.DiscoverableSubtypeResolver;
 import io.dropwizard.jackson.LogbackModule;
@@ -27,6 +28,7 @@ public class EmoServiceObjectMapperFactory {
     public static ObjectMapper configure(ObjectMapper mapper) {
         return CustomJsonObjectMapperFactory.configure(mapper)
                 .registerModule(new LogbackModule())
+                .registerModule(new GuavaModule())
                 .setDateFormat(new ISO8601DateFormat())
                 .setPropertyNamingStrategy(new AnnotationSensitivePropertyNamingStrategy())
                 .setSubtypeResolver(new DiscoverableSubtypeResolver());

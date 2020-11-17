@@ -2,27 +2,52 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.services.s3.AmazonS3;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
-import com.google.common.base.Charsets;
-import com.google.common.base.Throwables;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.io.Closeables;
-import com.google.common.io.LineReader;
+import com.bazaarvoice.emodb.streaming.AbstractSpliterator;
+import com.bazaarvoice.emodb.streaming.SpliteratorIterator;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Spliterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Closeable iterator for Stash splits.
  */
-class StashSplitIterator extends AbstractIterator<Map<String, Object>> implements StashRowIterator {
+class StashSplitIterator extends SpliteratorIterator<Map<String, Object>> implements StashRowIterator {
     private final AtomicBoolean _closed = new AtomicBoolean(false);
     private final BufferedReader _in;
-    private final LineReader _reader;
+
+    @Override
+    protected Spliterator<Map<String, Object>> getSpliterator() {
+        return new AbstractSpliterator<Map<String, Object>>() {
+            @Override
+            protected Map<String, Object> computeNext() {
+                String line;
+                try {
+                    line = _in.readLine();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (line == null) {
+                    try {
+                        close();
+                    } catch (IOException ignore) {
+                        // Don't worry about this, we're done iterating anyway
+                    }
+                    return endOfStream();
+                }
+
+                //noinspection unchecked
+                return JsonHelper.fromJson(line, Map.class);
+            }
+        };
+    }
 
     StashSplitIterator(AmazonS3 s3, String bucket, String key) {
         InputStream rawIn = new RestartingS3InputStream(s3, bucket, key);
@@ -32,39 +57,15 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
             //   Because the content may be concatenated gzip files we cannot use the default GZIPInputStream.
             //   GzipCompressorInputStream supports concatenated gzip files.
             GzipCompressorInputStream gzipIn = new GzipCompressorInputStream(rawIn, true);
-            _in = new BufferedReader(new InputStreamReader(gzipIn, Charsets.UTF_8));
-            // Create a line reader
-            _reader = new LineReader(_in);
+            _in = new BufferedReader(new InputStreamReader(gzipIn, StandardCharsets.UTF_8));
         } catch (Exception e) {
             try {
-                Closeables.close(rawIn, true);
+                rawIn.close();
             } catch (IOException ignore) {
-                // Won't happen, already caught and logged
+                // ignore
             }
-            throw Throwables.propagate(e);
+            throw (e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e));
         }
-    }
-
-    @Override
-    protected Map<String, Object> computeNext() {
-        String line;
-        try {
-            line = _reader.readLine();
-        } catch (IOException e) {
-            throw Throwables.propagate(e);
-        }
-
-        if (line == null) {
-            try {
-                close();
-            } catch (IOException ignore) {
-                // Don't worry about this, we're done iterating anyway
-            }
-            return endOfData();
-        }
-
-        //noinspection unchecked
-        return JsonHelper.fromJson(line, Map.class);
     }
 
     @Override

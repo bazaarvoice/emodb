@@ -9,19 +9,18 @@ import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.condition.OrConditionBuilder;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Lists;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class OrConditionBuilderImpl implements OrConditionBuilder {
 
     private List<Condition> _conditions;
     private List<Object> _values;
-    private ListMultimap<String, Condition> _intrinsics;
+    private ConcurrentMap<String, List<Condition>> _intrinsics;
     private boolean _alwaysTrue;
 
     @Override
@@ -46,29 +45,30 @@ public class OrConditionBuilderImpl implements OrConditionBuilder {
 
         } else if (condition instanceof EqualCondition) {
             if (_values == null) {
-                _values = Lists.newArrayList();
+                _values = new ArrayList<>();
             }
             _values.add(((EqualCondition) condition).getValue());
 
         } else if (condition instanceof InCondition) {
             if (_values == null) {
-                _values = Lists.newArrayList();
+                _values =  new ArrayList<>();
             }
             _values.addAll(((InCondition) condition).getValues());
 
         } else if (condition instanceof IntrinsicCondition) {
             if (_intrinsics == null) {
-                _intrinsics = ArrayListMultimap.create();
+                _intrinsics = new ConcurrentHashMap<>();
             }
             IntrinsicCondition intrinsic = (IntrinsicCondition) condition;
-            _intrinsics.put(intrinsic.getName(), intrinsic.getCondition());
+            _intrinsics.computeIfAbsent(intrinsic.getName(), ignore -> new ArrayList())
+                    .add(intrinsic.getCondition());
 
         } else if (condition instanceof OrCondition) {
             orAny(((OrCondition) condition).getConditions());
 
         } else {
             if (_conditions == null) {
-                _conditions = Lists.newArrayList();
+                _conditions = new ArrayList<>();
             }
             _conditions.add(condition);
         }
@@ -88,15 +88,14 @@ public class OrConditionBuilderImpl implements OrConditionBuilder {
             return Conditions.alwaysTrue();
         }
 
-        List<Condition> conditions = Lists.newArrayList();
+        List<Condition> conditions = new ArrayList<>();
         if (_values != null) {
             conditions.add(Conditions.in(_values));
         }
         if (_intrinsics != null) {
-            for (Map.Entry<String, Collection<Condition>> entry :
-                    OrderedJson.ENTRY_COMPARATOR.immutableSortedCopy(_intrinsics.asMap().entrySet())) {
-                conditions.add(Conditions.intrinsic(entry.getKey(), Conditions.or(entry.getValue())));
-            }
+            _intrinsics.entrySet().stream()
+                    .sorted(OrderedJson.ENTRY_COMPARATOR)
+                    .forEach(e -> conditions.add(Conditions.intrinsic(e.getKey(), Conditions.or(e.getValue()))));
         }
         if (_conditions != null) {
             conditions.addAll(_conditions);

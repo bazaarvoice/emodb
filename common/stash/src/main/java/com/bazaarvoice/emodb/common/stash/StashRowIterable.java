@@ -1,12 +1,8 @@
 package com.bazaarvoice.emodb.common.stash;
 
-import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-import com.google.common.io.Closeables;
-import com.google.common.io.Closer;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +11,7 @@ import java.util.Map;
  */
 abstract public class StashRowIterable implements Iterable<Map<String, Object>>, Closeable {
 
-    private final List<StashRowIterator> _openIterators = Lists.newArrayList();
+    private final List<StashRowIterator> _openIterators = new ArrayList<>();
     private StashRowIterator _initialIterator;
 
     abstract protected StashRowIterator createStashRowIterator();
@@ -32,11 +28,11 @@ abstract public class StashRowIterable implements Iterable<Map<String, Object>>,
             _openIterators.add(_initialIterator);
         } catch (Exception e) {
             try {
-                Closeables.close(_initialIterator, true);
+                _initialIterator.close();
             } catch (IOException e2) {
-                // Already caught and logged
+                // ignore
             }
-            throw Throwables.propagate(e);
+            throw e;
         }
     }
 
@@ -65,12 +61,20 @@ abstract public class StashRowIterable implements Iterable<Map<String, Object>>,
     public void close() throws IOException {
         if (!_openIterators.isEmpty()) {
             try {
-                // Use a closer to cleanly close all iterators even if one throws an exception on close
-                Closer closer = Closer.create();
+                Exception closeException = null;
                 for (StashRowIterator iterator : _openIterators) {
-                    closer.register(iterator);
+                    try {
+                        iterator.close();
+                    } catch (Exception e) {
+                        // Only maintain the first exception generated
+                        if (closeException == null) {
+                            closeException = e;
+                        }
+                    }
                 }
-                closer.close();
+                if (closeException != null) {
+                    throw (closeException instanceof IOException ? (IOException) closeException : new IOException(closeException));
+                }
             } finally {
                 _openIterators.clear();
             }

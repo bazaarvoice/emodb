@@ -25,8 +25,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
-import com.google.common.util.concurrent.RateLimiter;
+
+import java.util.Comparator;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Hex;
@@ -130,8 +130,8 @@ public class InMemoryDataReaderDAO implements DataReaderDAO, DataWriterDAO {
 
         String table = key.getTable().getName();
 
-        Ordering<UUID> ordering = reversed ? TimeUUIDs.ordering().reverse() : TimeUUIDs.ordering();
-        NavigableMap<UUID, Change> map = Maps.newTreeMap(ordering);
+        Comparator<UUID> comparator = reversed ? TimeUUIDs.comparator().reversed() : TimeUUIDs.comparator();
+        NavigableMap<UUID, Change> map = Maps.newTreeMap(comparator);
         if (includeContentData) {
             map.putAll(safeGet(_contentChanges, table, key.getKey()));
         }

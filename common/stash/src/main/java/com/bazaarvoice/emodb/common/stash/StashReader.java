@@ -11,24 +11,22 @@ import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.bazaarvoice.emodb.sor.api.StashNotAvailableException;
 import com.bazaarvoice.emodb.sor.api.TableNotStashedException;
-import com.google.common.base.Predicate;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Lists;
-import com.google.common.collect.PeekingIterator;
-import com.google.common.collect.Range;
-import com.google.common.reflect.AbstractInvocationHandler;
-import com.google.common.reflect.Reflection;
+import com.bazaarvoice.emodb.streaming.AbstractSpliterator;
+import com.bazaarvoice.emodb.streaming.SpliteratorIterator;
 
 import javax.annotation.Nullable;
 import java.io.InputStream;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.ListIterator;
+import java.util.Spliterator;
+import java.util.stream.StreamSupport;
 
 /**
  * Provides basic access to Stashed tables and content.
@@ -40,8 +38,13 @@ abstract public class StashReader {
     protected final String _rootPath;
 
     protected StashReader(URI stashRoot, AmazonS3 s3) {
-        checkNotNull(stashRoot, "stashRoot");
-        _s3 = checkNotNull(s3, "s3");
+        if (stashRoot == null) {
+            throw new NullPointerException("stashRoot is required");
+        }
+        if (s3 == null) {
+            throw new NullPointerException("s3 is required");
+        }
+        _s3 = s3;
         _bucket = stashRoot.getHost();
 
         String path = stashRoot.getPath();
@@ -80,21 +83,23 @@ abstract public class StashReader {
 
         return StashUtil.getRegionForBucket(bucket)
                 .map(region -> createS3ClientForRegion(region, credentialsProvider, s3Config))
-                .orElseGet(() -> Reflection.newProxy(AmazonS3.class, new AbstractInvocationHandler() {
-                    private AmazonS3 _resolvedClient = null;
+                .orElseGet(() -> (AmazonS3) Proxy.newProxyInstance(
+                        AmazonS3.class.getClassLoader(), new Class<?>[] { AmazonS3.class },
+                        new InvocationHandler() {
+                            private AmazonS3 _resolvedClient;
+                            
+                            @Override
+                            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                                return method.invoke(resolvedClient(), args);
+                            }
 
-                    @Override
-                    protected Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
-                        return method.invoke(resolvedClient(), args);
-                    }
-
-                    private AmazonS3 resolvedClient() {
-                        if (_resolvedClient == null) {
-                            String endPoint = determineEndpointForBucket(bucket, credentialsProvider, s3Config, stashRoot.getPath());
-                            _resolvedClient = createS3ClientForEndpoint(endPoint, credentialsProvider, s3Config);
-                        }
-                        return _resolvedClient;
-                    }
+                            private AmazonS3 resolvedClient() {
+                                if (_resolvedClient == null) {
+                                    String endPoint = determineEndpointForBucket(bucket, credentialsProvider, s3Config, stashRoot.getPath());
+                                    _resolvedClient = createS3ClientForEndpoint(endPoint, credentialsProvider, s3Config);
+                                }
+                                return _resolvedClient;
+                            }
                 }));
     }
 
@@ -155,44 +160,49 @@ abstract public class StashReader {
         final String root = getRootPath();
         final String prefix = String.format("%s/", root);
 
-        return new AbstractIterator<StashTable>() {
-            Iterator<String> _commonPrefixes = Iterators.emptyIterator();
+        return new SpliteratorIterator<StashTable>() {
+            Iterator<String> _commonPrefixes = Collections.emptyIterator();
             String _marker = null;
             boolean _truncated = true;
 
             @Override
-            protected StashTable computeNext() {
-                String dir = null;
+            protected Spliterator<StashTable> getSpliterator() {
+                return new AbstractSpliterator<StashTable>() {
+                    @Override
+                    protected StashTable computeNext() {
+                        String dir = null;
 
-                while (dir == null) {
-                    if (_commonPrefixes.hasNext()) {
-                        dir = _commonPrefixes.next();
-                        if (dir.isEmpty()) {
-                            // Ignore the empty directory if it comes back
-                            dir = null;
-                        } else {
-                            // Strip the prefix and trailing "/"
-                            dir = dir.substring(prefix.length(), dir.length()-1);
+                        while (dir == null) {
+                            if (_commonPrefixes.hasNext()) {
+                                dir = _commonPrefixes.next();
+                                if (dir.isEmpty()) {
+                                    // Ignore the empty directory if it comes back
+                                    dir = null;
+                                } else {
+                                    // Strip the prefix and trailing "/"
+                                    dir = dir.substring(prefix.length(), dir.length()-1);
+                                }
+                            } else if (_truncated) {
+                                ObjectListing response = _s3.listObjects(new ListObjectsRequest()
+                                        .withBucketName(_bucket)
+                                        .withPrefix(prefix)
+                                        .withDelimiter("/")
+                                        .withMarker(_marker)
+                                        .withMaxKeys(1000));
+
+                                _commonPrefixes = response.getCommonPrefixes().iterator();
+                                _marker = response.getNextMarker();
+                                _truncated = response.isTruncated();
+                            } else {
+                                return endOfStream();
+                            }
                         }
-                    } else if (_truncated) {
-                        ObjectListing response = _s3.listObjects(new ListObjectsRequest()
-                                .withBucketName(_bucket)
-                                .withPrefix(prefix)
-                                .withDelimiter("/")
-                                .withMarker(_marker)
-                                .withMaxKeys(1000));
 
-                        _commonPrefixes = response.getCommonPrefixes().iterator();
-                        _marker = response.getNextMarker();
-                        _truncated = response.isTruncated();
-                    } else {
-                        return endOfData();
+                        String tablePrefix = prefix + dir + "/";
+                        String tableName = StashUtil.decodeStashTable(dir);
+                        return new StashTable(_bucket, tablePrefix, tableName);
                     }
-                }
-
-                String tablePrefix = prefix + dir + "/";
-                String tableName = StashUtil.decodeStashTable(dir);
-                return new StashTable(_bucket, tablePrefix, tableName);
+                };
             }
         };
     }
@@ -206,66 +216,71 @@ abstract public class StashReader {
         final String prefix = String.format("%s/", root);
         final int prefixLength = prefix.length();
 
-        return new AbstractIterator<StashTableMetadata>() {
-            PeekingIterator<S3ObjectSummary> _listResponse =
-                    Iterators.peekingIterator(Iterators.<S3ObjectSummary>emptyIterator());
-            String _marker = null;
-            boolean _truncated = true;
-
+        return new SpliteratorIterator<StashTableMetadata>() {
             @Override
-            protected StashTableMetadata computeNext() {
-                String tableDir = null;
-                List<StashFileMetadata> files = Lists.newArrayListWithCapacity(16);
-                boolean allFilesRead = false;
+            protected Spliterator<StashTableMetadata> getSpliterator() {
+                return new AbstractSpliterator<StashTableMetadata>() {
+                    ListIterator<S3ObjectSummary> _listResponse = Collections.emptyListIterator();
+                    String _marker = null;
+                    boolean _truncated = true;
 
-                while (!allFilesRead) {
-                    if (_listResponse.hasNext()) {
-                        // Peek at the next record but don't consume it until we verify it's part of the same table
-                        S3ObjectSummary s3File = _listResponse.peek();
-                        String key = s3File.getKey();
+                    @Override
+                    protected StashTableMetadata computeNext() {
+                        String tableDir = null;
+                        List<StashFileMetadata> files = new ArrayList<>(16);
+                        boolean allFilesRead = false;
 
-                        // Don't include the _SUCCESS file or any other stray files we may find
-                        String[] parentDirAndFile = key.substring(prefixLength).split("/");
-                        if (parentDirAndFile.length != 2) {
-                            // Consume and skip this row
-                            _listResponse.next();
-                        } else {
-                            String parentDir = parentDirAndFile[0];
-                            if (tableDir == null) {
-                                tableDir = parentDir;
-                            }
+                        while (!allFilesRead) {
+                            if (_listResponse.hasNext()) {
+                                // Peek at the next record but don't consume it until we verify it's part of the same table
+                                S3ObjectSummary s3File = _listResponse.next();
+                                _listResponse.previous();
+                                String key = s3File.getKey();
 
-                            if (!parentDir.equals(tableDir)) {
-                                allFilesRead = true;
+                                // Don't include the _SUCCESS file or any other stray files we may find
+                                String[] parentDirAndFile = key.substring(prefixLength).split("/");
+                                if (parentDirAndFile.length != 2) {
+                                    // Consume and skip this row
+                                    _listResponse.next();
+                                } else {
+                                    String parentDir = parentDirAndFile[0];
+                                    if (tableDir == null) {
+                                        tableDir = parentDir;
+                                    }
+
+                                    if (!parentDir.equals(tableDir)) {
+                                        allFilesRead = true;
+                                    } else {
+                                        // Record is part of this table; consume it now
+                                        _listResponse.next();
+                                        files.add(new StashFileMetadata(_bucket, key, s3File.getSize()));
+                                    }
+                                }
+                            } else if (_truncated) {
+                                ObjectListing response = _s3.listObjects(new ListObjectsRequest()
+                                        .withBucketName(_bucket)
+                                        .withPrefix(prefix)
+                                        .withMarker(_marker)
+                                        .withMaxKeys(1000));
+
+                                _listResponse = response.getObjectSummaries().listIterator();
+                                _marker = response.getNextMarker();
+                                _truncated = response.isTruncated();
                             } else {
-                                // Record is part of this table; consume it now
-                                _listResponse.next();
-                                files.add(new StashFileMetadata(_bucket, key, s3File.getSize()));
+                                allFilesRead = true;
                             }
                         }
-                    } else if (_truncated) {
-                        ObjectListing response = _s3.listObjects(new ListObjectsRequest()
-                                .withBucketName(_bucket)
-                                .withPrefix(prefix)
-                                .withMarker(_marker)
-                                .withMaxKeys(1000));
 
-                        _listResponse = Iterators.peekingIterator(response.getObjectSummaries().iterator());
-                        _marker = response.getNextMarker();
-                        _truncated = response.isTruncated();
-                    } else {
-                        allFilesRead = true;
+                        if (tableDir == null) {
+                            // No files read this iteration means all files have been read
+                            return endOfStream();
+                        }
+
+                        String tablePrefix = prefix + tableDir + "/";
+                        String tableName = StashUtil.decodeStashTable(tableDir);
+                        return new StashTableMetadata(_bucket, tablePrefix, tableName, files);
                     }
-                }
-
-                if (tableDir == null) {
-                    // No files read this iteration means all files have been read
-                    return endOfData();
-                }
-
-                String tablePrefix = prefix + tableDir + "/";
-                String tableName = StashUtil.decodeStashTable(tableDir);
-                return new StashTableMetadata(_bucket, tablePrefix, tableName, files);
+                };
             }
         };
     }
@@ -279,15 +294,13 @@ abstract public class StashReader {
      */
     public StashTableMetadata getTableMetadata(String table)
             throws StashNotAvailableException, TableNotStashedException {
-        ImmutableList.Builder<StashFileMetadata> filesBuilder = ImmutableList.builder();
+        List<StashFileMetadata> files = new ArrayList<>();
 
         Iterator<S3ObjectSummary> objectSummaries = getS3ObjectSummariesForTable(table);
         while (objectSummaries.hasNext()) {
             S3ObjectSummary objectSummary = objectSummaries.next();
-            filesBuilder.add(new StashFileMetadata(_bucket, objectSummary.getKey(), objectSummary.getSize()));
+            files.add(new StashFileMetadata(_bucket, objectSummary.getKey(), objectSummary.getSize()));
         }
-
-        List<StashFileMetadata> files = filesBuilder.build();
 
         // Get the prefix arbitrarily from the first file.
         String prefix = files.get(0).getKey();
@@ -305,17 +318,17 @@ abstract public class StashReader {
      */
     public List<StashSplit> getSplits(String table)
             throws StashNotAvailableException, TableNotStashedException {
-        ImmutableList.Builder<StashSplit> splitsBuilder = ImmutableList.builder();
+        List<StashSplit> splits = new ArrayList<>();
 
         Iterator<S3ObjectSummary> objectSummaries = getS3ObjectSummariesForTable(table);
         while (objectSummaries.hasNext()) {
             S3ObjectSummary objectSummary = objectSummaries.next();
             String key = objectSummary.getKey();
             // Strip the common root path prefix from the split since it is constant.
-            splitsBuilder.add(new StashSplit(table, key.substring(_rootPath.length() + 1), objectSummary.getSize()));
+            splits.add(new StashSplit(table, key.substring(_rootPath.length() + 1), objectSummary.getSize()));
         }
 
-        return splitsBuilder.build();
+        return splits;
     }
 
     /**
@@ -349,8 +362,8 @@ abstract public class StashReader {
         return new RestartingS3InputStream(_s3, _bucket, getSplitKey(split));
     }
 
-    public InputStream getRawSplitPart(StashSplit split, Range<Long> byteRange) {
-        return new RestartingS3InputStream(_s3, _bucket, getSplitKey(split), byteRange);
+    public InputStream getRawSplitPart(StashSplit split, @Nullable Long fromInclusive, @Nullable Long toExclusive) {
+        return new RestartingS3InputStream(_s3, _bucket, getSplitKey(split), fromInclusive, toExclusive);
     }
 
     private String getPrefix(String table) {
@@ -373,30 +386,32 @@ abstract public class StashReader {
     private Iterator<S3ObjectSummary> getS3ObjectSummaries(final String prefix) {
         final int prefixLength = prefix.length();
 
-        Iterator<S3ObjectSummary> allSummaries = Iterators.concat(new AbstractIterator<Iterator<S3ObjectSummary>>() {
-            String marker = null;
-            ObjectListing response;
-            protected Iterator<S3ObjectSummary> computeNext() {
-                if (response == null || response.isTruncated()) {
-                    response = _s3.listObjects(new ListObjectsRequest()
+        Spliterator<S3ObjectSummary> allSummaries = new AbstractSpliterator<S3ObjectSummary>() {
+            private String _marker = null;
+            private Iterator<S3ObjectSummary> _summaries = null;
+
+            @Override
+            protected S3ObjectSummary computeNext() {
+                if (_summaries == null || (!_summaries.hasNext() && _marker != null)) {
+                    ObjectListing response = _s3.listObjects(new ListObjectsRequest()
                             .withBucketName(_bucket)
                             .withPrefix(prefix)
                             .withDelimiter("/")
-                            .withMarker(marker)
+                            .withMarker(_marker)
                             .withMaxKeys(1000));
-                    marker = response.getNextMarker();
-                    return response.getObjectSummaries().iterator();
+                    _marker = response.getNextMarker();
+                    _summaries = response.getObjectSummaries().iterator();
                 }
-                return endOfData();
+                if (_summaries.hasNext()) {
+                    return _summaries.next();
+                }
+                return endOfStream();
             }
-        });
+        };
 
-        // Sometimes the prefix itself can come back as a result.  Filter that entry out.
-        return Iterators.filter(allSummaries, new Predicate<S3ObjectSummary>() {
-            @Override
-            public boolean apply(S3ObjectSummary summary) {
-                return summary.getKey().length() > prefixLength;
-            }
-        });
+        return StreamSupport.stream(allSummaries, false)
+                // Sometimes the prefix itself can come back as a result.  Filter that entry out.
+                .filter(summary -> summary.getKey().length() > prefixLength)
+                .iterator();
     }
 }

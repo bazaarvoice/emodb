@@ -1,16 +1,13 @@
 package com.bazaarvoice.emodb.common.uuid;
 
 import com.eaio.uuid.UUIDGen;
-import com.google.common.collect.ImmutableSortedMap;
-import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.UUID;
-
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Operations on time-based UUIDs.
@@ -24,12 +21,7 @@ public abstract class TimeUUIDs {
     /** Maximum time in milliseconds that doesn't overflow a time UUID, equal to 9:21pm Mar 31, 5236 (UTC). */
     private static final long TIME_MILLIS_MAX = ((-1L >>> 4) - NUM_100NS_INTERVALS_SINCE_UUID_EPOCH) / 10000;
 
-    private static final Ordering<UUID> ORDERING = new Ordering<UUID>() {
-        @Override
-        public int compare(UUID uuid1, UUID uuid2) {
-            return TimeUUIDs.compare(uuid1, uuid2);
-        }
-    };
+    private static final Comparator<UUID> COMPARATOR = TimeUUIDs::compare;
 
     /** Prevent instantiation. */
     private TimeUUIDs() {}
@@ -123,8 +115,12 @@ public abstract class TimeUUIDs {
      * 15 October 1582 UTC, rounded to a millisecond boundary.
      */
     private static long getRawTimestamp(long timeMillis) {
-        checkArgument(timeMillis >= TIME_MILLIS_MIN, "Time value too small.");  // < 12am Oct 15, 1582 (UTC)
-        checkArgument(timeMillis <= TIME_MILLIS_MAX, "Time value too large.");  // > 9:21pm Mar 31, 5236 (UTC)
+        if (timeMillis < TIME_MILLIS_MIN) {
+            throw new IllegalArgumentException("Time value too small."); // < 12am Oct 15, 1582 (UTC)
+        }
+        if (timeMillis > TIME_MILLIS_MAX) {
+            throw new IllegalArgumentException("Time value too large.");  // > 9:21pm Mar 31, 5236 (UTC)
+        }
         return timeMillis * 10000 + NUM_100NS_INTERVALS_SINCE_UUID_EPOCH;
     }
 
@@ -156,7 +152,7 @@ public abstract class TimeUUIDs {
      * @throws UnsupportedOperationException if either uuid is not a timestamp UUID
      */
     public static int compare(UUID uuid1, UUID uuid2) {
-        int timeResult = Longs.compare(uuid1.timestamp(), uuid2.timestamp());
+        int timeResult = Long.compare(uuid1.timestamp(), uuid2.timestamp());
         if (timeResult != 0) {
             return timeResult;
         }
@@ -174,19 +170,21 @@ public abstract class TimeUUIDs {
      * @throws UnsupportedOperationException if either uuid is not a timestamp UUID
      */
     public static int compareTimestamps(UUID uuid1, UUID uuid2) {
-        return Longs.compare(uuid1.timestamp(), uuid2.timestamp());
+        return Long.compare(uuid1.timestamp(), uuid2.timestamp());
     }
 
     /**
      * Sort time UUIDs deterministically such that, as much as can be determined from the
      * information in the UUID, UUIDs created earlier sort before UUIDs created later.
      */
-    public static Ordering<UUID> ordering() {
-        return ORDERING;
+    public static Comparator<UUID> comparator() {
+        return COMPARATOR;
     }
 
     public static <T> NavigableMap<UUID, T> sortedCopy(Map<UUID, T> map) {
-        return ImmutableSortedMap.copyOf(map, ordering());
+        NavigableMap<UUID, T> sortedCopy =  new TreeMap<>(comparator());
+        sortedCopy.putAll(map);
+        return sortedCopy;
     }
 
     /**
@@ -195,7 +193,9 @@ public abstract class TimeUUIDs {
      * equal to {@link #maximumUuid()}.
      */
     public static UUID getNext(UUID uuid) {
-        checkArgument(uuid.version() == 1, "Not a time UUID");
+        if (uuid.version() != 1) {
+            throw new IllegalArgumentException("Not a time UUID");
+        }
         UUID max = maximumUuid();
         long lsb = uuid.getLeastSignificantBits();
         if (lsb < max.getLeastSignificantBits()) {
@@ -214,7 +214,9 @@ public abstract class TimeUUIDs {
      * equal to {@link #minimumUuid()}.
      */
     public static UUID getPrevious(UUID uuid) {
-        checkArgument(uuid.version() == 1, "Not a time UUID");
+        if (uuid.version() != 1) {
+            throw new IllegalArgumentException("Not a time UUID");
+        }
         UUID min = minimumUuid();
         long lsb = uuid.getLeastSignificantBits();
         if (lsb > min.getLeastSignificantBits()) {

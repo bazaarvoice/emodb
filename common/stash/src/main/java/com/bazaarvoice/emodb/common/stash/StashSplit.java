@@ -2,9 +2,10 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
-import com.google.common.io.BaseEncoding;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Objects;
 
 /**
  * POJO to maintain attributes of a Stash split.
@@ -26,7 +27,7 @@ public class StashSplit {
     }
 
     public static StashSplit fromString(String split) {
-        String unencoded = new String(BaseEncoding.base64Url().omitPadding().decode(split), Charsets.UTF_8);
+        String unencoded = new String(Base64.getUrlDecoder().decode(split), StandardCharsets.UTF_8);
         String[] parts = new StringBuilder(unencoded).reverse().toString().split("\n");
         String table = parts[0];
         String key = parts[1];
@@ -53,14 +54,14 @@ public class StashSplit {
 
     @Override
     public String toString() {
-        return BaseEncoding.base64Url().omitPadding().encode(
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(
                 new StringBuilder(_table.length() + _key.length() + 10)
                         .append(_table).append("\n")
                         .append(_key).append("\n")
                         .append(_size)
                         .reverse()
                         .toString()
-                        .getBytes(Charsets.UTF_8));
+                        .getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
@@ -74,13 +75,13 @@ public class StashSplit {
 
         StashSplit that = (StashSplit) o;
 
-        return Objects.equal(_table, that._table) &&
-                Objects.equal(_key, that._key) &&
+        return _table.equals(that._table) &&
+                _key.equals(that._key) &&
                 _size == that._size;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_table, _key);
+        return Objects.hash(_table, _key);
     }
 }

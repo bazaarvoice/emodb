@@ -1,21 +1,17 @@
 package com.bazaarvoice.emodb.common.api.impl;
 
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.Lists;
-
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.NoSuchElementException;
 
 /**
- * Similar to {@link com.google.common.collect.Iterators#partition(java.util.Iterator, int)} except that it
+ * Similar to Guava's <code>Iterators.partition()</code> except that it
  * adaptively adjusts the size of each partition in an attempt to keep the time between each loop of the
  * partition at a particular value.
  */
-public class TimePartitioningIterator<T> extends AbstractIterator<List<T>> {
+public class TimePartitioningIterator<T> implements Iterator<List<T>> {
 
     private final Iterator<T> _iterator;
     private final int _minSize;
@@ -47,9 +43,17 @@ public class TimePartitioningIterator<T> extends AbstractIterator<List<T>> {
      * work done between each call to {@link #hasNext()} is linear with respect to the size of the partition.
      */
     public TimePartitioningIterator(Iterator<T> iterator, int initialSize, int minSize, int maxSize, Duration iterationGoal) {
-        checkArgument(iterationGoal.compareTo(Duration.ZERO) > 0);
-        _iterator = checkNotNull(iterator);
-        checkArgument(minSize > 0 && minSize <= maxSize);
+        if (iterationGoal.compareTo(Duration.ZERO) <= 0) {
+            throw new IllegalArgumentException("Duration must be greater than zero");
+        }
+        if (iterator == null) {
+            throw new IllegalArgumentException("Iterator cannot be null");
+        }
+        if (minSize <= 0 || minSize > maxSize) {
+            throw new IllegalArgumentException("Sizes muse be in range 0 < minSize <= maxSize");
+        }
+
+        _iterator = iterator;
         _minSize = minSize;
         _maxSize = maxSize;
         _goalMillis = iterationGoal.toMillis();
@@ -57,18 +61,26 @@ public class TimePartitioningIterator<T> extends AbstractIterator<List<T>> {
     }
 
     @Override
-    protected List<T> computeNext() {
+    public boolean hasNext() {
+        return _iterator.hasNext();
+    }
+
+    @Override
+    public List<T> next() {
+        if (!hasNext()) {
+            throw new NoSuchElementException();
+        }
+        return getNext();
+    }
+
+    private List<T> getNext() {
         long now = System.currentTimeMillis();
         if (_timestamp != 0) {
             adjustBatchSize(now - _timestamp);
         }
         _timestamp = now;
 
-        if (!_iterator.hasNext()) {
-            return endOfData();
-        }
-
-        List<T> list = Lists.newArrayListWithCapacity(_batchSize);
+        List<T> list = new ArrayList<>(_batchSize);
         while (_iterator.hasNext() && list.size() < _batchSize) {
             list.add(_iterator.next());
         }

@@ -4,9 +4,6 @@ import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
-import com.google.common.base.Throwables;
-import com.google.common.collect.BoundType;
-import com.google.common.collect.Range;
 
 import javax.annotation.Nullable;
 import java.io.EOFException;
@@ -21,15 +18,15 @@ public class RestartingS3InputStream extends InputStream {
     private final AmazonS3 _s3;
     private final String _bucket;
     private final String _key;
-    private long _length;
+    private final long _length;
     private InputStream _in;
     private long _pos;
 
     public RestartingS3InputStream(AmazonS3 s3, String bucket, String key) {
-        this(s3, bucket, key, null);
+        this(s3, bucket, key, null, null);
     }
 
-    public RestartingS3InputStream(AmazonS3 s3, String bucket, String key, @Nullable Range<Long> range) {
+    public RestartingS3InputStream(AmazonS3 s3, String bucket, String key, @Nullable Long fromInclusive, @Nullable Long toExclusive) {
         _s3 = s3;
         _bucket = bucket;
         _key = key;
@@ -37,21 +34,31 @@ public class RestartingS3InputStream extends InputStream {
         S3Object s3Object;
 
         // Get the object synchronously so any immediate S3 errors, such as file not found, are thrown inline.
-        if (range == null) {
+        if (fromInclusive == null && toExclusive == null) {
             s3Object = _s3.getObject(new GetObjectRequest(_bucket, _key));
             _pos = 0;
             _length = s3Object.getObjectMetadata().getContentLength();
         } else {
             long start, end;
 
-            if (range.hasLowerBound()) {
-                start = range.lowerEndpoint() + (range.lowerBoundType() == BoundType.CLOSED ? 0 : 1);
+            if (fromInclusive != null) {
+                if (fromInclusive < 0) {
+                    throw new IllegalArgumentException("From must be >= 0");
+                }
+                start = fromInclusive;
             } else {
                 start = 0;
             }
 
-            if (range.hasUpperBound()) {
-                end = range.upperEndpoint() - (range.upperBoundType() == BoundType.CLOSED ? 0 : 1);
+            if (toExclusive != null) {
+                if (toExclusive <= 0) {
+                    throw new IllegalArgumentException("To must be > 0");
+                }
+                if (fromInclusive != null && toExclusive <= fromInclusive) {
+                    throw new IllegalArgumentException("From must be > to");
+                }
+                // Get object request is inclusive, so subtract 1.
+                end = toExclusive - 1;
             } else {
                 end = Long.MAX_VALUE;
             }
@@ -163,7 +170,7 @@ public class RestartingS3InputStream extends InputStream {
                 try {
                     Thread.sleep(200 * attempt);
                 } catch (InterruptedException interrupt) {
-                    throw Throwables.propagate(interrupt);
+                    throw new RuntimeException(interrupt);
                 }
             }
         }

@@ -20,8 +20,12 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
+
+    <prerequisites>
+        <maven>3.3.9</maven>
+    </prerequisites>
 
     <properties>
         <astyanax.version>3.8.0-bv8</astyanax.version>

@@ -15,6 +15,10 @@
 
     <name>EmoDB Stash Utilities</name>
 
+    <properties>
+        <commons-compress.version>1.4.1</commons-compress.version>
+    </properties>
+
     <dependencies>
         <!-- Bazaarvoice dependencies -->
         <dependency>
@@ -36,6 +40,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
+            <version>${commons-compress.version}</version>
         </dependency>
 
         <!-- Test dependencies -->
@@ -47,6 +52,11 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
             <scope>test</scope>
         </dependency>
 
