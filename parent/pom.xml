@@ -42,9 +42,10 @@
         <aws-sdk.version>1.11.551</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.18.1</jersey.version>
-        <jacoco.version>0.7.2.201409121644</jacoco.version>
+        <jacoco.version>0.8.6</jacoco.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
+        <sonar.version>3.7.0.1746</sonar.version>
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
         <skipCC>true</skipCC>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
@@ -58,6 +59,13 @@
         <!-- If the 'yum*' variables are changed, please change the options in emodb-deploy-snapshot jenkins build-->
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
+
+        <sonar.sources>src/main</sonar.sources>
+        <sonar.test.sources>src/test</sonar.test.sources>
+        <sonar.coverage.exclusions>
+            /config/,/model/,/dto/,/datamodel/,/repository/,/converter/,/entity/,/util/,/exception/
+        </sonar.coverage.exclusions>
+        <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
     </properties>
 
@@ -364,6 +372,11 @@
                 <artifactId>kafka-streams</artifactId>
                 <version>${kafka.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>${sonar.version}</version>
+            </dependency>
 
             <!-- Test dependencies -->
             <dependency>
@@ -420,23 +433,32 @@
                 -->
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
                 <configuration>
                     <propertyName>jacoco.agent.argLine</propertyName> <!-- Name it to make the dependecny clearer; default: argLine -->
                     <skip>${skipCC}</skip>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>pre-unit-test</id>
+                        <id>jacoco-initialize</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
+                        <phase>test-compile</phase>
                     </execution>
                     <execution>
-                        <id>post-unit-test</id>
-                        <phase>test</phase>
+                        <id>jacoco-site</id>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report-aggregate</goal>
+                        </goals>
+                        <phase>verify</phase>
                     </execution>
                 </executions>
             </plugin>
