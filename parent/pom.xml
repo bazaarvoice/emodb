@@ -47,7 +47,7 @@
         <kafka.version>2.3.0</kafka.version>
         <sonar.version>3.7.0.1746</sonar.version>
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
-        <skipCC>true</skipCC>
+        <skipCC>false</skipCC>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
