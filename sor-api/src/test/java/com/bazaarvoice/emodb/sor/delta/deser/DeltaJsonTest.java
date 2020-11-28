@@ -1,7 +1,9 @@
-package com.bazaarvoice.emodb.sor.delta;
+package com.bazaarvoice.emodb.sor.delta.deser;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableMap;
@@ -53,5 +55,21 @@ public class DeltaJsonTest {
 
         Map<String, Delta> actual = JsonHelper.fromJson(string, new TypeReference<Map<String, Delta>>() {});
         assertEquals(actual, expected);
+    }
+
+    @Test
+    public void testWrite() {
+    }
+
+    @Test
+    public void testTestWrite() {
+    }
+
+    @Test
+    public void testAppend() {
+    }
+
+    @Test
+    public void testTestAppend() {
     }
 }

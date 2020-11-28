@@ -1,7 +1,10 @@
-package com.bazaarvoice.emodb.sor.delta;
+package com.bazaarvoice.emodb.sor.delta.deser;
 
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.State;
+import com.bazaarvoice.emodb.sor.delta.Delta;
+import com.bazaarvoice.emodb.sor.delta.DeltaBuilder;
+import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

@@ -8,22 +8,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import com.google.common.base.Throwables;
-import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.PeekingIterator;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
-
-import static com.google.common.base.Preconditions.checkState;
+import java.util.Spliterator;
 
 /**
  * Incrementally parses an JSON array of objects, returning the results as an iterator.  Allows parsing an
  * arbitrary amount of data, potentially more than could fit in memory at one time.
  */
-public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements PeekingIterator<T>, Closeable {
+public class JsonStreamingArrayParser<T> extends SpliteratorIterator<T> implements Closeable {
     private final JsonParser _jp;
     private final ObjectReader _reader;
     private final Class<? extends T> _type;
@@ -49,39 +45,48 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
             JavaType javaType = mapper.constructType(elementType);
             //noinspection unchecked
             _type = (Class<? extends T>) javaType.getRawClass();
-            _jp = mapper.getFactory().createJsonParser(in);
-            _reader = mapper.reader(javaType);
+            _jp = mapper.getFactory().createParser(in);
+            _reader = mapper.readerFor(javaType);
 
             // Parse at least the first byte of the response to make sure the input stream is valid.
             if (_jp.nextToken() != JsonToken.START_ARRAY) {
                 throw new JsonParseException("Invalid JSON response, expected content to start with '[': " +
                         _jp.getCurrentToken(), _jp.getTokenLocation());
             }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    protected T computeNext() {
-        try {
-            if (_jp.nextToken() == JsonToken.END_ARRAY) {
-                checkState(_jp.nextToken() == null, "Expected EOF in JavaScript input stream.");
-                _jp.close();
-                return endOfData();
-            }
-            return _type.cast(_reader.readValue(_jp));
-        } catch (IOException e) {
-            // If the root cause is a JsonProcessingException then throw it as a JsonStreamProcessingException.
-            if (isJsonProcessingException(e)) {
-                throw new JsonStreamProcessingException(e);
-            }
+    protected Spliterator<T> getSpliterator() {
+        return new AbstractSpliterator<T>() {
+            @Override
+            protected T computeNext() {
+                try {
+                    if (_jp.nextToken() == JsonToken.END_ARRAY) {
+                        if (_jp.nextToken() != null) {
+                            throw new IllegalStateException("Expected EOF in JavaScript input stream.");
+                        }
+                        _jp.close();
+                        return endOfStream();
+                    }
+                    return _type.cast(_reader.readValue(_jp));
+                } catch (IOException e) {
+                    // If the root cause is a JsonProcessingException then throw it as a JsonStreamProcessingException.
+                    if (isJsonProcessingException(e)) {
+                        throw new JsonStreamProcessingException(e);
+                    }
 
-            // We already parsed the first few bytes in the constructor and verified that the InputStream looked valid
-            // so if there's an unexpected end of input here it likely means we lost the connection to the server.
-            // In practice this a JsonStreamingEOFException or a TruncatedChunkException or something similar.
-            throw new JsonStreamingEOFException(e);
-        }
+                    // We already parsed the first few bytes in the constructor and verified that the InputStream looked valid
+                    // so if there's an unexpected end of input here it likely means we lost the connection to the server.
+                    // In practice this a JsonStreamingEOFException or a TruncatedChunkException or something similar.
+                    throw new JsonStreamingEOFException(e);
+                }
+            }
+        };
     }
 
     /**
@@ -93,8 +98,8 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
         // more brittle approach of checking the exception message.
         return e instanceof JsonProcessingException &&
                 !(e instanceof JsonParseException &&
-                    e.getMessage() != null &&
-                    e.getMessage().startsWith("Unexpected end-of-input"));
+                        e.getMessage() != null &&
+                        e.getMessage().startsWith("Unexpected end-of-input"));
     }
 
     @Override
