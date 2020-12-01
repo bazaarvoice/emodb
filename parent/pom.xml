@@ -61,8 +61,7 @@
 
         <jacoco-maven-plugin.outputDirectory>target/site/jacoco-aggregate</jacoco-maven-plugin.outputDirectory>
 
-        <sonar.sources>src</sonar.sources>
-        <sonar.exclusions>**/src/test/**</sonar.exclusions>
+        <sonar.sources>src/main</sonar.sources>
         <sonar.test.sources>src/test</sonar.test.sources>
         <sonar.coverage.jacoco.xmlReportPaths>${jacoco-maven-plugin.outputDirectory}/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
