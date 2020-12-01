@@ -60,7 +60,8 @@
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
 
-        <sonar.sources>src/main</sonar.sources>
+        <sonar.sources>src</sonar.sources>
+        <sonar.exclusions>src/test</sonar.exclusions>
         <sonar.test.sources>src/test</sonar.test.sources>
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
