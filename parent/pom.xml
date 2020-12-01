@@ -59,10 +59,12 @@
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
 
+        <jacoco-maven-plugin.outputDirectory>target/site/jacoco-aggregate</jacoco-maven-plugin.outputDirectory>
+
         <sonar.sources>src</sonar.sources>
         <sonar.exclusions>**/src/test/**</sonar.exclusions>
         <sonar.test.sources>src/test</sonar.test.sources>
-        <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+        <sonar.coverage.jacoco.xmlReportPaths>${jacoco-maven-plugin.outputDirectory}/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
     </properties>
 
@@ -435,7 +437,10 @@
                             <goals>
                                 <goal>report-aggregate</goal>
                             </goals>
-                            <phase>verify</phase>
+                            <phase>post-integration-test</phase>
+                            <configuration>
+                                <outputDirectory>${jacoco-maven-plugin.outputDirectory}</outputDirectory>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
