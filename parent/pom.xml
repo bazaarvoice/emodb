@@ -61,7 +61,6 @@
 
         <jacoco-maven-plugin.outputDirectory>target/site/jacoco-aggregate</jacoco-maven-plugin.outputDirectory>
 
-        <sonar.projectKey>emodb</sonar.projectKey>
         <sonar.sources>src/main</sonar.sources>
         <sonar.test.sources>src/test</sonar.test.sources>
         <sonar.coverage.jacoco.xmlReportPaths>${jacoco-maven-plugin.outputDirectory}/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
