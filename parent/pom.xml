@@ -47,7 +47,6 @@
         <kafka.version>2.3.0</kafka.version>
         <sonar.version>3.7.0.1746</sonar.version>
         <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
-        <skipCC>false</skipCC>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
@@ -61,7 +60,7 @@
         <yumArtifactId>emodb-web</yumArtifactId>
 
         <sonar.sources>src</sonar.sources>
-        <sonar.exclusions>src/test</sonar.exclusions>
+        <sonar.exclusions>**/src/test/**</sonar.exclusions>
         <sonar.test.sources>src/test</sonar.test.sources>
         <sonar.coverage.jacoco.xmlReportPaths>target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
 
@@ -532,6 +531,24 @@
                         <configuration>
                             <additionalparam>-Xdoclint:none</additionalparam>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
