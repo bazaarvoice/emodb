@@ -44,7 +44,7 @@
         <jersey.version>1.18.1</jersey.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
-        <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
+        <dependency-check-maven.version>6.0.3</dependency-check-maven.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
@@ -399,38 +399,6 @@
                     <artifactId>cassandra-maven-plugin</artifactId>
                     <version>${cassandra.version}-4</version>
                 </plugin>
-                <!--
-                   Configure Code Coverage measurements...
-                   * Only for Unit tests
-                   * Skips Code Coverage by default
-                   * Generates HTML report
-                   * Output file is target/jacoco.exec
-                   * Output report is target/site/jacoco
-                -->
-                <plugin>
-                    <groupId>org.jacoco</groupId>
-                    <artifactId>jacoco-maven-plugin</artifactId>
-                    <version>${jacoco.version}</version>
-                    <configuration>
-                        <propertyName>jacoco.agent.argLine</propertyName>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>pre-unit-test</id>
-                            <goals>
-                                <goal>prepare-agent</goal>
-                            </goals>
-                            <phase>test-compile</phase>
-                        </execution>
-                        <execution>
-                            <id>post-unit-test</id>
-                            <phase>test</phase>
-                            <goals>
-                                <goal>report</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
                     <artifactId>sonar-maven-plugin</artifactId>
@@ -448,6 +416,21 @@
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
                     <version>${dependency-check-maven.version}</version>
+                    <configuration>
+                        <!--
+                            Default configuration skips dependency checks to reduce build time.  A build should be performed
+                            with dependency checks enabled after any dependencies are added or updated to get a list
+                            of known vulnerabilities that may have been introduced with the change.
+                        -->
+                        <skip>${skipDependencyChecks}</skip>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -460,7 +443,38 @@
                     <argLine>${jacoco.agent.argLine}</argLine> <!-- activate the JaCoCo javaagent -->
                 </configuration>
             </plugin>
-
+            <!--
+               Configure Code Coverage measurements...
+               * Only for Unit tests
+               * Skips Code Coverage by default
+               * Generates HTML report
+               * Output file is target/jacoco.exec
+               * Output report is target/site/jacoco
+            -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <propertyName>jacoco.agent.argLine</propertyName>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>pre-unit-test</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                        <phase>test-compile</phase>
+                    </execution>
+                    <execution>
+                        <id>post-unit-test</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
@@ -525,10 +539,6 @@
             </activation>
             <build>
                 <plugins>
-                    <plugin>
-                        <groupId>org.jacoco</groupId>
-                        <artifactId>jacoco-maven-plugin</artifactId>
-                    </plugin>
                     <plugin>
                         <groupId>org.sonarsource.scanner.maven</groupId>
                         <artifactId>sonar-maven-plugin</artifactId>
