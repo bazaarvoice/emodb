@@ -549,7 +549,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
             // quit now and return an empty result.  The caller can always poll again to try to pick up any more events,
             // and if necessary an async drain will kick off a few lines down to assist in clearing the redundant update
             // wasteland.
-            events = Iterators.emptyIterator();
+            events = Collections.emptyIterator();
             approximateSize = 0;
 
             // If there are still more unresolved events claimed then unclaim them now
@@ -569,7 +569,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
             final int initialDeferredLimit = remaining;
 
             Iterator<Event> deferredEvents = new AbstractIterator<Event>() {
-                private Iterator<Event> currentBatch = Iterators.emptyIterator();
+                private Iterator<Event> currentBatch = Collections.emptyIterator();
                 private int remaining = initialDeferredLimit;
 
                 @Override

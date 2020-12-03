@@ -41,9 +41,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.google.common.io.InputSupplier;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
+import java.util.function.Supplier;
+import javax.ws.rs.core.Response;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,6 +65,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.time.Duration;
 
 import static com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest.AUTHENTICATION_HEADER;
 import static org.junit.Assert.assertArrayEquals;
@@ -690,9 +691,9 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testPut() throws IOException {
-        InputSupplier<InputStream> in = new InputSupplier<InputStream>() {
+        Supplier<InputStream> in = new Supplier<InputStream>() {
             @Override
-            public InputStream getInput() throws IOException {
+            public InputStream get() {
                 return new ByteArrayInputStream("blob-content".getBytes());
             }
         };
@@ -700,7 +701,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         blobClient().put("table-name", "blob-id", in, attributes);
 
         //noinspection unchecked
-        verify(_server).put(eq("table-name"), eq("blob-id"), isA(InputSupplier.class), eq(attributes));
+        verify(_server).put(eq("table-name"), eq("blob-id"), isA(Supplier.class), eq(attributes), eq(Duration.ofDays(30)));
         verifyNoMoreInteractions(_server);
     }
 
@@ -847,19 +848,20 @@ public class BlobStoreJerseyTest extends ResourceTest {
         // The blob store client doesn't interact directly with the Content-Type header.  Therefore this test must bypass
         // and use the underlying client.
 
-        ClientResponse response = _resourceTestRule.client().resource("/blob/1/table-name/blob-id")
+        Response response = _resourceTestRule.client().target("/blob/1/table-name/blob-id")
+                .request()
                 .accept("*")
                 .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
-                .get(ClientResponse.class);
+                .get();
 
-        assertEquals(200, response.getStatus());
-        assertEquals(metadataContentType, response.getHeaders().getFirst("X-BVA-content-type"));
-        assertEquals(expectedContentType, response.getType().toString());
+        assertEquals(response.getStatus(), 200);
+        assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
+        assertEquals(response.getMediaType().toString(), expectedContentType);
 
         byte[] actual = new byte[content.length];
-        InputStream in = response.getEntityInputStream();
-        assertEquals(content.length, in.read(actual, 0, content.length));
-        assertEquals(-1, in.read());
+        InputStream in = response.readEntity(InputStream.class);
+        assertEquals(in.read(actual, 0, content.length), content.length);
+        assertEquals(in.read(), -1);
         assertArrayEquals(actual, content);
 
         verify(_server).get("table-name", "blob-id", null);

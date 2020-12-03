@@ -12,7 +12,7 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -154,7 +154,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                     public OwnedSubscription load(String subscription) throws Exception {
                         OwnedSubscription ownedSubscription = _delegate.getSubscription(subscription);
                         // Can't cache null, use special null value if the subscription does not exist
-                        return Objects.firstNonNull(ownedSubscription, NULL_SUBSCRIPTION);
+                        return MoreObjects.firstNonNull(ownedSubscription, NULL_SUBSCRIPTION);
                     }
 
                     /**

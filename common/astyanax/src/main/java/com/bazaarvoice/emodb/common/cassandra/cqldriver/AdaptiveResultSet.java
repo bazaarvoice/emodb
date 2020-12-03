@@ -10,8 +10,6 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.FrameTooLongException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.core.exceptions.OperationTimedOutException;
-import com.datastax.driver.core.exceptions.ReadTimeoutException;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -23,8 +21,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -67,15 +67,15 @@ public class AdaptiveResultSet implements ResultSet {
             }
         });
 
-        return Futures.withFallback(adaptiveFuture, t -> {
+        return Futures.catchingAsync(adaptiveFuture, Throwable.class, t -> {
             if (isAdaptiveException(t) && remainingAdaptations > 0 && fetchSize > MIN_FETCH_SIZE) {
                 // Try again with half the fetch size
                 int reducedFetchSize = Math.max(fetchSize / 2, MIN_FETCH_SIZE);
                 _log.debug("Repeating previous query with fetch size {} due to {}", reducedFetchSize, t.getMessage());
                 return executeAdaptiveQueryAsync(session, statement, reducedFetchSize, remainingAdaptations - 1);
             }
-            throw Throwables.propagate(t);
-        });
+            throw new RuntimeException(t);
+        }, Executors.newSingleThreadExecutor());
     }
 
     /**
@@ -119,7 +119,7 @@ public class AdaptiveResultSet implements ResultSet {
 
     private final Session _session;
     private ResultSet _delegate;
-    private Iterator<Row> _fetchedResults = Iterators.emptyIterator();
+    private Iterator<Row> _fetchedResults = Collections.emptyIterator();
     private volatile ResultSet _delegateWithPrefetchFailure;
     private volatile Throwable _prefetchFailure;
     private int _remainingAdaptations;

@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.slf4j.Logger;
@@ -143,7 +143,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
 
         if (complete) {
             // Cannot write a current file if the base URI is a root directory
-            String path = Objects.firstNonNull(_baseUri.getPath(), "/");
+            String path = MoreObjects.firstNonNull(_baseUri.getPath(), "/");
             if (path.endsWith("/")) {
                 path = path.substring(0, path.length() - 1);
             }

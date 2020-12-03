@@ -27,7 +27,7 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 
 import javax.ws.rs.core.MediaType;
@@ -58,7 +58,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     private final EmoClient _client;
     private final UriBuilder _uac;
-    
+
     public UserAccessControlClient(URI endPoint, EmoClient client) {
         _client = checkNotNull(client, "client");
         _uac = EmoUriBuilder.fromUri(endPoint);
@@ -84,7 +84,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
         try {
             URI uri = _uac.clone()
                     .segment("role")
-                    .segment(Objects.firstNonNull(group, EmoRoleKey.NO_GROUP))
+                    .segment(MoreObjects.firstNonNull(group, EmoRoleKey.NO_GROUP))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
@@ -315,7 +315,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .post(CreateEmoApiKeyResponse.class, null);
-            
+
             return response.getKey();
         } catch (EmoClientException e) {
             throw convertException(e);

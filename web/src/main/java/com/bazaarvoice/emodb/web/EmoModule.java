@@ -117,9 +117,9 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottle;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleControlTask;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
-import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
@@ -154,7 +154,6 @@ import com.google.inject.ProvisionException;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
-import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;
@@ -164,6 +163,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.net.URI;
 import java.time.Clock;
 import java.util.List;
@@ -182,9 +182,9 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
@@ -303,7 +303,10 @@ public class EmoModule extends AbstractModule {
         /** Configure the HTTP client for out-bound HTTP calls. */
         @Provides @Singleton
         Client provideJerseyClient(JerseyClientConfiguration configuration, Environment environment) {
-            return new JerseyClientBuilder(environment).using(configuration).using(environment).build("emodb");
+            return new JerseyClientBuilder(environment)
+                .using(configuration)
+                .using(environment)
+                .build("emodb");
         }
 
         private Class<? extends TaskRegistry> getTaskRegistryClass() {
@@ -407,7 +410,7 @@ public class EmoModule extends AbstractModule {
 
         /** Provides a BlobStore client that delegates to the remote system center blob store. */
         @Provides @Singleton @SystemBlobStore
-        BlobStore provideSystemBlobStore (DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
+        BlobStore provideSystemBlobStore(DataCenterConfiguration config, Client jerseyClient, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
 
             ServiceFactory<BlobStore> clientFactory = BlobStoreClientFactory
                     .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)

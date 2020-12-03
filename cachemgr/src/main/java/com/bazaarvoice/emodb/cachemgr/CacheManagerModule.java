@@ -27,7 +27,7 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 
 /**
  * Guice module for constructing a {@link CacheRegistry}.

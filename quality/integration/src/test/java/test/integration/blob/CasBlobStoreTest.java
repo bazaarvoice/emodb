@@ -56,7 +56,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -64,12 +63,15 @@ import com.google.inject.TypeLiteral;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
 import io.dropwizard.setup.Environment;
-import org.apache.commons.codec.binary.Hex;
+
+import javax.ws.rs.client.Client;
+
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
@@ -192,6 +194,8 @@ public class CasBlobStoreTest {
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
 
                 bind(Environment.class).toInstance(mock(Environment.class));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());
@@ -334,7 +338,12 @@ public class CasBlobStoreTest {
 
     private void verifyPutAndGet(String blobId, final byte[] blobData, ImmutableMap<String, String> attributes)
             throws IOException {
-        putBlob(blobId, blobData, attributes);
+        _store.put(TABLE, blobId, new java.util.function.Supplier<InputStream>() {
+            @Override
+            public InputStream get() {
+                return new ByteArrayInputStream(blobData);
+            }
+        }, attributes, ttl);
 
         Blob blob = _store.get(TABLE, blobId);
         // verify that we can get what we putBlob

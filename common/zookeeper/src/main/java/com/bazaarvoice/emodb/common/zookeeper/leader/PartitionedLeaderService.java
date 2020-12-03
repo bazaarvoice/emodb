@@ -65,8 +65,8 @@ public class PartitionedLeaderService implements Managed {
      * in their constructor.
      */
     protected PartitionedLeaderService(CuratorFramework curator, String leaderPath, String instanceId, String serviceName,
-                                                  int numPartitions, long reacquireDelay, long repartitionDelay, TimeUnit delayUnit,
-                                                  @Nullable Clock clock) {
+                                       int numPartitions, long reacquireDelay, long repartitionDelay, TimeUnit delayUnit,
+                                       @Nullable Clock clock) {
         _curator = curator;
         _basePath = leaderPath;
         _instanceId = instanceId;
@@ -96,7 +96,7 @@ public class PartitionedLeaderService implements Managed {
         if (_serviceFactory == null) {
             throw new IllegalStateException("Cannot start service without first providing a service factory");
         }
-        
+
         String participantsPath = ZKPaths.makePath(_basePath, String.format(LEADER_PATH_PATTERN, 0));
 
         // Watch the participants for partition 0 to determine how many potential leaders there are total
@@ -104,7 +104,7 @@ public class PartitionedLeaderService implements Managed {
         _participantsCache.getListenable().addListener((ignore1, ignore2) -> participantsUpdated(false));
         _participantsCache.start(PathChildrenCache.StartMode.BUILD_INITIAL_CACHE);
         participantsUpdated(true);
-        
+
         List<Future<Void>> futures = Lists.newArrayListWithCapacity(_numPartitions);
 
         for (PartitionLeader partitionLeader : _partitionLeaders) {
@@ -220,7 +220,7 @@ public class PartitionedLeaderService implements Managed {
                 public void terminated(Service.State from) {
                     _terminatedFuture.set(null);
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.directExecutor());
         }
 
         Future<Void> startAsync() {
@@ -274,14 +274,14 @@ public class PartitionedLeaderService implements Managed {
             }
             // It's possible we technically have leadership but are in the process of giving it up because we already
             // are leading the maximum number of partitions.  Verify that this isn't a rejected service.
-            Service delegateService = _leaderService.getCurrentDelegateService().orNull();
+            Service delegateService = _leaderService.getCurrentDelegateService().orElse(null);
             return delegateService == null || !(delegateService instanceof RelinquishService);
         }
-        
+
         boolean relinquishLeadership() {
             if (hasLeadership()) {
                 // Release leadership by stopping the delegate service, but do not stop the leadership service itself
-                Service delegateService = _leaderService.getCurrentDelegateService().orNull();
+                Service delegateService = _leaderService.getCurrentDelegateService().orElse(null);
                 if (delegateService != null) {
                     _log.info("Relinquishing leadership of partition {} for {}", _partition, _serviceName);
                     delegateService.stopAsync();

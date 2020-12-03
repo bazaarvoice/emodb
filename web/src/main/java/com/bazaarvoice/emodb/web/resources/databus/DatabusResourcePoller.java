@@ -9,8 +9,8 @@ import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
+import java.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,7 +139,7 @@ public class DatabusResourcePoller {
                         // We're in an async context and have already returned a 200 response.  Since we can't
                         // retroactively change to 500 finish the request with an empty response and log the error.
                         _log.error("Failed to perform asynchronous poll on subscription {}", _subscription, e);
-                        result = new PollResult(Iterators.emptyIterator(), 0, false);
+                        result = new PollResult(Collections.emptyIterator(), 0, false);
                         pollFailed = true;
                     }
 

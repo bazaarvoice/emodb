@@ -38,12 +38,6 @@ public class MaintenanceSchedulerManager {
                                        @TableChangesEnabled ValueStore<Boolean> tableChangesEnabled,
                                        @Maintenance final String scope,
                                        final MetricRegistry metricRegistry) {
-        final Supplier<Service> maintenanceServiceFactory = new Supplier<Service>() {
-            @Override
-            public Service get() {
-                return new MaintenanceScheduler(tableDao, tableMutexManager, selfDataCenter, cacheRegistry, moveTableTask);
-            }
-        };
 
         // Now start the maintenance scheduler subject to winning a leader election.
         Supplier<LeaderService> leaderServiceFactory = new Supplier<LeaderService>() {
@@ -52,7 +46,7 @@ public class MaintenanceSchedulerManager {
                 LeaderService service = new LeaderService(
                         curator, "/leader/table-maintenance", self.toString(),
                         "Leader-TableMaintenance-" + scope, 1, TimeUnit.MINUTES,
-                        maintenanceServiceFactory);
+                        () -> new MaintenanceScheduler(tableDao, tableMutexManager, selfDataCenter, cacheRegistry, moveTableTask));
                 ServiceFailureListener.listenTo(service, metricRegistry);
                 dropwizardTask.register(scope.toLowerCase() + "-maintenance", service);
                 return service;

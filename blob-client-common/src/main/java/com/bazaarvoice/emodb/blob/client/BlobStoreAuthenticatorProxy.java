@@ -12,11 +12,12 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.google.common.io.InputSupplier;
 
+import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
@@ -81,9 +82,8 @@ class BlobStoreAuthenticatorProxy implements BlobStore {
     }
 
     @Override
-    public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes)
-            throws IOException {
-        _authBlobStore.put(_apiKey, table, blobId, in, attributes);
+    public void put(String table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl) throws IOException {
+        _authBlobStore.put(_apiKey, table, blobId, in, attributes, ttl);
     }
 
     @Override

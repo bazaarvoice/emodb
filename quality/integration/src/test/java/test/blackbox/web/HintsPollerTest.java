@@ -40,6 +40,7 @@ public class HintsPollerTest extends BaseRoleConnectHelper {
                 .addContactPoint("127.0.0.1")
                 .withPort(9164)
                 .withClusterName("Test Cluster")
+                .withoutJMXReporting()
                 .build();
 
         Session clusterSession = cluster.connect("system");

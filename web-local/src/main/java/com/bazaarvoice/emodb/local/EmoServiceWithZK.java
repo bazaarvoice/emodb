@@ -36,6 +36,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.server.ServerFactory;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
@@ -46,6 +47,7 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.curator.test.TestingServer;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -75,18 +77,18 @@ public class EmoServiceWithZK {
         // Start cassandra if necessary (cassandra.yaml is provided)
         ArgumentParser parser = ArgumentParsers.newArgumentParser("java -jar emodb-web-local*.jar");
         parser.addArgument("server").required(true).help("server");
-        parser.addArgument("emo-config").required(true).help("config.yaml - EmoDB's config file");
-        parser.addArgument("emo-config-ddl").required(true).help("config-ddl.yaml - EmoDB's cassandra schema file");
-        parser.addArgument("cassandra-yaml").nargs("?").help("cassandra.yaml - Cassandra configuration file to start an" +
+        parser.addArgument("emo_config").required(true).help("config.yaml - EmoDB's config file");
+        parser.addArgument("emo_config-ddl").required(true).help("config-ddl.yaml - EmoDB's cassandra schema file");
+        parser.addArgument("cassandra_yaml").nargs("?").help("cassandra.yaml - Cassandra configuration file to start an" +
                 " in memory embedded Cassandra.");
         parser.addArgument("-z","--zookeeper").dest("zookeeper").action(Arguments.storeTrue()).help("Starts zookeeper");
         parser.addArgument("-p","--permissions-yaml").dest("permissions").nargs("*").help("Permissions file(s)");
 
         // Get the path to cassandraYaml or if zookeeper is available
         Namespace result = parser.parseArgs(args);
-        String cassandraYaml = result.getString("cassandra-yaml");
+        String cassandraYaml = result.getString("cassandra_yaml");
         boolean startZk = result.getBoolean("zookeeper");
-        String emoConfigYaml = result.getString("emo-config");
+        String emoConfigYaml = result.getString("emo_config");
         List<String> permissionsYamls = result.getList("permissions");
 
         String[] emoServiceArgs = args;
@@ -248,10 +250,15 @@ public class EmoServiceWithZK {
             }
         }
 
+        final Client client = new JerseyClientBuilder(metricRegistry)
+            .using(Executors.newSingleThreadExecutor())
+            .using(objectMapper)
+            .build(cluster);
+
         // Create a client for the local EmoDB service
         UserAccessControl uac = ServicePoolBuilder.create(UserAccessControl.class)
                 .withHostDiscoverySource(new UserAccessControlFixedHostDiscoverySource("http://localhost:" + selfHostAndPort.getPort()))
-                .withServiceFactory(UserAccessControlClientFactory.forCluster(cluster, metricRegistry).usingCredentials(adminApiKey))
+                .withServiceFactory(UserAccessControlClientFactory.forClusterAndHttpClient(cluster, client).usingCredentials(adminApiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
 

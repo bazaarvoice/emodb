@@ -3,10 +3,10 @@ package com.bazaarvoice.emodb.auth.jersey;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import javax.ws.rs.container.DynamicFeature;
 
 /**
  * This class holds objects which can be used to configure Jersey to allow for authentication and authorization.
@@ -15,11 +15,11 @@ import java.util.List;
 public class JerseyAuthConfiguration {
 
     private final List<Object> _providers;
-    private final List<ResourceFilterFactory> _resourceFilterFactories;
+    private final List<DynamicFeature> _dynamicFeatures;
 
-    public JerseyAuthConfiguration(List<Object> providers, List<ResourceFilterFactory> resourceFilterFactories) {
+    public JerseyAuthConfiguration(List<Object> providers, List<DynamicFeature> dynamicFeatures) {
         _providers = providers;
-        _resourceFilterFactories = resourceFilterFactories;
+        _dynamicFeatures = dynamicFeatures;
     }
 
     public List<Object> getProviderInstances() {
@@ -41,7 +41,7 @@ public class JerseyAuthConfiguration {
                 .toList();
     }
 
-    public List<ResourceFilterFactory> getResourceFilterFactories() {
-        return _resourceFilterFactories;
+    public List<DynamicFeature> getDynamicFeatures() {
+        return _dynamicFeatures;
     }
 }

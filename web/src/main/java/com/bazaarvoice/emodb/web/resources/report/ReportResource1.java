@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.web.report.AllTablesReportQuery;
 import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.report.ReportNotFoundException;
 import com.google.common.collect.ImmutableMap;
-import com.sun.jersey.api.client.ClientResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,7 +75,7 @@ public class ReportResource1 {
     private RuntimeException handleException(String reportId, Exception e) throws WebApplicationException {
         if (e instanceof ReportNotFoundException) {
             throw new WebApplicationException(
-                    Response.status(ClientResponse.Status.NOT_FOUND)
+                    Response.status(Response.Status.NOT_FOUND)
                             .type(MediaType.APPLICATION_JSON_TYPE)
                             .entity(ImmutableMap.of("notFound", reportId))
                             .build());
@@ -85,7 +84,7 @@ public class ReportResource1 {
         _log.warn("Report request failed: [reportId={}]", reportId, e);
 
         throw new WebApplicationException(
-                Response.status(ClientResponse.Status.INTERNAL_SERVER_ERROR)
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                         .type(MediaType.APPLICATION_JSON_TYPE)
                         .entity(ImmutableMap.of("exception", e.getClass().getName(), "message", e.getMessage()))
                         .build());

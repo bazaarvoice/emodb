@@ -16,4 +16,4 @@
 #   java -jar cassandra-cli.jar
 #
 
-mvn clean verify -P init-cassandra,start-emodb
+mvn clean verify -P init-cassandra,start-emodb $@

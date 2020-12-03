@@ -72,7 +72,7 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -88,11 +88,11 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
-import com.sun.jersey.api.client.Client;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -196,11 +196,11 @@ public class ScanUploadModule extends PrivateModule {
     protected String provideScanRequestTablePlacement(@SystemTablePlacement String tablePlacement) {
         return tablePlacement;
     }
-    
+
     @Provides
     @Singleton
     protected Region provideAmazonRegion() {
-        return Objects.firstNonNull(Regions.getCurrentRegion(), Region.getRegion(Regions.US_EAST_1));
+        return MoreObjects.firstNonNull(Regions.getCurrentRegion(), Region.getRegion(Regions.US_EAST_1));
     }
 
     @Provides
@@ -211,7 +211,7 @@ public class ScanUploadModule extends PrivateModule {
         AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
         if (_config.getS3AssumeRole().isPresent()) {
             s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider(
-                    credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHostText());
+                    credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHost());
         }
         return s3CredentialsProvider;
     }

@@ -3,13 +3,15 @@ package com.bazaarvoice.emodb.web.resources.databus;
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.databus.api.AuthDatabus;
 import com.bazaarvoice.emodb.databus.client.DatabusClientFactory;
-import com.sun.jersey.api.client.Client;
+import org.glassfish.jersey.client.ClientProperties;
 
+import javax.ws.rs.client.Client;
 import java.net.URI;
 
 public class DatabusRelayClientFactory extends DatabusClientFactory {
 
     public static DatabusRelayClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+        client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
         return new DatabusRelayClientFactory(clusterName, client);
     }
 

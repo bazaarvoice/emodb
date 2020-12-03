@@ -2,11 +2,14 @@ package com.bazaarvoice.emodb.common.dropwizard.jersey;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerResponse;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 
 /**
  * By default DropWizard includes a metric tracking all 5xx errors returned by the application:
@@ -22,10 +25,12 @@ import javax.ws.rs.core.Response;
  */
 public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter {
 
+    private static final Logger LOG = LoggerFactory.getLogger(ServerErrorResponseMetricsFilter.class);
+
     private final Meter _meter500;
     private final Meter _meter503;
     private final Meter _meterOther;
-    
+
     public ServerErrorResponseMetricsFilter(MetricRegistry metricRegistry) {
         _meter500 = metricRegistry.meter(MetricRegistry.name("bv.emodb.web", "500-responses"));
         _meter503 = metricRegistry.meter(MetricRegistry.name("bv.emodb.web", "503-responses"));
@@ -33,9 +38,12 @@ public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter
     }
 
     @Override
-    public ContainerResponse filter(ContainerRequest request, ContainerResponse response) {
-        if (response.getStatusType().getFamily() == Response.Status.Family.SERVER_ERROR) {
-            switch (response.getStatus()) {
+    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
+        if (responseContext.getStatusInfo().getFamily() == Response.Status.Family.SERVER_ERROR) {
+//            LOG.error("request[{}] hasEntity[{}] response hasEntity[{}] bytes[{}]",
+//                requestContext.getUriInfo().getRequestUri().toASCIIString(),
+//                requestContext.hasEntity(), responseContext.hasEntity(), responseContext.getLength());
+            switch (responseContext.getStatus()) {
                 case 500:
                     _meter500.mark();
                     break;
@@ -47,6 +55,5 @@ public class ServerErrorResponseMetricsFilter implements ContainerResponseFilter
                     break;
             }
         }
-        return response;
     }
 }

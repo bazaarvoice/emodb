@@ -52,7 +52,7 @@ public class RegisterCassandraCommand extends ConfiguredCommand<EmoConfiguration
         // Validate arguments.  Verify that Cassandra is listening at the expected host/port and get the partitioner.
         String partitioner = null;
         try {
-            TTransport tr = new TFramedTransport(new TSocket(host.getHostText(), host.getPort()));
+            TTransport tr = new TFramedTransport(new TSocket(host.getHost(), host.getPort()));
             Cassandra.Client client = new Cassandra.Client(new TBinaryProtocol(tr));
             tr.open();
             partitioner = client.describe_partitioner();

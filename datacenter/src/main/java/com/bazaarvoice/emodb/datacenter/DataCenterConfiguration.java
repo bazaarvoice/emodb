@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.datacenter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import javax.validation.Valid;
@@ -64,7 +64,7 @@ public class DataCenterConfiguration {
     }
 
     public String getCassandraDataCenter() {
-        return Objects.firstNonNull(_cassandraDataCenter, _currentDataCenter);
+        return MoreObjects.firstNonNull(_cassandraDataCenter, _currentDataCenter);
     }
 
     public DataCenterConfiguration setCassandraDataCenter(String cassandraDataCenter) {

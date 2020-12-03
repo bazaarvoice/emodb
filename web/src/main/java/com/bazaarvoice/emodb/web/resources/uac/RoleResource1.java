@@ -8,7 +8,9 @@ import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
+import com.google.common.collect.Lists;
 import io.swagger.annotations.Api;
+import java.util.List;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
 
@@ -50,8 +52,8 @@ public class RoleResource1 {
      * this call does not support "from" or "limit" parameters similar to the system or record.
      */
     @GET
-    public Iterator<EmoRole> getAllRoles(final @Authenticated Subject subject) {
-        return _uac.getAllRoles(subject);
+    public List<EmoRole> getAllRoles(final @Authenticated Subject subject) {
+        return Lists.newArrayList(_uac.getAllRoles(subject));
     }
 
     /**
@@ -60,9 +62,9 @@ public class RoleResource1 {
      */
     @GET
     @Path("{group}")
-    public Iterator<EmoRole> getAllRolesInGroup(@PathParam("group") String group,
+    public List<EmoRole> getAllRolesInGroup(@PathParam("group") String group,
                                                 final @Authenticated Subject subject) {
-        return _uac.getAllRolesInGroup(subject, group);
+        return Lists.newArrayList(_uac.getAllRolesInGroup(subject, group));
     }
 
     /**

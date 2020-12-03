@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
 
@@ -153,7 +153,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
     }
 
     String getGroupId() {
-        return Objects.firstNonNull(get(GROUP_ID), _uuid);
+        return MoreObjects.firstNonNull(get(GROUP_ID), _uuid);
     }
 
     boolean isFacade() {
@@ -262,7 +262,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
     // For debugging
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("primary", isPrimary())
                 .add("uuid", _uuid)
                 .add("placement", getPlacement())

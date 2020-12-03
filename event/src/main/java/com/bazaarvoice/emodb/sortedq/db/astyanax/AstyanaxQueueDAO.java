@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
@@ -100,7 +100,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
         ColumnList<ByteBuffer> columns = execute(_keyspace.prepareQuery(CF_DEDUP_DATA, ConsistencyLevel.CL_LOCAL_QUORUM)
                 .getKey(dataId)
                 .withColumnRange(new RangeBuilder()
-                        .setStart(Objects.firstNonNull(from, EMPTY_BUFFER))
+                        .setStart(MoreObjects.firstNonNull(from, EMPTY_BUFFER))
                         .setLimit(1)
                         .build()));
         return !columns.isEmpty() ? columns.getColumnByIndex(0).getName() : null;
@@ -137,8 +137,8 @@ public class AstyanaxQueueDAO implements QueueDAO {
                 _keyspace.prepareQuery(CF_DEDUP_DATA, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(dataId)
                         .withColumnRange(new RangeBuilder()
-                                .setStart(Objects.firstNonNull(from, EMPTY_BUFFER))
-                                .setEnd(Objects.firstNonNull(to, EMPTY_BUFFER))
+                                .setStart(MoreObjects.firstNonNull(from, EMPTY_BUFFER))
+                                .setEnd(MoreObjects.firstNonNull(to, EMPTY_BUFFER))
                                 .setLimit(batchSize)
                                 .build())
                         .autoPaginate(true));

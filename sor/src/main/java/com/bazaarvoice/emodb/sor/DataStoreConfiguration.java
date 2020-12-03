@@ -54,7 +54,6 @@ public class DataStoreConfiguration {
     private int _deltaEncodingVersion = 3;
 
     @Valid
-    @NotNull
     @JsonProperty("stashRoot")
     private Optional<String> _stashRoot = Optional.absent();
 
@@ -72,7 +71,6 @@ public class DataStoreConfiguration {
     private int _cellTombstoneBlockLimit = 2;
 
     @Valid
-    @NotNull
     @JsonProperty("stashBlackListTableCondition")
     private Optional<String> _stashBlackListTableCondition = Optional.absent();
 

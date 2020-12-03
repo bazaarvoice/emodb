@@ -13,9 +13,7 @@ import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.consistency.DatabusClusterInfo;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Supplier;
 import com.google.common.net.HostAndPort;
-import com.google.common.util.concurrent.Service;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -37,12 +35,7 @@ public class SystemQueueMonitorManager {
                               final MetricRegistry metricRegistry) {
         LeaderService leaderService = new LeaderService(
                 curator, "/leader/queue-monitor", self.toString(), "Leader-QueueMonitor", 1, TimeUnit.MINUTES,
-                new Supplier<Service>() {
-                    @Override
-                    public Service get() {
-                        return new SystemQueueMonitor(eventStore, dataCenters, clusterInfo, masterFanoutPartitions, dataCenterFanoutPartitions, metricRegistry);
-                    }
-                });
+                () -> new SystemQueueMonitor(eventStore, dataCenters, clusterInfo, masterFanoutPartitions, dataCenterFanoutPartitions, metricRegistry));
         ServiceFailureListener.listenTo(leaderService, metricRegistry);
         dropwizardTask.register("queue-monitor", leaderService);
         lifeCycle.manage(new ManagedGuavaService(leaderService));

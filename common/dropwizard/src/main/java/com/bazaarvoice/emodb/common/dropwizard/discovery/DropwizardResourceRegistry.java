@@ -29,7 +29,7 @@ public class DropwizardResourceRegistry implements ResourceRegistry {
         _serviceRegistry = checkNotNull(serviceRegistry, "serviceRegistry");
         _self = checkNotNull(self, "self");
         _selfAdmin = checkNotNull(selfAdmin, "selfAdmin");
-        checkArgument(self.getHostText().equals(selfAdmin.getHostText()));
+        checkArgument(self.getHost().equals(selfAdmin.getHost()));
     }
 
     /**

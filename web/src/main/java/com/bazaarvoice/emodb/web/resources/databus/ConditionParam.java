@@ -11,8 +11,8 @@ public class ConditionParam extends AbstractParam<Condition> {
     }
 
     @Override
-    protected String errorMessage(String input, Exception e) {
-        return "Invalid json-condition string: " + input;
+    protected String errorMessage(Exception e) {
+        return "Invalid json-condition string";
     }
 
     @Override

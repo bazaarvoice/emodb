@@ -90,11 +90,11 @@ public class EmoConfiguration extends Configuration {
     private JerseyClientConfiguration _httpClientConfiguration = new JerseyClientConfiguration();
 
     @Valid
-    @NotNull
     @JsonProperty ("scanner")
     private Optional<ScannerConfiguration> _scanner = Optional.absent();
 
     @Valid
+<<<<<<< HEAD
     @NotNull
     @JsonProperty("kafka")
     private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.absent();
@@ -103,6 +103,10 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty("megabus")
     private Optional<MegabusConfiguration> _megabusConfiguration = Optional.absent();
+=======
+    @JsonProperty ("deltaMigrator")
+    private Optional<MigratorConfiguration> _migrator = Optional.absent();
+>>>>>>> extra changes for reliable boot in quality modules (still many test failures)
 
     @Valid
     @NotNull

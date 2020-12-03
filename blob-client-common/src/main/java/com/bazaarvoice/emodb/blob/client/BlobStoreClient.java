@@ -29,7 +29,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.io.InputSupplier;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.codec.binary.Base64;
@@ -53,8 +52,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -479,8 +480,8 @@ public class BlobStoreClient implements AuthBlobStore {
     }
 
     @Override
-    public void put(String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in,
-                    Map<String, String> attributes)
+    public void put(String apiKey, String table, String blobId, Supplier<? extends InputStream> in,
+                    Map<String, String> attributes, @Nullable Duration ttl)
             throws IOException {
         checkNotNull(table, "table");
         checkNotNull(blobId, "blobId");
@@ -499,7 +500,7 @@ public class BlobStoreClient implements AuthBlobStore {
             // Upload the object
             request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.getInput());
+                    .put(in.get());
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -695,6 +696,7 @@ public class BlobStoreClient implements AuthBlobStore {
                 try {
                     Closeables.close(_stream, true);
                 } catch (IOException e) {
+                    throw new RuntimeException(e);
                     // Already caught and logged
                 }
             }

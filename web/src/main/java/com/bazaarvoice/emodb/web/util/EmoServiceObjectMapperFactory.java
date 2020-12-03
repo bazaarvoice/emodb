@@ -6,7 +6,6 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.AnnotationSensitivePropertyNamingStrategy;
 import io.dropwizard.jackson.DiscoverableSubtypeResolver;
-import io.dropwizard.jackson.LogbackModule;
 
 import javax.annotation.Nullable;
 
@@ -26,7 +25,6 @@ public class EmoServiceObjectMapperFactory {
 
     public static ObjectMapper configure(ObjectMapper mapper) {
         return CustomJsonObjectMapperFactory.configure(mapper)
-                .registerModule(new LogbackModule())
                 .setDateFormat(new ISO8601DateFormat())
                 .setPropertyNamingStrategy(new AnnotationSensitivePropertyNamingStrategy())
                 .setSubtypeResolver(new DiscoverableSubtypeResolver());

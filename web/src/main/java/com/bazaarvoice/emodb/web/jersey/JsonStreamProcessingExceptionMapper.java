@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.jersey;
 
 import com.bazaarvoice.emodb.common.json.JsonStreamProcessingException;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 
 import javax.ws.rs.core.MediaType;
@@ -18,7 +18,7 @@ public class JsonStreamProcessingExceptionMapper implements ExceptionMapper<Json
 
         return Response.status(Response.Status.BAD_REQUEST)
                 .header("X-BV-Exception", JsonStreamProcessingException.class.getName())
-                .entity(Objects.firstNonNull(rootCause.getMessage(), "Invalid JSON request"))
+                .entity(MoreObjects.firstNonNull(rootCause.getMessage(), "Invalid JSON request"))
                 .type(MediaType.TEXT_PLAIN_TYPE)
                 .build();
     }

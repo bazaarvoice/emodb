@@ -25,23 +25,25 @@
 
     <properties>
         <astyanax.version>3.8.0-bv8</astyanax.version>
-        <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
+        <!--TODO: We need 2.x for dependency compatibility. Upgrade once a non-RC version becomes available-->
+        <dropwizard-metrics-datadog.version>2.0.0-RC1</dropwizard-metrics-datadog.version>
         <cassandra.version>2.2.4</cassandra.version>
-        <curator.version>2.4.0</curator.version>
-        <curator-extensions.version>1.4.1</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>16.0.1</guava.version>
+        <curator.version>4.0.1</curator.version>
+        <curator-test.version>2.12.0</curator-test.version>
+        <curator-extensions.version>2.1.0</curator-extensions.version>
+        <zookeeper.version>3.4.14</zookeeper.version>
+        <dropwizard.version>1.3.17</dropwizard.version>
+        <guava.version>24.1.1-jre</guava.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.6.7.2</jackson.version>
-        <metrics.version>3.0.2</metrics.version>
-        <ostrich.version>1.9.2</ostrich.version>
-        <rison.version>2.1.1</rison.version>
-        <slf4j.version>1.7.4</slf4j.version>
+        <jackson.version>2.9.10.20191020</jackson.version>
+        <metrics.version>4.0.5</metrics.version>
+        <ostrich.version>2.0.2</ostrich.version>
+        <rison.version>2.9.4</rison.version>
+        <slf4j.version>1.7.26</slf4j.version>
         <commons-io.version>2.1</commons-io.version>
         <commons-compress.version>1.4.1</commons-compress.version>
-        <aws-sdk.version>1.11.551</aws-sdk.version>
+        <aws-sdk.version>1.11.501</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
-        <jersey.version>1.18.1</jersey.version>
         <jacoco.version>0.7.2.201409121644</jacoco.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
@@ -80,6 +82,11 @@
                 <version>${curator-extensions.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
+                <version>${curator-test.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.bazaarvoice.jackson</groupId>
                 <artifactId>rison</artifactId>
                 <version>${rison.version}</version>
@@ -88,6 +95,12 @@
                 <groupId>org.coursera</groupId>
                 <artifactId>dropwizard-metrics-datadog</artifactId>
                 <version>${dropwizard-metrics-datadog.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard</groupId>
+                        <artifactId>dropwizard-metrics</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.ostrich</groupId>
@@ -109,8 +122,18 @@
                 <artifactId>ostrich-zookeeper-registry</artifactId>
                 <version>${ostrich.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>${zookeeper.version}</version>
+            </dependency>
 
             <!-- 3rd-party dependencies -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>4.0.56.Final</version>
+            </dependency>
             <dependency>
                 <groupId>com.clearspring.analytics</groupId>
                 <artifactId>stream</artifactId>
@@ -180,8 +203,13 @@
                 <version>${dropwizard.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-jmx</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
@@ -258,6 +286,14 @@
                         <groupId>io.dropwizard.metrics</groupId>
                         <artifactId>metrics-core</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>ch.qos.logback</groupId>
+                        <artifactId>logback-classic</artifactId>
+                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -266,6 +302,36 @@
                 <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jdk8</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-guava</artifactId>
+                <version>${jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -334,6 +400,11 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-cloudwatch</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-sts</artifactId>
                 <version>${aws-sdk.version}</version>
             </dependency>
@@ -341,6 +412,12 @@
                 <groupId>com.datastax.cassandra</groupId>
                 <artifactId>cassandra-driver-core</artifactId>
                 <version>${cassandra.driver.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.datastax.cassandra</groupId>

@@ -4,7 +4,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.clearspring.analytics.stream.cardinality.HyperLogLog;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Throwables;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
@@ -76,7 +76,7 @@ class Segment {
             throw new UnsupportedOperationException("Unsupported persistent sorted queue data version: " + snapshot.version);
         }
         _id = checkNotNull(id, "id");
-        _dataId = Objects.firstNonNull(snapshot.dataId, id);  // dataId should be non-null except for segments before dataId was introduced
+        _dataId = MoreObjects.firstNonNull(snapshot.dataId, id);  // dataId should be non-null except for segments before dataId was introduced
         _min = (snapshot.min != null) ? ByteBufferUtil.hexToBytes(snapshot.min) : null;
         _adds = snapshot.adds;
         _bytesAdded = snapshot.bytesAdded;

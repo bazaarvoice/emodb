@@ -358,7 +358,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         SecureRandom random = new SecureRandom();
         random.setSeed(System.currentTimeMillis());
         random.setSeed(Thread.currentThread().getId());
-        random.setSeed(_hostAndPort.getHostText().getBytes());
+        random.setSeed(_hostAndPort.getHost().getBytes());
         random.setSeed(_hostAndPort.getPort());
 
         // Use base64 encoding but keep the keys alphanumeric (we could use base64URL() to make them at least URL-safe
@@ -541,7 +541,7 @@ public class LocalSubjectUserAccessControl implements SubjectUserAccessControl {
         }
 
         verifyPermissionToGrantRoles(subject, roleIds);
-        
+
         try {
             _authIdentityManager.deleteIdentity(id);
         } catch (IdentityNotFoundException e) {

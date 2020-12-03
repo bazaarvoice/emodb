@@ -8,9 +8,6 @@ import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.partition.ConsistentHashPartitionFilter;
 import com.bazaarvoice.ostrich.partition.PartitionFilter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Optional;
-import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -30,6 +27,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -108,7 +106,8 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
     /**
      * Returns the specified managed service if this server is responsible for the specified object and has won a
      * ZooKeeper-managed leader election.
-     * @param name object name.  Whether this server owns the object is computed by Ostrich using consistent hashing.
+     *
+     * @param name         object name.  Whether this server owns the object is computed by Ostrich using consistent hashing.
      * @param waitDuration the amount of time to wait for this server to win the leader election and for the service
      *                     to startup, if the object is managed by this server.
      */
@@ -116,29 +115,38 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
     @Override
     public T startIfOwner(String name, Duration waitDuration) {
         long timeoutAt = System.currentTimeMillis() + waitDuration.toMillis();
-        LeaderService leaderService = _leaderMap.getUnchecked(name).orNull();
+        LeaderService leaderService = _leaderMap.getUnchecked(name).orElse(null);
+        _log.info("starting owned service  {}; got {}", name, leaderService);
         if (leaderService == null || !awaitRunning(leaderService, timeoutAt)) {
             return null;
         }
+        if (leaderService != null) {
+            _log.info("leader service[{}]", leaderService.toString());
+        }
         Service service;
-        for (;;) {
+        for (; ; ) {
             Optional<Service> opt = leaderService.getCurrentDelegateService();
             if (opt.isPresent()) {
                 service = opt.get();
+                _log.info("got service (was preseent) {}", service);
                 break;
             }
             if (System.currentTimeMillis() >= timeoutAt) {
+                _log.info("expired (timed out) waiting");
                 return null;
             }
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
-                throw Throwables.propagate(e);
+                throw new RuntimeException(e);
             }
         }
+        _log.info("service is probablly not null heree {}", service);
         if (!awaitRunning(service, timeoutAt)) {
+            _log.info("waited for running but timed out... {}", service);
             return null;
         }
+        _log.info("OK returning thee service successfully {}", service);
         //noinspection unchecked
         return (T) service;
     }
@@ -189,7 +197,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         // eligible to manage it, start or stop it and update our cache.
         List<String> pending = Lists.newArrayList();
         for (Iterator<Map.Entry<String, Optional<LeaderService>>> it =
-                     _leaderMap.asMap().entrySet().iterator(); it.hasNext(); ) {
+             _leaderMap.asMap().entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, Optional<LeaderService>> entry = it.next();
             if (isOwner(entry.getKey()) != entry.getValue().isPresent()) {
                 // Remove the entry from the cache.  This will stop the service (if started).
@@ -207,7 +215,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
 
     private Optional<LeaderService> startService(final String name) {
         if (!isOwner(name)) {
-            return Optional.absent();
+            return Optional.empty();
         }
 
         _log.info("Starting owned service {}: {}", _group, name);
@@ -217,15 +225,10 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         String taskName = String.format("%s-%s", _group.toLowerCase(), name);
 
         LeaderService leaderService = new LeaderService(_curator, zkLeaderPath, _selfId,
-                threadName, 1, TimeUnit.MINUTES, new Supplier<Service>() {
-            @Override
-            public Service get() {
-                return _factory.create(name);
-            }
-        });
+                threadName, 1, TimeUnit.MINUTES, () -> _factory.create(name));
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
         _dropwizardTask.register(taskName, leaderService);
-        leaderService.start();
+        leaderService.startAsync();
         return Optional.of(leaderService);
     }
 
@@ -233,24 +236,35 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         if (ref.isPresent()) {
             Service service = ref.get();
             _log.info("Stopping owned service {}: {}", _group, name);
-            service.stop();
+            service.stopAsync();
         }
     }
 
-    /** Returns true if the Guava service entered the RUNNING state within the specified time period. */
+    /**
+     * Returns true if the Guava service entered the RUNNING state within the specified time period.
+     */
     private boolean awaitRunning(Service service, long timeoutAt) {
+        _log.info("await  running on service {}, times out at {}", service, timeoutAt);
         if (service.isRunning()) {
+            _log.info("servicee is running");
             return true;
+        } else {
+            _log.info("service not  already running");
         }
         long waitMillis = timeoutAt - System.currentTimeMillis();
+        _log.info("waitMillis[{}]", waitMillis);
         if (waitMillis <= 0) {
+            _log.info("wait millis was less than zero");
             return false;
         }
         try {
-            service.start().get(waitMillis, TimeUnit.MILLISECONDS);
+            _log.info("  and wait");
+            service.awaitRunning(waitMillis, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
+            _log.error("ignoreed exception", e);
             // Fall through
         }
+        _log.info("returning service runnning = {}", service.isRunning());
         return service.isRunning();
     }
 }
