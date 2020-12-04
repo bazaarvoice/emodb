@@ -20,8 +20,8 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <astyanax.version>3.8.0-bv8</astyanax.version>
@@ -42,11 +42,9 @@
         <aws-sdk.version>1.11.551</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.18.1</jersey.version>
-        <jacoco.version>0.7.2.201409121644</jacoco.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
-        <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
-        <skipCC>true</skipCC>
+        <dependency-check-maven.version>6.0.3</dependency-check-maven.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
@@ -58,6 +56,13 @@
         <!-- If the 'yum*' variables are changed, please change the options in emodb-deploy-snapshot jenkins build-->
         <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
         <yumArtifactId>emodb-web</yumArtifactId>
+
+        <jacoco.version>0.8.6</jacoco.version>
+        <skipCC>true</skipCC>
+
+        <sonar.version>3.7.0.1746</sonar.version>
+        <sonar.sources>src/main</sonar.sources>
+        <sonar.test.sources>src/test</sonar.test.sources>
 
     </properties>
 
@@ -401,9 +406,37 @@
                     <version>${jacoco.version}</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar.version}</version>
+                    <executions>
+                        <execution>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sonar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
                     <version>${dependency-check-maven.version}</version>
+                    <configuration>
+                        <!--
+                            Default configuration skips dependency checks to reduce build time.  A build should be performed
+                            with dependency checks enabled after any dependencies are added or updated to get a list
+                            of known vulnerabilities that may have been introduced with the change.
+                        -->
+                        <skip>${skipDependencyChecks}</skip>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -502,6 +535,20 @@
                         <configuration>
                             <additionalparam>-Xdoclint:none</additionalparam>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
