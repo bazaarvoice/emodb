@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
@@ -182,12 +181,12 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
             if (_keyspace == null) {
                 // Use the shared pool configuration
-                metricName = Objects.firstNonNull(_clusterMetric, _cluster);
+                metricName = java.util.Optional.ofNullable(_clusterMetric).orElse(_cluster);
                 poolConfig = CassandraConfiguration.this;
             } else {
                 // Use the configuration specifically for this keyspace
                 KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
-                metricName = Objects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
+                metricName = java.util.Optional.ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = keyspaceConfig;
             }
 
@@ -195,9 +194,9 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                     .forCluster(_cluster);
 
             if (!_disableClusterMetrics) {
-                    builder = builder
-                            .withTracerFactory(new InstrumentedTracerFactory(metricName, _metricRegistry))
-                            .withConnectionPoolMonitor(new MetricConnectionPoolMonitor(metricName, _metricRegistry));
+                builder = builder
+                        .withTracerFactory(new InstrumentedTracerFactory(metricName, _metricRegistry))
+                        .withConnectionPoolMonitor(new MetricConnectionPoolMonitor(metricName, _metricRegistry));
             }
 
             AstyanaxContext<Cluster> astyanaxContext = builder.buildCluster(ThriftFamilyFactory.getInstance());
@@ -318,12 +317,12 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
             if (_keyspace == null) {
                 // Use the shared pool configuration
-                metricName = Objects.firstNonNull(_clusterMetric, _cluster);
+                metricName = java.util.Optional.ofNullable(_clusterMetric).orElse(_cluster);
                 poolConfig = new FilterConnectionPoolConfiguration(CassandraConfiguration.this);
             } else {
                 // Use the configuration specifically for this keyspace
                 KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
-                metricName = Objects.firstNonNull(keyspaceConfig.getKeyspaceMetric(), _keyspace);
+                metricName = java.util.Optional.ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = new FilterConnectionPoolConfiguration(keyspaceConfig);
             }
 
@@ -335,8 +334,8 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
             }
 
             // Set any unset policies to the default
-            _loadBalancingPolicy = Objects.firstNonNull(_loadBalancingPolicy, Policies.defaultLoadBalancingPolicy());
-            _retryPolicy = Objects.firstNonNull(_retryPolicy, Policies.defaultRetryPolicy());
+            _loadBalancingPolicy = java.util.Optional.ofNullable(_loadBalancingPolicy).orElse(Policies.defaultLoadBalancingPolicy());
+            _retryPolicy = java.util.Optional.ofNullable(_retryPolicy).orElse(Policies.defaultRetryPolicy());
 
             com.datastax.driver.core.Cluster cluster = newCqlDriverBuilder(poolConfig, _metricRegistry)
                     .withClusterName(_cluster)
@@ -371,7 +370,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 } else if (hostAndPort.getPort() != _cqlPort) {
                     throw new IllegalArgumentException(String.format(
                             "Seed %s found with invalid port %s.  The port must match either the RPC (thrift) port %s " +
-                            "or the native (CQL) port %s", seed, hostAndPort.getPort(), _thriftPort, _cqlPort));
+                                    "or the native (CQL) port %s", seed, hostAndPort.getPort(), _thriftPort, _cqlPort));
                 }
             }
 
@@ -493,7 +492,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         return _partitioner;
     }
 
-    @JsonProperty ("partitioner")
+    @JsonProperty("partitioner")
     public CassandraConfiguration setPartitioner(String partitioner) {
         return setPartitioner(CassandraPartitioner.valueOf(partitioner.toUpperCase()));
     }

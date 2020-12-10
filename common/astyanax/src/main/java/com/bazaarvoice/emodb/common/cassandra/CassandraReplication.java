@@ -1,10 +1,10 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Provides information about the replication strategy for a column family.
@@ -46,6 +46,6 @@ public class CassandraReplication {
     }
 
     public int getReplicationFactorForDataCenter(String dataCenter) {
-        return Objects.firstNonNull(_replicationFactorByDataCenter.get(dataCenter), 0);
+        return Optional.ofNullable(_replicationFactorByDataCenter.get(dataCenter)).orElse(0);
     }
 }
