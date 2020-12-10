@@ -12,7 +12,6 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
-import com.google.common.base.Objects;
 import com.google.common.base.Ticker;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -33,15 +32,16 @@ import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Wraps a {@link SubscriptionDAO} with a cache that makes it fast and efficient to lookup subscription metadata.  The
  * downside is that servers must globally coordinate changes to subscriptions because the consequences of using
  * out-of-date cached subscription metadata are pretty severe.
- *
+ * <p>
  * There have been two implementations for how cache invalidation is managed using the cache registry:
  *
  * <ul>
@@ -56,7 +56,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *         cached as a map.
  *     </li>
  * </ul>
- *
+ * <p>
  * Over time, as the number of total subscriptions, single-subscription lookups and cache invalidations scaled up the
  * legacy caching became a bottleneck and was replaced with the current one.  However, since the two cache invalidation
  * systems are not compatible it is not possible to just upgrade from one to another on an in-flight system without
@@ -72,7 +72,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  *         In normal mode the DAO exclusively uses current cache invalidation.
  *     </li>
  * </ol>
- *
+ * <p>
  * A safe upgrade requires upgrading all servers from legacy to normal mode.  Only once all active servers are in one
  * mode is it safe to move to the next.
  */
@@ -81,7 +81,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
     public enum CachingMode {
         legacy,
         normal
-    };
+    }
 
     private static final String SUBSCRIPTIONS = "subscriptions";
 
@@ -108,9 +108,9 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                   @CachingSubscriptionDAORegistry CacheRegistry cacheRegistry,
                                   @CachingSubscriptionDAOExecutorService ListeningExecutorService refreshService,
                                   MetricRegistry metricRegistry, Clock clock, CachingMode cachingMode) {
-        _delegate = checkNotNull(delegate, "delegate");
-        _refreshService = checkNotNull(refreshService, "refreshService");
-        _cachingMode = checkNotNull(cachingMode, "cachingMode");
+        _delegate = Objects.requireNonNull(delegate, "delegate");
+        _refreshService = Objects.requireNonNull(refreshService, "refreshService");
+        _cachingMode = Objects.requireNonNull(cachingMode, "cachingMode");
 
         Ticker ticker = ClockTicker.getTicker(clock);
         _reloadAllSubscriptionsTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "reload-all-subscriptions"));
@@ -154,7 +154,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                     public OwnedSubscription load(String subscription) throws Exception {
                         OwnedSubscription ownedSubscription = _delegate.getSubscription(subscription);
                         // Can't cache null, use special null value if the subscription does not exist
-                        return Objects.firstNonNull(ownedSubscription, NULL_SUBSCRIPTION);
+                        return Optional.ofNullable(ownedSubscription).orElse(NULL_SUBSCRIPTION);
                     }
 
                     /**
@@ -312,7 +312,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
      * wrap the cache with a forwarding implementation which calls {@link InvalidationListeningForwardingCache#valueInvalidated()}
      * whenever <em>any</em> value is removed since the action taken on any value invalidation is the same.
      */
-    private abstract static class InvalidationListeningForwardingCache<K,V> extends ForwardingLoadingCache.SimpleForwardingLoadingCache<K,V> {
+    private abstract static class InvalidationListeningForwardingCache<K, V> extends ForwardingLoadingCache.SimpleForwardingLoadingCache<K, V> {
 
         InvalidationListeningForwardingCache(LoadingCache<K, V> delegate) {
             super(delegate);

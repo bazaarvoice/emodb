@@ -4,12 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.StringJoiner;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Role object for an Emo role.  Each role is uniquely identified by a {@link EmoRoleKey}.  Although it is useful
@@ -26,12 +27,12 @@ public class EmoRole {
     @JsonCreator
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
-                Objects.firstNonNull(group, EmoRoleKey.NO_GROUP),
-                checkNotNull(id, "id")));
+                Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
+                Objects.requireNonNull(id, "id")));
     }
 
     public EmoRole(EmoRoleKey id) {
-        _id = checkNotNull(id, "id");
+        _id = Objects.requireNonNull(id, "id");
     }
 
     @JsonProperty("group")
@@ -86,8 +87,8 @@ public class EmoRole {
         EmoRole emoRole = (EmoRole) o;
 
         return _id.equals(emoRole.getId()) &&
-                Objects.equal(_name, emoRole.getName()) &&
-                Objects.equal(_description, emoRole.getDescription()) &&
+                Objects.equals(_name, emoRole.getName()) &&
+                Objects.equals(_description, emoRole.getDescription()) &&
                 _permissions.equals(emoRole.getPermissions());
     }
 
@@ -98,12 +99,11 @@ public class EmoRole {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(getClass())
-                .add("id", getId())
-                .add("name", getName())
-                .add("description", getDescription())
-                .add("permissions", getPermissions())
+        return new StringJoiner(", ", EmoRole.class.getSimpleName() + "[", "]")
+                .add("id=" + _id)
+                .add("name='" + _name + "'")
+                .add("description='" + _description + "'")
+                .add("permissions=" + _permissions)
                 .toString();
-
     }
 }

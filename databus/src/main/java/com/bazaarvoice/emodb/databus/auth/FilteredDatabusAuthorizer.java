@@ -1,12 +1,11 @@
 package com.bazaarvoice.emodb.databus.auth;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Implementation of DatabusAuthorizer that overrides authorization for specific owners.  All other owners
@@ -19,8 +18,8 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
 
     private FilteredDatabusAuthorizer(Map<String, DatabusAuthorizer> ownerOverrides,
                                       DatabusAuthorizer authorizer) {
-        _ownerOverrides = checkNotNull(ownerOverrides, "ownerOverrides");
-        _authorizer = checkNotNull(authorizer, "authorizer");
+        _ownerOverrides = Objects.requireNonNull(ownerOverrides, "ownerOverrides");
+        _authorizer = Objects.requireNonNull(authorizer, "authorizer");
     }
 
     @Override
@@ -30,7 +29,7 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
         //        replaced with the commented-out version once enough time has passed for all grandfathered-in
         //        subscriptions to have been renewed and therefore have an owner attached.
         //
-        // return Objects.firstNonNull(_ownerOverrides.get(ownerId), _authorizer).owner(ownerId);
+        // return Optional.ofNullable(_ownerOverrides.get(ownerId)).orElse(_authorizer).owner(ownerId);
 
         DatabusAuthorizer authorizer = null;
         if (ownerId != null) {

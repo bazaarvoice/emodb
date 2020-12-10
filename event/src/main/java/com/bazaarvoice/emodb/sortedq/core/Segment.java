@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.clearspring.analytics.stream.cardinality.HyperLogLog;
 import com.clearspring.analytics.stream.cardinality.ICardinality;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
@@ -18,14 +17,17 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 class Segment {
     private static final Logger _log = LoggerFactory.getLogger(Segment.class);
 
-    /** Bump this version number when making backward-incompatible changes to the segment snapshot format. */
+    /**
+     * Bump this version number when making backward-incompatible changes to the segment snapshot format.
+     */
     private static final int PERSISTENCE_VERSION = 1;
 
     /**
@@ -57,7 +59,9 @@ class Segment {
     private long _splitTargetSize;
     private long _splitTargetRemaining;
 
-    /** Creates a brand new segment. */
+    /**
+     * Creates a brand new segment.
+     */
     Segment(UUID id, @Nullable ByteBuffer min, long splitThresholdBytes, SplitQueue<Segment> splitQueue) {
         _id = id;
         _dataId = TimeUUIDs.newUUID();
@@ -66,22 +70,24 @@ class Segment {
         _bytesUntilSplitCheckSize = splitThresholdBytes / 16;
         _bytesUntilSplitCheckRemaining = _bytesUntilSplitCheckSize;
         _splitThresholdBytes = splitThresholdBytes;
-        _splitQueue = checkNotNull(splitQueue, "splitQueue");
+        _splitQueue = Objects.requireNonNull(splitQueue, "splitQueue");
     }
 
-    /** Loads a segment from a persistent snapshot. */
+    /**
+     * Loads a segment from a persistent snapshot.
+     */
     Segment(UUID id, Snapshot snapshot, long splitThresholdBytes, SplitQueue<Segment> splitQueue) {
         // Fail if the segment was written with a newer incompatible data format.
         if (snapshot.version > PERSISTENCE_VERSION) {
             throw new UnsupportedOperationException("Unsupported persistent sorted queue data version: " + snapshot.version);
         }
-        _id = checkNotNull(id, "id");
-        _dataId = Objects.firstNonNull(snapshot.dataId, id);  // dataId should be non-null except for segments before dataId was introduced
+        _id = Objects.requireNonNull(id, "id");
+        _dataId = Optional.ofNullable(snapshot.dataId).orElse(id);  // dataId should be non-null except for segments before dataId was introduced
         _min = (snapshot.min != null) ? ByteBufferUtil.hexToBytes(snapshot.min) : null;
         _adds = snapshot.adds;
         _bytesAdded = snapshot.bytesAdded;
         try {
-            _distinctAdds = HyperLogLog.Builder.build(checkNotNull(snapshot.distinctAddsHll, "distinctAddsHll"));
+            _distinctAdds = HyperLogLog.Builder.build(Objects.requireNonNull(snapshot.distinctAddsHll, "distinctAddsHll"));
         } catch (IOException e) {
             throw Throwables.propagate(e);
         }
@@ -92,7 +98,7 @@ class Segment {
         _splitting = snapshot.splitting;
         _splitTargetSize = snapshot.splitTargetSize;
         _splitTargetRemaining = snapshot.splitTargetRemaining;
-        _splitQueue = checkNotNull(splitQueue, "splitQueue");
+        _splitQueue = Objects.requireNonNull(splitQueue, "splitQueue");
     }
 
     Snapshot snapshot() {
@@ -174,7 +180,9 @@ class Segment {
         return _splitting;
     }
 
-    /** Tracks the # of bytes that have been moved.  Returns true if the splitter should create a new destination segment. */
+    /**
+     * Tracks the # of bytes that have been moved.  Returns true if the splitter should create a new destination segment.
+     */
     boolean onSplitWork(int bytesMoved) {
         if (_splitTargetRemaining <= 0) {
             _splitTargetRemaining = _splitTargetSize - bytesMoved;
@@ -185,22 +193,30 @@ class Segment {
         }
     }
 
-    /** Returns the estimated # of live records in this segment. */
+    /**
+     * Returns the estimated # of live records in this segment.
+     */
     int cardinality() {
         return Math.max(distinctAdds() - _deletes, 1);
     }
 
-    /** Returns the estimated # of distinct records ever written to this segment. */
+    /**
+     * Returns the estimated # of distinct records ever written to this segment.
+     */
     int distinctAdds() {
         return (int) Math.min(_adds, _distinctAdds.cardinality());
     }
 
-    /** Returns the estimated # of bytes in this segment. */
+    /**
+     * Returns the estimated # of bytes in this segment.
+     */
     long segmentSize() {
         return cardinality() * recordSize();
     }
 
-    /** Returns the estimated # of bytes per record. */
+    /**
+     * Returns the estimated # of bytes per record.
+     */
     long recordSize() {
         return Math.max(LongMath.divide(_bytesAdded, Math.max(_adds, 1), RoundingMode.CEILING), 1);
     }
@@ -214,7 +230,9 @@ class Segment {
         }
     }
 
-    /** For debugging. */
+    /**
+     * For debugging.
+     */
     @Override
     public String toString() {
         return String.format("Segment[%s%smin=%s;size=%,d;bytes=%,d;added=%,d;deleted=%,d;id=%s;dataId=%s]",

@@ -2,9 +2,10 @@ package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import java.util.Objects;
+import java.util.Optional;
+
 
 /**
  * Unique key for identifying a role.  Each key consists of a group and an ID.  It is possible for a role to belong to
@@ -25,8 +26,8 @@ public class EmoRoleKey {
 
     @JsonCreator
     public EmoRoleKey(@JsonProperty("group") String group, @JsonProperty("id") String id) {
-        _group = Objects.firstNonNull(group, NO_GROUP);
-        _id = checkNotNull(id, "id");
+        _group = Optional.ofNullable(group).orElse(NO_GROUP);
+        _id = Objects.requireNonNull(id, "id");
     }
 
     /**
@@ -60,7 +61,7 @@ public class EmoRoleKey {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(_group, _id);
+        return Objects.hash(_group, _id);
     }
 
     public String toString() {

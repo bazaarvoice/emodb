@@ -2,14 +2,14 @@ package com.bazaarvoice.emodb.common.dropwizard.discovery;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
-import com.google.common.collect.Maps;
 
 import java.net.URI;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * SOA (Ostrich) payload object, typically embedded within a {@link ServiceEndPoint}.
@@ -25,8 +25,8 @@ public class Payload {
 
     public static Payload valueOf(String string) {
         Map<?, ?> map = JsonHelper.fromJson(string, Map.class);
-        URI serviceUri = URI.create((String) checkNotNull(map.get("serviceUrl"), "serviceUrl"));
-        URI adminUri = URI.create((String) checkNotNull(map.get("adminUrl"), "adminUrl"));
+        URI serviceUri = URI.create((String) Objects.requireNonNull(map.get("serviceUrl"), "serviceUrl"));
+        URI adminUri = URI.create((String) Objects.requireNonNull(map.get("adminUrl"), "adminUrl"));
         @SuppressWarnings("unchecked") Map<String, ?> extensions = Optional.ofNullable(
                 (Map<String, ?>) map.get("extensions")).orElse(Collections.emptyMap());
         return new Payload(serviceUri, adminUri, extensions);
@@ -37,9 +37,9 @@ public class Payload {
     }
 
     public Payload(URI serviceUrl, URI adminUrl, Map<String, ?> extensions) {
-        _serviceUrl = checkNotNull(serviceUrl, "serviceUrl");
-        _adminUrl = checkNotNull(adminUrl, "adminUrl");
-        _extensions = checkNotNull(extensions, "extensions");
+        _serviceUrl = Objects.requireNonNull(serviceUrl, "serviceUrl");
+        _adminUrl = Objects.requireNonNull(adminUrl, "adminUrl");
+        _extensions = Objects.requireNonNull(extensions, "extensions");
     }
 
     public URI getServiceUrl() {
@@ -56,7 +56,7 @@ public class Payload {
 
     @Override
     public String toString() {
-        Map<String, Object> map = Maps.newLinkedHashMap();
+        Map<String, Object> map = new LinkedHashMap<>();
         map.put("serviceUrl", _serviceUrl);
         map.put("adminUrl", _adminUrl);
         if (!_extensions.isEmpty()) {

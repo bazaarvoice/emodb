@@ -3,12 +3,12 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Request object for creating new roles.  Parameters include the key for the new role (group and ID),
@@ -36,7 +36,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setRoleKey(EmoRoleKey roleKey) {
-        _roleKey = checkNotNull(roleKey, "roleKey");
+        _roleKey = Objects.requireNonNull(roleKey, "roleKey");
         return this;
     }
 
@@ -71,7 +71,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setPermissions(Set<String> permissions) {
-        _permissions = Objects.firstNonNull(permissions, ImmutableSet.<String>of());
+        _permissions = Optional.ofNullable(permissions).orElse(ImmutableSet.of());
         return this;
     }
 }

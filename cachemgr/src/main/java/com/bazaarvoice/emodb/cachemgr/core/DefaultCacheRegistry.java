@@ -9,32 +9,32 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.InstrumentedCache;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsSet;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-
 public class DefaultCacheRegistry implements CacheRegistry, Closeable {
-    private static Logger _log = LoggerFactory.getLogger(DefaultCacheRegistry.class);
+    private static final Logger _log = LoggerFactory.getLogger(DefaultCacheRegistry.class);
 
-    private final ConcurrentMap<String, HandleImpl> _handles = Maps.newConcurrentMap();
+    private final ConcurrentMap<String, HandleImpl> _handles = new ConcurrentHashMap<>();
     private final List<InvalidationListener> _listeners = Lists.newCopyOnWriteArrayList();
-    private final List<MetricsSet> _metrics = Lists.newArrayList();
-    private MetricRegistry _metricRegistry;
+    private final List<MetricsSet> _metrics = new ArrayList<>();
+    private final MetricRegistry _metricRegistry;
 
     @Inject
     public DefaultCacheRegistry(LifeCycleRegistry lifeCycle, MetricRegistry metricRegistry) {
@@ -69,7 +69,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
 
     private HandleImpl getOrPut(String name) {
         HandleImpl handle = new HandleImpl(name);
-        return Objects.firstNonNull(_handles.putIfAbsent(name, handle), handle);
+        return Optional.ofNullable(_handles.putIfAbsent(name, handle)).orElse(handle);
     }
 
     @Override
@@ -110,7 +110,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
         private final AtomicReference<Cache<String, ?>> _cache = new AtomicReference<>();
 
         private HandleImpl(String name) {
-            _name = checkNotNull(name, "name");
+            _name = Objects.requireNonNull(name, "name");
         }
 
         private void setCache(Cache<String, ?> cache) {

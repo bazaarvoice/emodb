@@ -7,7 +7,6 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -16,24 +15,25 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Condition visitor to return the inverse of a condition.  If possible this returns an inverse, <code>i</code>,
  * which guarantees that for each value <code>v</code> and intrinsics <code>intr</code>:
  *
  * <code>ConditionEvaluator.eval(x, v, intr) != ConditionEvaluator.eval(i, v, intr)</code>.
- *
+ * <p>
  * This evaluator is only used internally by {@link SubsetEvaluator} and is only implemented to the extent that class
  * requires.  Not every condition has a well-defined inversion with the current set of conditions.  For example,
  * there is no inverse for <code>"constant"</code> or <code>like("prefix:*")</code>.  If there is no well-defined
@@ -43,7 +43,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
 
     @Nullable
     public static Condition getInverseOf(Condition condition) {
-        return checkNotNull(condition, "condition").visit(new InverseEvaluator(), null);
+        return Objects.requireNonNull(condition, "condition").visit(new InverseEvaluator(), null);
     }
 
     @Nullable
@@ -150,7 +150,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         // Use DeMorgan's law.  In this case allow "not(sub-condition)" for any sub-conditions which do not have an
         // inverse, leaving future operations to handle if necessary.
         List<Condition> inverseConditions = conditions.stream()
-                .map(condition -> Objects.firstNonNull(condition.visit(this, null), Conditions.not(condition)))
+                .map(condition -> Optional.ofNullable(condition.visit(this, null)).orElse(Conditions.not(condition)))
                 .collect(Collectors.toList());
 
         if (fromAnd) {
@@ -168,7 +168,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         List<Condition> conditions = Lists.newArrayListWithCapacity(condition.getEntries().size());
         for (Map.Entry<String, Condition> entry : condition.getEntries().entrySet()) {
             Condition keyCond = entry.getValue();
-            Condition inverted = Objects.firstNonNull(keyCond.visit(this, null), Conditions.not(keyCond));
+            Condition inverted = Optional.ofNullable(keyCond.visit(this, null)).orElse(Conditions.not(keyCond));
             conditions.add(Conditions.mapBuilder().matches(entry.getKey(), inverted).build());
         }
 
@@ -187,7 +187,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
         }
         return Conditions.partition(condition.getNumPartitions(), inverse);
     }
-    
+
     // The remaining conditions have no well-defined inverse expressible as a Condition other than not(condition).
 
     @Nullable

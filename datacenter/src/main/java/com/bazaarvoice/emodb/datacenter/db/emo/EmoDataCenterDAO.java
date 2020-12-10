@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -22,8 +21,9 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Stores all data center information in a single SoR object.  Use a single object so that reading the set of all
@@ -38,8 +38,8 @@ public class EmoDataCenterDAO implements DataCenterDAO {
 
     @Inject
     public EmoDataCenterDAO(DataStore dataStore, @ServerCluster String cluster) {
-        _dataStore = checkNotNull(dataStore, "dataStore");
-        _cluster = checkNotNull(cluster, "cluster");
+        _dataStore = Objects.requireNonNull(dataStore, "dataStore");
+        _cluster = Objects.requireNonNull(cluster, "cluster");
     }
 
     @Override
@@ -93,13 +93,13 @@ public class EmoDataCenterDAO implements DataCenterDAO {
         URI serviceUri = URI.create((String) map.get("serviceUri"));
         URI adminUri = URI.create((String) map.get("adminUri"));
         boolean system = (Boolean) map.get("system");
-        String cassandraName = Objects.firstNonNull((String) map.get("cassandraName"), name);
-        List<String> cassandraKeyspaces = Objects.firstNonNull((List<String>) map.get("cassandraKeyspaces"), Collections.<String>emptyList());
+        String cassandraName = Optional.ofNullable((String) map.get("cassandraName")).orElse(name);
+        List<String> cassandraKeyspaces = Optional.ofNullable((List<String>) map.get("cassandraKeyspaces")).orElse(Collections.emptyList());
         return new DefaultDataCenter(name, serviceUri, adminUri, system, cassandraName, cassandraKeyspaces);
     }
 
     private Map.Entry<String, Object> serialize(DataCenter dataCenter) {
-        return Maps.<String, Object>immutableEntry(dataCenter.getName(), ImmutableMap.<String, Object>builder()
+        return Maps.immutableEntry(dataCenter.getName(), ImmutableMap.<String, Object>builder()
                 .put("cluster", _cluster)
                 .put("serviceUri", dataCenter.getServiceUri().toString())
                 .put("adminUri", dataCenter.getAdminUri().toString())
