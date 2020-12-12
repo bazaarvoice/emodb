@@ -53,9 +53,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyDouble;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -63,6 +62,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.fail;
 
 public class DataStoreUpdateThrottleTest extends ResourceTest {
 
@@ -74,11 +74,9 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
 
     private final DataStore _dataStore = mock(DataStore.class);
     private String _limitedId;
-    private String _unlimitedId;
     private CuratorFramework _curator;
     private ZkMapStore<DataStoreUpdateThrottle> _mapStore;
     private DataStoreUpdateThrottleManager _throttleManager;
-    private String _zkNamespace;
     private Instant _now;
     private volatile RateLimiterFactory _rateLimiterFactory;
 
@@ -88,7 +86,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
     private ResourceTestRule setupDataStoreResourceTestRule() {
         InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
         _limitedId = authIdentityManager.createIdentity(API_KEY_LIMITED, new ApiKeyModification().addRoles("all-sor-role"));
-        _unlimitedId = authIdentityManager.createIdentity(API_KEY_UNLIMITED, new ApiKeyModification().addRoles("all-sor-role"));
+        authIdentityManager.createIdentity(API_KEY_UNLIMITED, new ApiKeyModification().addRoles("all-sor-role"));
         EmoPermissionResolver permissionResolver = new EmoPermissionResolver(_dataStore, mock(BlobStore.class));
         InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);
         InMemoryRoleManager roleManager = new InMemoryRoleManager(permissionManager);
@@ -101,7 +99,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
         DataStoreUpdateThrottler throttler = id -> _throttleManager.beforeUpdate(id);
 
         return setupResourceTestRule(
-                Collections.<Object>singletonList(new DataStoreResource1(
+                Collections.singletonList(new DataStoreResource1(
                         _dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)),
                         new InMemoryCompactionControlSource(), throttler)),
                 ImmutableList.of(),
@@ -128,15 +126,15 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
     @Before
     public void setUp() throws Exception {
         // Create a unique base path for each test so each tests ZooKeeper data is independent.
-        _zkNamespace = "emodb/test" + UUID.randomUUID();
-        _curator = _rootCurator.usingNamespace(_zkNamespace);
+        String zkNamespace = "emodb/test" + UUID.randomUUID();
+        _curator = _rootCurator.usingNamespace(zkNamespace);
 
         _mapStore = new ZkMapStore<>(_curator, "sor-update-throttle", new ZkDataStoreUpdateThrottleSerializer());
         _mapStore.start();
 
         Clock clock = mock(Clock.class);
         when(clock.instant()).then(ignore -> _now);
-        when(clock.millis()).then(ignore-> _now.toEpochMilli());
+        when(clock.millis()).then(ignore -> _now.toEpochMilli());
         _now = Instant.ofEpochMilli(1514764800000L);
 
         _rateLimiterFactory = mock(RateLimiterFactory.class);
@@ -226,7 +224,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
         updateAPIKeyRateLimit(_limitedId, new DataStoreUpdateThrottle(10, _now.plusSeconds(1)));
 
         List<Update> updates = Lists.newArrayListWithCapacity(20);
-        for (int i=0; i < 20; i++) {
+        for (int i = 0; i < 20; i++) {
             updates.add(new Update("table", "key" + i, TimeUUIDs.newUUID(), Deltas.delete(), new AuditBuilder().build()));
         }
         createClient(API_KEY_LIMITED).updateAll(updates);
@@ -282,7 +280,7 @@ public class DataStoreUpdateThrottleTest extends ResourceTest {
 
         updateAPIKeyRateLimit(_limitedId, new DataStoreUpdateThrottle(10, _now.plusSeconds(1)));
         DataStore client = createClient(API_KEY_LIMITED);
-        for (int i=0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             client.update("table", "key", TimeUUIDs.newUUID(), Deltas.delete(), new AuditBuilder().build());
         }
 

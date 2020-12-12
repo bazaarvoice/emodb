@@ -13,7 +13,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.Key;
 import com.bazaarvoice.emodb.sor.db.Record;
 import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.MultiDCDataStores;
@@ -27,7 +26,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.time.Duration;
@@ -36,11 +34,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Tests that compactions in multiple data centers do not result in data loss.
@@ -57,8 +55,6 @@ public class MultiDCCompactionTest {
         MultiDCDataStores allDCs = new MultiDCDataStores(2, new MetricRegistry());
         DataStore dc1 = allDCs.dc(0);
         DataStore dc2 = allDCs.dc(1);
-        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
-        InMemoryDataReaderDAO dao2 = allDCs.dao(1);
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -113,7 +109,9 @@ public class MultiDCCompactionTest {
         assertTrue(actualRow.containsKey("fifth"));
     }
 
-    /** Test that compactions are only deleted when the chosen compaction is behind FCT. **/
+    /**
+     * Test that compactions are only deleted when the chosen compaction is behind FCT.
+     **/
     @Test
     public void testCorrectCompactionsAreDeleted() {
         // Test that compactions are only deleted when the chosen compaction is behind FCT.
@@ -155,7 +153,7 @@ public class MultiDCCompactionTest {
                 Maps.immutableEntry(new DeltaClusteringKey(t1, 1), c1),
                 Maps.immutableEntry(new DeltaClusteringKey(t2, 1), c2),
                 Maps.immutableEntry(new DeltaClusteringKey(t3, 1), c3)
-                );
+        );
 
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
@@ -174,8 +172,8 @@ public class MultiDCCompactionTest {
         expand = compactor.expand(record, fctAfterT2, fctAfterT2, Long.MIN_VALUE, MutableIntrinsics.create(key), false, requeryFn);
         List<DeltaClusteringKey> deletedCompactions = expand.getPendingCompaction().getCompactionKeysToDelete();
         // Verify that compactions other than c2, are deleted
-        Assert.assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t1, 1)));
-        Assert.assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t3, 1)));
+        assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t1, 1)));
+        assertTrue(deletedCompactions.contains(new DeltaClusteringKey(t3, 1)));
     }
 
     private Audit newAudit(String comment) {

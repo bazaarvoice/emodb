@@ -36,11 +36,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.longThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -52,7 +52,7 @@ public class AthenaAuditWriterTest {
     private final static String BUCKET = "test-bucket";
 
     private AmazonS3 _s3;
-    private Multimap<String, Map<String, Object>> _uploadedAudits = ArrayListMultimap.create();
+    private final Multimap<String, Map<String, Object>> _uploadedAudits = ArrayListMultimap.create();
     private File _tempStagingDir;
     private ScheduledExecutorService _auditService;
     private ExecutorService _fileTransferService;
@@ -73,7 +73,8 @@ public class AthenaAuditWriterTest {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    Map<String, Object> auditJson = JsonHelper.fromJson(line, new TypeReference<Map<String, Object>>() {});
+                    Map<String, Object> auditJson = JsonHelper.fromJson(line, new TypeReference<Map<String, Object>>() {
+                    });
                     _uploadedAudits.put((String) invocationOnMock.getArguments()[1], auditJson);
                 }
             }
@@ -127,7 +128,7 @@ public class AthenaAuditWriterTest {
         ArgumentCaptor<Runnable> doLogFileMaintenance = ArgumentCaptor.forClass(Runnable.class);
         verify(_auditService).scheduleAtFixedRate(
                 doLogFileMaintenance.capture(),
-                longThat(new LessThan<>(maxBatchTime.toMillis()+1)),
+                longThat(new LessThan<>(maxBatchTime.toMillis() + 1)),
                 eq(maxBatchTime.toMillis()), eq(TimeUnit.MILLISECONDS));
         _doLogFileMaintenance = doLogFileMaintenance.getValue();
 
@@ -143,7 +144,7 @@ public class AthenaAuditWriterTest {
         AthenaAuditWriter writer = createWriter("path/to/test", prefix, maxFileSize, maxBatchTime);
 
         long auditTime = _now.toEpochMilli();
-        for (int i=0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             Audit audit = new AuditBuilder().setComment("comment" + i).set("custom", "custom" + i).build();
             writer.persist("test:table", "key" + i, audit, auditTime);
         }
@@ -186,7 +187,7 @@ public class AthenaAuditWriterTest {
         AthenaAuditWriter writer = createWriter("shutdown/", prefix, maxFileSize, maxBatchTime);
 
         long auditTime = _now.toEpochMilli();
-        for (int i=0; i < 10; i++) {
+        for (int i = 0; i < 10; i++) {
             Audit audit = new AuditBuilder().setComment("comment" + i).set("custom", "custom" + i).build();
             writer.persist("test:table", "key" + i, audit, auditTime);
         }
@@ -198,7 +199,8 @@ public class AthenaAuditWriterTest {
 
         ArgumentCaptor<Runnable> fileTransferRunnable = ArgumentCaptor.forClass(Runnable.class);
         verify(_fileTransferService).submit(fileTransferRunnable.capture());
-        fileTransferRunnable.getValue().run();
+        final Runnable value = fileTransferRunnable.getValue();
+        value.run();
 
         assertEquals(_uploadedAudits.keySet().size(), 1);
         String key = _uploadedAudits.keySet().iterator().next();
@@ -208,7 +210,7 @@ public class AthenaAuditWriterTest {
         assertEquals(auditMaps.size(), 10);
 
         int i = 0;
-        for (Map<String, Object> auditMap : auditMaps ) {
+        for (Map<String, Object> auditMap : auditMaps) {
             assertEquals(auditMap.get("tablename"), "test:table");
             assertEquals(auditMap.get("key"), "key" + i);
             assertEquals(auditMap.get("time"), auditTime);

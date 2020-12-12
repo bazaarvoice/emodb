@@ -39,8 +39,8 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -49,7 +49,7 @@ import static org.testng.Assert.fail;
 
 public class BlobStoreShadedClientTest extends ResourceTest {
 
-    private final static String API_KEY = "test-api-key";
+    private static final String API_KEY = "test-api-key";
 
     private ScheduledExecutorService _connectionManagementService = mock(ScheduledExecutorService.class);
 
@@ -156,7 +156,7 @@ public class BlobStoreShadedClientTest extends ResourceTest {
      * a few representative API calls.
      */
     @Path("/blob/1")
-    public final static class BlobStoreClientTestResource {
+    public static final class BlobStoreClientTestResource {
 
         @GET
         @Path("_table/test:table/size")

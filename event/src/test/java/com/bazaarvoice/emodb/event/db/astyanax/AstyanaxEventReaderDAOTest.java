@@ -6,16 +6,12 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
@@ -28,6 +24,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -43,7 +41,7 @@ public class AstyanaxEventReaderDAOTest {
         final int count = 0;
 
         CassandraKeyspace cassandraKeyspace = mock(CassandraKeyspace.class);
-        when(cassandraKeyspace.prepareQuery(Matchers.<ColumnFamily<String, ByteBuffer>>any(), Matchers.<ConsistencyLevel>any()))
+        when(cassandraKeyspace.prepareQuery(any(), any()))
                 // 'manifest' query
                 .then(new Answer<Object>() {
                     @Override
@@ -64,16 +62,16 @@ public class AstyanaxEventReaderDAOTest {
                         when(result2.getResult()).thenReturn(list2);
 
                         RowQuery<String, ByteBuffer> rowQuery = mock(RowQuery.class);
-                        when(rowQuery.withColumnRange(Matchers.<ByteBufferRange>any())).thenReturn(rowQuery);
-                        when(rowQuery.autoPaginate(Matchers.anyBoolean())).thenReturn(rowQuery);
+                        when(rowQuery.withColumnRange(any())).thenReturn(rowQuery);
+                        when(rowQuery.autoPaginate(anyBoolean())).thenReturn(rowQuery);
                         when(rowQuery.execute())
                                 .thenReturn(result1)  // first page
                                 .thenReturn(result2); // second page
 
                         ColumnFamilyQuery<String, ByteBuffer> cfQuery = mock(ColumnFamilyQuery.class);
-                        when(cfQuery.getKey(Matchers.<String>any())).thenReturn(rowQuery);
+                        when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
-                        return (ColumnFamilyQuery) cfQuery;
+                        return cfQuery;
                     }
                 })
                 // 'slab' query
@@ -91,15 +89,15 @@ public class AstyanaxEventReaderDAOTest {
                         when(rowQuery.getCount()).thenReturn(countQuery);
 
                         ColumnFamilyQuery<ByteBuffer, Integer> cfQuery = mock(ColumnFamilyQuery.class);
-                        when(cfQuery.getKey(Matchers.<ByteBuffer>any())).thenReturn(rowQuery);
+                        when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
-                        return (ColumnFamilyQuery) cfQuery;
+                        return cfQuery;
                     }
                 });
 
         // Mutations are not allowed!  Fail if async deletion gets scheduled.
         ExecutorService executorService = mock(ExecutorService.class);
-        when(executorService.submit(Matchers.<Runnable>any())).thenThrow(AssertionError.class);
+        when(executorService.submit(any(Runnable.class))).thenThrow(AssertionError.class);
 
         AstyanaxEventReaderDAO readerDao = new AstyanaxEventReaderDAO(
                 cassandraKeyspace, mock(ManifestPersister.class), "metricsGroup", executorService, new MetricRegistry());
@@ -130,7 +128,7 @@ public class AstyanaxEventReaderDAOTest {
                 mock(CassandraKeyspace.class), mock(ManifestPersister.class), "metricsGroup", mock(ExecutorService.class), metricRegistry);
         SlabFilter slabFilterSince = eventReaderDAO.getSlabFilterSince(since, "testchannel");
 
-        for(int i = 0; i < orderedSlabIds.size(); i++) {
+        for (int i = 0; i < orderedSlabIds.size(); i++) {
             UUID currSlabId = orderedSlabIds.get(i);
             ByteBuffer slabId = serializer.toByteBuffer(currSlabId);
             ByteBuffer nextSlabId = (i + 1 < orderedSlabIds.size()) ? serializer.toByteBuffer(orderedSlabIds.get(i + 1))

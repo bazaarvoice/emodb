@@ -2,7 +2,6 @@ package test.integration.sor;
 
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
-import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
@@ -71,7 +70,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -92,10 +90,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -131,7 +131,7 @@ public class CasDataStoreTest {
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
-                        .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
+                        .setCassandraClusters(ImmutableMap.of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Duration.ofDays(2));
@@ -204,7 +204,7 @@ public class CasDataStoreTest {
     @Test
     public void testHealthCheck() throws Exception {
         ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
-        verify(_healthChecks, atLeastOnce()).addHealthCheck(Matchers.anyString(), captor.capture());
+        verify(_healthChecks, atLeastOnce()).addHealthCheck(anyString(), captor.capture());
         List<HealthCheck> healthChecks = captor.getAllValues();
 
         int numCassandraHealthChecks = 0;
@@ -331,8 +331,6 @@ public class CasDataStoreTest {
         // try compaction with multiple threads to compact key3. This will surface race condition issues, even though it is inconsistent.
         try {
             multiThreadCompactionTest(content4Expected, key4);
-        } catch (InterruptedException | ExecutionException e) {
-            throw new Exception("This test is specifically designed to catch race conditions. So, please do not ignore any intermittent failures, as it points to a race condition error", e);
         } catch (Exception e) {
             throw new Exception("This test is specifically designed to catch race conditions. So, please do not ignore any intermittent failures, as it points to a race condition error", e);
         }
@@ -445,7 +443,7 @@ public class CasDataStoreTest {
         }
 
         // Restore back to an empty template.
-        _store.setTableTemplate(TABLE, ImmutableMap.<String, Object>of(), newAudit("template"));
+        _store.setTableTemplate(TABLE, ImmutableMap.of(), newAudit("template"));
         assertEquals(_store.getTableTemplate(TABLE), ImmutableMap.of());
     }
 
@@ -457,7 +455,7 @@ public class CasDataStoreTest {
         boolean found = false;
         while (tableIter.hasNext()) {
             Table table = tableIter.next();
-            assertTrue(!table.getName().startsWith("__")); // No internal tables
+            assertFalse(table.getName().startsWith("__")); // No internal tables
             if (TABLE.equals(table.getName())) {
                 assertEquals(table.getOptions(), new TableOptionsBuilder().setPlacement("ugc_global:ugc").build());
                 assertEquals(table.getTemplate(), ImmutableMap.of());

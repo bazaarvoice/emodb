@@ -7,21 +7,23 @@ import com.bazaarvoice.emodb.web.scanner.ScanDestination;
 import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
-import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanStatus;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.StashRequest;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatcher;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.net.URI;
-import java.time.*;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
@@ -31,11 +33,11 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.longThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.longThat;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -54,7 +56,7 @@ public class ScanUploadSchedulingServiceTest {
         Object[][] dates = new Object[144][1];
         Instant date = Instant.ofEpochMilli(1470009600000L);
 
-        for (int i=0; i < 144; i++) {
+        for (int i = 0; i < 144; i++) {
             dates[i][0] = date;
             date = date.plus(Duration.ofMinutes(10));
         }
@@ -96,8 +98,7 @@ public class ScanUploadSchedulingServiceTest {
     }
 
     @Test(dataProvider = "every10minutes")
-    public void testScanScheduled(Instant now)
-            throws Exception {
+    public void testScanScheduled(Instant now) {
 
         ScanUploader scanUploader = mock(ScanUploader.class);
         StashRequestManager stashRequestManager = mock(StashRequestManager.class);
@@ -120,7 +121,7 @@ public class ScanUploadSchedulingServiceTest {
                         ImmutableList.of("placement1"), 1, true, false, 1000000, Duration.ofMinutes(10));
         ScheduledDailyScanUpload futureScanUpload =
                 new ScheduledDailyScanUpload("daily", futureTimeOfDay, DateTimeFormatter.ofPattern("'future'-yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
-                        ScanDestination.discard(),DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
+                        ScanDestination.discard(), DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
                         ImmutableList.of("placement2"), 1, true, false, 1000000, Duration.ofMinutes(10));
 
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
@@ -235,7 +236,7 @@ public class ScanUploadSchedulingServiceTest {
         Clock clock = Clock.fixed(Instant.ofEpochMilli(now.toEpochMilli()), ZoneId.systemDefault());
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.of(), scanCountListener, clock);
 
         service.startScheduledScan(scanUpload, now);
 
@@ -253,7 +254,7 @@ public class ScanUploadSchedulingServiceTest {
                         .setScanByAZ(true));
 
         verify(builder).start();
-        
+
         verifyNoMoreInteractions(scanUploader);
     }
 
@@ -274,8 +275,8 @@ public class ScanUploadSchedulingServiceTest {
 
         ScanUploader scanUploader = mock(ScanUploader.class);
         when(scanUploader.getStatus(expectedScanId)).thenReturn(new ScanStatus(
-                expectedScanId, new ScanOptions("placement1"), true, false, new Date(), ImmutableList.<ScanRangeStatus>of(),
-                ImmutableList.<ScanRangeStatus>of(), ImmutableList.<ScanRangeStatus>of()));
+                expectedScanId, new ScanOptions("placement1"), true, false, new Date(), ImmutableList.of(),
+                ImmutableList.of(), ImmutableList.of()));
 
         StashRequestManager stashRequestManager = mock(StashRequestManager.class);
         ScanCountListener scanCountListener = mock(ScanCountListener.class);
@@ -283,7 +284,7 @@ public class ScanUploadSchedulingServiceTest {
         Clock clock = Clock.fixed(Instant.ofEpochMilli(now.toEpochMilli()), ZoneId.systemDefault());
 
         ScanUploadSchedulingService.DelegateSchedulingService service =
-                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.<ScheduledDailyScanUpload>of(), scanCountListener, clock);
+                new ScanUploadSchedulingService.DelegateSchedulingService(scanUploader, stashRequestManager, ImmutableList.of(), scanCountListener, clock);
 
         try {
             service.startScheduledScan(scanUpload, now);
@@ -296,7 +297,6 @@ public class ScanUploadSchedulingServiceTest {
         verifyNoMoreInteractions(scanUploader);
     }
 
-    @SuppressWarnings("unchecked")
     @Test(dataProvider = "every10minutes")
     public void testParticipationNotification(Instant now)
             throws Exception {
@@ -371,7 +371,7 @@ public class ScanUploadSchedulingServiceTest {
                         ImmutableList.of("placement1"), 1, true, true, 1000000, Duration.ofMinutes(10));
         ScheduledDailyScanUpload futureScanUpload =
                 new ScheduledDailyScanUpload("future", futureTimeOfDay, DateTimeFormatter.ofPattern("'future'-yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
-                        ScanDestination.discard(),DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
+                        ScanDestination.discard(), DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC),
                         ImmutableList.of("placement2"), 1, true, true, 1000000, Duration.ofMinutes(10));
 
         List<ScheduledDailyScanUpload> scheduledScans = ImmutableList.of(pastScanUpload, futureScanUpload);
@@ -462,16 +462,16 @@ public class ScanUploadSchedulingServiceTest {
         verifyNoMoreInteractions(executorService, stashRequestManager, scanUploader, scanCountListener);
     }
 
-    private Matcher<Long> withinNSeconds(final int seconds, final long expected) {
-        return new BaseMatcher<Long>() {
+    private ArgumentMatcher<Long> withinNSeconds(final int seconds, final long expected) {
+        return new ArgumentMatcher<Long>() {
             @Override
-            public boolean matches(Object item) {
-                return Math.abs(((Long) item) - expected) < TimeUnit.SECONDS.toMillis(seconds);
+            public boolean matches(Long item) {
+                return Math.abs(item - expected) < TimeUnit.SECONDS.toMillis(seconds);
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("Within 10 seconds of ").appendValue(expected);
+            public String toString() {
+                return "Within " + seconds + " seconds of " + expected;
             }
         };
     }

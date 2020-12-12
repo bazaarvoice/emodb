@@ -28,12 +28,11 @@ import java.util.Collection;
 import java.util.Set;
 
 import static org.mockito.AdditionalMatchers.not;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
@@ -62,22 +61,12 @@ public class ApiKeyRealmTest {
                 _cacheManager, _authIdentityManager, _permissionManager, null);
         LifecycleUtils.init(_underTest);
 
-//        _permissionCaching.updatePermissions("othertestrole", new PermissionUpdateRequest().permit("city|get|Austin", "country|get|USA"));
-
     }
 
-//    @Test
-//    public void simpleNull() {
-//        assertNotNull(_underTest.getAvailableRolesCache(), "precondition: there is a cache");
-//        when(_permissionReader.getPermissions(PermissionIDs.forRole("role"))).thenReturn(null);
-//        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
-//        assertNull(resultPerms, "should be no permissions yet");
-//    }
-//
     @Test
     public void simpleEmpty() {
         assertNotNull(_underTest.getAvailableRolesCache(), "precondition: there is a cache");
-        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.<Permission>newHashSet());
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet());
         Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertTrue(resultPerms.isEmpty(), "should be no permissions yet");
     }
@@ -115,23 +104,6 @@ public class ApiKeyRealmTest {
         assertEquals(cache.size(), 1, "side effect: cache still has one element");
     }
 
-//    @Test
-//    public void simpleNowNull() {
-//        Cache<String, Set<Permission>> cache = _underTest.getAvailableRolesCache();
-//        assertEquals(cache.size(), 0, "precondition: cache is empty");
-//        Permission p1 = mock(Permission.class);
-//        when(p1.toString()).thenReturn("p1");
-//        when(_permissionReader.getRolePermissions("role")).thenReturn(Sets.<Permission>newHashSet(p1));
-//        Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
-//        assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
-//        assertEquals(cache.size(), 1, "side effect: cache has one element");
-//        when(_permissionReader.getRolePermissions("role")).thenReturn(null);
-//        cache.clear();
-//        resultPerms = _underTest.getRolePermissions("role");
-//        assertNull(resultPerms, "now should have null");
-//        assertEquals(cache.size(), 0, "side effect: cache has nothing");
-//    }
-
     @Test
     public void simpleNowEmpty() {
         Cache<String, RolePermissionSet> cache = _underTest.getAvailableRolesCache();
@@ -142,7 +114,7 @@ public class ApiKeyRealmTest {
         Collection<Permission> resultPerms = _underTest.getRolePermissions("role");
         assertEquals(resultPerms.iterator().next(), p1, "should have the first permission we added");
         assertEquals(cache.size(), 1, "side effect: cache has one element");
-        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.<Permission>newHashSet());
+        when(_permissionManager.getPermissions(PermissionIDs.forRole("role"))).thenReturn(Sets.newHashSet());
         cache.clear();
         resultPerms = _underTest.getRolePermissions("role");
         assertTrue(resultPerms.isEmpty(), "now should have empty");

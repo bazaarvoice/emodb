@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -45,7 +45,7 @@ public class CachingRowGroupIteratorTest {
         assertTrue(iterator.hasNext());
         // Get the rows from the row group
         Iterable<Row> rows = iterator.next();
-        for (int i=0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             assertTrue(groupsEqual(rows, row("a", "b", "c")));
             // No records should have been added to the soft cache
             assertTrue(_softReferences.isEmpty());
@@ -60,7 +60,7 @@ public class CachingRowGroupIteratorTest {
         assertTrue(iterator.hasNext());
         // Get the rows from the row group
         Iterable<Row> rows = iterator.next();
-        for (int i=0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             assertTrue(groupsEqual(rows, row("a", "1", "1"), row("a", "2", "2"), row("a", "3", "3")));
             // No records should have been added to the soft cache
             assertTrue(_softReferences.isEmpty());
@@ -75,7 +75,7 @@ public class CachingRowGroupIteratorTest {
         assertTrue(iterator.hasNext());
         // Get the rows from the row group
         Iterable<Row> rows = iterator.next();
-        for (int i=0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             assertTrue(groupsEqual(rows, row("a", "1", "1"), row("a", "2", "2"), row("a", "3", "3")));
             // Last row should have been put in the soft cache
             assertEquals(_softReferences.size(), 1);
@@ -133,7 +133,10 @@ public class CachingRowGroupIteratorTest {
             _softReferences.put(rows.get(0).getString(0), rows.get(0).getString(1), ref);
             // By default the reference will return the rows.  Callers can reset the mock to override this behavior.
             when(ref.get()).thenAnswer(ignore -> rowsRef.get());
-            doAnswer(ignore -> { rowsRef.set(null); return null; }).when(ref).clear();
+            doAnswer(ignore -> {
+                rowsRef.set(null);
+                return null;
+            }).when(ref).clear();
             return ref;
         }
     }
@@ -173,9 +176,9 @@ public class CachingRowGroupIteratorTest {
                     public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
                         Row after = (Row) invocationOnMock.getArguments()[0];
 
-                        for (int i=0; i < rows.length; i++) {
+                        for (int i = 0; i < rows.length; i++) {
                             if (rowsEqual(after, rows[i])) {
-                                _reloadedRows = Arrays.asList(rows).subList(i+1, rows.length);
+                                _reloadedRows = Arrays.asList(rows).subList(i + 1, rows.length);
                                 return _reloadedRows.iterator();
                             }
                         }
@@ -202,7 +205,7 @@ public class CachingRowGroupIteratorTest {
 
     private boolean rowsEqual(Row l, Row r) {
         return l.getString(0).equals(r.getString(0)) &&
-            l.getString(1).equals(r.getString(1)) &&
-            l.getString(2).equals(r.getString(2));
+                l.getString(1).equals(r.getString(1)) &&
+                l.getString(2).equals(r.getString(2));
     }
 }

@@ -71,7 +71,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -97,6 +96,7 @@ import java.util.Spliterators;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -222,7 +222,7 @@ public class CasBlobStoreTest {
     @Test
     public void testHealthCheck() throws Exception {
         ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
-        verify(_healthChecks, atLeastOnce()).addHealthCheck(Matchers.anyString(), captor.capture());
+        verify(_healthChecks, atLeastOnce()).addHealthCheck(anyString(), captor.capture());
         List<HealthCheck> healthChecks = captor.getAllValues();
 
         int numCassandraHealthChecks = 0;
@@ -422,7 +422,7 @@ public class CasBlobStoreTest {
         boolean found = false;
         while (tableIter.hasNext()) {
             Table table = tableIter.next();
-            assertTrue(!table.getName().startsWith("__")); // No internal tables
+            assertFalse(table.getName().startsWith("__")); // No internal tables
             if (TABLE.equals(table.getName())) {
                 assertEquals(table.getOptions(), new TableOptionsBuilder().setPlacement(TABLE_PLACEMENT).build());
                 assertEquals(table.getAttributes(), ImmutableMap.of());

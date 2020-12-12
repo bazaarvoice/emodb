@@ -26,11 +26,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.Assert.assertTrue;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 /**
  * Tests that writes in multiple data centers result in a consistent
@@ -106,13 +106,13 @@ public class MultiDCVersionTest {
         dc2.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
         List<Compaction> compactions1 = getCompactions(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));
         assertEquals(compactions1.size(), 1);
-        assertCompactionEquals(compactions1.get(0), 3+/*cutoff is also compacted now*/1, changeId1, changeId4);
+        assertCompactionEquals(compactions1.get(0), 3 +/*cutoff is also compacted now*/1, changeId1, changeId4);
         // We will still see our change Id since the compaction doesn't get rid of deltas
         assertNotNull(asMap(dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).get(changeId3));
 
         List<Compaction> compactions2 = getCompactions(dc2.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG));
         assertEquals(compactions2.size(), 1);
-        assertCompactionEquals(compactions2.get(0), 2+1, changeId1, changeId3);
+        assertCompactionEquals(compactions2.get(0), 2 + 1, changeId1, changeId3);
         // We compact cutoff Id into compaction too, but defer the deletes until the compactions are also behind the FCT.
         assertNotNull(asMap(dc2.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG)).get(changeId3));
 
@@ -129,7 +129,7 @@ public class MultiDCVersionTest {
         // We will have two compactions since we defer the delete of the base compaction until the owning compaction is behind the FCT
         assertEquals(compactions1.size(), 2);
 
-        assertCompactionEquals(compactions1.get(0), 3/*add back cutoof delta*/+1, changeId1, changeId4);
+        assertCompactionEquals(compactions1.get(0), 3/*add back cutoof delta*/ + 1, changeId1, changeId4);
 
         // Make sure the content and version is as expected
         assertEquals(Intrinsic.getVersion(actualRow), (Long) 4L);
@@ -206,7 +206,7 @@ public class MultiDCVersionTest {
     }
 
     private boolean cutoffExists(Map<UUID, Change> timeline, UUID cutoffId) {
-        for(Change change : timeline.values()) {
+        for (Change change : timeline.values()) {
             Compaction compaction;
             if ((compaction = change.getCompaction()) != null &&
                     TimeUUIDs.compare(compaction.getCutoff(), cutoffId) == 0) {

@@ -14,15 +14,13 @@ import io.dropwizard.metrics.ReporterFactory;
 import org.coursera.metrics.datadog.model.DatadogGauge;
 import org.coursera.metrics.datadog.transport.AbstractTransportFactory;
 import org.coursera.metrics.datadog.transport.Transport;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
+import org.mockito.ArgumentMatcher;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -48,10 +46,10 @@ public class DatadogMetricFilterTest {
                         "\"host\": \"test-host\"," +
                         "\"includeExpansions\": [\"count\", \"min\", \"max\", \"p95\"]," +
                         "\"transport\": {" +
-                                "\"type\": \"http\"," +
-                                "\"apiKey\": \"12345\"" +
+                        "\"type\": \"http\"," +
+                        "\"apiKey\": \"12345\"" +
                         "}" +
-                "}";
+                        "}";
 
 
         ScheduledReporter reporter = createReporter(json);
@@ -73,12 +71,7 @@ public class DatadogMetricFilterTest {
         timer.update(2, TimeUnit.SECONDS);
         timer.update(3, TimeUnit.SECONDS);
 
-        _metricRegistry.register("test.gauge", new Gauge<Integer>() {
-            @Override
-            public Integer getValue() {
-                return 50;
-            }
-        });
+        _metricRegistry.register("test.gauge", (Gauge<Integer>) () -> 50);
 
         reporter.report();
 
@@ -159,17 +152,16 @@ public class DatadogMetricFilterTest {
         return datadogReporterFactory.build(_metricRegistry);
     }
 
-    private static Matcher<DatadogGauge> hasGauge(final String metricName, final Number value) {
-        return new BaseMatcher<DatadogGauge>() {
+    private static ArgumentMatcher<DatadogGauge> hasGauge(final String metricName, final Number value) {
+        return new ArgumentMatcher<DatadogGauge>() {
             @Override
-            public boolean matches(Object item) {
-                DatadogGauge gauge = (DatadogGauge) item;
+            public boolean matches(DatadogGauge gauge) {
                 return metricName.equals(gauge.getMetric()) && value.floatValue() == gauge.getPoints().get(0).get(1).floatValue();
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("metric ").appendText(metricName).appendText(" has value ").appendValue(value);
+            public String toString() {
+                return "metric " + metricName + " has value " + value;
             }
         };
     }

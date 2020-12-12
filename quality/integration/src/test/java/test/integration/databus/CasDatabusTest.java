@@ -67,7 +67,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -78,6 +77,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -87,7 +87,6 @@ import static org.testng.Assert.assertTrue;
 public class CasDatabusTest {
     private SimpleLifeCycleRegistry _lifeCycle;
     private HealthCheckRegistry _healthChecks;
-    private DatabusFactory _bus;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -118,7 +117,7 @@ public class CasDatabusTest {
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc", "app_remote:default"))
-                        .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
+                        .setCassandraClusters(ImmutableMap.of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Duration.ofDays(2));
@@ -189,7 +188,7 @@ public class CasDatabusTest {
                 install(new DatabusModule(serviceMode, metricRegistry));
             }
         });
-        _bus = injector.getInstance(DatabusFactory.class);
+        DatabusFactory bus = injector.getInstance(DatabusFactory.class);
 
         _lifeCycle.start();
     }
@@ -202,7 +201,7 @@ public class CasDatabusTest {
     @Test
     public void testHealthCheck() throws Exception {
         ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
-        verify(_healthChecks, atLeastOnce()).addHealthCheck(Matchers.anyString(), captor.capture());
+        verify(_healthChecks, atLeastOnce()).addHealthCheck(anyString(), captor.capture());
         List<HealthCheck> healthChecks = captor.getAllValues();
 
         int numCassandraHealthChecks = 0;

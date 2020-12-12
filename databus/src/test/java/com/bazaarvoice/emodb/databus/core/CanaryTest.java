@@ -24,8 +24,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -99,7 +99,7 @@ public class CanaryTest {
     public void testIterationWithEventsInOnePoll() throws Exception {
         List<Event> events = Lists.newArrayListWithCapacity(20);
         List<String> eventIds = Lists.newArrayListWithCapacity(20);
-        for (int i=0; i < 20; i++) {
+        for (int i = 0; i < 20; i++) {
             String eventId = String.valueOf(i);
             events.add(new Event(eventId, ImmutableMap.of(), ImmutableList.of()));
             eventIds.add(eventId);
@@ -118,13 +118,13 @@ public class CanaryTest {
         List<List<Event>> events = Lists.newArrayListWithCapacity(3);
         List<List<String>> eventIds = Lists.newArrayListWithCapacity(3);
 
-        for (int batch=0; batch < 3; batch++) {
+        for (int batch = 0; batch < 3; batch++) {
             List<Event> batchEvents = Lists.newArrayListWithCapacity(50);
             List<String> batchEventIds = Lists.newArrayListWithCapacity(50);
             events.add(batchEvents);
             eventIds.add(batchEventIds);
 
-            for (int i=0; i < 50; i++) {
+            for (int i = 0; i < 50; i++) {
                 String eventId = String.valueOf(batch * 50 + i);
                 batchEvents.add(new Event(eventId, ImmutableMap.of(), ImmutableList.of()));
                 batchEventIds.add(eventId);

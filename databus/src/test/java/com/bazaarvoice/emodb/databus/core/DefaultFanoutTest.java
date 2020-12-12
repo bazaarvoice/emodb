@@ -34,14 +34,14 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyCollectionOf;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -61,10 +61,9 @@ public class DefaultFanoutTest {
     private String _remoteChannel;
     private Multimap<String, ByteBuffer> _eventsSinked;
     private PartitionSelector _outboundPartitionSelector;
-    private EventSource _eventSource;
     private List<String> _deletedKeys;
     private Instant _now;
-    
+
     @BeforeMethod
     private void setUp() {
         _eventsSinked = ArrayListMultimap.create();
@@ -80,12 +79,12 @@ public class DefaultFanoutTest {
         };
 
         // Event event keys are deleted we need to capture them since fanout clears and re-uses the same instance.
-        _eventSource = mock(EventSource.class);
+        EventSource _eventSource = mock(EventSource.class);
         _deletedKeys = Lists.newArrayList();
         doAnswer(invocationOnMock -> {
             _deletedKeys.addAll((List<String>) invocationOnMock.getArguments()[0]);
             return null;
-        }).when(_eventSource).delete(anyCollectionOf(String.class));
+        }).when(_eventSource).delete(anyCollection());
 
         _subscriptionsSupplier = mock(Supplier.class);
         _currentDataCenter = mock(DataCenter.class);
@@ -110,7 +109,7 @@ public class DefaultFanoutTest {
         Clock clock = mock(Clock.class);
         when(clock.instant()).thenAnswer(ignore -> _now);
         when(clock.millis()).thenAnswer(ignore -> _now.toEpochMilli());
-        
+
         MetricRegistry metricRegistry = new MetricRegistry();
 
         _defaultFanout = new DefaultFanout("test", "test", _eventSource, eventSink, _outboundPartitionSelector,
@@ -196,12 +195,12 @@ public class DefaultFanoutTest {
         addTable("partition-test-table");
 
         List<String> remoteChannels = Lists.newArrayListWithCapacity(3);
-        for (int partition=0; partition < 3; partition++) {
+        for (int partition = 0; partition < 3; partition++) {
             remoteChannels.add(ChannelNames.getReplicationFanoutChannel(_remoteDataCenter, partition));
         }
-        
+
         List<EventData> events = Lists.newArrayListWithCapacity(4);
-        for (int i=0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             EventData event = newEvent("id" + i, "partition-test-table", "key" + i);
             events.add(event);
         }
@@ -225,9 +224,9 @@ public class DefaultFanoutTest {
 
         // Need to set the current time to match the time of the event
         _now = Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(UpdateRefSerializer.fromByteBuffer(event.getData().duplicate()).getChangeId()));
-        
+
         // For the first 30 seconds the event should neither be fanned out nor deleted
-        for (int i=0; i <= 30; i++) {
+        for (int i = 0; i <= 30; i++) {
             _defaultFanout.copyEvents(ImmutableList.of(event));
             assertTrue(_eventsSinked.isEmpty());
             assertTrue(_deletedKeys.isEmpty());
@@ -258,7 +257,7 @@ public class DefaultFanoutTest {
             return table;
         });
 
-        for (int i=0; i < 2; i++) {
+        for (int i = 0; i < 2; i++) {
             _defaultFanout.copyEvents(ImmutableList.of(event));
             assertTrue(_eventsSinked.isEmpty());
             assertTrue(_deletedKeys.isEmpty());
@@ -274,7 +273,7 @@ public class DefaultFanoutTest {
     private Table mockTable(String tableName) {
         Table table = mock(Table.class);
         when(table.getName()).thenReturn(tableName);
-        when(table.getAttributes()).thenReturn(ImmutableMap.<String, Object>of());
+        when(table.getAttributes()).thenReturn(ImmutableMap.of());
         when(table.getOptions()).thenReturn(new TableOptionsBuilder().setPlacement("placement").build());
         // Put in another data center to force replication
         when(table.getDataCenters()).thenReturn(ImmutableList.of(_currentDataCenter, _remoteDataCenter));
@@ -291,7 +290,7 @@ public class DefaultFanoutTest {
         EventData eventData = mock(EventData.class);
         when(eventData.getId()).thenReturn(id);
 
-        UpdateRef updateRef = new UpdateRef(table, key, TimeUUIDs.newUUID(), ImmutableSet.<String>of());
+        UpdateRef updateRef = new UpdateRef(table, key, TimeUUIDs.newUUID(), ImmutableSet.of());
         ByteBuffer data = UpdateRefSerializer.toByteBuffer(updateRef);
         when(eventData.getData()).thenReturn(data);
 

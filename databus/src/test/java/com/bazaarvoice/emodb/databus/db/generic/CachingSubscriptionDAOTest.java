@@ -27,12 +27,13 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -70,7 +71,7 @@ public class CachingSubscriptionDAOTest {
         _delegate = new InMemorySubscriptionDAO(_clock);
 
         // Insert some test data into the delegate
-        for (int i=0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             _delegate.insertSubscription("owner", "sub" + i, Conditions.alwaysTrue(), Duration.ofDays(1), Duration.ofMinutes(5));
         }
     }
@@ -136,7 +137,7 @@ public class CachingSubscriptionDAOTest {
         assertEquals(subscriptions.stream().map(Subscription::getName).sorted().collect(Collectors.toList()),
                 ImmutableList.of("sub0", "sub1", "sub2"));
         assertEquals(subscriptions.stream()
-                        .sorted((left, right) -> left.getName().compareTo(right.getName()))
+                        .sorted(Comparator.comparing(Subscription::getName))
                         .map(Subscription::getTableFilter)
                         .collect(Collectors.toList()),
                 ImmutableList.of(Conditions.alwaysTrue(), Conditions.alwaysTrue(), sub2Condition));

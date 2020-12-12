@@ -50,14 +50,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class CasStashTableTest  {
+public class CasStashTableTest {
 
     private SimpleLifeCycleRegistry _lifeCycleRegistry;
     private AstyanaxTableDAO _astyanaxTableDAO;
@@ -85,7 +85,7 @@ public class CasStashTableTest  {
         keyspaceMap.putAll(cassandraFactory.build(new TestCassandraConfiguration("ugc_global", "ugc_delta_v2")));
 
         PlacementFactory placementFactory = new DeltaPlacementFactory(_lifeCycleRegistry, ImmutableSet.of("app_global:sys", "ugc_global:ugc"),
-               keyspaceMap, dataCenters);
+                keyspaceMap, dataCenters);
 
         PlacementCache placementCache = new PlacementCache(placementFactory);
         CQLStashTableDAO cqlStashTableDAO = new CQLStashTableDAO("app_global:sys", placementCache, dataCenters);
@@ -99,10 +99,10 @@ public class CasStashTableTest  {
         // private in-memory implementation.
         _tableBackingStore = new InMemoryDataStore(new MetricRegistry());
         _astyanaxTableDAO.setBackingStore(_tableBackingStore);
-        
+
         _lifeCycleRegistry.start();
     }
-    
+
     @AfterClass
     public void teardown() throws Exception {
         _lifeCycleRegistry.stop();
@@ -264,7 +264,7 @@ public class CasStashTableTest  {
 
         Table table18 = _astyanaxTableDAO.get("table18");
         List<StashTokenRange> expected = Lists.newArrayListWithCapacity(256);
-        for (int i=0; i < 256; i++){
+        for (int i = 0; i < 256; i++) {
             expected.add(new StashTokenRange(
                     toToken(String.format("%02x0000000000009000", i)),
                     toToken(String.format("%02x0000000000009001", i)),

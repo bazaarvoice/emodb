@@ -67,12 +67,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import static com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest.AUTHENTICATION_HEADER;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -80,8 +77,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link BlobStoreClient} are
@@ -116,9 +115,9 @@ public class BlobStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "blob-role-b", ImmutableSet.of("blob|read|b*"));
 
         return setupResourceTestRule(
-            Collections.singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
-            authIdentityManager,
-            permissionManager);
+                Collections.singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
+                authIdentityManager,
+                permissionManager);
     }
 
     @After
@@ -133,8 +132,8 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private BlobStore blobClient(String apiKey) {
         return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
-            new JerseyEmoClient(_resourceTestRule.client()), _connectionManagementService))
-            .usingCredentials(apiKey);
+                new JerseyEmoClient(_resourceTestRule.client()), _connectionManagementService))
+                .usingCredentials(apiKey);
     }
 
     @Test
@@ -208,7 +207,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         {
             final long size = blobClient(APIKEY_BLOB_A).getTableApproximateSize("a-table");
-            assertEquals(1234L, size);
+            assertEquals(size, 1234L);
         }
 
         {
@@ -280,7 +279,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         {
             final List<BlobMetadata> metadata = ImmutableList.copyOf(blobClient(APIKEY_BLOB_A).scanMetadata("a-table", null, 10L));
-            assertEquals(1, metadata.size());
+            assertEquals(metadata.size(), 1);
             assertMetadataEquals(expected.get(0), metadata.get(0));
         }
 
@@ -303,12 +302,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), expected.length, "33d5", "54a1", attributes);
         Range expectedRange = new Range(0, expected.length);
         when(_server.get("a-table", "blob-id", null))
-            .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
-                @Override
-                public void writeTo(OutputStream out) throws IOException {
-                    out.write(expected);
-                }
-            }));
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
+                    @Override
+                    public void writeTo(OutputStream out) throws IOException {
+                        out.write(expected);
+                    }
+                }));
 
         {
             final Blob actual = blobClient(APIKEY_BLOB_A).get("a-table", "blob-id");
@@ -322,7 +321,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            assertArrayEquals(expected, actualBytes.toByteArray());
+            assertEquals(expected, actualBytes.toByteArray());
         }
 
         {
@@ -342,12 +341,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
         List<Table> expected = ImmutableList.of(
-            new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
-            new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
+                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
+                new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
-            BlobStoreStreaming.listTables(blobClient()));
+                BlobStoreStreaming.listTables(blobClient()));
 
         assertEquals(expected, actual);
         verify(_server).listTables(null, Long.MAX_VALUE);
@@ -359,12 +358,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
         List<Table> expected = ImmutableList.of(
-            new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
-            new DefaultTable("blob-id-2", options, ImmutableMap.of("key", "value2"), availability));
+                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
+                new DefaultTable("blob-id-2", options, ImmutableMap.of("key", "value2"), availability));
         when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
-            BlobStoreStreaming.listTables(blobClient(), "from-key", 1234L));
+                BlobStoreStreaming.listTables(blobClient(), "from-key", 1234L));
 
         assertEquals(expected, actual);
         verify(_server).listTables("from-key", Long.MAX_VALUE);
@@ -458,11 +457,10 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableAvailable() {
-        boolean expected = true;
         TableAvailability availability = new TableAvailability("my:placement", false);
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
-            new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
+                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
         );
 
         boolean actual = blobClient().isTableAvailable("table-name");
@@ -474,11 +472,10 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableNotAvailable() {
-        boolean expected = false;
         TableAvailability availability = null;
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
-            new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
+                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
         );
 
         boolean actual = blobClient().isTableAvailable("table-name");
@@ -552,12 +549,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test
     public void testScanMetadata() {
         List<BlobMetadata> expected = ImmutableList.of(
-            new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
-            new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
+                new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
+                new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
         when(_server.scanMetadata("table-name", null, Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<BlobMetadata> actual = Lists.newArrayList(
-            BlobStoreStreaming.scanMetadata(blobClient(), "table-name"));
+                BlobStoreStreaming.scanMetadata(blobClient(), "table-name"));
 
         assertEquals(actual.size(), expected.size());
         for (int i = 0; i < actual.size(); i++) {
@@ -570,12 +567,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test
     public void testScanMetadataFrom() {
         List<BlobMetadata> expected = ImmutableList.of(
-            new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
-            new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
+                new DefaultBlobMetadata("blob-id-1", new Date(), 55, "33d5", "54a1", ImmutableMap.of("key", "value1")),
+                new DefaultBlobMetadata("blob-id-2", new Date(), 66, "33d5", "54a1", ImmutableMap.of("key", "value2")));
         when(_server.scanMetadata("table-name", "from-key", 1234L)).thenReturn(expected.iterator());
 
         List<BlobMetadata> actual = Lists.newArrayList(
-            BlobStoreStreaming.scanMetadata(blobClient(), "table-name", "from-key", 1234L));
+                BlobStoreStreaming.scanMetadata(blobClient(), "table-name", "from-key", 1234L));
 
         assertEquals(actual.size(), expected.size());
         for (int i = 0; i < actual.size(); i++) {
@@ -592,12 +589,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), expected.length, "33d5", "54a1", attributes);
         Range expectedRange = new Range(0, expected.length);
         when(_server.get("table-name", "blob-id", null))
-            .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
-                @Override
-                public void writeTo(OutputStream out) throws IOException {
-                    out.write(expected);
-                }
-            }));
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
+                    @Override
+                    public void writeTo(OutputStream out) throws IOException {
+                        out.write(expected);
+                    }
+                }));
 
         Blob actual = blobClient().get("table-name", "blob-id");
 
@@ -608,7 +605,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         for (int i = 0; i < 2; i++) {
             ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
             actual.writeTo(actualBytes);
-            assertArrayEquals(actualBytes.toByteArray(), expected);
+            assertEquals(actualBytes.toByteArray(), expected);
         }
 
         verify(_server, times(2)).get("table-name", "blob-id", null);
@@ -622,12 +619,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), 1234, "33d5", "54a1", attributes);
         Range expectedRange = new Range(2, expected.length);
         when(_server.get("table-name", "blob-id", RangeSpecifications.slice(2, expected.length)))
-            .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
-                @Override
-                public void writeTo(OutputStream out) throws IOException {
-                    out.write(expected);
-                }
-            }));
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
+                    @Override
+                    public void writeTo(OutputStream out) throws IOException {
+                        out.write(expected);
+                    }
+                }));
 
         Blob actual = blobClient().get("table-name", "blob-id", RangeSpecifications.slice(2, expected.length));
 
@@ -636,7 +633,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         // Read the blob twice to force an automated round-trip on the second request
         for (int i = 0; i < 2; i++) {
-            assertArrayEquals(read(actual), expected);
+            assertEquals(read(actual), expected);
         }
 
         verify(_server, times(2)).get("table-name", "blob-id", RangeSpecifications.slice(2, expected.length));
@@ -650,18 +647,18 @@ public class BlobStoreJerseyTest extends ResourceTest {
         BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), 1234, "33d5", "54a1", attributes);
         Range expectedRange = new Range(1234 - expected.length, expected.length);
         when(_server.get("table-name", "blob-id", RangeSpecifications.suffix(expected.length)))
-            .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
-                @Override
-                public void writeTo(OutputStream out) throws IOException {
-                    out.write(expected);
-                }
-            }));
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
+                    @Override
+                    public void writeTo(OutputStream out) throws IOException {
+                        out.write(expected);
+                    }
+                }));
 
         Blob actual = blobClient().get("table-name", "blob-id", RangeSpecifications.suffix(expected.length));
 
         assertMetadataEquals(actual, expectedMd);
         assertEquals(actual.getByteRange(), expectedRange);
-        assertArrayEquals(read(actual), expected);
+        assertEquals(read(actual), expected);
         verify(_server).get("table-name", "blob-id", RangeSpecifications.suffix(expected.length));
         verifyNoMoreInteractions(_server);
     }
@@ -673,12 +670,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
         BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), expected.length, "33d5", "54a1", attributes);
         Range expectedRange = new Range(0, expected.length);
         when(_server.get("table-name", "blob-id", null))
-            .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
-                @Override
-                public void writeTo(OutputStream out) throws IOException {
-                    out.write(expected);
-                }
-            }));
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, new StreamSupplier() {
+                    @Override
+                    public void writeTo(OutputStream out) throws IOException {
+                        out.write(expected);
+                    }
+                }));
 
         Blob actual = blobClient().get("table-name", "blob-id");
 
@@ -694,7 +691,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
         ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
         actual.writeTo(actualBytes);
-        assertArrayEquals(actualBytes.toByteArray(), expected);
+        assertEquals(actualBytes.toByteArray(), expected);
 
         // Even though we only read the blob once it should have performed two back-end calls
         verify(_server, times(2)).get("table-name", "blob-id", null);
@@ -729,7 +726,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().delete("table-name", "blob-id");
             fail();
         } catch (BlobNotFoundException e) {
-            assertEquals("blob-id", e.getBlobId());
+            assertEquals(e.getBlobId(), "blob-id");
         }
         verify(_server).delete("table-name", "blob-id");
         verifyNoMoreInteractions(_server);
@@ -742,7 +739,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (BlobNotFoundException e) {
-            assertEquals("blob-id", e.getBlobId());
+            assertEquals(e.getBlobId(), "blob-id");
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -756,7 +753,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             fail();
         } catch (BlobNotFoundException e) {
             // Expected.
-            assertEquals("blob-id", e.getBlobId());
+            assertEquals(e.getBlobId(), "blob-id");
         }
         verify(_server).getMetadata("table-name", "blob-id");
         verifyNoMoreInteractions(_server);
@@ -765,13 +762,13 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test
     public void testRangeNotSatisfiable() {
         when(_server.get("table-name", "blob-id", null))
-            .thenThrow(new RangeNotSatisfiableException("message", 1, 2));
+                .thenThrow(new RangeNotSatisfiableException("message", 1, 2));
         try {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (RangeNotSatisfiableException e) {
-            assertEquals(1, e.getOffset());
-            assertEquals(2, e.getLength());
+            assertEquals(e.getOffset(), 1);
+            assertEquals(e.getLength(), 2);
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -781,8 +778,8 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @SuppressWarnings("unchecked")
     public void testTableExistsException() {
         doThrow(new TableExistsException("table-name"))
-            .when(_server)
-            .createTable(eq("table-name"), any(TableOptions.class), any(Map.class), any(Audit.class));
+                .when(_server)
+                .createTable(eq("table-name"), any(TableOptions.class), any(Map.class), any(Audit.class));
 
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         Map<String, String> attributes = ImmutableMap.of("key", "value");
@@ -791,7 +788,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().createTable("table-name", options, attributes, audit);
             fail();
         } catch (TableExistsException e) {
-            assertEquals("table-name", e.getTable());
+            assertEquals(e.getTable(), "table-name");
         }
         verify(_server).createTable("table-name", options, attributes, audit);
         verifyNoMoreInteractions(_server);
@@ -804,7 +801,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (UnknownTableException e) {
-            assertEquals("table-name", e.getTable());
+            assertEquals(e.getTable(), "table-name");
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -824,12 +821,12 @@ public class BlobStoreJerseyTest extends ResourceTest {
     @Test
     public void testUnknownPlacementException() {
         when(_server.get("table-name", "blob-id", null)).thenThrow(
-            new UnknownPlacementException("Table table-name is not available in this data center", "placement-name"));
+                new UnknownPlacementException("Table table-name is not available in this data center", "placement-name"));
         try {
             blobClient().get("table-name", "blob-id");
             fail();
         } catch (final UnknownPlacementException e) {
-            assertEquals("placement-name", e.getPlacement());
+            assertEquals(e.getPlacement(), "placement-name");
         }
         verify(_server).get("table-name", "blob-id", null);
         verifyNoMoreInteractions(_server);
@@ -860,7 +857,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
                 .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
                 .get(ClientResponse.class);
 
-        assertEquals(200, response.getStatus());
+        assertEquals(response.getStatus(), 200);
         assertEquals(metadataContentType, response.getHeaders().getFirst("X-BVA-content-type"));
         assertEquals(expectedContentType, response.getType().toString());
 
@@ -868,7 +865,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         InputStream in = response.getEntityInputStream();
         assertEquals(content.length, in.read(actual, 0, content.length));
         assertEquals(-1, in.read());
-        assertArrayEquals(actual, content);
+        assertEquals(actual, content);
 
         verify(_server).get("table-name", "blob-id", null);
     }

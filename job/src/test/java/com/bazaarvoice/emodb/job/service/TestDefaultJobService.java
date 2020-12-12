@@ -29,8 +29,8 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -43,7 +43,6 @@ public class TestDefaultJobService {
 
     private QueueService _queueService;
     private DefaultJobHandlerRegistry _jobHandlerRegistry;
-    private JobStatusDAO _jobStatusDAO;
     private DefaultJobService _service;
     private TestingServer _testingServer;
     private CuratorFramework _curator;
@@ -53,7 +52,7 @@ public class TestDefaultJobService {
         LifeCycleRegistry lifeCycleRegistry = mock(LifeCycleRegistry.class);
         _queueService = mock(QueueService.class);
         _jobHandlerRegistry = new DefaultJobHandlerRegistry();
-        _jobStatusDAO = new InMemoryJobStatusDAO();
+        JobStatusDAO jobStatusDAO = new InMemoryJobStatusDAO();
         _testingServer = new TestingServer();
         _curator = CuratorFrameworkFactory.builder()
                 .connectString(_testingServer.getConnectString())
@@ -63,7 +62,7 @@ public class TestDefaultJobService {
         _curator.start();
 
         _service = new DefaultJobService(
-                lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, _jobStatusDAO, _curator,
+                lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry, jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
     }
 
@@ -75,7 +74,7 @@ public class TestDefaultJobService {
 
     @Test
     public void testRunOneJob() throws Exception {
-        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.<JobHandler<TestRequest, TestResult>>ofInstance(
+        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.ofInstance(
                 new JobHandler<TestRequest, TestResult>() {
                     @Override
                     public TestResult run(TestRequest request)
@@ -95,7 +94,7 @@ public class TestDefaultJobService {
 
     @Test
     public void testRunOneJobWithFailure() {
-        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.<JobHandler<TestRequest, TestResult>>ofInstance(
+        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.ofInstance(
                 new JobHandler<TestRequest, TestResult>() {
                     @Override
                     public TestResult run(TestRequest request)
@@ -116,7 +115,7 @@ public class TestDefaultJobService {
 
     @Test
     public void testRunOneJobNonLocal() {
-        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.<JobHandler<TestRequest, TestResult>>ofInstance(
+        _jobHandlerRegistry.addHandler(new TestJobType(), Suppliers.ofInstance(
                 new JobHandler<TestRequest, TestResult>() {
                     @Override
                     public TestResult run(TestRequest request)
@@ -153,7 +152,7 @@ public class TestDefaultJobService {
                 ImmutableList.of(
                         new Message("12345", jobId.toString())
                 ),
-                ImmutableList.<Message>of()
+                ImmutableList.of()
         );
 
         boolean ran = _service.runNextJob();
@@ -167,7 +166,7 @@ public class TestDefaultJobService {
         private final int _value2;
 
         @JsonCreator
-        public TestRequest(@JsonProperty ("value1") String value1, @JsonProperty ("value2") Integer value2) {
+        public TestRequest(@JsonProperty("value1") String value1, @JsonProperty("value2") Integer value2) {
             _value1 = value1;
             _value2 = value2;
         }
@@ -191,7 +190,7 @@ public class TestDefaultJobService {
         private final List<String> _values;
 
         @JsonCreator
-        public TestResult(@JsonProperty ("values") List<String> values) {
+        public TestResult(@JsonProperty("values") List<String> values) {
             _values = values;
         }
 

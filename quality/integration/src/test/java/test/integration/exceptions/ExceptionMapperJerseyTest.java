@@ -31,7 +31,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
 
-import static org.junit.Assert.assertEquals;
+import static org.testng.Assert.assertEquals;
 
 /**
  * Unit test to verify that each mapped exception is returning the expected headers and content.
@@ -42,7 +42,7 @@ public class ExceptionMapperJerseyTest extends ResourceTest {
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(Collections.<Object>singletonList(new ExceptionResource()),
             ImmutableMap.of(
-                    "unused" , new ApiKey("id0", ImmutableSet.of()),
+                    "unused", new ApiKey("id0", ImmutableSet.of()),
                     "also-unused", new ApiKey("id1", ImmutableSet.<String>of())),
             ImmutableMultimap.of());
 

@@ -45,8 +45,8 @@ import org.testng.annotations.Test;
 
 import java.time.Clock;
 
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -97,7 +97,7 @@ public class BlobStoreModuleTest {
 
         final CuratorFramework curator = mock(CuratorFramework.class);
         when(curator.getState()).thenReturn(CuratorFrameworkState.STARTED);
-        when(curator.newNamespaceAwareEnsurePath(Mockito.<String>any())).thenReturn(mock(EnsurePath.class));
+        when(curator.newNamespaceAwareEnsurePath(Mockito.any())).thenReturn(mock(EnsurePath.class));
 
         Injector injector = Guice.createInjector(new AbstractModule() {
             @Override

@@ -20,14 +20,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -35,6 +33,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.fail;
 
 
 public class DefaultBlobStoreTest {
@@ -42,7 +42,6 @@ public class DefaultBlobStoreTest {
     private InMemoryTableDAO tableDao;
     private StorageProvider storageProvider;
     private MetadataProvider metadataProvider;
-    private MetricRegistry metricRegistry;
     private BlobStore blobStore;
     private static final String TABLE = "table1";
 
@@ -51,7 +50,7 @@ public class DefaultBlobStoreTest {
         tableDao = new InMemoryTableDAO();
         storageProvider = mock(StorageProvider.class);
         metadataProvider = mock(MetadataProvider.class);
-        metricRegistry = mock(MetricRegistry.class);
+        MetricRegistry metricRegistry = mock(MetricRegistry.class);
         blobStore = new DefaultBlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
         tableDao.create(TABLE, new TableOptionsBuilder().setPlacement("placement").build(), new HashMap<String, String>(), new AuditBuilder().setComment("create table").build());
     }
@@ -206,10 +205,10 @@ public class DefaultBlobStoreTest {
             put(blobId1, new StorageSummary(1, 1, 1, "md5_1", "sha1_1", new HashMap<>(), 1));
             put(blobId2, new StorageSummary(2, 1, 2, "md5_2", "sha1_2", new HashMap<>(), 2));
         }};
-        when(metadataProvider.scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class))).thenReturn(map.entrySet().iterator());
+        when(metadataProvider.scanMetadata(any(Table.class), isNull(), any(LimitCounter.class))).thenReturn(map.entrySet().iterator());
         blobStore.purgeTableUnsafe(TABLE, new AuditBuilder().setComment("purge").build());
 
-        verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));
+        verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(), any(LimitCounter.class));
         verify(metadataProvider, times(1)).deleteMetadata(any(Table.class), eq(blobId1));
         verify(metadataProvider, times(1)).deleteMetadata(any(Table.class), eq(blobId2));
         verifyNoMoreInteractions(metadataProvider);
@@ -221,22 +220,22 @@ public class DefaultBlobStoreTest {
 
     @Test
     public void testPurgeTableUnsafe_EmptyTable() {
-        when(metadataProvider.scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class))).thenReturn(new HashMap<String, StorageSummary>().entrySet().iterator());
+        when(metadataProvider.scanMetadata(any(Table.class), isNull(), any(LimitCounter.class))).thenReturn(new HashMap<String, StorageSummary>().entrySet().iterator());
         blobStore.purgeTableUnsafe(TABLE, new AuditBuilder().setComment("purge").build());
         verifyNoMoreInteractions(storageProvider);
 
-        verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));
+        verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(), any(LimitCounter.class));
         verifyNoMoreInteractions(metadataProvider);
     }
 
     @Test
     public void testPurgeTableUnsafe_FailedScanMetadata() {
-        when(metadataProvider.scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class))).thenThrow(new RuntimeException("Failed to scan metadata"));
+        when(metadataProvider.scanMetadata(any(Table.class), isNull(), any(LimitCounter.class))).thenThrow(new RuntimeException("Failed to scan metadata"));
         try {
             blobStore.purgeTableUnsafe(TABLE, new AuditBuilder().setComment("purge").build());
             fail();
         } catch (Exception e) {
-            verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));
+            verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(), any(LimitCounter.class));
             verifyNoMoreInteractions(metadataProvider);
             verifyNoMoreInteractions(metadataProvider);
         }
@@ -251,7 +250,7 @@ public class DefaultBlobStoreTest {
             put(blobId1, new StorageSummary(1, 1, 1, "md5_1", "sha1_1", new HashMap<>(), 1));
             put(blobId2, new StorageSummary(2, 1, 2, "md5_2", "sha1_2", new HashMap<>(), 2));
         }};
-        when(metadataProvider.scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class))).thenReturn(map.entrySet().iterator());
+        when(metadataProvider.scanMetadata(any(Table.class), isNull(), any(LimitCounter.class))).thenReturn(map.entrySet().iterator());
         doThrow(new RuntimeException("Cannot delete metadata"))
                 .when(metadataProvider)
                 .deleteMetadata(any(Table.class), eq(blobId1));
@@ -264,7 +263,7 @@ public class DefaultBlobStoreTest {
             verify(storageProvider, times(1)).deleteObject(any(Table.class), eq(blobId2));
             verifyNoMoreInteractions(storageProvider);
 
-            verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(String.class), any(LimitCounter.class));
+            verify(metadataProvider, times(1)).scanMetadata(any(Table.class), isNull(), any(LimitCounter.class));
             verify(metadataProvider, times(1)).deleteMetadata(any(Table.class), eq(blobId1));
             verify(metadataProvider, times(1)).deleteMetadata(any(Table.class), eq(blobId2));
             verifyNoMoreInteractions(metadataProvider);
