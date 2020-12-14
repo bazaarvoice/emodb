@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.report.db;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
@@ -17,13 +18,11 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.delta.MapDeltaBuilder;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.web.report.AllTablesReportQuery;
 import com.bazaarvoice.emodb.web.report.ReportNotFoundException;
 import com.bazaarvoice.emodb.web.report.TableStatistics;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.AbstractIterator;
@@ -39,6 +38,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -141,16 +141,16 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
                         .update("tables", Deltas.mapBuilder()
                                 .update(tableDelta.getTableId(),
                                         Deltas.mapBuilder()
-                                        .putIfAbsent("placement", tableDelta.getPlacement())
-                                        .putIfAbsent("facade", tableDelta.isFacade())
-                                        .update("dropped", tableDelta.isDropped()
-                                                ? Deltas.literal(true)
-                                                : Deltas.conditional(Conditions.not(Conditions.equal(true)), Deltas.literal(false)))
-                                        .update("shards", Deltas.mapBuilder()
-                                                .put(String.valueOf(tableDelta.getShardId()),
-                                                        JsonHelper.convert(tableDelta.getTableStatistics(), Map.class))
+                                                .putIfAbsent("placement", tableDelta.getPlacement())
+                                                .putIfAbsent("facade", tableDelta.isFacade())
+                                                .update("dropped", tableDelta.isDropped()
+                                                        ? Deltas.literal(true)
+                                                        : Deltas.conditional(Conditions.not(Conditions.equal(true)), Deltas.literal(false)))
+                                                .update("shards", Deltas.mapBuilder()
+                                                        .put(String.valueOf(tableDelta.getShardId()),
+                                                                JsonHelper.convert(tableDelta.getTableStatistics(), Map.class))
+                                                        .build())
                                                 .build())
-                                        .build())
                                 .build())
                         .build(),
                 new AuditBuilder().setComment(delta.getDescription()).build(),
@@ -190,7 +190,8 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
         Object placementMap = metadata.get("placements");
         if (placementMap != null) {
             placements = ImmutableList.copyOf(
-                    JsonHelper.convert(placementMap, new TypeReference<Map<String, Object>>() {}).keySet());
+                    JsonHelper.convert(placementMap, new TypeReference<Map<String, Object>>() {
+                    }).keySet());
         } else {
             placements = ImmutableList.of();
         }
@@ -210,15 +211,15 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
         // Set up several filters based on the query attributes
 
         final Predicate<String> placementFilter = query.getPlacements().isEmpty()
-                ? Predicates.<String>alwaysTrue()
+                ? Predicates.alwaysTrue()
                 : Predicates.in(query.getPlacements());
 
         final Predicate<Boolean> droppedFilter = query.isIncludeDropped()
-                ? Predicates.<Boolean>alwaysTrue()
+                ? Predicates.alwaysTrue()
                 : Predicates.equalTo(false);
 
         final Predicate<Boolean> facadeFilter = query.isIncludeFacades()
-                ? Predicates.<Boolean>alwaysTrue()
+                ? Predicates.alwaysTrue()
                 : Predicates.equalTo(false);
 
         return new Iterable<TableReportEntry>() {
@@ -337,7 +338,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Nullable
     private TableReportEntryTable convertToTableReportEntryTable(
-            String tableId,  Map<String, Object> map, Predicate<String> placementFilter,
+            String tableId, Map<String, Object> map, Predicate<String> placementFilter,
             Predicate<Boolean> droppedFilter, Predicate<Boolean> facadeFilter) {
 
         // Check the filters for placement, dropped, and facade
@@ -347,12 +348,12 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
             return null;
         }
 
-        Boolean dropped = Objects.firstNonNull((Boolean) map.get("dropped"), false);
+        Boolean dropped = Optional.ofNullable((Boolean) map.get("dropped")).orElse(false);
         if (!droppedFilter.apply(dropped)) {
             return null;
         }
 
-        Boolean facade = Objects.firstNonNull((Boolean) map.get("facade"), false);
+        Boolean facade = Optional.ofNullable((Boolean) map.get("facade")).orElse(false);
         if (!facadeFilter.apply(facade)) {
             return null;
         }
@@ -368,7 +369,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
         if (shardJson != null) {
             Map<String, TableStatistics> shardMap = JsonHelper.convert(
                     shardJson, new TypeReference<Map<String, TableStatistics>>() {
-            });
+                    });
 
             for (Map.Entry<String, TableStatistics> entry : shardMap.entrySet()) {
                 Integer shardId = Integer.parseInt(entry.getKey());

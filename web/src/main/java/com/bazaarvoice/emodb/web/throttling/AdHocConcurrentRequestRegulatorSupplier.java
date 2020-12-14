@@ -2,13 +2,13 @@ package com.bazaarvoice.emodb.web.throttling;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ContainerRequest;
 
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentMap;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Implementation of {@link ConcurrentRequestRegulatorSupplier} which supplies regulators which will throttle based
@@ -23,7 +23,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
     private final Meter _meter;
 
     public AdHocConcurrentRequestRegulatorSupplier(AdHocThrottleManager throttleStore, MetricRegistry metricRegistry) {
-        _throttleStore = checkNotNull(throttleStore, "throttleStore");
+        _throttleStore = Objects.requireNonNull(throttleStore, "throttleStore");
         _meter = metricRegistry.meter(MetricRegistry.name("bv.emodb.web", "Throttle", "adhoc-throttled-requests"));
     }
 
@@ -55,7 +55,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
 
             while (cachedRegulator == null || !cachedRegulator.throttle.equals(updatedValue.throttle)) {
                 if (cachedRegulator == null) {
-                    cachedRegulator = Objects.firstNonNull(_regulatorCache.putIfAbsent(endpoint, updatedValue), updatedValue);
+                    cachedRegulator = Optional.ofNullable(_regulatorCache.putIfAbsent(endpoint, updatedValue)).orElse(updatedValue);
                 } else if (_regulatorCache.replace(endpoint, cachedRegulator, updatedValue)) {
                     cachedRegulator = updatedValue;
                 } else {

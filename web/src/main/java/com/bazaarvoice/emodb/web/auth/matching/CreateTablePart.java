@@ -4,13 +4,13 @@ import com.bazaarvoice.emodb.auth.permissions.matching.Implier;
 import com.bazaarvoice.emodb.auth.permissions.matching.MatchingPart;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableMap;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * This part is used for verifying permissions for creating a new table by other permissions.  As such no permissions
@@ -25,9 +25,9 @@ public class CreateTablePart extends EmoMatchingPart {
     @JsonCreator
     public CreateTablePart(@JsonProperty("name") String name, @JsonProperty("placement") String placement,
                            @JsonProperty("attributes") Map<String, ?> attributes) {
-        _name = checkNotNull(name, "name");
-        _placement = checkNotNull(placement, "placement");
-        _attributes = Objects.firstNonNull(attributes, ImmutableMap.<String, Object>of());
+        _name = Objects.requireNonNull(name, "name");
+        _placement = Objects.requireNonNull(placement, "placement");
+        _attributes = Optional.ofNullable(attributes).orElse(Collections.EMPTY_MAP);
     }
 
     public String getName() {

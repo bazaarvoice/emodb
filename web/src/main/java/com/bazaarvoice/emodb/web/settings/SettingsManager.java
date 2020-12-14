@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
@@ -29,8 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
 /**
@@ -79,7 +79,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                 _dataStore.get().createTable(
                         settingsTable,
                         new TableOptionsBuilder().setPlacement(_settingsTablePlacement).build(),
-                        ImmutableMap.<String, Object>of(),
+                        ImmutableMap.of(),
                         new AuditBuilder().setLocalHost().setComment("create settings table").build());
             }
             return settingsTable;
@@ -90,7 +90,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                     @Override
                     public Object load(String name) throws Exception {
                         RegisteredSetting<?> registeredSetting = _registeredSettings.get(name);
-                        checkNotNull(registeredSetting, "Cache value lookup for unregistered setting: %s", name);
+                        Objects.requireNonNull(registeredSetting, "Cache value lookup for unregistered setting: " + name);
                         SettingMetadata<?> metadata = registeredSetting.metadata;
 
                         Map<String, Object> valueMap = _dataStore.get().get(
@@ -100,7 +100,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                             return metadata.getDefaultValue();
                         }
                         Object value;
-                        int version = Objects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
+                        int version = Optional.ofNullable((Integer) valueMap.get(VERSION_ATTRIBUTE)).orElse(-1);
                         if (version == CURRENT_SETTING_VERSION) {
                             String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
                             value = JsonHelper.fromJson(rawValue, metadata.getTypeReference());
@@ -123,9 +123,9 @@ public class SettingsManager implements SettingsRegistry, Settings {
 
     @Override
     public <T> Setting<T> register(String name, TypeReference<T> typeReference, T defaultValue) {
-        checkNotNull(name, "name");
-        checkNotNull(typeReference, "typeReference");
-        checkNotNull(defaultValue, "defaultValue");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(typeReference, "typeReference");
+        Objects.requireNonNull(defaultValue, "defaultValue");
 
         SettingMetadata<T> metadata = new SettingMetadata<>(name, typeReference, defaultValue);
         Setting<T> setting = createSetting(metadata);
@@ -166,9 +166,9 @@ public class SettingsManager implements SettingsRegistry, Settings {
     }
 
     private <T> void set(SettingMetadata<T> metadata, T value) {
-        checkNotNull(value, "value");
+        Objects.requireNonNull(value, "value");
 
-        Delta delta =  Deltas.mapBuilder()
+        Delta delta = Deltas.mapBuilder()
                 .put(VALUE_ATTRIBUTE, JsonHelper.asJson(value))
                 .put(VERSION_ATTRIBUTE, CURRENT_SETTING_VERSION)
                 .build();
@@ -188,8 +188,8 @@ public class SettingsManager implements SettingsRegistry, Settings {
 
     @Override
     public <T> Setting<T> getSetting(String name, TypeReference<T> typeReference) {
-        checkNotNull(name, "name");
-        checkNotNull(typeReference, "typeReference");
+        Objects.requireNonNull(name, "name");
+        Objects.requireNonNull(typeReference, "typeReference");
 
         RegisteredSetting<?> registered = _registeredSettings.get(name);
         if (registered != null && registered.metadata.getTypeReference().getType().equals(typeReference.getType())) {
@@ -209,7 +209,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
     }
 
     private <T> TypeReference<T> asTypeReference(Class<T> clazz) {
-        checkNotNull(clazz, "class");
+        Objects.requireNonNull(clazz, "class");
         return new TypeReference<T>() {
             @Override
             public Type getType() {
