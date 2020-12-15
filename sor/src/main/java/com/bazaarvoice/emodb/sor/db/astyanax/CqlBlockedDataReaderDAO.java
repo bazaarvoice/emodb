@@ -8,8 +8,20 @@ import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.bazaarvoice.emodb.sor.db.*;
-import com.bazaarvoice.emodb.sor.db.cql.*;
+import com.bazaarvoice.emodb.sor.db.DAOUtils;
+import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
+import com.bazaarvoice.emodb.sor.db.Key;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanOptions;
+import com.bazaarvoice.emodb.sor.db.MultiTableScanResult;
+import com.bazaarvoice.emodb.sor.db.Record;
+import com.bazaarvoice.emodb.sor.db.RecordEntryRawMetadata;
+import com.bazaarvoice.emodb.sor.db.ScanRange;
+import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
+import com.bazaarvoice.emodb.sor.db.cql.CachingRowGroupIterator;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
+import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
+import com.bazaarvoice.emodb.sor.db.cql.CqlReaderDAODelegate;
+import com.bazaarvoice.emodb.sor.db.cql.RowGroupResultSetIterator;
 import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -23,23 +35,37 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import com.codahale.metrics.annotation.Timed;
-import com.datastax.driver.core.*;
+import com.datastax.driver.core.CodecRegistry;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.ProtocolVersion;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.querybuilder.QueryBuilder;
 import com.datastax.driver.core.querybuilder.Select;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.*;
+import com.google.common.collect.AbstractIterator;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.PeekingIterator;
+import com.google.common.collect.Range;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.util.ByteBufferRangeImpl;
-import java.util.concurrent.TimeoutException;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,13 +73,30 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Instant;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Spliterators;
+import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import static com.datastax.driver.core.querybuilder.QueryBuilder.*;
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.asc;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.desc;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.eq;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gt;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.gte;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.in;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lt;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.lte;
+import static com.datastax.driver.core.querybuilder.QueryBuilder.token;
+import static java.util.Objects.requireNonNull;
+import static java.util.Optional.ofNullable;
 
 // Delegates to AstyanaxReaderDAO for non-CQL stuff
 // Once we transition fully, we will stop delegating to Astyanax
@@ -88,7 +131,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
     public CqlBlockedDataReaderDAO(@CqlReaderDAODelegate DataReaderDAO delegate, PlacementCache placementCache,
                                    CqlDriverConfiguration driverConfig, ChangeEncoder changeEncoder,
                                    MetricRegistry metricRegistry, DAOUtils daoUtils, @PrefixLength int deltaPrefixLength) {
-        _astyanaxReaderDAO = checkNotNull(delegate, "delegate");
+        _astyanaxReaderDAO = requireNonNull(delegate, "delegate");
         _placementCache = placementCache;
         _driverConfig = driverConfig;
         _changeEncoder = changeEncoder;
@@ -108,12 +151,12 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
 
     @Inject
     public void setUseCqlforMultiGets(@CqlForMultiGets Supplier<Boolean> useCqlForMultiGets) {
-        _useCqlForMultiGets = checkNotNull(useCqlForMultiGets, "useCqlForMultiGets");
+        _useCqlForMultiGets = requireNonNull(useCqlForMultiGets, "useCqlForMultiGets");
     }
 
     @Inject
     public void setUseCqlforScans(@CqlForScans Supplier<Boolean> useCqlForScans) {
-        _useCqlForScans = checkNotNull(useCqlForScans, "useCqlForScans");
+        _useCqlForScans = requireNonNull(useCqlForScans, "useCqlForScans");
     }
 
     /**
@@ -122,8 +165,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
      */
     @Override
     public Record read(Key key, ReadConsistency consistency) {
-        checkNotNull(key, "key");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(key, "key");
+        requireNonNull(consistency, "consistency");
 
         AstyanaxTable table = (AstyanaxTable) key.getTable();
         AstyanaxStorage storage = table.getReadStorage();
@@ -139,8 +182,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
             return _astyanaxReaderDAO.readAll(keys, consistency);
         }
 
-        checkNotNull(keys, "keys");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(keys, "keys");
+        requireNonNull(consistency, "consistency");
 
         // Group the keys by placement.  Each placement will result in a separate set of queries.  Dedup keys.
         Multimap<DeltaPlacement, Key> placementMap = HashMultimap.create();
@@ -158,15 +201,15 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
 
     @Override
     public String getPlacementCluster(String placementName) {
-        checkNotNull(placementName, "placement");
+        requireNonNull(placementName, "placement");
 
         DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
         return placement.getKeyspace().getClusterName();
     }
 
     private Record read(Key key, ByteBuffer rowKey, ReadConsistency consistency, DeltaPlacement placement) {
-        checkNotNull(key, "key");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(key, "key");
+        requireNonNull(consistency, "consistency");
 
         BlockedDeltaTableDDL tableDDL = placement.getBlockedDeltaTableDDL();
 
@@ -301,7 +344,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
      * Read a batch of keys that all belong to the same placement (ColumnFamily).
      */
     private Iterator<Record> readBatch(final DeltaPlacement placement, final Collection<Key> keys, final ReadConsistency consistency) {
-        checkNotNull(keys, "keys");
+        requireNonNull(keys, "keys");
 
         // Convert the keys to ByteBuffer Cassandra row keys
         List<Map.Entry<ByteBuffer, Key>> rowKeys = Lists.newArrayListWithCapacity(keys.size());
@@ -340,8 +383,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
      */
     private Iterator<Record> rowQuery(final List<Map.Entry<ByteBuffer, Key>> rowKeys, final ReadConsistency consistency,
                                       final DeltaPlacement placement) {
-        List<ByteBuffer> keys = Lists.newArrayListWithCapacity(rowKeys.size());
-        final Map<ByteBuffer, Key> rawKeyMap = Maps.newHashMap();
+        List<ByteBuffer> keys = new ArrayList<>(rowKeys.size());
+        final Map<ByteBuffer, Key> rawKeyMap = new HashMap<>();
         for (Map.Entry<ByteBuffer, Key> entry : rowKeys) {
             keys.add(entry.getKey());
             rawKeyMap.put(entry.getKey(), entry.getValue());
@@ -460,8 +503,8 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
             return _astyanaxReaderDAO.scan(tbl, fromKeyExclusive, ignore_limit, consistency);
         }
 
-        checkNotNull(tbl, "table");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(consistency, "consistency");
 
         final AstyanaxTable table = (AstyanaxTable) tbl;
         AstyanaxStorage storage = table.getReadStorage();
@@ -492,9 +535,9 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
             return _astyanaxReaderDAO.getSplit(tbl, split, fromKeyExclusive, ignore_limit, consistency);
         }
 
-        checkNotNull(tbl, "table");
-        checkNotNull(split, "split");
-        checkNotNull(consistency, "consistency");
+        requireNonNull(tbl, "table");
+        requireNonNull(split, "split");
+        requireNonNull(consistency, "consistency");
 
         ByteBufferRange splitRange = SplitFormat.decode(split);
 
@@ -521,7 +564,9 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
 
         // Note: if Cassandra is asked to perform a token range query where start >= end it will wrap
         // around which is absolutely *not* what we want.
-        checkArgument(AstyanaxStorage.compareKeys(startToken, endToken) < 0, "Cannot scan rows which loop from maximum- to minimum-token");
+        if (AstyanaxStorage.compareKeys(startToken, endToken) >= 0) {
+            throw new IllegalArgumentException("Cannot scan rows which loop from maximum- to minimum-token");
+        }
 
         BlockedDeltaTableDDL tableDDL = placement.getBlockedDeltaTableDDL();
 
@@ -563,11 +608,11 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
             return _astyanaxReaderDAO.multiTableScan(query, tables, limit, consistency, cutoffTime);
         }
 
-        checkNotNull(query, "query");
-        String placementName = checkNotNull(query.getPlacement(), "placement");
+        requireNonNull(query, "query");
+        String placementName = requireNonNull(query.getPlacement(), "placement");
         final DeltaPlacement placement = (DeltaPlacement) _placementCache.get(placementName);
 
-        ScanRange scanRange = Objects.firstNonNull(query.getScanRange(), ScanRange.all());
+        ScanRange scanRange = ofNullable(query.getScanRange()).orElse(ScanRange.all());
 
         // Since the range may wrap from high to low end of the token range we need to unwrap it
         List<ScanRange> ranges = scanRange.unwrapped();
@@ -679,7 +724,7 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
                     }
                 }
 
-                return Iterators.peekingIterator(Iterators.<Iterable<Row>>emptyIterator());
+                return Iterators.peekingIterator(Iterators.emptyIterator());
             }
         });
     }
@@ -773,9 +818,11 @@ public class CqlBlockedDataReaderDAO implements DataReaderDAO, StorageReaderDAO 
     @Override
     public Iterator<Change> readTimeline(Key key, boolean includeContentData, UUID start, UUID end,
                                          boolean reversed, long limit, ReadConsistency readConsistency) {
-        checkNotNull(key, "key");
-        checkArgument(limit > 0, "Limit must be >0");
-        checkNotNull(readConsistency, "consistency");
+        requireNonNull(key, "key");
+        if (limit <= 0) {
+            throw new IllegalArgumentException("Limit must be >0");
+        }
+        requireNonNull(readConsistency, "consistency");
 
         // Even though the API allows for a long limit CQL only supports integer values.  Anything longer than MAX_INT
         // is impractical given that a single Cassandra record must practically hold less than 2G rows since a wide row

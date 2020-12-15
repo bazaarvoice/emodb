@@ -72,11 +72,9 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -96,12 +94,14 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Optional.ofNullable;
 
 /**
  * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#SCANNER}
@@ -196,11 +196,11 @@ public class ScanUploadModule extends PrivateModule {
     protected String provideScanRequestTablePlacement(@SystemTablePlacement String tablePlacement) {
         return tablePlacement;
     }
-    
+
     @Provides
     @Singleton
     protected Region provideAmazonRegion() {
-        return Objects.firstNonNull(Regions.getCurrentRegion(), Region.getRegion(Regions.US_EAST_1));
+        return ofNullable(Regions.getCurrentRegion()).orElse(Region.getRegion(Regions.US_EAST_1));
     }
 
     @Provides
@@ -323,7 +323,7 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    @Named ("plugin")
+    @Named("plugin")
     protected List<StashStateListener> providePluginStashStateListeners(Environment environment, PluginServerMetadata metadata) {
         List<PluginConfiguration> pluginConfigs = _config.getNotifications().getStashStateListenerPluginConfigurations();
         if (pluginConfigs.isEmpty()) {
@@ -346,7 +346,7 @@ public class ScanUploadModule extends PrivateModule {
     protected StashStateListener provideStashStateListener(MetricsStashStateListener metricsListener,
                                                            Optional<SNSStashStateListener> snsListener,
                                                            @Named("plugin") List<StashStateListener> pluginListeners) {
-        List<StashStateListener> listeners = Lists.newArrayListWithCapacity(3);
+        List<StashStateListener> listeners = new ArrayList<>(3);
         listeners.add(metricsListener);
         if (snsListener.isPresent()) {
             listeners.add(snsListener.get());
@@ -384,7 +384,7 @@ public class ScanUploadModule extends PrivateModule {
     @Singleton
     protected ScanCountListener provideScanCountListener(MetricsScanCountListener metricsListener,
                                                          Optional<CloudWatchScanCountListener> cloudWatchScanCountListener) {
-        List<ScanCountListener> listeners = Lists.newArrayListWithCapacity(2);
+        List<ScanCountListener> listeners = new ArrayList<>(2);
         listeners.add(metricsListener);
         if (cloudWatchScanCountListener.isPresent()) {
             listeners.add(cloudWatchScanCountListener.get());
@@ -394,7 +394,7 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    @Named ("ScannerAPIKey")
+    @Named("ScannerAPIKey")
     protected String provideScannerApiKey(@ServerCluster String cluster) {
         if (!_config.getScannerApiKey().isPresent()) {
             return "anonymous";
@@ -409,7 +409,9 @@ public class ScanUploadModule extends PrivateModule {
         return scannerApiKey;
     }
 
-    /** Provider used internally when EmoDB queues are configured */
+    /**
+     * Provider used internally when EmoDB queues are configured
+     */
     public static class QueueScanWorkflowProvider implements Provider<ScanWorkflow> {
         private final CuratorFramework _curator;
         private final String _cluster;
@@ -422,9 +424,9 @@ public class ScanUploadModule extends PrivateModule {
 
         @Inject
         public QueueScanWorkflowProvider(@Global CuratorFramework curator, @ServerCluster String cluster,
-                                         Client client, @Named ("ScannerAPIKey") String apiKey,
-                                         @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
-                                         @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName,
+                                         Client client, @Named("ScannerAPIKey") String apiKey,
+                                         @Named("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                         @Named("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName,
                                          Environment environment, MetricRegistry metricRegistry) {
             _curator = curator;
             _cluster = cluster;
@@ -456,7 +458,9 @@ public class ScanUploadModule extends PrivateModule {
         }
     }
 
-    /** Provider used internally when SQS queues are configured */
+    /**
+     * Provider used internally when SQS queues are configured
+     */
     public static class SQSScanWorkflowProvider implements Provider<ScanWorkflow> {
         private final AmazonSQS _amazonSQS;
         private final String _pendingScanRangeQueueName;
@@ -464,8 +468,8 @@ public class ScanUploadModule extends PrivateModule {
 
         @Inject
         public SQSScanWorkflowProvider(@ServerCluster String cluster, AmazonSQS amazonSQS,
-                                       @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
-                                       @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
+                                       @Named("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                       @Named("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
             _amazonSQS = amazonSQS;
             _pendingScanRangeQueueName = pendingScanRangeQueueName.or(String.format("emodb-pending-scan-ranges-%s", cluster));
             _completeScanRangeQueueName = completeScanRangeQueueName.or(String.format("emodb-complete-scan-ranges-%s", cluster));
