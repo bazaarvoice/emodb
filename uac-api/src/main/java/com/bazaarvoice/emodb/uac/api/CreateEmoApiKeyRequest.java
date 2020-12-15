@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.uac.api;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.collect.ImmutableSet;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -14,7 +14,7 @@ public class CreateEmoApiKeyRequest extends UserAccessControlRequest {
 
     private String _owner;
     private String _description;
-    private Set<EmoRoleKey> _roles = ImmutableSet.of();
+    private Set<EmoRoleKey> _roles = Collections.EMPTY_SET;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public String getOwner() {
@@ -42,7 +42,7 @@ public class CreateEmoApiKeyRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoApiKeyRequest setRoles(Set<EmoRoleKey> roles) {
-        _roles = Optional.ofNullable(roles).orElse(ImmutableSet.of());
+        _roles = Optional.ofNullable(roles).orElse(Collections.EMPTY_SET);
         return this;
     }
 }

@@ -1,8 +1,9 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,19 +22,19 @@ public class CassandraReplication {
             // This algorithm should match the NetworkTopologyStrategy.getReplicationFactor() method.
             // Strategy options is a Map of data center name -> replication factor.
             int replicationFactor = 0;
-            ImmutableMap.Builder<String, Integer> dataCenterBuilder = ImmutableMap.builder();
+            Map<String, Integer> dataCenterMap = new HashMap<>();
             for (Map.Entry<String, String> option : keyspaceDefinition.getStrategyOptions().entrySet()) {
                 String dataCenter = option.getKey();
                 int repFactor = Integer.parseInt(option.getValue());
                 replicationFactor += repFactor;
-                dataCenterBuilder.put(dataCenter, repFactor);
+                dataCenterMap.put(dataCenter, repFactor);
             }
             _replicationFactor = replicationFactor;
-            _replicationFactorByDataCenter = dataCenterBuilder.build();
+            _replicationFactorByDataCenter = Collections.unmodifiableMap(dataCenterMap);
         } else {
             // SimpleStrategy and OldNetworkTopologyStrategy both require a 'replication_factor' setting
             _replicationFactor = Integer.parseInt(keyspaceDefinition.getStrategyOptions().get("replication_factor"));
-            _replicationFactorByDataCenter = ImmutableMap.of();
+            _replicationFactorByDataCenter = Collections.EMPTY_MAP;
         }
     }
 

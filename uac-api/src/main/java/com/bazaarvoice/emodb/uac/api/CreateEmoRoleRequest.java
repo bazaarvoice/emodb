@@ -3,8 +3,8 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.google.common.collect.ImmutableSet;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -20,7 +20,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     private EmoRoleKey _roleKey;
     private String _name;
     private String _description;
-    private Set<String> _permissions = ImmutableSet.of();
+    private Set<String> _permissions = Collections.EMPTY_SET;
 
     @JsonCreator
     public CreateEmoRoleRequest() {
@@ -71,7 +71,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setPermissions(Set<String> permissions) {
-        _permissions = Optional.ofNullable(permissions).orElse(ImmutableSet.of());
+        _permissions = Optional.ofNullable(permissions).orElse(Collections.EMPTY_SET);
         return this;
     }
 }

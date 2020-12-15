@@ -27,7 +27,6 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Strings;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -38,7 +37,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkArgument;
 
 /**
  * Client implementation of {@link AuthUserAccessControl} which makes REST calls to the Emo service.
@@ -77,8 +75,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<EmoRole>>() {
-                    });
+                    .get(new TypeReference<Iterator<EmoRole>>() {});
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -249,7 +246,9 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     public CreateEmoApiKeyResponse createApiKey(String apiKey, CreateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
         Objects.requireNonNull(request, "request");
-        checkArgument(!Strings.isNullOrEmpty(request.getOwner()), "Non-empty owner is required");
+        if (request.getOwner() == null || request.getOwner().isEmpty()) {
+            throw new IllegalArgumentException("Non-empty owner is required for API-KEY creation");
+        }
 
         try {
             URI uri = _uac.clone()
@@ -277,7 +276,9 @@ public class UserAccessControlClient implements AuthUserAccessControl {
             throws EmoApiKeyNotFoundException {
         Objects.requireNonNull(request, "request");
         String id = Objects.requireNonNull(request.getId(), "id");
-        checkArgument(!request.isOwnerPresent() || !Strings.isNullOrEmpty(request.getOwner()), "Non-empty owner is required");
+        if (request.isOwnerPresent() && request.getOwner() != null && request.getOwner().isEmpty()) {
+            throw new IllegalArgumentException("Non-empty owner is required for API-KEY update");
+        }
 
         try {
             URI uri = _uac.clone()

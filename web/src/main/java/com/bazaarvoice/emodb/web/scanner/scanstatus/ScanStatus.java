@@ -6,16 +6,16 @@ import com.bazaarvoice.emodb.web.scanner.ScanOptions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.net.URI;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -60,9 +60,9 @@ public class ScanStatus {
         _tableSnapshotCreated = tableSnapshotCreated;
         _canceled = canceled;
         _startTime = startTime;
-        _pendingScanRanges = Optional.ofNullable(pendingScanRanges).orElse(ImmutableList.of());
-        _activeScanRanges = Optional.ofNullable(activeScanRanges).orElse(ImmutableList.of());
-        _completeScanRanges = Optional.ofNullable(completeScanRanges).orElse(ImmutableList.of());
+        _pendingScanRanges = Optional.ofNullable(pendingScanRanges).orElse(Collections.EMPTY_LIST);
+        _activeScanRanges = Optional.ofNullable(activeScanRanges).orElse(Collections.EMPTY_LIST);
+        _completeScanRanges = Optional.ofNullable(completeScanRanges).orElse(Collections.EMPTY_LIST);
         _completeTime = completeTime;
     }
 
@@ -145,7 +145,7 @@ public class ScanStatus {
 
     public StashMetadata asPluginStashMetadata() {
         // Convert destinations to URIs
-        Set<URI> destinations = Sets.newHashSet();
+        Set<URI> destinations = new HashSet<>();
         for (ScanDestination destination : getOptions().getDestinations()) {
             if (destination.isDiscarding()) {
                 // Replace a discarding destination with a URI to /dev/null
@@ -171,7 +171,7 @@ public class ScanStatus {
         return _scanId.equals(that._scanId) &&
                 _canceled == that._canceled &&
                 _startTime.equals(that._startTime) &&
-                Objects.equal(_completeTime, that._completeTime) &&
+                Objects.equals(_completeTime, that._completeTime) &&
                 _options.equals(that._options) &&
                 _activeScanRanges.equals(that._activeScanRanges) &&
                 _completeScanRanges.equals(that._completeScanRanges) &&

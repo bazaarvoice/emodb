@@ -8,7 +8,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.netflix.astyanax.ColumnListMutation;
 import com.netflix.astyanax.Execution;
@@ -31,6 +30,7 @@ import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +45,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
     private static final ColumnFamily<UUID, ByteBuffer> CF_DEDUP_DATA = new ColumnFamily<>("dedup_data",
             TimeUUIDSerializer.get(), ByteBufferSerializer.get());
 
-    private static ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
+    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0);
 
     private final CassandraKeyspace _keyspace;
     private final ChannelConfiguration _channelConfiguration;
@@ -80,7 +80,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
 
     @Override
     public Map<UUID, String> loadSegments(String queue) {
-        Map<UUID, String> resultMap = Maps.newHashMap();
+        Map<UUID, String> resultMap = new HashMap<>();
         Iterator<Column<UUID>> iter = executePaginated(
                 _keyspace.prepareQuery(CF_DEDUP_MD, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(queue)
@@ -111,7 +111,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
         // Finding the max using a reversed column range shouldn't have to worry about skipping tombstones since
         // we always delete smaller column values before deleting larger column values--scanning will hit the max
         // before needing to skip over tombstones.
-        Map<UUID, ByteBuffer> resultMap = Maps.newHashMap();
+        Map<UUID, ByteBuffer> resultMap = new HashMap<>();
         for (List<UUID> batch : Iterables.partition(dataIds, 10)) {
             Rows<UUID, ByteBuffer> rows = execute(
                     _keyspace.prepareQuery(CF_DEDUP_DATA, ConsistencyLevel.CL_LOCAL_QUORUM)

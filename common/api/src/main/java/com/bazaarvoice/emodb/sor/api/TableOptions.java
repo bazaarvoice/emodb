@@ -15,7 +15,7 @@ public final class TableOptions {
 
     TableOptions(@JsonProperty("placement") String placement, @JsonProperty("facades") List<FacadeOptions> facadeOptions) {
         _placement = Objects.requireNonNull(placement, "Table option is required: placement");
-        _facades = Optional.ofNullable(facadeOptions).orElse(Collections.emptyList());
+        _facades = Optional.ofNullable(facadeOptions).orElse(Collections.EMPTY_LIST);
     }
 
     /**

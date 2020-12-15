@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -22,7 +22,7 @@ public class EmoRole {
     private final EmoRoleKey _id;
     private String _name;
     private String _description;
-    private Set<String> _permissions = ImmutableSet.of();
+    private Set<String> _permissions = Collections.EMPTY_SET;
 
     @JsonCreator
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {

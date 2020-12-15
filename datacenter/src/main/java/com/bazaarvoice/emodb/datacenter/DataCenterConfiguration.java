@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.datacenter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -52,7 +52,7 @@ public class DataCenterConfiguration {
      **/
     @Valid
     @NotNull
-    private Set<String> _ignoredDataCenters = ImmutableSet.of();
+    private Set<String> _ignoredDataCenters = Collections.EMPTY_SET;
 
     public boolean isSystemDataCenter() {
         return _currentDataCenter.equals(_systemDataCenter);

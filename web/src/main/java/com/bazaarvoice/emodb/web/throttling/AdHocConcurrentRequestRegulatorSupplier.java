@@ -2,11 +2,11 @@ package com.bazaarvoice.emodb.web.throttling;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Maps;
 import com.sun.jersey.spi.container.ContainerRequest;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 
@@ -19,7 +19,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
     private final static String SEMAPHORE_PROPERTY = AdHocConcurrentRequestRegulatorSupplier.class.getName() + ".semaphore";
 
     private final AdHocThrottleManager _throttleStore;
-    private final ConcurrentMap<AdHocThrottleEndpoint, CachedRegulator> _regulatorCache = Maps.newConcurrentMap();
+    private final ConcurrentMap<AdHocThrottleEndpoint, CachedRegulator> _regulatorCache = new ConcurrentHashMap<>();
     private final Meter _meter;
 
     public AdHocConcurrentRequestRegulatorSupplier(AdHocThrottleManager throttleStore, MetricRegistry metricRegistry) {

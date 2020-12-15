@@ -10,15 +10,14 @@ import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -68,16 +67,16 @@ public class EmoDataCenterDAO implements DataCenterDAO {
     }
 
     private Map<String, DataCenter> deserializeAll(Map<String, Object> json) {
-        ImmutableMap.Builder<String, DataCenter> builder = ImmutableMap.builder();
+        Map<String, DataCenter> m = new HashMap<>();
         for (Map.Entry<String, Object> entry : json.entrySet()) {
             if (!entry.getKey().startsWith("~")) {
                 DataCenter dataCenter = deserialize(entry);
                 if (dataCenter != null) {
-                    builder.put(dataCenter.getName(), dataCenter);
+                    m.put(dataCenter.getName(), dataCenter);
                 }
             }
         }
-        return builder.build();
+        return Collections.unmodifiableMap(m);
     }
 
     @Nullable
@@ -99,18 +98,20 @@ public class EmoDataCenterDAO implements DataCenterDAO {
     }
 
     private Map.Entry<String, Object> serialize(DataCenter dataCenter) {
-        return Maps.immutableEntry(dataCenter.getName(), ImmutableMap.<String, Object>builder()
-                .put("cluster", _cluster)
-                .put("serviceUri", dataCenter.getServiceUri().toString())
-                .put("adminUri", dataCenter.getAdminUri().toString())
-                .put("system", dataCenter.isSystem())
-                .put("cassandraName", dataCenter.getCassandraName())
-                .put("cassandraKeyspaces", sorted(dataCenter.getCassandraKeyspaces()))
-                .build());
+        Map<String, Object> m = new HashMap<>();
+        m.put("cluster", _cluster);
+        m.put("serviceUri", dataCenter.getServiceUri().toString());
+        m.put("adminUri", dataCenter.getAdminUri().toString());
+        m.put("system", dataCenter.isSystem());
+        m.put("cassandraName", dataCenter.getCassandraName());
+        m.put("cassandraKeyspaces", sorted(dataCenter.getCassandraKeyspaces()));
+        Map<String, Object> result = new HashMap<>();
+        result.put(dataCenter.getName(), m);
+        return result.entrySet().stream().findFirst().get();
     }
 
-    private List<String> sorted(Collection<String> col) {
-        List<String> list = Lists.newArrayList(col);
+    private static List<String> sorted(Collection<String> col) {
+        List<String> list = new ArrayList<>(col);
         Collections.sort(list);
         return list;
     }

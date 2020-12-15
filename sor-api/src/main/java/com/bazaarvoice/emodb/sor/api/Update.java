@@ -4,14 +4,12 @@ import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkArgument;
 
 public final class Update {
     private final String _table;
@@ -30,14 +28,20 @@ public final class Update {
                   @JsonProperty("changeId") @Nullable UUID changeId, @JsonProperty("delta") Delta delta,
                   @JsonProperty("audit") Audit audit, @JsonProperty("consistency") @Nullable WriteConsistency consistency) {
         _table = Objects.requireNonNull(table, "table");
-        checkArgument(Names.isLegalTableName(table),
-                "Table name must be a lowercase ASCII string between 1 and 255 characters in length. " +
-                        "Allowed punctuation characters are -.:@_ and the table name may not start with a single underscore character. " +
-                        "An example of a valid table name would be 'review:testcustomer'.");
-        checkArgument(!Strings.isNullOrEmpty(key), "key must be a non-empty string");
+        if (!Names.isLegalTableName(table)) {
+            throw new IllegalArgumentException(
+                    "Table name must be a lowercase ASCII string between 1 and 255 characters in length. " +
+                            "Allowed punctuation characters are -.:@_ and the table name may not start with a single underscore character. " +
+                            "An example of a valid table name would be 'review:testcustomer'.");
+        }
+        if (key == null || key.isEmpty()) {
+            throw new IllegalArgumentException("key must be a non-empty string");
+        }
         _key = key;
         _changeId = Optional.ofNullable(changeId).orElse(TimeUUIDs.newUUID());
-        checkArgument(_changeId.version() == 1, "The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
+        if (_changeId.version() != 1) {
+            throw new IllegalArgumentException("The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
+        }
         _delta = Objects.requireNonNull(delta, "delta");
         _audit = Objects.requireNonNull(audit, "audit");
         _consistency = Optional.ofNullable(consistency).orElse(WriteConsistency.STRONG);

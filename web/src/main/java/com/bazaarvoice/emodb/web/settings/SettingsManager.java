@@ -19,19 +19,19 @@ import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
-import static com.google.common.base.Preconditions.checkState;
 
 /**
  * Implementations of {@link SettingsRegistry} and {@link Settings} that is backed by a system table.  Each
@@ -55,7 +55,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
     private final String VERSION_ATTRIBUTE = "settingVersion";
     private final int CURRENT_SETTING_VERSION = 1;
 
-    private final Map<String, RegisteredSetting<?>> _registeredSettings = Maps.newConcurrentMap();
+    private final Map<String, RegisteredSetting<?>> _registeredSettings = new ConcurrentHashMap<>();
     private final LoadingCache<String, Object> _settingsCache;
     private final Supplier<DataStore> _dataStore;
     private final Supplier<String> _settingsTable;
@@ -79,7 +79,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                 _dataStore.get().createTable(
                         settingsTable,
                         new TableOptionsBuilder().setPlacement(_settingsTablePlacement).build(),
-                        ImmutableMap.of(),
+                        Collections.EMPTY_MAP,
                         new AuditBuilder().setLocalHost().setComment("create settings table").build());
             }
             return settingsTable;
@@ -133,8 +133,9 @@ public class SettingsManager implements SettingsRegistry, Settings {
 
         RegisteredSetting<?> registered = _registeredSettings.putIfAbsent(name, newSetting);
         if (registered != null) {
-            checkState(registered.metadata.equals(metadata),
-                    "Setting %s already registered with incompatible parameters", name);
+            if (!registered.metadata.equals(metadata)) {
+                throw new IllegalStateException("Setting " + name + " already registered with incompatible parameters");
+            }
             //noinspection unchecked
             return (Setting<T>) registered.setting;
         }
@@ -201,7 +202,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
 
     @Override
     public Map<String, Object> getAll() {
-        Map<String, Object> settings = Maps.newHashMap();
+        Map<String, Object> settings = new HashMap<>();
         for (RegisteredSetting<?> registered : _registeredSettings.values()) {
             settings.put(registered.metadata.getName(), registered.setting.get());
         }

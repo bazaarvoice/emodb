@@ -18,8 +18,6 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -29,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -128,7 +128,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                             assert SUBSCRIPTIONS.equals(key) : "All subscriptions cache should only be accessed by a single key";
 
                             Iterable<String> subscriptionNames = _delegate.getAllSubscriptionNames();
-                            ImmutableList.Builder<OwnedSubscription> subscriptionsBuilder = ImmutableList.builder();
+                            List<OwnedSubscription> subscriptionsBuilder = new ArrayList<>();
 
                             for (String name : subscriptionNames) {
                                 // As much as possible take advantage of already cached subscriptions
@@ -138,7 +138,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                 }
                             }
 
-                            List<OwnedSubscription> subscriptions = subscriptionsBuilder.build();
+                            List<OwnedSubscription> subscriptions = Collections.unmodifiableList(subscriptionsBuilder);
                             _subscriptionsReloaded.mark(subscriptions.size());
                             return subscriptions;
                         }
@@ -211,7 +211,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                         public Map<String, OwnedSubscription> load(String key) throws Exception {
                             // The actual cached object doesn't matter since this cache is only used for receiving
                             // invalidation messages.  Just need to provide a non-null value.
-                            return ImmutableMap.of();
+                            return Collections.EMPTY_MAP;
                         }
                     })
             ) {
