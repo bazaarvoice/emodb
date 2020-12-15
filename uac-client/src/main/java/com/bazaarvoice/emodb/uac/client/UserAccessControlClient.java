@@ -34,8 +34,9 @@ import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -62,7 +63,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     private final UriBuilder _uac;
 
     public UserAccessControlClient(URI endPoint, EmoClient client) {
-        _client = Objects.requireNonNull(client, "client");
+        _client = requireNonNull(client, "client");
         _uac = EmoUriBuilder.fromUri(endPoint);
     }
 
@@ -100,7 +101,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     @Override
     public EmoRole getRole(String apiKey, EmoRoleKey roleKey) {
-        Objects.requireNonNull(roleKey, "roleKey");
+        requireNonNull(roleKey, "roleKey");
         URI uri = _uac.clone()
                 .segment("role")
                 .segment(roleKey.getGroup())
@@ -123,8 +124,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public void createRole(String apiKey, CreateEmoRoleRequest request)
             throws EmoRoleExistsException {
-        Objects.requireNonNull(request, "request");
-        EmoRoleKey roleKey = Objects.requireNonNull(request.getRoleKey(), "roleKey");
+        requireNonNull(request, "request");
+        EmoRoleKey roleKey = requireNonNull(request.getRoleKey(), "roleKey");
         try {
             URI uri = _uac.clone()
                     .segment("role")
@@ -144,8 +145,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public void updateRole(String apiKey, UpdateEmoRoleRequest request)
             throws EmoRoleNotFoundException {
-        Objects.requireNonNull(request, "request");
-        EmoRoleKey roleKey = Objects.requireNonNull(request.getRoleKey(), "roleKey");
+        requireNonNull(request, "request");
+        EmoRoleKey roleKey = requireNonNull(request.getRoleKey(), "roleKey");
         try {
             URI uri = _uac.clone()
                     .segment("role")
@@ -165,7 +166,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public void deleteRole(String apiKey, EmoRoleKey roleKey)
             throws EmoRoleNotFoundException {
-        Objects.requireNonNull(roleKey, "roleKey");
+        requireNonNull(roleKey, "roleKey");
         try {
             URI uri = _uac.clone()
                     .segment("role")
@@ -184,8 +185,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public boolean checkRoleHasPermission(String apiKey, EmoRoleKey roleKey, String permission)
             throws EmoRoleNotFoundException {
-        Objects.requireNonNull(roleKey, "roleKey");
-        Objects.requireNonNull(permission, "permission");
+        requireNonNull(roleKey, "roleKey");
+        requireNonNull(permission, "permission");
         try {
             URI uri = _uac.clone()
                     .segment("role")
@@ -205,7 +206,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     @Override
     public EmoApiKey getApiKey(String apiKey, String id) {
-        Objects.requireNonNull(id, "id");
+        requireNonNull(id, "id");
         URI uri = _uac.clone()
                 .segment("api-key")
                 .segment(id)
@@ -219,7 +220,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     @Override
     public EmoApiKey getApiKeyByKey(String apiKey, String key) {
-        Objects.requireNonNull(key, "key");
+        requireNonNull(key, "key");
         URI uri = _uac.clone()
                 .segment("api-key")
                 .segment("_key")
@@ -245,7 +246,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public CreateEmoApiKeyResponse createApiKey(String apiKey, CreateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
-        Objects.requireNonNull(request, "request");
+        requireNonNull(request, "request");
         if (request.getOwner() == null || request.getOwner().isEmpty()) {
             throw new IllegalArgumentException("Non-empty owner is required for API-KEY creation");
         }
@@ -274,8 +275,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public void updateApiKey(String apiKey, UpdateEmoApiKeyRequest request)
             throws EmoApiKeyNotFoundException {
-        Objects.requireNonNull(request, "request");
-        String id = Objects.requireNonNull(request.getId(), "id");
+        requireNonNull(request, "request");
+        String id = requireNonNull(request.getId(), "id");
         if (request.isOwnerPresent() && request.getOwner() != null && request.getOwner().isEmpty()) {
             throw new IllegalArgumentException("Non-empty owner is required for API-KEY update");
         }
@@ -303,8 +304,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
 
     @Override
     public String migrateApiKey(String apiKey, MigrateEmoApiKeyRequest request) {
-        Objects.requireNonNull(request, "request");
-        String id = Objects.requireNonNull(request.getId(), "id");
+        requireNonNull(request, "request");
+        String id = requireNonNull(request.getId(), "id");
         try {
             URI uri = _uac.clone()
                     .segment("api-key")
@@ -332,7 +333,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public void deleteApiKey(String apiKey, String id)
             throws EmoApiKeyNotFoundException {
-        Objects.requireNonNull(id, "id");
+        requireNonNull(id, "id");
         try {
             URI uri = _uac.clone()
                     .segment("api-key")
@@ -350,8 +351,8 @@ public class UserAccessControlClient implements AuthUserAccessControl {
     @Override
     public boolean checkApiKeyHasPermission(String apiKey, String id, String permission)
             throws EmoApiKeyNotFoundException {
-        Objects.requireNonNull(id, "id");
-        Objects.requireNonNull(permission, "permission");
+        requireNonNull(id, "id");
+        requireNonNull(permission, "permission");
         try {
             URI uri = _uac.clone()
                     .segment("api-key")

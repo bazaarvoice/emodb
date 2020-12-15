@@ -4,10 +4,11 @@ import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.sun.jersey.spi.container.ContainerRequest;
 
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -23,7 +24,7 @@ public class AdHocConcurrentRequestRegulatorSupplier implements ConcurrentReques
     private final Meter _meter;
 
     public AdHocConcurrentRequestRegulatorSupplier(AdHocThrottleManager throttleStore, MetricRegistry metricRegistry) {
-        _throttleStore = Objects.requireNonNull(throttleStore, "throttleStore");
+        _throttleStore = requireNonNull(throttleStore, "throttleStore");
         _meter = metricRegistry.meter(MetricRegistry.name("bv.emodb.web", "Throttle", "adhoc-throttled-requests"));
     }
 

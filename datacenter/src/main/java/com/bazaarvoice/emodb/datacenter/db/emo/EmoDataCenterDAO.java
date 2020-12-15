@@ -20,8 +20,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -37,8 +38,8 @@ public class EmoDataCenterDAO implements DataCenterDAO {
 
     @Inject
     public EmoDataCenterDAO(DataStore dataStore, @ServerCluster String cluster) {
-        _dataStore = Objects.requireNonNull(dataStore, "dataStore");
-        _cluster = Objects.requireNonNull(cluster, "cluster");
+        _dataStore = requireNonNull(dataStore, "dataStore");
+        _cluster = requireNonNull(cluster, "cluster");
     }
 
     @Override

@@ -32,9 +32,10 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -108,9 +109,9 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                   @CachingSubscriptionDAORegistry CacheRegistry cacheRegistry,
                                   @CachingSubscriptionDAOExecutorService ListeningExecutorService refreshService,
                                   MetricRegistry metricRegistry, Clock clock, CachingMode cachingMode) {
-        _delegate = Objects.requireNonNull(delegate, "delegate");
-        _refreshService = Objects.requireNonNull(refreshService, "refreshService");
-        _cachingMode = Objects.requireNonNull(cachingMode, "cachingMode");
+        _delegate = requireNonNull(delegate, "delegate");
+        _refreshService = requireNonNull(refreshService, "refreshService");
+        _cachingMode = requireNonNull(cachingMode, "cachingMode");
 
         Ticker ticker = ClockTicker.getTicker(clock);
         _reloadAllSubscriptionsTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "reload-all-subscriptions"));

@@ -34,9 +34,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+
+import static java.util.Objects.requireNonNull;
 
 
 public class AstyanaxQueueDAO implements QueueDAO {
@@ -52,8 +53,8 @@ public class AstyanaxQueueDAO implements QueueDAO {
 
     @Inject
     public AstyanaxQueueDAO(CassandraKeyspace keyspace, ChannelConfiguration channelConfiguration) {
-        _keyspace = Objects.requireNonNull(keyspace, "keyspace");
-        _channelConfiguration = Objects.requireNonNull(channelConfiguration, "channelConfiguration");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _channelConfiguration = requireNonNull(channelConfiguration, "channelConfiguration");
     }
 
     @Override

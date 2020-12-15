@@ -8,13 +8,15 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 
+import static java.util.Objects.requireNonNull;
+
 
 public final class TableOptions {
     private final String _placement;
     private final List<FacadeOptions> _facades;
 
     TableOptions(@JsonProperty("placement") String placement, @JsonProperty("facades") List<FacadeOptions> facadeOptions) {
-        _placement = Objects.requireNonNull(placement, "Table option is required: placement");
+        _placement = requireNonNull(placement, "Table option is required: placement");
         _facades = Optional.ofNullable(facadeOptions).orElse(Collections.EMPTY_LIST);
     }
 

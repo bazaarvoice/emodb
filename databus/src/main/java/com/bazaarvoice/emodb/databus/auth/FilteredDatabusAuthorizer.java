@@ -3,7 +3,8 @@ package com.bazaarvoice.emodb.databus.auth;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -17,8 +18,8 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
 
     private FilteredDatabusAuthorizer(Map<String, DatabusAuthorizer> ownerOverrides,
                                       DatabusAuthorizer authorizer) {
-        _ownerOverrides = Objects.requireNonNull(ownerOverrides, "ownerOverrides");
-        _authorizer = Objects.requireNonNull(authorizer, "authorizer");
+        _ownerOverrides = requireNonNull(ownerOverrides, "ownerOverrides");
+        _authorizer = requireNonNull(authorizer, "authorizer");
     }
 
     @Override

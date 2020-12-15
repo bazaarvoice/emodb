@@ -8,8 +8,9 @@ import com.google.inject.Inject;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -26,7 +27,7 @@ public class MinLagConsistencyTimeProvider implements FullConsistencyTimeProvide
 
     @Inject
     public MinLagConsistencyTimeProvider(@MinLagDurationValues Map<String, ValueStore<Duration>> durationCache) {
-        _durationCache = Objects.requireNonNull(durationCache, "durationCache");
+        _durationCache = requireNonNull(durationCache, "durationCache");
     }
 
     @Override

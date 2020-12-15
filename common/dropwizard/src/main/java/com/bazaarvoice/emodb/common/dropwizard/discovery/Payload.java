@@ -7,8 +7,9 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -25,8 +26,8 @@ public class Payload {
 
     public static Payload valueOf(String string) {
         Map<?, ?> map = JsonHelper.fromJson(string, Map.class);
-        URI serviceUri = URI.create((String) Objects.requireNonNull(map.get("serviceUrl"), "serviceUrl"));
-        URI adminUri = URI.create((String) Objects.requireNonNull(map.get("adminUrl"), "adminUrl"));
+        URI serviceUri = URI.create((String) requireNonNull(map.get("serviceUrl"), "serviceUrl"));
+        URI adminUri = URI.create((String) requireNonNull(map.get("adminUrl"), "adminUrl"));
         @SuppressWarnings("unchecked") Map<String, ?> extensions = Optional.ofNullable(
                 (Map<String, ?>) map.get("extensions")).orElse(Collections.emptyMap());
         return new Payload(serviceUri, adminUri, extensions);
@@ -37,9 +38,9 @@ public class Payload {
     }
 
     public Payload(URI serviceUrl, URI adminUrl, Map<String, ?> extensions) {
-        _serviceUrl = Objects.requireNonNull(serviceUrl, "serviceUrl");
-        _adminUrl = Objects.requireNonNull(adminUrl, "adminUrl");
-        _extensions = Objects.requireNonNull(extensions, "extensions");
+        _serviceUrl = requireNonNull(serviceUrl, "serviceUrl");
+        _adminUrl = requireNonNull(adminUrl, "adminUrl");
+        _extensions = requireNonNull(extensions, "extensions");
     }
 
     public URI getServiceUrl() {

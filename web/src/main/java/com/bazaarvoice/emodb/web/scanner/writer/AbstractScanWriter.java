@@ -25,12 +25,12 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Date;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Useful base implementation for ScanWriter, including:
@@ -52,11 +52,11 @@ abstract public class AbstractScanWriter implements ScanWriter {
 
     protected AbstractScanWriter(String type, int taskId, URI baseUri, Compression compression,
                                  MetricRegistry metricRegistry) {
-        _type = Objects.requireNonNull(type, "type");
+        _type = requireNonNull(type, "type");
         _taskId = taskId;
-        _baseUri = Objects.requireNonNull(baseUri, "baseUri");
-        _compression = Objects.requireNonNull(compression, "compression");
-        _metricRegistry = Objects.requireNonNull(metricRegistry, "metricRegistry");
+        _baseUri = requireNonNull(baseUri, "baseUri");
+        _compression = requireNonNull(compression, "compression");
+        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
     }
 
     protected URI getUriForShard(String tableName, int shardId, long tableUuid) {

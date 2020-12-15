@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.StringJoiner;
 
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * Role object for an Emo role.  Each role is uniquely identified by a {@link EmoRoleKey}.  Although it is useful
@@ -28,11 +30,11 @@ public class EmoRole {
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
                 Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
-                Objects.requireNonNull(id, "id")));
+                requireNonNull(id, "id")));
     }
 
     public EmoRole(EmoRoleKey id) {
-        _id = Objects.requireNonNull(id, "id");
+        _id = requireNonNull(id, "id");
     }
 
     @JsonProperty("group")

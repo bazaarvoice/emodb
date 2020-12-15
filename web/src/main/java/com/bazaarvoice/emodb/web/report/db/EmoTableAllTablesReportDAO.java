@@ -38,8 +38,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -63,7 +64,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public void verifyOrCreateReport(String reportId) {
-        Objects.requireNonNull(reportId, "reportId");
+        requireNonNull(reportId, "reportId");
 
         String tableName = getTableName(reportId);
         if (_dataStore.getTableExists(tableName)) {
@@ -87,7 +88,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public void updateReport(AllTablesReportDelta delta) {
-        Objects.requireNonNull(delta, "delta");
+        requireNonNull(delta, "delta");
 
         updateMetadata(delta);
 
@@ -163,7 +164,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public TableReportMetadata getReportMetadata(String reportId) {
-        Objects.requireNonNull(reportId, "reportId");
+        requireNonNull(reportId, "reportId");
 
         final String reportTable = getTableName(reportId);
 
@@ -204,7 +205,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public Iterable<TableReportEntry> getReportEntries(String reportId, final AllTablesReportQuery query) {
-        Objects.requireNonNull(reportId, "reportId");
+        requireNonNull(reportId, "reportId");
 
         final String reportTable = getTableName(reportId);
 

@@ -5,9 +5,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 import java.util.Collections;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -36,7 +37,7 @@ public class CreateEmoRoleRequest extends UserAccessControlRequest {
     }
 
     public CreateEmoRoleRequest setRoleKey(EmoRoleKey roleKey) {
-        _roleKey = Objects.requireNonNull(roleKey, "roleKey");
+        _roleKey = requireNonNull(roleKey, "roleKey");
         return this;
     }
 

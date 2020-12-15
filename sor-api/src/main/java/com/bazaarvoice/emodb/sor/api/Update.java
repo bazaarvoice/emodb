@@ -10,6 +10,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.Objects.requireNonNull;
+
 
 public final class Update {
     private final String _table;
@@ -27,7 +29,7 @@ public final class Update {
     public Update(@JsonProperty("table") String table, @JsonProperty("key") String key,
                   @JsonProperty("changeId") @Nullable UUID changeId, @JsonProperty("delta") Delta delta,
                   @JsonProperty("audit") Audit audit, @JsonProperty("consistency") @Nullable WriteConsistency consistency) {
-        _table = Objects.requireNonNull(table, "table");
+        _table = requireNonNull(table, "table");
         if (!Names.isLegalTableName(table)) {
             throw new IllegalArgumentException(
                     "Table name must be a lowercase ASCII string between 1 and 255 characters in length. " +
@@ -42,8 +44,8 @@ public final class Update {
         if (_changeId.version() != 1) {
             throw new IllegalArgumentException("The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
         }
-        _delta = Objects.requireNonNull(delta, "delta");
-        _audit = Objects.requireNonNull(audit, "audit");
+        _delta = requireNonNull(delta, "delta");
+        _audit = requireNonNull(audit, "audit");
         _consistency = Optional.ofNullable(consistency).orElse(WriteConsistency.STRONG);
     }
 

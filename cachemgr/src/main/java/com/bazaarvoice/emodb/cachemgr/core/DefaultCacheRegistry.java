@@ -21,12 +21,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static java.util.Objects.requireNonNull;
 
 public class DefaultCacheRegistry implements CacheRegistry, Closeable {
     private static final Logger _log = LoggerFactory.getLogger(DefaultCacheRegistry.class);
@@ -110,7 +111,7 @@ public class DefaultCacheRegistry implements CacheRegistry, Closeable {
         private final AtomicReference<Cache<String, ?>> _cache = new AtomicReference<>();
 
         private HandleImpl(String name) {
-            _name = Objects.requireNonNull(name, "name");
+            _name = requireNonNull(name, "name");
         }
 
         private void setCache(Cache<String, ?> cache) {

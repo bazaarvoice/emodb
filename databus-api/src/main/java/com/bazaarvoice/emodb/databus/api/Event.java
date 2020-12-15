@@ -7,9 +7,10 @@ import com.fasterxml.jackson.annotation.JsonView;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
+
+import static java.util.Objects.requireNonNull;
 
 public class Event {
 
@@ -20,8 +21,8 @@ public class Event {
     public Event(@JsonProperty("eventKey") String eventKey,
                  @JsonProperty("content") Map<String, ?> content,
                  @JsonProperty("tags") List<List<String>> tags) {
-        _eventKey = Objects.requireNonNull(eventKey, "eventKey");
-        _content = Objects.requireNonNull(content, "content");
+        _eventKey = requireNonNull(eventKey, "eventKey");
+        _content = requireNonNull(content, "content");
         // Permit nulls; older version of the API omit tags from the response
         _tags = Optional.ofNullable(tags).orElse(Collections.EMPTY_LIST);
     }

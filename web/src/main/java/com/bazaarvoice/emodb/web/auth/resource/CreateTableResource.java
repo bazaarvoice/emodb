@@ -7,8 +7,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
+
+import static java.util.Objects.requireNonNull;
 
 
 /**
@@ -24,8 +25,8 @@ public class CreateTableResource extends AuthResource {
     @JsonCreator
     public CreateTableResource(@JsonProperty("name") String name, @JsonProperty("placement") String placement,
                                @JsonProperty("attributes") Map<String, ?> attributes) {
-        _name = Objects.requireNonNull(name, "name");
-        _placement = Objects.requireNonNull(placement, "placement");
+        _name = requireNonNull(name, "name");
+        _placement = requireNonNull(placement, "placement");
         _attributes = Optional.ofNullable(attributes).orElse(Collections.EMPTY_MAP);
     }
 

@@ -8,12 +8,12 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wrapper around the json table storage metadata for a specific table uuid.
@@ -113,8 +113,8 @@ class Storage extends JsonMap implements Comparable<Storage> {
     private List<Storage> _group;
 
     Storage(String uuid, Map<String, Object> json, boolean masterPrimary) {
-        super(Objects.requireNonNull(json, "missing storage json for uuid: " + uuid));
-        _uuid = Objects.requireNonNull(uuid, "uuid");
+        super(requireNonNull(json, "missing storage json for uuid: " + uuid));
+        _uuid = requireNonNull(uuid, "uuid");
         _masterPrimary = masterPrimary;
     }
 
