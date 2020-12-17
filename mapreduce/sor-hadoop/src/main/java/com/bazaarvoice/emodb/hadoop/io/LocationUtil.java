@@ -9,7 +9,6 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
@@ -33,22 +32,23 @@ import java.util.regex.Pattern;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
+import static java.util.Optional.ofNullable;
 
 /**
  * Locations take take one of the following forms (all starting with "emodb://"):
- *
+ * <p>
  * ci.us/tablename
  * ci.us.group/tablename
  * ci.us/tablename?zkConnectString=zookeeper-connect-string
  * ci.us/tablename?host=hostname
- *
+ * <p>
  * For local host:
- *
+ * <p>
  * local/tablename
  * local.group/tablename
  * local/tablename?zkConnectString=zookeeper-connect-string
  * local/tablename?host=hostname
- *
+ * <p>
  * Alternately the caller can provide a direct emodb URL, such as "emodb://localhost:8080/tablename"
  */
 public class LocationUtil {
@@ -64,12 +64,12 @@ public class LocationUtil {
 
     private static final Pattern LOCATOR_PATTERN = Pattern.compile(
             "^((?<universe>ci|cert|anon|uat|bazaar)(\\.(?<region>us|us-east-1|eu|eu-west-1))?|local)" +
-            "(\\.(?<group>.+?))?$");
+                    "(\\.(?<group>.+?))?$");
 
     // Supported regions
     private static enum Region {
-        us ("us-east-1", "us"),
-        eu ("eu-west-1", "eu");
+        us("us-east-1", "us"),
+        eu("eu-west-1", "eu");
 
         private final String _defaultAlias;
         private final Set<String> _aliases;
@@ -215,7 +215,7 @@ public class LocationUtil {
         if (matcher.group("universe") != null) {
             // Normal host discovery
             String universe = matcher.group("universe");
-            Region region = getRegion(Objects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
+            Region region = getRegion(ofNullable(matcher.group("region")).orElse(DEFAULT_REGION));
             namespace = format("%s/%s", universe, region);
             defaultConnectionString = DEFAULT_ZK_CONNECTION_STRING;
         } else {
@@ -253,7 +253,7 @@ public class LocationUtil {
             clusterPrefix = "local";
         }
 
-        String group = Objects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
+        String group = ofNullable(matcher.group("group")).orElse(DEFAULT_GROUP);
         return format("%s_%s", clusterPrefix, group);
     }
 
@@ -323,14 +323,14 @@ public class LocationUtil {
         Matcher matcher = getLocatorMatcher(location);
         if (matcher.matches()) {
             // Stash is only available for the default group.  Make sure that's the case here
-            String group = Objects.firstNonNull(matcher.group("group"), DEFAULT_GROUP);
+            String group = ofNullable(matcher.group("group")).orElse(DEFAULT_GROUP);
             checkArgument(DEFAULT_GROUP.equals(group), "Stash not available for group: %s", group);
 
             // Stash it not available for local
             String universe = matcher.group("universe");
             checkArgument(universe != null, "Stash not available for local");
 
-            Region region = getRegion(Objects.firstNonNull(matcher.group("region"), DEFAULT_REGION));
+            Region region = getRegion(ofNullable(matcher.group("region")).orElse(DEFAULT_REGION));
 
             host = getS3BucketForRegion(region);
             path = getS3PathForUniverse(universe);

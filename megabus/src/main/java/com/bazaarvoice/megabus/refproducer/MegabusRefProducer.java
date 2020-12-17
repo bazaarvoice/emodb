@@ -34,6 +34,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 public class MegabusRefProducer extends AbstractScheduledService {
@@ -75,15 +76,9 @@ public class MegabusRefProducer extends AbstractScheduledService {
 
         _log = LoggerFactory.getLogger(MegabusRefProducer.class.getName() + "-" + partitionIdentifer);
 
-        if (configuration.getPollIntervalMs() <= 0) {
-            throw new IllegalArgumentException("Poll interval must be >0");
-        }
-        if (configuration.getBatchSize() <= 0) {
-            throw new IllegalArgumentException("Batch size must be >0");
-        }
-        if (configuration.getSkipWaitThreshold() < 0 || configuration.getSkipWaitThreshold() > configuration.getBatchSize()) {
-            throw new IllegalArgumentException("Skip wait threshold must be >=0 and <= batch size=" + configuration.getBatchSize());
-        }
+        checkArgument(configuration.getPollIntervalMs() > 0);
+        checkArgument(configuration.getBatchSize() > 0);
+        checkArgument(configuration.getSkipWaitThreshold() >= 0 && configuration.getSkipWaitThreshold() <= configuration.getBatchSize());
         _pollIntervalMs = configuration.getPollIntervalMs();
         _eventsLimit = configuration.getBatchSize();
         _skipWaitThreshold = configuration.getSkipWaitThreshold();

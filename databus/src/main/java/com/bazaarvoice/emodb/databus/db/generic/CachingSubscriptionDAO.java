@@ -18,6 +18,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.ForwardingLoadingCache;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -27,16 +29,13 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-import static java.util.Objects.requireNonNull;
-
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Wraps a {@link SubscriptionDAO} with a cache that makes it fast and efficient to lookup subscription metadata.  The
@@ -84,6 +83,8 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         normal
     }
 
+    ;
+
     private static final String SUBSCRIPTIONS = "subscriptions";
 
     // Loading cache cannot have null values, so use a single dummy value as a stand-in when a subscription does not exist.
@@ -109,9 +110,9 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                   @CachingSubscriptionDAORegistry CacheRegistry cacheRegistry,
                                   @CachingSubscriptionDAOExecutorService ListeningExecutorService refreshService,
                                   MetricRegistry metricRegistry, Clock clock, CachingMode cachingMode) {
-        _delegate = requireNonNull(delegate, "delegate");
-        _refreshService = requireNonNull(refreshService, "refreshService");
-        _cachingMode = requireNonNull(cachingMode, "cachingMode");
+        _delegate = checkNotNull(delegate, "delegate");
+        _refreshService = checkNotNull(refreshService, "refreshService");
+        _cachingMode = checkNotNull(cachingMode, "cachingMode");
 
         Ticker ticker = ClockTicker.getTicker(clock);
         _reloadAllSubscriptionsTimer = metricRegistry.timer(MetricRegistry.name("bv.emodb.databus", "CachingSubscriptionDAO", "reload-all-subscriptions"));
@@ -129,7 +130,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                             assert SUBSCRIPTIONS.equals(key) : "All subscriptions cache should only be accessed by a single key";
 
                             Iterable<String> subscriptionNames = _delegate.getAllSubscriptionNames();
-                            List<OwnedSubscription> subscriptionsBuilder = new ArrayList<>();
+                            ImmutableList.Builder<OwnedSubscription> subscriptionsBuilder = ImmutableList.builder();
 
                             for (String name : subscriptionNames) {
                                 // As much as possible take advantage of already cached subscriptions
@@ -139,7 +140,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                                 }
                             }
 
-                            List<OwnedSubscription> subscriptions = Collections.unmodifiableList(subscriptionsBuilder);
+                            List<OwnedSubscription> subscriptions = subscriptionsBuilder.build();
                             _subscriptionsReloaded.mark(subscriptions.size());
                             return subscriptions;
                         }
@@ -212,7 +213,7 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
                         public Map<String, OwnedSubscription> load(String key) throws Exception {
                             // The actual cached object doesn't matter since this cache is only used for receiving
                             // invalidation messages.  Just need to provide a non-null value.
-                            return Collections.EMPTY_MAP;
+                            return ImmutableMap.of();
                         }
                     })
             ) {

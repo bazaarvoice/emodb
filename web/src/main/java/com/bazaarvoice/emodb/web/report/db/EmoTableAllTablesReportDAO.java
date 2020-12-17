@@ -40,8 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
-
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Implementation of AllTablesReportDAO that is backed by an EmoDB table.
@@ -64,7 +63,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public void verifyOrCreateReport(String reportId) {
-        requireNonNull(reportId, "reportId");
+        checkNotNull(reportId, "reportId");
 
         String tableName = getTableName(reportId);
         if (_dataStore.getTableExists(tableName)) {
@@ -88,7 +87,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public void updateReport(AllTablesReportDelta delta) {
-        requireNonNull(delta, "delta");
+        checkNotNull(delta, "delta");
 
         updateMetadata(delta);
 
@@ -164,7 +163,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public TableReportMetadata getReportMetadata(String reportId) {
-        requireNonNull(reportId, "reportId");
+        checkNotNull(reportId, "reportId");
 
         final String reportTable = getTableName(reportId);
 
@@ -205,22 +204,22 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
      */
     @Override
     public Iterable<TableReportEntry> getReportEntries(String reportId, final AllTablesReportQuery query) {
-        requireNonNull(reportId, "reportId");
+        checkNotNull(reportId, "reportId");
 
         final String reportTable = getTableName(reportId);
 
         // Set up several filters based on the query attributes
 
         final Predicate<String> placementFilter = query.getPlacements().isEmpty()
-                ? Predicates.alwaysTrue()
+                ? Predicates.<String>alwaysTrue()
                 : Predicates.in(query.getPlacements());
 
         final Predicate<Boolean> droppedFilter = query.isIncludeDropped()
-                ? Predicates.alwaysTrue()
+                ? Predicates.<Boolean>alwaysTrue()
                 : Predicates.equalTo(false);
 
         final Predicate<Boolean> facadeFilter = query.isIncludeFacades()
-                ? Predicates.alwaysTrue()
+                ? Predicates.<Boolean>alwaysTrue()
                 : Predicates.equalTo(false);
 
         return new Iterable<TableReportEntry>() {

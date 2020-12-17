@@ -22,7 +22,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
 import com.netflix.astyanax.AstyanaxContext;
 import com.netflix.astyanax.Cluster;
@@ -44,13 +46,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static java.util.Objects.requireNonNull;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -176,7 +176,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public AstyanaxCluster cluster() {
-            requireNonNull(_cluster, "cluster");
+            checkNotNull(_cluster, "cluster");
             String metricName;
             ConnectionPoolConfiguration poolConfig;
 
@@ -186,7 +186,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = CassandraConfiguration.this;
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = keyspaceConfig;
             }
@@ -312,7 +312,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public CqlCluster cluster() {
-            requireNonNull(_cluster, "cluster");
+            checkNotNull(_cluster, "cluster");
             String metricName;
             FilterConnectionPoolConfiguration poolConfig;
 
@@ -322,7 +322,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = new FilterConnectionPoolConfiguration(CassandraConfiguration.this);
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = new FilterConnectionPoolConfiguration(keyspaceConfig);
             }
@@ -358,7 +358,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         performHostDiscovery(metricRegistry);
 
         String[] seeds = _seeds.split(",");
-        List<String> contactPoints = new ArrayList<>(seeds.length);
+        List<String> contactPoints = Lists.newArrayListWithCapacity(seeds.length);
 
         // Each seed may be a host name or a host name and port (e.g.; "1.2.3.4" or "1.2.3.4:9160").  These need
         // to be converted into host names only.
@@ -371,7 +371,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 } else if (hostAndPort.getPort() != _cqlPort) {
                     throw new IllegalArgumentException(String.format(
                             "Seed %s found with invalid port %s.  The port must match either the RPC (thrift) port %s " +
-                            "or the native (CQL) port %s", seed, hostAndPort.getPort(), _thriftPort, _cqlPort));
+                                    "or the native (CQL) port %s", seed, hostAndPort.getPort(), _thriftPort, _cqlPort));
                 }
             }
 
@@ -425,16 +425,12 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
 
         // Perform ZooKeeper discovery to find the seeds.
         if (_zooKeeperServiceName != null) {
-            if (hosts != null) {
-                throw new IllegalStateException("Too many host discovery mechanisms configured.");
-            }
-
-            if (_curator == null) {
-                throw new IllegalStateException("ZooKeeper host discovery is configured but withZooKeeperHostDiscovery() was not called.");
-            }
+            checkState(hosts == null, "Too many host discovery mechanisms configured.");
+            checkState(_curator != null,
+                    "ZooKeeper host discovery is configured but withZooKeeperHostDiscovery() was not called.");
 
             try (HostDiscovery hostDiscovery = new ZooKeeperHostDiscovery(_curator, _zooKeeperServiceName, metricRegistry)) {
-                List<String> hostList = new ArrayList<>();
+                List<String> hostList = Lists.newArrayList();
                 for (ServiceEndPoint endPoint : hostDiscovery.getHosts()) {
                     // The host:port is in the end point ID
                     hostList.add(endPoint.getId());
@@ -454,17 +450,10 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
             }
         }
 
-        if (hosts == null) {
-            throw new IllegalStateException("No Cassandra host discovery mechanisms are configured.");
-        }
-
-        if (Iterables.isEmpty(hosts)) {
-            throw new IllegalStateException("Unable to discover any Cassandra seed instances.");
-        }
-
-        if (_partitioner == null) {
-            throw new IllegalStateException("Cassandra partitioner not configured or discoverable.");
-        }
+        checkState(hosts != null, "No Cassandra host discovery mechanisms are configured.");
+        //noinspection ConstantConditions
+        checkState(!Iterables.isEmpty(hosts), "Unable to discover any Cassandra seed instances.");
+        checkState(_partitioner != null, "Cassandra partitioner not configured or discoverable.");
         _seeds = Joiner.on(',').join(hosts);
         _hostDiscoveryPerformed = true;
     }
@@ -496,7 +485,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
     }
 
     public CassandraConfiguration setKeyspaces(Map<String, KeyspaceConfiguration> keyspaces) {
-        _keyspaces = Collections.unmodifiableMap(new HashMap<>(keyspaces));
+        _keyspaces = ImmutableMap.copyOf(keyspaces);
         return this;
     }
 

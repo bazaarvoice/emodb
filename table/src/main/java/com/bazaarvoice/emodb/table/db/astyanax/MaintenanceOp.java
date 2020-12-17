@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
+import com.google.common.base.Objects;
+
 import java.time.Instant;
-import java.util.Objects;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
-
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Describes a pending table maintenance operation.
@@ -18,11 +18,11 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     private MaintenanceTask _task;
 
     static MaintenanceOp forMetadata(String name, Instant when, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", requireNonNull(task, "task"));
+        return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", checkNotNull(task, "task"));
     }
 
     static MaintenanceOp forData(String name, Instant when, String dataCenter, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.DATA, Optional.ofNullable(dataCenter).orElse("<n/a>"), requireNonNull(task, "task"));
+        return new MaintenanceOp(name, when, MaintenanceType.DATA, Optional.ofNullable(dataCenter).orElse("<n/a>"), checkNotNull(task, "task"));
     }
 
     static MaintenanceOp reschedule(MaintenanceOp op, Instant when) {
@@ -30,9 +30,9 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     }
 
     private MaintenanceOp(String name, Instant when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
-        _name = requireNonNull(name, "name");
-        _when = requireNonNull(when, "when");
-        _type = requireNonNull(type, "type");
+        _name = checkNotNull(name, "name");
+        _when = checkNotNull(when, "when");
+        _type = checkNotNull(type, "type");
         _dataCenter = dataCenter;
         _task = task;
     }
@@ -92,11 +92,11 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
         return _name.equals(that._name) &&
                 _when.equals(that._when) &&
                 _type == that._type &&
-                Objects.equals(_dataCenter, that._dataCenter);
+                Objects.equal(_dataCenter, that._dataCenter);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(_name, _when, _type, _dataCenter);
+        return Objects.hashCode(_name, _when, _type, _dataCenter);
     }
 }

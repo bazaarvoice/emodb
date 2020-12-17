@@ -1,11 +1,11 @@
 package com.bazaarvoice.emodb.databus.auth;
 
+import com.google.common.collect.Maps;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import static java.util.Objects.requireNonNull;
-
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Implementation of DatabusAuthorizer that overrides authorization for specific owners.  All other owners
@@ -18,8 +18,8 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
 
     private FilteredDatabusAuthorizer(Map<String, DatabusAuthorizer> ownerOverrides,
                                       DatabusAuthorizer authorizer) {
-        _ownerOverrides = requireNonNull(ownerOverrides, "ownerOverrides");
-        _authorizer = requireNonNull(authorizer, "authorizer");
+        _ownerOverrides = checkNotNull(ownerOverrides, "ownerOverrides");
+        _authorizer = checkNotNull(authorizer, "authorizer");
     }
 
     @Override
@@ -49,7 +49,7 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
      * Builder class for creating a FilteredDatabusAuthorizer.
      */
     public static class Builder {
-        private final Map<String, DatabusAuthorizer> _ownerOverrides = new HashMap<>();
+        private final Map<String, DatabusAuthorizer> _ownerOverrides = Maps.newHashMap();
         private DatabusAuthorizer _defaultAuthorizer;
 
         private Builder() {
@@ -57,17 +57,13 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
         }
 
         public Builder withAuthorizerForOwner(String ownerId, DatabusAuthorizer authorizer) {
-            if (_ownerOverrides.containsKey(ownerId)) {
-                throw new IllegalArgumentException("Cannot assign multiple rules for owner");
-            }
+            checkArgument(!_ownerOverrides.containsKey(ownerId), "Cannot assign multiple rules for owner");
             _ownerOverrides.put(ownerId, authorizer);
             return this;
         }
 
         public Builder withDefaultAuthorizer(DatabusAuthorizer defaultAuthorizer) {
-            if (_defaultAuthorizer != null) {
-                throw new IllegalStateException("Cannot assign multiple default authorizers");
-            }
+            checkArgument(_defaultAuthorizer == null, "Cannot assign multiple default authorizers");
             _defaultAuthorizer = defaultAuthorizer;
             return this;
         }

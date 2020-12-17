@@ -29,8 +29,8 @@ import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Useful base implementation for ScanWriter, including:
@@ -52,11 +52,11 @@ abstract public class AbstractScanWriter implements ScanWriter {
 
     protected AbstractScanWriter(String type, int taskId, URI baseUri, Compression compression,
                                  MetricRegistry metricRegistry) {
-        _type = requireNonNull(type, "type");
+        _type = checkNotNull(type, "type");
         _taskId = taskId;
-        _baseUri = requireNonNull(baseUri, "baseUri");
-        _compression = requireNonNull(compression, "compression");
-        _metricRegistry = requireNonNull(metricRegistry, "metricRegistry");
+        _baseUri = checkNotNull(baseUri, "baseUri");
+        _compression = checkNotNull(compression, "compression");
+        _metricRegistry = checkNotNull(metricRegistry, "metricRegistry");
     }
 
     protected URI getUriForShard(String tableName, int shardId, long tableUuid) {

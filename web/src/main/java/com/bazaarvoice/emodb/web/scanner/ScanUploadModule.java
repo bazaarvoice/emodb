@@ -75,6 +75,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Inject;
 import com.google.inject.Key;
@@ -94,7 +95,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -154,9 +154,11 @@ public class ScanUploadModule extends PrivateModule {
         bind(String.class).annotatedWith(StashRequestTable.class).toInstance(_config.getScanRequestTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
 
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {
+        }).annotatedWith(Names.named("pendingScanRangeQueueName"))
                 .toInstance(_config.getPendingScanRangeQueueName());
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {
+        }).annotatedWith(Names.named("completeScanRangeQueueName"))
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
         bind(ScanWriterGenerator.class).to(DefaultScanWriterGenerator.class).asEagerSingleton();
@@ -346,7 +348,7 @@ public class ScanUploadModule extends PrivateModule {
     protected StashStateListener provideStashStateListener(MetricsStashStateListener metricsListener,
                                                            Optional<SNSStashStateListener> snsListener,
                                                            @Named("plugin") List<StashStateListener> pluginListeners) {
-        List<StashStateListener> listeners = new ArrayList<>(3);
+        List<StashStateListener> listeners = Lists.newArrayListWithCapacity(3);
         listeners.add(metricsListener);
         if (snsListener.isPresent()) {
             listeners.add(snsListener.get());
@@ -384,7 +386,7 @@ public class ScanUploadModule extends PrivateModule {
     @Singleton
     protected ScanCountListener provideScanCountListener(MetricsScanCountListener metricsListener,
                                                          Optional<CloudWatchScanCountListener> cloudWatchScanCountListener) {
-        List<ScanCountListener> listeners = new ArrayList<>(2);
+        List<ScanCountListener> listeners = Lists.newArrayListWithCapacity(2);
         listeners.add(metricsListener);
         if (cloudWatchScanCountListener.isPresent()) {
             listeners.add(cloudWatchScanCountListener.get());

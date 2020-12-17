@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.sdk;
 
+import com.google.common.collect.Lists;
 import org.apache.curator.test.TestingServer;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +27,7 @@ public final class CrossMojoState {
     public static void addEmoProcess(EmoExec emoProcess, Map pluginContext) {
         List<EmoExec> processes = (List<EmoExec>) pluginContext.get(EMO_PROCESSES);
         if (processes == null) {
-            pluginContext.put(EMO_PROCESSES, processes = new ArrayList<>());
+            pluginContext.put(EMO_PROCESSES, processes = Lists.newArrayList());
         }
         processes.add(emoProcess);
     }
@@ -35,7 +35,7 @@ public final class CrossMojoState {
     @SuppressWarnings("unchecked")
     public static List<EmoExec> getEmoProcesses(Map pluginContext) {
         List<EmoExec> processes = (List<EmoExec>) pluginContext.get(EMO_PROCESSES);
-        return Optional.ofNullable(processes).orElse(Collections.EMPTY_LIST);
+        return Optional.ofNullable(processes).orElse(Collections.emptyList());
     }
 
     @SuppressWarnings("unchecked")

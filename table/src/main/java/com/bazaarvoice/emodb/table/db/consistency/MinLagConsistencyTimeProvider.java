@@ -10,8 +10,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
-import static java.util.Objects.requireNonNull;
-
+import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * Implementation of {@link FullConsistencyTimeProvider} that sets the maximum full consistency timestamp based
@@ -27,7 +26,7 @@ public class MinLagConsistencyTimeProvider implements FullConsistencyTimeProvide
 
     @Inject
     public MinLagConsistencyTimeProvider(@MinLagDurationValues Map<String, ValueStore<Duration>> durationCache) {
-        _durationCache = requireNonNull(durationCache, "durationCache");
+        _durationCache = checkNotNull(durationCache, "durationCache");
     }
 
     @Override
