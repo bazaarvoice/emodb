@@ -83,8 +83,6 @@ public class CachingSubscriptionDAO implements SubscriptionDAO {
         normal
     }
 
-    ;
-
     private static final String SUBSCRIPTIONS = "subscriptions";
 
     // Loading cache cannot have null values, so use a single dummy value as a stand-in when a subscription does not exist.
