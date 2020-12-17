@@ -190,8 +190,7 @@ public class EmoTableAllTablesReportDAO implements AllTablesReportDAO {
         Object placementMap = metadata.get("placements");
         if (placementMap != null) {
             placements = ImmutableList.copyOf(
-                    JsonHelper.convert(placementMap, new TypeReference<Map<String, Object>>() {
-                    }).keySet());
+                    JsonHelper.convert(placementMap, new TypeReference<Map<String, Object>>() {}).keySet());
         } else {
             placements = ImmutableList.of();
         }

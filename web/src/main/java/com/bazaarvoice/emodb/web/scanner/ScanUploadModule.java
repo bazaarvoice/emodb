@@ -154,11 +154,9 @@ public class ScanUploadModule extends PrivateModule {
         bind(String.class).annotatedWith(StashRequestTable.class).toInstance(_config.getScanRequestTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
 
-        bind(new TypeLiteral<Optional<String>>() {
-        }).annotatedWith(Names.named("pendingScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {}).annotatedWith(Names.named("pendingScanRangeQueueName"))
                 .toInstance(_config.getPendingScanRangeQueueName());
-        bind(new TypeLiteral<Optional<String>>() {
-        }).annotatedWith(Names.named("completeScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {}).annotatedWith(Names.named("completeScanRangeQueueName"))
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
         bind(ScanWriterGenerator.class).to(DefaultScanWriterGenerator.class).asEagerSingleton();
