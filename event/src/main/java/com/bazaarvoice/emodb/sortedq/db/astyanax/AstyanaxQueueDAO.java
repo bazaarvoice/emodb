@@ -4,7 +4,6 @@ import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
-import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterables;
@@ -35,6 +34,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -100,7 +100,7 @@ public class AstyanaxQueueDAO implements QueueDAO {
         ColumnList<ByteBuffer> columns = execute(_keyspace.prepareQuery(CF_DEDUP_DATA, ConsistencyLevel.CL_LOCAL_QUORUM)
                 .getKey(dataId)
                 .withColumnRange(new RangeBuilder()
-                        .setStart(Objects.firstNonNull(from, EMPTY_BUFFER))
+                        .setStart(Optional.ofNullable(from).orElse(EMPTY_BUFFER))
                         .setLimit(1)
                         .build()));
         return !columns.isEmpty() ? columns.getColumnByIndex(0).getName() : null;
@@ -137,8 +137,8 @@ public class AstyanaxQueueDAO implements QueueDAO {
                 _keyspace.prepareQuery(CF_DEDUP_DATA, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(dataId)
                         .withColumnRange(new RangeBuilder()
-                                .setStart(Objects.firstNonNull(from, EMPTY_BUFFER))
-                                .setEnd(Objects.firstNonNull(to, EMPTY_BUFFER))
+                                .setStart(Optional.ofNullable(from).orElse(EMPTY_BUFFER))
+                                .setEnd(Optional.ofNullable(to).orElse(EMPTY_BUFFER))
                                 .setLimit(batchSize)
                                 .build())
                         .autoPaginate(true));
@@ -212,7 +212,9 @@ public class AstyanaxQueueDAO implements QueueDAO {
         };  //todo
     }
 
-    /** Executes a {@code RowQuery} with {@code autoPaginate(true)} repeatedly as necessary to fetch all pages. */
+    /**
+     * Executes a {@code RowQuery} with {@code autoPaginate(true)} repeatedly as necessary to fetch all pages.
+     */
     private <K, C> Iterator<Column<C>> executePaginated(final RowQuery<K, C> query) {
         return Iterators.concat(new AbstractIterator<Iterator<Column<C>>>() {
             @Override

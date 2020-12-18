@@ -8,9 +8,9 @@ import com.bazaarvoice.emodb.web.auth.resource.ConditionResource;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
 import com.bazaarvoice.emodb.web.auth.resource.VerifiableResource;
-import com.google.common.base.Objects;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
 import static com.bazaarvoice.emodb.auth.permissions.MatchingPermission.escapeSeparators;
 import static java.lang.String.format;
@@ -233,7 +233,7 @@ public class Permissions {
      * By convention permissions for roles with no group use "_" as the group name for permissions.
      */
     public static VerifiableResource toRoleGroupResource(@Nullable String group) {
-        return new NamedResource(Objects.firstNonNull(group, "_"));
+        return new NamedResource(Optional.ofNullable(group).orElse("_"));
     }
 
     public static String readRole(VerifiableResource group) {
@@ -337,7 +337,7 @@ public class Permissions {
     }
 
     // System permissions
-    
+
     /**
      * Although the following permission concerns the databus it is placed in the "system" resource since
      * databus replication should only be performed internally by the system.

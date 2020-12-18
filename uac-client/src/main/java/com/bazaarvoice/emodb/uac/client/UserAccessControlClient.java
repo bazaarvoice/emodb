@@ -27,7 +27,6 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 import javax.ws.rs.core.MediaType;
@@ -36,6 +35,7 @@ import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -84,7 +84,7 @@ public class UserAccessControlClient implements AuthUserAccessControl {
         try {
             URI uri = _uac.clone()
                     .segment("role")
-                    .segment(Objects.firstNonNull(group, EmoRoleKey.NO_GROUP))
+                    .segment(Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP))
                     .build();
             return _client.resource(uri)
                     .accept(MediaType.APPLICATION_JSON_TYPE)

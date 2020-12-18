@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
+import java.util.Optional;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -26,7 +27,7 @@ public class EmoRole {
     @JsonCreator
     private EmoRole(@JsonProperty("group") String group, @JsonProperty("id") String id) {
         this(new EmoRoleKey(
-                Objects.firstNonNull(group, EmoRoleKey.NO_GROUP),
+                Optional.ofNullable(group).orElse(EmoRoleKey.NO_GROUP),
                 checkNotNull(id, "id")));
     }
 
