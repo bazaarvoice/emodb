@@ -16,6 +16,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -45,23 +46,23 @@ public class ScanStatus {
     }
 
     @JsonCreator
-    public ScanStatus(@JsonProperty ("scanId") String scanId,
-                      @JsonProperty ("options") ScanOptions options,
-                      @JsonProperty ("tableSnapshotCreated") boolean tableSnapshotCreated,
-                      @JsonProperty ("canceled") boolean canceled,
-                      @JsonProperty ("startTime") Date startTime,
-                      @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
-                      @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeScanRanges,
-                      @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeScanRanges,
-                      @JsonProperty ("completeTime") @Nullable Date completeTime) {
+    public ScanStatus(@JsonProperty("scanId") String scanId,
+                      @JsonProperty("options") ScanOptions options,
+                      @JsonProperty("tableSnapshotCreated") boolean tableSnapshotCreated,
+                      @JsonProperty("canceled") boolean canceled,
+                      @JsonProperty("startTime") Date startTime,
+                      @JsonProperty("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
+                      @JsonProperty("activeScanRanges") List<ScanRangeStatus> activeScanRanges,
+                      @JsonProperty("completeScanRanges") List<ScanRangeStatus> completeScanRanges,
+                      @JsonProperty("completeTime") @Nullable Date completeTime) {
         _scanId = scanId;
         _options = options;
         _tableSnapshotCreated = tableSnapshotCreated;
         _canceled = canceled;
         _startTime = startTime;
-        _pendingScanRanges = Objects.firstNonNull(pendingScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _activeScanRanges = Objects.firstNonNull(activeScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _completeScanRanges = Objects.firstNonNull(completeScanRanges, ImmutableList.<ScanRangeStatus>of());
+        _pendingScanRanges = Optional.ofNullable(pendingScanRanges).orElse(ImmutableList.of());
+        _activeScanRanges = Optional.ofNullable(activeScanRanges).orElse(ImmutableList.of());
+        _completeScanRanges = Optional.ofNullable(completeScanRanges).orElse(ImmutableList.of());
         _completeTime = completeTime;
     }
 

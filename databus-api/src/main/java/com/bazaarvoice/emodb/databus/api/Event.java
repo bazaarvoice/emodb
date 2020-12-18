@@ -9,6 +9,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -24,7 +25,7 @@ public class Event {
         _eventKey = checkNotNull(eventKey, "eventKey");
         _content = checkNotNull(content, "content");
         // Permit nulls; older version of the API omit tags from the response
-        _tags = Objects.firstNonNull(tags, ImmutableList.<List<String>>of());
+        _tags = Optional.ofNullable(tags).orElse(ImmutableList.of());
     }
 
     @JsonView(EventViews.ContentOnly.class)

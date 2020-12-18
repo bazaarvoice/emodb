@@ -5,6 +5,7 @@ import com.google.common.base.Objects;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -14,7 +15,7 @@ public final class TableOptions {
 
     TableOptions(@JsonProperty("placement") String placement, @JsonProperty("facades") List<FacadeOptions> facadeOptions) {
         _placement = checkNotNull(placement, "Table option is required: placement");
-        _facades = Objects.firstNonNull(facadeOptions, Collections.<FacadeOptions>emptyList());
+        _facades = Optional.ofNullable(facadeOptions).orElse(Collections.emptyList());
     }
 
     /**

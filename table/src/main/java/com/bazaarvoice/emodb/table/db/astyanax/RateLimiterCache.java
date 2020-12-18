@@ -3,11 +3,12 @@ package com.bazaarvoice.emodb.table.db.astyanax;
 import com.bazaarvoice.emodb.common.zookeeper.store.ChangeType;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStoreListener;
-import com.google.common.base.Objects;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.util.concurrent.RateLimiter;
+
+import java.util.Optional;
 
 /**
  * A set of named rate limiters where the configured rates can be set dynamically via ZooKeeper.
@@ -44,7 +45,7 @@ public class RateLimiterCache {
 
     private double getRate(String key) {
         Double rate = _rates.get(key);
-        return Objects.firstNonNull(rate, _defaultRate);
+        return Optional.ofNullable(rate).orElse(_defaultRate);
     }
 
     public RateLimiter get(String key) {

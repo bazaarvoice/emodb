@@ -8,6 +8,7 @@ import com.google.common.base.Objects;
 import com.google.common.base.Strings;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -36,11 +37,11 @@ public final class Update {
                         "An example of a valid table name would be 'review:testcustomer'.");
         checkArgument(!Strings.isNullOrEmpty(key), "key must be a non-empty string");
         _key = key;
-        _changeId = Objects.firstNonNull(changeId, TimeUUIDs.newUUID());
+        _changeId = Optional.ofNullable(changeId).orElse(TimeUUIDs.newUUID());
         checkArgument(_changeId.version() == 1, "The changeId must be an RFC 4122 version 1 UUID (a time UUID).");
         _delta = checkNotNull(delta, "delta");
         _audit = checkNotNull(audit, "audit");
-        _consistency = Objects.firstNonNull(consistency, WriteConsistency.STRONG);
+        _consistency = Optional.ofNullable(consistency).orElse(WriteConsistency.STRONG);
     }
 
     public String getTable() {

@@ -43,6 +43,7 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
@@ -93,7 +94,7 @@ public class StashFileSystem extends FileSystem implements EmoInputSplittable {
         // The location is either a table or a split.  Get the root path depending on which it is.
 
         // Strip the trailing slash if present
-        String locationPath = Objects.firstNonNull(location.getPath(), "/");
+        String locationPath = Optional.ofNullable(location.getPath()).orElse("/");
         if (locationPath.length() > 0 && locationPath.endsWith("/")) {
             locationPath = locationPath.substring(0, locationPath.length() - 1);
         }

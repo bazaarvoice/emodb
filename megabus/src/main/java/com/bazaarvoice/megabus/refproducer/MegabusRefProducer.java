@@ -28,12 +28,12 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.time.Clock;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Objects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
@@ -88,7 +88,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;
         _producer = requireNonNull(producer, "producer");
-        _clock = firstNonNull(clock, Clock.systemUTC());
+        _clock = Optional.ofNullable(clock).orElse(Clock.systemUTC());
         _eventMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "events"));
         _errorMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.megabus", "MegabusRefProducer", "errors"));
 
@@ -152,7 +152,7 @@ public class MegabusRefProducer extends AbstractScheduledService {
                 .entrySet()
                 .stream()
                 .map(entry -> _producer.send(new ProducerRecord<>(_topic.getName(), entry.getKey(), TimeUUIDs.newUUID().toString(),
-                                _objectMapper.valueToTree(entry.getValue()))))
+                        _objectMapper.valueToTree(entry.getValue()))))
                 .collect(Collectors.toList());
 
         // Last chance to check that we are the leader before doing anything that would be bad if we aren't.
