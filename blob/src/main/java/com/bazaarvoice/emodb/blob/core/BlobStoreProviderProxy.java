@@ -13,7 +13,6 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -123,7 +122,7 @@ public class BlobStoreProviderProxy implements BlobStore {
     }
 
     @Override
-    public void put(String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes)
+    public void put(String table, String blobId, java.util.function.Supplier<? extends InputStream> in, Map<String, String> attributes)
             throws IOException {
         _local.get().put(table, blobId, in, attributes);
     }

@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -127,10 +128,11 @@ public class DefaultFanout extends AbstractScheduledService {
         _clock = clock;
         ServiceFailureListener.listenTo(this, metricRegistry);
 
-        _fanoutPool = Executors.newFixedThreadPool(
-                8,
-                new ThreadFactoryBuilder().setDaemon(true).setNameFormat("fanout-%d").build()
-        );
+        final ThreadFactory fanoutThreadFactory = new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat("fanout-%d")
+                .build();
+        _fanoutPool = Executors.newFixedThreadPool(8, fanoutThreadFactory);
     }
 
     private Meter newEventMeter(String name, MetricRegistry metricRegistry) {
