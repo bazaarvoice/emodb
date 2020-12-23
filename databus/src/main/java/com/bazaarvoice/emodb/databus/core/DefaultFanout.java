@@ -28,8 +28,8 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
-import java.time.temporal.ChronoUnit;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -127,10 +128,11 @@ public class DefaultFanout extends AbstractScheduledService {
         _clock = clock;
         ServiceFailureListener.listenTo(this, metricRegistry);
 
-        _fanoutPool = Executors.newFixedThreadPool(
-            8,
-            new ThreadFactoryBuilder().setDaemon(true).setNameFormat("fanout-%d").build()
-        );
+        final ThreadFactory fanoutThreadFactory = new ThreadFactoryBuilder()
+                .setDaemon(true)
+                .setNameFormat("fanout-%d")
+                .build();
+        _fanoutPool = Executors.newFixedThreadPool(8, fanoutThreadFactory);
     }
 
     private Meter newEventMeter(String name, MetricRegistry metricRegistry) {
@@ -158,7 +160,7 @@ public class DefaultFanout extends AbstractScheduledService {
             // flooding the logs with a continuous stream of error messages.  Include the event source name in the
             // message template so we rate limit each event source independently.
             _rateLimitedLog.error(t, "Unexpected fanout exception copying from " + _name + ": {}", t);
-            stop();  // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync().awaitTerminated();  // Give up leadership temporarily.  Maybe another server will have more success.
         }
     }
 
@@ -197,8 +199,8 @@ public class DefaultFanout extends AbstractScheduledService {
         subTime.stop();
 
         List<Date> lastMatchEventBatchTimes = Collections.synchronizedList(Lists.newArrayList());
-        
-        try(final Timer.Context ignored = _e2eFanoutTimer.time()) {
+
+        try (final Timer.Context ignored = _e2eFanoutTimer.time()) {
             final List<Future<?>> futures = new LinkedList<>();
             // Copy the events to all the destination channels.
             for (final List<EventData> rawEventPartition : Lists.partition(rawEvents, (int) Math.ceil(1.0 * rawEvents.size() / 8))) {

@@ -29,7 +29,6 @@ import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
 import com.google.inject.Inject;
 import org.apache.commons.codec.binary.Hex;
 import org.slf4j.Logger;
@@ -48,6 +47,7 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -154,7 +154,7 @@ public class DefaultBlobStore implements BlobStore {
             }
         });
 
-        if(totalCounter.get() > 0) {
+        if (totalCounter.get() > 0) {
             if (failedCounter.get() > 0) {
                 String message = String.format("Failed to purge %s of %s rows for table: %s.", failedCounter.get(), totalCounter.get(), table.getName());
                 LOGGER.error(message);
@@ -348,7 +348,7 @@ public class DefaultBlobStore implements BlobStore {
     }
 
     @Override
-    public void put(String tableName, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
+    public void put(String tableName, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
         checkLegalTableName(tableName);
         checkLegalBlobId(blobId);
         checkNotNull(in, "in");
@@ -374,11 +374,11 @@ public class DefaultBlobStore implements BlobStore {
         }
     }
 
-    private StorageSummary putObject(Table table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes) throws IOException {
+    private StorageSummary putObject(Table table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes) {
         long timestamp = _storageProvider.getCurrentTimestamp(table);
         int chunkSize = _storageProvider.getDefaultChunkSize();
         checkArgument(chunkSize > 0);
-        DigestInputStream md5In = new DigestInputStream(in.getInput(), getMessageDigest("MD5"));
+        DigestInputStream md5In = new DigestInputStream(in.get(), getMessageDigest("MD5"));
         DigestInputStream sha1In = new DigestInputStream(md5In, getMessageDigest("SHA-1"));
 
         // A more aggressive solution like the Astyanax ObjectWriter recipe would improve performance by pipelining

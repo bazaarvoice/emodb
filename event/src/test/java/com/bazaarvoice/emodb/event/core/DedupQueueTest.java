@@ -37,12 +37,12 @@ public class DedupQueueTest {
         DedupQueue q = new DedupQueue("test-queue", "read", "write",
                 mock(QueueDAO.class), eventStore, Suppliers.ofInstance(true), mock(ScheduledExecutorService.class), getPersistentSortedQueueFactory(),
                 mock(MetricRegistry.class));
-        q.startAndWait();
+        q.startAsync().awaitRunning();
 
         // The first poll checks the read channel, find it empty, checks the write channel.
         q.poll(Duration.ofSeconds(30), new SimpleEventSink(10));
-        verify(readerDao).readNewer(eq("read"), Matchers.<EventSink>any());
-        verify(readerDao).readNewer(eq("write"), Matchers.<EventSink>any());
+        verify(readerDao).readNewer(eq("read"), Matchers.any());
+        verify(readerDao).readNewer(eq("write"), Matchers.any());
         verifyNoMoreInteractions(readerDao);
 
         reset(readerDao);
@@ -60,19 +60,19 @@ public class DedupQueueTest {
         DedupQueue q = new DedupQueue("test-queue", "read", "write",
                 mock(QueueDAO.class), eventStore, Suppliers.ofInstance(true), mock(ScheduledExecutorService.class), getPersistentSortedQueueFactory(),
                 mock(MetricRegistry.class));
-        q.startAndWait();
+        q.startAsync().awaitRunning();
 
         // The first peek checks the read channel, find it empty, checks the write channel.
         q.peek(new SimpleEventSink(10));
-        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull(), Matchers.eq(true));
-        verify(readerDao).readNewer(eq("write"), Matchers.<EventSink>any());
+        verify(readerDao).readAll(eq("read"), Matchers.any(), (Date) Matchers.isNull(), Matchers.eq(true));
+        verify(readerDao).readNewer(eq("write"), Matchers.any());
         verifyNoMoreInteractions(readerDao);
 
         reset(readerDao);
 
         // Subsequent peeks w/in a short window still peek the read channel, skip polling the write channel.
         q.peek(new SimpleEventSink(10));
-        verify(readerDao).readAll(eq("read"), Matchers.<EventSink>any(), (Date) Matchers.isNull(), Matchers.eq(true));
+        verify(readerDao).readAll(eq("read"), Matchers.any(), (Date) Matchers.isNull(), Matchers.eq(true));
         verifyNoMoreInteractions(readerDao);
     }
 
@@ -82,7 +82,7 @@ public class DedupQueueTest {
         Mockito.when(factory.create(Matchers.anyString(), Matchers.any(QueueDAO.class))).thenAnswer(new Answer() {
             public Object answer(InvocationOnMock invocation) {
                 Object[] args = invocation.getArguments();
-                return new PersistentSortedQueue((String)args[0], (QueueDAO)args[1], new MetricRegistry());
+                return new PersistentSortedQueue((String) args[0], (QueueDAO) args[1], new MetricRegistry());
             }
         });
 
