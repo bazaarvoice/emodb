@@ -16,9 +16,10 @@
     <name>EmoDB SDK Maven Plugin</name>
 
     <properties>
-        <mavenVersion>3.1.1</mavenVersion>
-        <mavenPluginAnnotationsVersion>3.3</mavenPluginAnnotationsVersion>
-        <mavenPluginPluginVersion>3.3</mavenPluginPluginVersion>
+        <mavenVersion>3.6.0</mavenVersion>
+        <mavenPluginAnnotationsVersion>3.6.0</mavenPluginAnnotationsVersion>
+        <mavenPluginPluginVersion>3.6.0</mavenPluginPluginVersion>
+        <enforcer.skip>true</enforcer.skip>
     </properties>
 
     <dependencies>
@@ -50,16 +51,7 @@
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
             <version>${curator.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>log4j</groupId>
-                    <artifactId>log4j</artifactId>
-                </exclusion>
-            </exclusions>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.twdata.maven</groupId>
