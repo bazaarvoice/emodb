@@ -37,7 +37,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.longThat;
@@ -73,8 +73,7 @@ public class AthenaAuditWriterTest {
 
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    Map<String, Object> auditJson = JsonHelper.fromJson(line, new TypeReference<Map<String, Object>>() {
-                    });
+                    Map<String, Object> auditJson = JsonHelper.fromJson(line, new TypeReference<Map<String, Object>>() {});
                     _uploadedAudits.put((String) invocationOnMock.getArguments()[1], auditJson);
                 }
             }
@@ -192,15 +191,14 @@ public class AthenaAuditWriterTest {
             writer.persist("test:table", "key" + i, audit, auditTime);
         }
 
-        when(_auditService.awaitTermination(anyInt(), any(TimeUnit.class))).thenReturn(true);
-        when(_fileTransferService.awaitTermination(anyInt(), any(TimeUnit.class))).thenReturn(true);
+        when(_auditService.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(true);
+        when(_fileTransferService.awaitTermination(anyLong(), any(TimeUnit.class))).thenReturn(true);
 
         writer.flushAndShutdown();
 
         ArgumentCaptor<Runnable> fileTransferRunnable = ArgumentCaptor.forClass(Runnable.class);
         verify(_fileTransferService).submit(fileTransferRunnable.capture());
-        final Runnable value = fileTransferRunnable.getValue();
-        value.run();
+        fileTransferRunnable.getValue().run();
 
         assertEquals(_uploadedAudits.keySet().size(), 1);
         String key = _uploadedAudits.keySet().iterator().next();

@@ -887,7 +887,7 @@ public class ScanUploaderTest {
         verifyNoMoreInteractions(service, scanWorkflow);
     }
 
-//    @Test
+    @Test
     public void testScanTaskWithOversizedRange()
             throws Exception {
         final String id = "id";
@@ -896,7 +896,7 @@ public class ScanUploaderTest {
         final MetricRegistry metricRegistry = new MetricRegistry();
 
         DataTools dataTools = mock(DataTools.class);
-        when(dataTools.stashMultiTableScan(eq(id), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(Instant.class)))
+        when(dataTools.stashMultiTableScan(eq(id), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any()))
                 .thenAnswer((Answer<Iterator<MultiTableScanResult>>) invocation -> {
                     // For this test return 400 results; if the test is successful it should only pull the first
                     // 300 anyway, but put a hard stop on it so the test cannot infinite loop on failure.
@@ -955,7 +955,6 @@ public class ScanUploaderTest {
             uploader.stop();
         }
 
-        //TODO
         assertEquals(result.getStatus(), RangeScanUploaderResult.Status.REPSPLIT);
 
         ScanRange expectedResplitRange = ScanRange.create(
@@ -1213,7 +1212,7 @@ public class ScanUploaderTest {
         }
     }
 
-//    @Test
+    @Test
     public void testPassesScanRangeTaskWithSlowTransfer()
             throws Exception {
         DataTools dataTools = mock(DataTools.class);
@@ -1229,7 +1228,7 @@ public class ScanUploaderTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
 
-        when(dataTools.stashMultiTableScan(eq("id"), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any(Instant.class)))
+        when(dataTools.stashMultiTableScan(eq("id"), anyString(), any(ScanRange.class), any(LimitCounter.class), any(ReadConsistency.class), any()))
                 .thenReturn(Iterators.singletonIterator(
                         new MultiTableScanResult(
                                 ByteBuffer.wrap(new byte[]{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}),
@@ -1292,7 +1291,6 @@ public class ScanUploaderTest {
             // was not killed despite taking over 100ms, which is what this test is checking for.
             RangeScanUploaderResult result = uploader.scanAndUpload("id", 0, options, "p0", ScanRange.all(), mock(Date.class));
 
-            //TODO
             assertEquals(result.getStatus(), RangeScanUploaderResult.Status.SUCCESS);
         } finally {
             uploader.stop();

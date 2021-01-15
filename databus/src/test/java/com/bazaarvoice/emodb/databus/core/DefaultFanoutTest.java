@@ -79,12 +79,12 @@ public class DefaultFanoutTest {
         };
 
         // Event event keys are deleted we need to capture them since fanout clears and re-uses the same instance.
-        EventSource _eventSource = mock(EventSource.class);
+        EventSource eventSource = mock(EventSource.class);
         _deletedKeys = Lists.newArrayList();
         doAnswer(invocationOnMock -> {
             _deletedKeys.addAll((List<String>) invocationOnMock.getArguments()[0]);
             return null;
-        }).when(_eventSource).delete(anyCollection());
+        }).when(eventSource).delete(anyCollection());
 
         _subscriptionsSupplier = mock(Supplier.class);
         _currentDataCenter = mock(DataCenter.class);
@@ -112,7 +112,7 @@ public class DefaultFanoutTest {
 
         MetricRegistry metricRegistry = new MetricRegistry();
 
-        _defaultFanout = new DefaultFanout("test", "test", _eventSource, eventSink, _outboundPartitionSelector,
+        _defaultFanout = new DefaultFanout("test", "test", eventSource, eventSink, _outboundPartitionSelector,
                 Duration.ofSeconds(1), _subscriptionsSupplier, _currentDataCenter, rateLimitedLogFactory, subscriptionEvaluator,
                 new FanoutLagMonitor(mock(LifeCycleRegistry.class), metricRegistry), metricRegistry, clock);
     }

@@ -66,6 +66,7 @@
 
         <mockito.version>3.7.0</mockito.version>
         <testng.version>7.3.0</testng.version>
+        <junit.version>4.13.1</junit.version>
     </properties>
 
     <dependencyManagement>
@@ -389,6 +390,12 @@
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
                 <version>${testng.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
         </dependencies>

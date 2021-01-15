@@ -84,7 +84,7 @@ public class ScanOperationsTimeUpdateTest {
         Assert.assertFalse(compactionControlSource.getAllStashTimes().containsKey(StashTimeKey.of("test1", "us-east")));
     }
 
-//    @Test
+    @Test
     public void testTimeEntryDoNotExistIfScanFailsWithAnException()
             throws Exception {
         StashStateListener stashStateListener = mock(StashStateListener.class);
@@ -96,7 +96,7 @@ public class ScanOperationsTimeUpdateTest {
         ScanOptions scanOptions = new ScanOptions("placement1").addDestination(ScanDestination.to(new URI("s3://testbucket/test/path")));
 
         ScanStatusDAO scanStatusDAO = mock(ScanStatusDAO.class);
-        doThrow(Exception.class).when(scanStatusDAO).updateScanStatus(any(ScanStatus.class));
+        doThrow(RuntimeException.class).when(scanStatusDAO).updateScanStatus(any(ScanStatus.class));
 
         CompactionControlSource compactionControlSource = new InMemoryCompactionControlSource();
 
