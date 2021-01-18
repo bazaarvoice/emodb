@@ -30,6 +30,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
+import org.junit.Assert;
 import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -108,7 +109,7 @@ public class DataStoreShadedClientTest extends ResourceTest {
         TestingServer server = new TestingServer();
 
         try (CuratorFramework curator = CuratorFrameworkFactory.newClient(
-                server.getConnectString(), new RetryNTimes(3, 100))) {
+                    server.getConnectString(), new RetryNTimes(3, 100))) {
             curator.start();
 
             ObjectMapper objectMapper = new ObjectMapper();
@@ -154,7 +155,7 @@ public class DataStoreShadedClientTest extends ResourceTest {
 
         Iterator<Map<String, Object>> records = client.scan("test:table", null, 10, ReadConsistency.STRONG);
 
-        for (int i = 1; i <= 10; i++) {
+        for (int i=1; i <= 10; i++) {
             assertTrue(records.hasNext());
             Map<String, Object> record = records.next();
             assertEquals(Intrinsic.getId(record), "record" + i);
@@ -198,10 +199,10 @@ public class DataStoreShadedClientTest extends ResourceTest {
         Map<String, List<Update>> updatesByTable = Maps.newHashMap();
         List<Update> allUpdates = Lists.newArrayList();
 
-        for (int table = 0; table < 3; table++) {
+        for (int table=0; table < 3; table++) {
             String tableName = "table" + table;
             List<Update> tableUpdates = Lists.newArrayListWithCapacity(2);
-            for (int value = 0; value < 2; value++) {
+            for (int value=0; value < 2; value++) {
                 Update update = new Update(tableName, "key" + value,
                         TimeUUIDs.newUUID(),
                         Deltas.mapBuilder().put("value", value).build(),
@@ -254,8 +255,8 @@ public class DataStoreShadedClientTest extends ResourceTest {
         }
 
         @GET
-        @Path("_stashroot")
-        @Produces(MediaType.TEXT_PLAIN)
+        @Path ("_stashroot")
+        @Produces (MediaType.TEXT_PLAIN)
         public String stashRoot() {
             return "s3://emodb-us-east-1/stash/ci";
         }
@@ -270,7 +271,7 @@ public class DataStoreShadedClientTest extends ResourceTest {
             assertEquals(consistency, "STRONG");
 
             List<Map<String, Object>> results = Lists.newArrayListWithCapacity(10);
-            for (int i = 1; i <= 10; i++) {
+            for (int i=1; i <= 10; i++) {
                 results.add(ImmutableMap.<String, Object>builder()
                         .put("value", "test" + i)
                         .put("~id", "record" + i)
@@ -307,13 +308,13 @@ public class DataStoreShadedClientTest extends ResourceTest {
         }
 
         @POST
-        @Path("_stream")
+        @Path ("_stream")
         public Response streamingUpdate(@HeaderParam("X-BV-API-Key") String apiKey, InputStream updateStream)
                 throws IOException {
             assertEquals(apiKey, API_KEY);
 
             // Because the Jackson and its annotation were shaded we need use the shaded JsonHelper to read it back
-            List<Update> updates = JsonHelper.readJson(updateStream, new TypeReference<List<Update>>() {});
+            List<Update> updates = JsonHelper.readJson(updateStream, new TypeReference<List<Update>>(){});
             for (Update update : updates) {
                 _updates.put(update.getTable(), update);
             }
