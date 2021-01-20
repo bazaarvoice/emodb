@@ -1,0 +1,71 @@
+systemOfRecord:
+   keyspaces:
+      ugc_global:
+         replicationFactor: 1
+         tables:
+            ugc:
+               keyspace: ugc_global
+               table.delta_v2: ugc_delta_v2
+               table.history: ugc_history
+      catalog_global:
+         replicationFactor: 1
+         tables:
+            ugc:
+               keyspace: catalog_global
+               table.delta_v2: cat_delta_v2
+               table.history: cat_history
+      app_global:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: app_global
+               table.delta_v2: default_delta_v2
+               table.history: default_history
+            sys:
+               keyspace: app_global
+               table.delta_v2: sys_delta_v2
+               table.history: sys_history
+      pii_us:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: pii_us
+               table.delta_v2: pii_delta_v2
+               table.history: pii_history
+
+databus:
+   keyspaces:
+      databus:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: databus
+
+queue:
+   keyspaces:
+      queue:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: queue
+
+blobStore:
+   keyspaces:
+      media_global:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: media_global
+               table: ugc_blob
+      media_global_mirror:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: media_global_mirror
+               table: media_blob
+      blob_global:
+         replicationFactor: 1
+         tables:
+            default:
+               keyspace: blob_global
+               table: media_blob
