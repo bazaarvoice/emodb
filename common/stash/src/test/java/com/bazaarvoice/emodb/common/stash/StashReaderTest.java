@@ -16,6 +16,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.mockito.ArgumentMatcher;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.SkipException;
 import org.testng.annotations.Test;
@@ -58,7 +59,7 @@ public class StashReaderTest {
 
         // Get the latest
         StandardStashReader reader = new StandardStashReader(URI.create("s3://stash-bucket/stash/test"), s3, 0);
-        assertEquals(reader.getLatest(), "2015-01-01-00-00-00");
+        assertEquals("2015-01-01-00-00-00", reader.getLatest());
         assertEquals(reader.getLatestCreationTime(), new ISO8601DateFormat().parse("2015-01-01T00:00:00Z"));
 
         // Lock the latest
@@ -66,12 +67,12 @@ public class StashReaderTest {
         // Update the latest
         latest.set("2015-01-02-00-00-00");
         // Make sure the latest is still locked
-        assertEquals(reader.getLatest(), "2015-01-01-00-00-00");
+        assertEquals("2015-01-01-00-00-00", reader.getLatest());
         assertEquals(reader.getLatestCreationTime(), new ISO8601DateFormat().parse("2015-01-01T00:00:00Z"));
 
         // Unlock the latest
         reader.unlock();
-        assertEquals(reader.getLatest(), "2015-01-02-00-00-00");
+        assertEquals("2015-01-02-00-00-00", reader.getLatest());
         assertEquals(reader.getLatestCreationTime(), new ISO8601DateFormat().parse("2015-01-02T00:00:00Z"));
     }
 
@@ -80,19 +81,27 @@ public class StashReaderTest {
         AmazonS3 s3 = mock(AmazonS3.class);
 
         final String latest = "2015-01-01-00-00-00";
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream(latest.getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream(latest.getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         Date startTime = Date.from(Instant.now().minus(Duration.ofDays(1)));
         String startTimeAsWrittenInSuccessFile = new ISO8601DateFormat().format(startTime);
         final String contents = format("%s\n%s\n%s", startTimeAsWrittenInSuccessFile, "2015-01-01T03:00:00Z", "scanId");
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/" + latest + "/_SUCCESS")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream(contents.getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/" + latest + "/_SUCCESS")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream(contents.getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         // Get the stash start timestamp
@@ -103,10 +112,14 @@ public class StashReaderTest {
     @Test
     public void testListTables() {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         ObjectListing listing = new ObjectListing();
@@ -130,15 +143,19 @@ public class StashReaderTest {
     @Test
     public void testListTableMetadata() {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         String nextMarker = "1";
         ObjectListing listing = new ObjectListing();
-        listing.setCommonPrefixes(ImmutableList.of());
+        listing.setCommonPrefixes(ImmutableList.<String>of());
         listing.setNextMarker(nextMarker);
 
         // Add an initial summary for the _SUCCESS file
@@ -149,8 +166,8 @@ public class StashReaderTest {
         listing.getObjectSummaries().add(objectSummary);
 
         // Simulate 100 tables, each with 8 gzip files of content
-        for (int t = 0; t < 100; t++) {
-            for (int f = 0; f < 8; f++) {
+        for (int t=0; t < 100; t++) {
+            for (int f=0; f < 8; f++) {
                 objectSummary = new S3ObjectSummary();
                 objectSummary.setBucketName("stash-bucket");
                 objectSummary.setKey(
@@ -168,7 +185,7 @@ public class StashReaderTest {
 
                     // Start the next object listing
                     listing = new ObjectListing();
-                    listing.setCommonPrefixes(ImmutableList.of());
+                    listing.setCommonPrefixes(ImmutableList.<String>of());
                     listing.setMarker(nextMarker);
                     nextMarker = String.valueOf(Integer.parseInt(nextMarker) + 1);
                 }
@@ -184,7 +201,7 @@ public class StashReaderTest {
         List<StashTableMetadata> tables = ImmutableList.copyOf(reader.listTableMetadata());
         assertEquals(tables.size(), 100);
 
-        for (int t = 0; t < 100; t++) {
+        for (int t=0; t < 100; t++) {
             StashTableMetadata tableMetadata = tables.get(t);
             String expectedPrefix = String.format("stash/test/2015-01-01-00-00-00/table~client%d/", t);
             String expectedTableName = String.format("table:client%d", t);
@@ -194,7 +211,7 @@ public class StashReaderTest {
             assertEquals(tableMetadata.getTableName(), expectedTableName);
             assertEquals(tableMetadata.getFiles().size(), 8);
 
-            for (int f = 0; f < 8; f++) {
+            for (int f=0; f < 8; f++) {
                 StashFileMetadata fileMetadata = tableMetadata.getFiles().get(f);
                 String expectedKey = String.format("stash/test/2015-01-01-00-00-00/table~client%d/table~client%d-%d.gz", t, t, f);
                 long expectedSize = 10 * (f + 1);
@@ -207,12 +224,16 @@ public class StashReaderTest {
     }
 
     @Test
-    public void testGetTableMetadata() {
+    public void testGetTableMetadata() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/test~table/", null))))
@@ -238,12 +259,16 @@ public class StashReaderTest {
     }
 
     @Test
-    public void testGetSplits() {
+    public void testGetSplits() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream("2015-01-01-00-00-00".getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         when(s3.listObjects(argThat(listObjectRequest("stash-bucket", "stash/test/2015-01-01-00-00-00/test~table/", null))))
@@ -255,7 +280,7 @@ public class StashReaderTest {
         List<StashSplit> splits = reader.getSplits("test:table");
         assertEquals(splits.size(), 4);
 
-        for (int i = 0; i < 4; i++) {
+        for (int i=0; i < 4; i++) {
             StashSplit split = splits.get(i);
             assertEquals(split.getTable(), "test:table");
             assertEquals(split.getFile(), "split" + i + ".gz");
@@ -271,8 +296,8 @@ public class StashReaderTest {
         List<Map<String, Object>> expected = Lists.newArrayListWithCapacity(4);
         ByteArrayOutputStream splitOut = new ByteArrayOutputStream();
 
-        for (int p = 0; p < 2; p++) {
-            for (int i = 0; i < 2; i++) {
+        for (int p=0; p < 2; p++) {
+            for (int i=0; i < 2; i++) {
                 ByteArrayOutputStream partialOut = new ByteArrayOutputStream();
                 try (BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new GZIPOutputStream(partialOut)))) {
                     Map<String, Object> value = ImmutableMap.<String, Object>builder()
@@ -318,10 +343,14 @@ public class StashReaderTest {
     @Test
     public void testLockedView() throws Exception {
         AmazonS3 s3 = mock(AmazonS3.class);
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
-            S3Object s3Object = new S3Object();
-            s3Object.setObjectContent(new ByteArrayInputStream("2015-01-02-00-00-00".getBytes(Charsets.UTF_8)));
-            return s3Object;
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
+            @Override
+            public S3Object answer(InvocationOnMock invocation)
+                    throws Throwable {
+                S3Object s3Object = new S3Object();
+                s3Object.setObjectContent(new ByteArrayInputStream("2015-01-02-00-00-00".getBytes(Charsets.UTF_8)));
+                return s3Object;
+            }
         });
 
         ObjectListing listing = new ObjectListing();
@@ -345,7 +374,12 @@ public class StashReaderTest {
         // Lock the original reader to the previous day
         reader.lockToStashCreatedAt(new ISO8601DateFormat().parse("2015-01-01T00:00:00Z"));
 
-        Function<StashTable, String> toTableName = StashTable::getTableName;
+        Function<StashTable, String> toTableName = new Function<StashTable, String>() {
+            @Override
+            public String apply(StashTable stashTable) {
+                return stashTable.getTableName();
+            }
+        };
 
         List<String> readerTables = ImmutableList.copyOf(Iterators.transform(reader.listTables(), toTableName));
         List<String> lockedViewTables = ImmutableList.copyOf(Iterators.transform(lockedView.listTables(), toTableName));
@@ -390,24 +424,28 @@ public class StashReaderTest {
     }
 
     private Answer<ObjectListing> objectListingAnswer(@Nullable final String marker, final String... fileNames) {
-        return invocation -> {
-            ListObjectsRequest request = (ListObjectsRequest) invocation.getArguments()[0];
+        return new Answer<ObjectListing>() {
+            @Override
+            public ObjectListing answer(InvocationOnMock invocation)
+                    throws Throwable {
+                ListObjectsRequest request = (ListObjectsRequest) invocation.getArguments()[0];
 
-            ObjectListing objectListing = new ObjectListing();
-            objectListing.setBucketName(request.getBucketName());
-            objectListing.setPrefix(request.getPrefix());
+                ObjectListing objectListing = new ObjectListing();
+                objectListing.setBucketName(request.getBucketName());
+                objectListing.setPrefix(request.getPrefix());
 
-            objectListing.setTruncated(marker != null);
-            objectListing.setNextMarker(marker);
+                objectListing.setTruncated(marker != null);
+                objectListing.setNextMarker(marker);
 
-            for (String fileName : fileNames) {
-                S3ObjectSummary objectSummary = new S3ObjectSummary();
-                objectSummary.setKey(request.getPrefix() + fileName);
-                objectSummary.setSize(100);
-                objectListing.getObjectSummaries().add(objectSummary);
+                for (String fileName : fileNames) {
+                    S3ObjectSummary objectSummary = new S3ObjectSummary();
+                    objectSummary.setKey(request.getPrefix() + fileName);
+                    objectSummary.setSize(100);
+                    objectListing.getObjectSummaries().add(objectSummary);
+                }
+
+                return objectListing;
             }
-
-            return objectListing;
         };
     }
 

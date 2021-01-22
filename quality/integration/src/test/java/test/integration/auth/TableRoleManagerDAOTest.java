@@ -78,7 +78,7 @@ public class TableRoleManagerDAOTest {
 
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
 
-        for (int i = 0; i < 3; i++) {
+        for (int i=0; i < 3; i++) {
             _roleManager.getRole(id);
         }
 
@@ -132,7 +132,7 @@ public class TableRoleManagerDAOTest {
     @Test
     public void testAddRoleToExistingGroup() throws Exception {
         RoleIdentifier id1 = new RoleIdentifier("g1", "r1");
-        createRole(id1, null, null, null);
+        createRole(id1, null,null, null);
         RoleIdentifier id2 = new RoleIdentifier("g1", "r2");
         createRole(id2, null, null, null);
 
@@ -170,7 +170,7 @@ public class TableRoleManagerDAOTest {
     public void testCreateInvalidGroupName() throws Exception {
         RoleIdentifier id = new RoleIdentifier("bad/group", "r1");
         try {
-            createRole(id, null, null, null);
+            createRole(id, null,null, null);
             fail("IllegalArgumentException not thrown");
         } catch (IllegalArgumentException e) {
             // expected
@@ -211,7 +211,7 @@ public class TableRoleManagerDAOTest {
     @Test
     public void testGetPermissionsForRole() throws Exception {
         RoleIdentifier id = new RoleIdentifier("g1", "r1");
-        createRole(id, "n1", "d1", ImmutableSet.of("p1", "p2"));
+        createRole(id, "n1","d1", ImmutableSet.of("p1", "p2"));
 
         Set<String> permissions = _roleManager.getPermissionsForRole(id);
         assertEquals(permissions, ImmutableSet.of("p1", "p2"));
@@ -250,7 +250,7 @@ public class TableRoleManagerDAOTest {
                 new RoleIdentifier(null, "r4"));
 
         for (RoleIdentifier id : roleIds) {
-            createRole(id, null, null, null);
+            createRole(id, null,null, null);
         }
         List<Role> actual = ImmutableList.copyOf(_roleManager.getAll());
 

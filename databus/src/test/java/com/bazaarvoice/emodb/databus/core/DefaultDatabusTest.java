@@ -406,7 +406,7 @@ public class DefaultDatabusTest {
                 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
 
         List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
-        for (int i = 0; i < 4; i++) {
+        for (int i=0; i < 4; i++) {
             updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
         }
 
@@ -432,7 +432,7 @@ public class DefaultDatabusTest {
         Duration subscriptionTtl = Duration.ofDays(365 * 10).plus(Duration.ofDays(1));
         Duration eventTtl = Duration.ofDays(2);
 
-        testDatabus.subscribe("id", "test-subscription", condition, subscriptionTtl, eventTtl);
+        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
@@ -448,11 +448,11 @@ public class DefaultDatabusTest {
         Duration subscriptionTtl = Duration.ofDays(15);
         Duration eventTtl = Duration.ofDays(365).plus(Duration.ofDays(1));
 
-        testDatabus.subscribe("id", "test-subscription", condition, subscriptionTtl, eventTtl);
+        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {
-        return newEvent(id, table, key, changeId, ImmutableSet.of());
+        return newEvent(id, table, key, changeId, ImmutableSet.<String>of());
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId, Set<String> tags) {

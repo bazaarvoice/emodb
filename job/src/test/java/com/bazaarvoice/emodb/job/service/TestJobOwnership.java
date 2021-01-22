@@ -49,6 +49,7 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 
 public class TestJobOwnership {
+    private QueueService _queueService;
     private JobStatusDAO _jobStatusDAO;
     private TestingServer _testingServer;
     private CuratorFramework _curator;
@@ -58,17 +59,18 @@ public class TestJobOwnership {
     private DefaultJobService _service1;
     private DefaultJobService _service2;
 
-    private final AtomicInteger _nextMessageId = new AtomicInteger(1);
-    private final Deque<Message> _queue = Queues.newArrayDeque();
+    private AtomicInteger _nextMessageId = new AtomicInteger(1);
+    private Deque<Message> _queue = Queues.newArrayDeque();
 
     @BeforeMethod
     public void setUp() throws Exception {
         LifeCycleRegistry lifeCycleRegistry = mock(LifeCycleRegistry.class);
-        QueueService queueService = mock(QueueService.class);
+        _queueService = mock(QueueService.class);
 
-        when(queueService.peek(eq("testqueue"), anyInt())).thenAnswer(new Answer<List<Message>>() {
+        when(_queueService.peek(eq("testqueue"), anyInt())).thenAnswer(new Answer<List<Message>>() {
             @Override
-            public List<Message> answer(InvocationOnMock invocationOnMock) {
+            public List<Message> answer(InvocationOnMock invocationOnMock)
+                    throws Throwable {
                 return ImmutableList.copyOf(Iterables.limit(_queue, (Integer) invocationOnMock.getArguments()[1]));
             }
         });
@@ -82,7 +84,7 @@ public class TestJobOwnership {
                         invocationOnMock.getArguments()[1]));
                 return null;
             }
-        }).when(queueService).send(eq("testqueue"), any());
+        }).when(_queueService).send(eq("testqueue"), any());
 
         doAnswer(new Answer() {
             @Override
@@ -97,7 +99,7 @@ public class TestJobOwnership {
                 }
                 return null;
             }
-        }).when(queueService).acknowledge(eq("testqueue"), anyList());
+        }).when(_queueService).acknowledge(eq("testqueue"), anyList());
 
         _jobStatusDAO = new InMemoryJobStatusDAO();
         _testingServer = new TestingServer();
@@ -111,11 +113,11 @@ public class TestJobOwnership {
         _jobHandlerRegistry1 = new DefaultJobHandlerRegistry();
         _jobHandlerRegistry2 = new DefaultJobHandlerRegistry();
         _service1 = new DefaultJobService(
-                lifeCycleRegistry, queueService, "testqueue", _jobHandlerRegistry1, _jobStatusDAO, _curator,
+                lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry1, _jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
 
         _service2 = new DefaultJobService(
-                lifeCycleRegistry, queueService, "testqueue", _jobHandlerRegistry2, _jobStatusDAO, _curator,
+                lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry2, _jobStatusDAO, _curator,
                 1, Duration.ZERO, 100, Duration.ofHours(1));
     }
 
@@ -154,13 +156,13 @@ public class TestJobOwnership {
 
         // Create 10 of the jobs submitted only to service 1.  Since service1 and service2 share a queue all jobs
         // should be visible to both.
-        for (int i = 0; i < 10; i++) {
+        for (int i=0; i < 10; i++) {
             JobIdentifier<String, String> jobId = _service1.submitJob(new JobRequest<>(type, String.format("test-%d", i)));
             jobIds.add(jobId);
         }
 
         // Run all 10 jobs one at a time, alternating between service1 and service2
-        for (int i = 0; i < 10; i++) {
+        for (int i=0; i < 10; i++) {
             boolean jobRan = i % 2 == 0 ? _service1.runNextJob() : _service2.runNextJob();
             assertTrue(jobRan);
         }
@@ -170,7 +172,7 @@ public class TestJobOwnership {
         assertFalse(_service2.runNextJob());
 
         // Validate all 10 jobs ran successfully
-        for (int i = 0; i < 10; i++) {
+        for (int i=0; i < 10; i++) {
             JobIdentifier<String, String> jobId = jobIds.get(i);
             JobStatus<String, String> status = _jobStatusDAO.getJobStatus(jobId);
             assertNotNull(status);
@@ -229,7 +231,7 @@ public class TestJobOwnership {
         List<JobIdentifier<String, String>> service2Ids = Lists.newArrayList();
 
         // Create 20 jobs, 10 that can only be handled by service1 and 10 that can only be handled by service2
-        for (int i = 0; i < 10; i++) {
+        for (int i=0; i < 10; i++) {
             JobIdentifier<String, String> jobId = _service1.submitJob(new JobRequest<>(type, String.format("1-%d-test", i)));
             service1Ids.add(jobId);
             jobId = _service1.submitJob(new JobRequest<>(type, String.format("2-%d-test", i)));
@@ -255,8 +257,8 @@ public class TestJobOwnership {
 
         // Validate that all jobs ran and that they ran on the correct server.  This can be validated because server1's
         // and server2's handlers each generate unique responses.
-        for (int i = 0; i < 10; i++) {
-            for (int s = 1; s <= 2; s++) {
+        for (int i=0; i < 10; i++) {
+            for (int s=1; s <= 2; s++) {
                 JobIdentifier<String, String> jobId = (s == 1 ? service1Ids : service2Ids).get(i);
                 JobStatus<String, String> status = _jobStatusDAO.getJobStatus(jobId);
                 assertNotNull(status);

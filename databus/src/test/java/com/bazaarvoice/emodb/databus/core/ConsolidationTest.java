@@ -50,9 +50,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 public class ConsolidationTest {
-    /**
-     * EventStore.poll() returns 10 events, all for the same coordinate.
-     */
+    /** EventStore.poll() returns 10 events, all for the same coordinate. */
     @Test
     public void testOneCoordinateManyEvents() {
         final List<String> actualIds = Lists.newArrayList();
@@ -82,9 +80,7 @@ public class ConsolidationTest {
         assertTrue(result.hasMoreEvents());
     }
 
-    /**
-     * EventStore.poll() returns 1000 events, all for the same coordinate.
-     */
+    /** EventStore.poll() returns 1000 events, all for the same coordinate. */
     @Test
     public void testOneCoordinateTooManyEvents() {
         final List<String> actualIds = Lists.newArrayList();
@@ -264,7 +260,7 @@ public class ConsolidationTest {
             @Override
             public boolean poll(String subscription, Duration claimTtl, EventSink sink) {
                 // The single poll will supply 10 redundant events followed by an empty queue return value
-                for (int i = 0; i < 10; i++) {
+                for (int i=0; i < 10; i++) {
                     String id = "a" + i;
                     actualIds.add(id);
                     assertTrue(sink.remaining() > 0);
@@ -350,7 +346,7 @@ public class ConsolidationTest {
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {
-        return newEvent(id, table, key, changeId, ImmutableSet.of());
+        return newEvent(id, table, key, changeId, ImmutableSet.<String>of());
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId, Set<String> tags) {

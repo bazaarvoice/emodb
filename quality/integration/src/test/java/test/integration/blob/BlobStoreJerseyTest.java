@@ -117,8 +117,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         return setupResourceTestRule(
                 Collections.singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
                 authIdentityManager,
-                permissionManager
-        );
+                permissionManager);
     }
 
     @After
@@ -458,6 +457,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableAvailable() {
+        boolean expected = true;
         TableAvailability availability = new TableAvailability("my:placement", false);
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
@@ -473,6 +473,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableNotAvailable() {
+        boolean expected = false;
         TableAvailability availability = null;
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(

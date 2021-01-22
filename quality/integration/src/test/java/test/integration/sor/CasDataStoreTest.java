@@ -2,6 +2,7 @@ package test.integration.sor;
 
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
+import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
@@ -131,7 +132,7 @@ public class CasDataStoreTest {
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc"))
-                        .setCassandraClusters(ImmutableMap.of(
+                        .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Duration.ofDays(2));
@@ -331,6 +332,8 @@ public class CasDataStoreTest {
         // try compaction with multiple threads to compact key3. This will surface race condition issues, even though it is inconsistent.
         try {
             multiThreadCompactionTest(content4Expected, key4);
+        } catch (InterruptedException | ExecutionException e) {
+            throw new Exception("This test is specifically designed to catch race conditions. So, please do not ignore any intermittent failures, as it points to a race condition error", e);
         } catch (Exception e) {
             throw new Exception("This test is specifically designed to catch race conditions. So, please do not ignore any intermittent failures, as it points to a race condition error", e);
         }
@@ -443,7 +446,7 @@ public class CasDataStoreTest {
         }
 
         // Restore back to an empty template.
-        _store.setTableTemplate(TABLE, ImmutableMap.of(), newAudit("template"));
+        _store.setTableTemplate(TABLE, ImmutableMap.<String, Object>of(), newAudit("template"));
         assertEquals(_store.getTableTemplate(TABLE), ImmutableMap.of());
     }
 
@@ -455,7 +458,7 @@ public class CasDataStoreTest {
         boolean found = false;
         while (tableIter.hasNext()) {
             Table table = tableIter.next();
-            assertFalse(table.getName().startsWith("__")); // No internal tables
+            assertTrue(!table.getName().startsWith("__")); // No internal tables
             if (TABLE.equals(table.getName())) {
                 assertEquals(table.getOptions(), new TableOptionsBuilder().setPlacement("ugc_global:ugc").build());
                 assertEquals(table.getTemplate(), ImmutableMap.of());

@@ -71,7 +71,7 @@ public class AstyanaxEventReaderDAOTest {
                         ColumnFamilyQuery<String, ByteBuffer> cfQuery = mock(ColumnFamilyQuery.class);
                         when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
-                        return cfQuery;
+                        return (ColumnFamilyQuery) cfQuery;
                     }
                 })
                 // 'slab' query
@@ -91,7 +91,7 @@ public class AstyanaxEventReaderDAOTest {
                         ColumnFamilyQuery<ByteBuffer, Integer> cfQuery = mock(ColumnFamilyQuery.class);
                         when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
-                        return cfQuery;
+                        return (ColumnFamilyQuery) cfQuery;
                     }
                 });
 
@@ -128,7 +128,7 @@ public class AstyanaxEventReaderDAOTest {
                 mock(CassandraKeyspace.class), mock(ManifestPersister.class), "metricsGroup", mock(ExecutorService.class), metricRegistry);
         SlabFilter slabFilterSince = eventReaderDAO.getSlabFilterSince(since, "testchannel");
 
-        for (int i = 0; i < orderedSlabIds.size(); i++) {
+        for(int i = 0; i < orderedSlabIds.size(); i++) {
             UUID currSlabId = orderedSlabIds.get(i);
             ByteBuffer slabId = serializer.toByteBuffer(currSlabId);
             ByteBuffer nextSlabId = (i + 1 < orderedSlabIds.size()) ? serializer.toByteBuffer(orderedSlabIds.get(i + 1))

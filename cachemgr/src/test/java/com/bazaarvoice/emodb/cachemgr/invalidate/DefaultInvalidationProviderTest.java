@@ -3,10 +3,13 @@ package com.bazaarvoice.emodb.cachemgr.invalidate;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationEvent;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import org.testng.annotations.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import static org.mockito.Mockito.doThrow;
@@ -84,7 +87,7 @@ public class DefaultInvalidationProviderTest {
 
         EndPointProvider local = getEndPointProvider(getEndPoint("local1", false));
         RemoteInvalidationClient client = mock(RemoteInvalidationClient.class);
-        doThrow(RuntimeException.class).when(client).invalidateAll("http://local1:8081/tasks/invalidate", InvalidationScope.LOCAL, event);
+        doThrow(IOException.class).when(client).invalidateAll("http://local1:8081/tasks/invalidate", InvalidationScope.LOCAL, event);
 
         DefaultInvalidationProvider provider = new DefaultInvalidationProvider(
                 mock(LifeCycleRegistry.class), local, mock(EndPointProvider.class), client);
@@ -95,7 +98,12 @@ public class DefaultInvalidationProviderTest {
     }
 
     private EndPointProvider getEndPointProvider(final EndPoint... endPoints) {
-        return function -> function.apply(Arrays.asList(endPoints));
+        return new EndPointProvider() {
+            @Override
+            public void withEndPoints(Function<Collection<EndPoint>, ?> function) {
+                function.apply(Arrays.asList(endPoints));
+            }
+        };
     }
 
     private EndPoint getEndPoint(final String host, final boolean valid) {
@@ -104,7 +112,6 @@ public class DefaultInvalidationProviderTest {
             public String getAddress() {
                 return "http://" + host + ":8081/tasks/invalidate";
             }
-
             @Override
             public boolean isValid() {
                 return valid;

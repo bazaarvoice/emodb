@@ -116,8 +116,8 @@ public class DataStoreJerseyTest extends ResourceTest {
     private static final String APIKEY_STANDARD = "standard-key";
     private static final String APIKEY_STANDARD_UPDATE = "standard-update";
 
-    private final DataStore _server = mock(DataStore.class);
-    private final DataCenters _dataCenters = mock(DataCenters.class);
+    private DataStore _server = mock(DataStore.class);
+    private DataCenters _dataCenters = mock(DataCenters.class);
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupDataStoreResourceTestRule();
@@ -144,7 +144,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         createRole(roleManager, null, "standard", DefaultRoles.standard.getPermissions());
         createRole(roleManager, null, "update-with-events", ImmutableSet.of("sor|update|*"));
 
-        return setupResourceTestRule(Collections.singletonList(
+        return setupResourceTestRule(Collections.<Object>singletonList(
                 new DataStoreResource1(_server, mock(DataStoreAsync.class), new InMemoryCompactionControlSource(), new UnlimitedDataStoreUpdateThrottler())),
                 authIdentityManager, permissionManager);
     }
@@ -162,7 +162,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetDocRestricted() {
-        final ImmutableMap<String, Object> doc = ImmutableMap.of("asdf", "qwer");
+        final ImmutableMap<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer");
         when(_server.get("a-table-1", "k", ReadConsistency.STRONG)).thenReturn(doc);
         {
             final Map<String, Object> map = sorClient(APIKEY_READ_TABLES_A).get("a-table-1", "k");
@@ -181,6 +181,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetDocTimelineRestricted() {
+        Audit audit = new AuditBuilder().setLocalHost().build();
         List<Change> expected = ImmutableList.of(
                 new ChangeBuilder(TimeUUIDs.newUUID()).build());
         when(_server.getTimeline("a-table-1", "k", false, false, null, null, false, 10L, ReadConsistency.STRONG))
@@ -203,12 +204,10 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testScanRestricted() {
-        final Map<String, Object> doc = ImmutableMap.of("asdf", "qwer", Intrinsic.DELETED, false);
+    @Test public void testScanRestricted() {
+        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer", Intrinsic.DELETED, false);
         when(_server.scan("a-table-1", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-            @Override
-            public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+            @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                 return ImmutableList.of(doc).iterator();
             }
         });
@@ -230,14 +229,13 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetSplitsRestricted() {
+    @Test public void testGetSplitsRestricted() {
         final ImmutableList<String> splits = ImmutableList.of("schplit");
         when(_server.getSplits("a-table-1", 10)).thenReturn(splits);
 
         {
             final Collection<String> result = sorClient(APIKEY_READ_TABLES_A).getSplits("a-table-1", 10);
-            assertEquals(result.size(), 1);
+            assertTrue(result.size() == 1);
             assertEquals(splits.get(0), result.iterator().next());
             verify(_server).getSplits("a-table-1", 10);
         }
@@ -251,12 +249,10 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetSplitRestricted() {
-        final Map<String, Object> doc = ImmutableMap.of("asdf", "qwer", Intrinsic.DELETED, false);
+    @Test public void testGetSplitRestricted() {
+        final Map<String, Object> doc = ImmutableMap.<String, Object>of("asdf", "qwer", Intrinsic.DELETED, false);
         when(_server.getSplit("a-table-1", "schplit", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-            @Override
-            public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+            @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                 return ImmutableList.of(doc).iterator();
             }
         });
@@ -279,36 +275,32 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testMultiGetRestricted() {
+    @Test public void testMultiGetRestricted() {
 
         final Coordinate a1Id = Coordinate.of("a-table-1", "asdf");
-        final Map<String, Object> a1Doc = ImmutableMap.of("asdf", "ghjk");
+        final Map<String, Object> a1Doc = ImmutableMap.<String, Object>of("asdf", "ghjk");
         final Coordinate a2Id = Coordinate.of("a-table-2", "qwer");
-        final Map<String, Object> a2Doc = ImmutableMap.of("qwer", "tyui");
+        final Map<String, Object> a2Doc = ImmutableMap.<String, Object>of("qwer", "tyui");
         final Coordinate b1Id = Coordinate.of("b-table-1", "zxcv");
-        final Map<String, Object> b1Doc = ImmutableMap.of("zxcv", "bnm,");
+        final Map<String, Object> b1Doc = ImmutableMap.<String, Object>of("zxcv", "bnm,");
 
         when(_server.multiGet(ImmutableList.of(a1Id, a2Id), ReadConsistency.STRONG))
                 .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                    @Override
-                    public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                         return ImmutableList.of(a1Doc, a2Doc).iterator();
                     }
                 });
 
         when(_server.multiGet(ImmutableList.of(b1Id), ReadConsistency.STRONG))
                 .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                    @Override
-                    public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                         return ImmutableList.of(b1Doc).iterator();
                     }
                 });
 
         when(_server.multiGet(ImmutableList.of(a1Id, a2Id, b1Id), ReadConsistency.STRONG))
                 .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                    @Override
-                    public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
                         return ImmutableList.of(a1Doc, a2Doc, b1Doc).iterator();
                     }
                 });
@@ -347,7 +339,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testListTablesRestricted() {
         final TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
-        final ImmutableMap<String, Object> template = ImmutableMap.of("key", "value1");
+        final ImmutableMap<String, Object> template = ImmutableMap.<String, Object>of("key", "value1");
         final TableAvailability availability = new TableAvailability("my:placement", false);
         final DefaultTable a1 = new DefaultTable("a-table-1", options, template, availability);
         final DefaultTable a2 = new DefaultTable("a-table-2", options, template, availability);
@@ -368,9 +360,8 @@ public class DataStoreJerseyTest extends ResourceTest {
         verify(_server, times(1)).listTables(null, Long.MAX_VALUE);
     }
 
-    @Test
-    public void testGetTableTemplateRestricted() {
-        final ImmutableMap<String, Object> template = ImmutableMap.of("key", "value1");
+    @Test public void testGetTableTemplateRestricted() {
+        final ImmutableMap<String, Object> template = ImmutableMap.<String, Object>of("key", "value1");
         when(_server.getTableTemplate("a-table-1")).thenReturn(template);
         {
             final Map<String, Object> result = sorClient(APIKEY_READ_TABLES_A).getTableTemplate("a-table-1");
@@ -387,8 +378,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetTableOptionsRestricted() {
+    @Test public void testGetTableOptionsRestricted() {
         final TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableOptions("a-table-1")).thenReturn(options);
         {
@@ -406,8 +396,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetTableSizeRestricted() {
+    @Test public void testGetTableSizeRestricted() {
         final long size = 3L;
         when(_server.getTableApproximateSize("a-table-1")).thenReturn(size);
         {
@@ -425,8 +414,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetTableSizeLimitedRestricted() {
+    @Test public void testGetTableSizeLimitedRestricted() {
         final long size = 3L;
         when(_server.getTableApproximateSize("a-table-1", 5)).thenReturn(size);
         {
@@ -444,11 +432,10 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
     }
 
-    @Test
-    public void testGetTableMetadataRestricted() {
+    @Test public void testGetTableMetadataRestricted() {
         final TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         final TableAvailability availability = new TableAvailability("my:placement", false);
-        final Table metadata = new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability);
+        final Table metadata = new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability);
         when(_server.getTableMetadata("a-table-1")).thenReturn(metadata);
         {
             final Table result = sorClient(APIKEY_READ_TABLES_A).getTableMetadata("a-table-1");
@@ -469,9 +456,9 @@ public class DataStoreJerseyTest extends ResourceTest {
     public void testListTables() {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
-        List<Table> expected = ImmutableList.of(
-                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
-                new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
+        List<Table> expected = ImmutableList.<Table>of(
+                new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
+                new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
         when(_server.listTables(null, Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
@@ -487,9 +474,9 @@ public class DataStoreJerseyTest extends ResourceTest {
     public void testListTablesFrom() {
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         TableAvailability availability = new TableAvailability("my:placement", false);
-        List<Table> expected = ImmutableList.of(
-                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability),
-                new DefaultTable("table-2", options, ImmutableMap.of("key", "value2"), availability));
+        List<Table> expected = ImmutableList.<Table>of(
+                new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability),
+                new DefaultTable("table-2", options, ImmutableMap.<String, Object>of("key", "value2"), availability));
         when(_server.listTables("from-key", Long.MAX_VALUE)).thenReturn(expected.iterator());
 
         List<Table> actual = Lists.newArrayList(
@@ -590,7 +577,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         TableAvailability availability = new TableAvailability("ugc_global:ugc", false);
         TableOptions options = new TableOptionsBuilder().setPlacement("ugc_global:ugc").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
-                new DefaultTable("table-name", options, ImmutableMap.of(), availability));
+                new DefaultTable("table-name", options, ImmutableMap.<String, Object>of(), availability));
 
         Audit audit = new AuditBuilder().setLocalHost().build();
 
@@ -657,9 +644,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         verifyNoMoreInteractions(_server);
     }
 
-    /**
-     * Call {@code updateAllForFacade()} with an API key that doesn't have permission to update facades.
-     */
+    /** Call {@code updateAllForFacade()} with an API key that doesn't have permission to update facades. */
     @Test
     public void testUpdateAllForFacadeForbidden() {
 
@@ -719,7 +704,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testGetTableExists() {
         boolean expected = true;
-        when(_server.getTableTemplate("table-name")).thenReturn(ImmutableMap.of());
+        when(_server.getTableTemplate("table-name")).thenReturn(ImmutableMap.<String, Object>of());
 
         boolean actual = sorClient(APIKEY_TABLE).getTableExists("table-name");
 
@@ -746,7 +731,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         TableAvailability availability = new TableAvailability("my:placement", false);
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
-                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
+                new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability)
         );
 
         boolean actual = sorClient(APIKEY_TABLE).isTableAvailable("table-name");
@@ -762,7 +747,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         TableAvailability availability = null;
         TableOptions options = new TableOptionsBuilder().setPlacement("my:placement").build();
         when(_server.getTableMetadata("table-name")).thenReturn(
-                new DefaultTable("table-1", options, ImmutableMap.of("key", "value1"), availability)
+                new DefaultTable("table-1", options, ImmutableMap.<String, Object>of("key", "value1"), availability)
         );
 
         boolean actual = sorClient(APIKEY_TABLE).isTableAvailable("table-name");
@@ -774,7 +759,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetTableTemplate() {
-        Map<String, Object> expected = ImmutableMap.of("key", "value");
+        Map<String, Object> expected = ImmutableMap.<String, Object>of("key", "value");
         when(_server.getTableTemplate("table-name")).thenReturn(expected);
 
         Map<String, Object> actual = sorClient(APIKEY_TABLE).getTableTemplate("table-name");
@@ -831,7 +816,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGet() {
-        Map<String, Object> expected = ImmutableMap.of("key", "value", "count", 1234);
+        Map<String, Object> expected = ImmutableMap.<String, Object>of("key", "value", "count", 1234);
         when(_server.get("table-name", "row-key", ReadConsistency.STRONG)).thenReturn(expected);
 
         Map<String, Object> actual = sorClient(APIKEY_TABLE).get("table-name", "row-key");
@@ -843,7 +828,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetWithConsistency() {
-        Map<String, Object> expected = ImmutableMap.of("key", "value", "count", 1234);
+        Map<String, Object> expected = ImmutableMap.<String, Object>of("key", "value", "count", 1234);
         when(_server.get("table-name", "row-key", ReadConsistency.WEAK)).thenReturn(expected);
 
         Map<String, Object> actual = sorClient(APIKEY_TABLE).get("table-name", "row-key", ReadConsistency.WEAK);
@@ -873,9 +858,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         verifyNoMoreInteractions(_server);
     }
 
-    /**
-     * Test getTimeline(), omitting all optional query parameters.
-     */
+    /** Test getTimeline(), omitting all optional query parameters. */
     @Test
     public void testGetTimelineRESTDefault() throws Exception {
         List<Change> expected = ImmutableList.of(
@@ -892,7 +875,8 @@ public class DataStoreJerseyTest extends ResourceTest {
         List<Change> actual = _resourceTestRule.client().resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
-                .get(new GenericType<List<Change>>() {});
+                .get(new GenericType<List<Change>>() {
+                });
 
         assertEquals(actual.size(), expected.size());
         assertEquals(actual.get(0).getId(), expected.get(0).getId());
@@ -902,9 +886,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         verifyNoMoreInteractions(_server);
     }
 
-    /**
-     * Test getTimeline() with timestamp start/end instead of UUIDs.
-     */
+    /** Test getTimeline() with timestamp start/end instead of UUIDs. */
     @Test
     public void testGetTimelineRESTTimestampsForward() throws Exception {
         Date start = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").parse("2012-03-15 16:12:34.567");
@@ -912,7 +894,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         UUID startUuid = TimeUUIDs.uuidForTimestamp(start);
         UUID endUuid = TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(end.getTime() + 1));
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, false, 10, ReadConsistency.STRONG))
-                .thenReturn(Iterators.emptyIterator());
+                .thenReturn(Iterators.<Change>emptyIterator());
 
         DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")
@@ -924,15 +906,14 @@ public class DataStoreJerseyTest extends ResourceTest {
         _resourceTestRule.client().resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
-                .get(new GenericType<List<Change>>() {});
+                .get(new GenericType<List<Change>>() {
+                });
 
         verify(_server).getTimeline("table-name", "row-key", true, false, startUuid, endUuid, false, 10, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);
     }
 
-    /**
-     * Test getTimeline() with timestamp start/end instead of UUIDs.
-     */
+    /** Test getTimeline() with timestamp start/end instead of UUIDs. */
     @Test
     public void testGetTimelineRESTTimestampsReversed() throws Exception {
         Date start = new Date();
@@ -940,7 +921,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         UUID startUuid = TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(start.getTime() + 1));
         UUID endUuid = TimeUUIDs.uuidForTimestamp(end);
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, true, 10, ReadConsistency.STRONG))
-                .thenReturn(Iterators.emptyIterator());
+                .thenReturn(Iterators.<Change>emptyIterator());
 
         DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")
@@ -951,7 +932,8 @@ public class DataStoreJerseyTest extends ResourceTest {
         _resourceTestRule.client().resource(uri)
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, APIKEY_TABLE)
-                .get(new GenericType<List<Change>>() {});
+                .get(new GenericType<List<Change>>() {
+                });
 
         verify(_server).getTimeline("table-name", "row-key", true, false, startUuid, endUuid, true, 10, ReadConsistency.STRONG);
         verifyNoMoreInteractions(_server);
@@ -959,9 +941,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testScan() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
-                ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
         when(_server.scan("table-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
@@ -974,9 +956,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testScanFrom() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
-                ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
         when(_server.scan("table-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
@@ -1016,9 +998,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetSplit() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
-                ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
         when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.WEAK)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
@@ -1031,9 +1013,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetSplitFrom() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
-                ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.ID, "key2", Intrinsic.DELETED, false, "count", 5678));
         when(_server.getSplit("table-name", "split-name", "from-key", Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(expected.iterator());
 
         List<Map<String, Object>> actual = Lists.newArrayList(
@@ -1046,7 +1028,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testGetSplitWithMostContentDeleted() {
-        List<Map<String, Object>> content = ImmutableList.of(
+        List<Map<String, Object>> content = ImmutableList.<Map<String, Object>>of(
                 ImmutableMap.of(Intrinsic.ID, "key1", Intrinsic.DELETED, false, "count", 1),
                 ImmutableMap.of(Intrinsic.ID, "key2", Intrinsic.DELETED, true, "count", 2),
                 ImmutableMap.of(Intrinsic.ID, "key3", Intrinsic.DELETED, true, "count", 3),
@@ -1063,8 +1045,7 @@ public class DataStoreJerseyTest extends ResourceTest {
                     throw Throwables.propagate(e);
                 }
             }
-            return true;
-        });
+            return true; });
 
         when(_server.getSplit("table-name", "split-name", null, Long.MAX_VALUE, true, ReadConsistency.STRONG)).thenReturn(slowIterator);
 
@@ -1092,9 +1073,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testMultiGet() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.TABLE, "testtable1", Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.of(Intrinsic.TABLE, "testtable2", Intrinsic.ID, "key&2", "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.TABLE, "testtable1", Intrinsic.ID, "key1", "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.TABLE, "testtable2", Intrinsic.ID, "key&2", "count", 5678));
         List<Coordinate> coordinates = Lists.newArrayList(Coordinate.of("testtable", "key1"),
                 Coordinate.of("testtable2", "key&2"));
         when(_server.multiGet(coordinates, ReadConsistency.STRONG)).thenReturn(expected.iterator());
@@ -1109,9 +1090,9 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     @Test
     public void testMultiGetWithConsistency() {
-        List<Map<String, Object>> expected = ImmutableList.of(
-                ImmutableMap.of(Intrinsic.TABLE, "testtable1", Intrinsic.ID, "key1", "count", 1234),
-                ImmutableMap.of(Intrinsic.TABLE, "testtable2", Intrinsic.ID, "key&2", "count", 5678));
+        List<Map<String, Object>> expected = ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(Intrinsic.TABLE, "testtable1", Intrinsic.ID, "key1", "count", 1234),
+                ImmutableMap.<String, Object>of(Intrinsic.TABLE, "testtable2", Intrinsic.ID, "key&2", "count", 5678));
         List<Coordinate> coordinates = Lists.newArrayList(Coordinate.of("testtable", "key1"),
                 Coordinate.of("testtable2", "key&2"));
         when(_server.multiGet(coordinates, ReadConsistency.WEAK)).thenReturn(expected.iterator());
@@ -1388,18 +1369,18 @@ public class DataStoreJerseyTest extends ResourceTest {
                 Table table = mock(Table.class);
                 when(table.getName()).thenReturn(name);
                 when(table.getOptions()).thenReturn(new TableOptionsBuilder().setPlacement(placement).build());
-                when(table.getTemplate()).thenReturn(ImmutableMap.of());
+                when(table.getTemplate()).thenReturn(ImmutableMap.<String, Object>of());
                 return table;
             }
         };
     }
 
-    @Test(expected = InvalidCredentialException.class)
+    @Test (expected = InvalidCredentialException.class)
     public void testClientWithNullApiKey() {
         sorClient(null);
     }
 
-    @Test(expected = InvalidCredentialException.class)
+    @Test (expected = InvalidCredentialException.class)
     public void testClientWithEmptyApiKey() {
         sorClient("");
     }

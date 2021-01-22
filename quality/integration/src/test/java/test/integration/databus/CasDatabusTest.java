@@ -87,6 +87,7 @@ import static org.testng.Assert.assertTrue;
 public class CasDatabusTest {
     private SimpleLifeCycleRegistry _lifeCycle;
     private HealthCheckRegistry _healthChecks;
+    private DatabusFactory _bus;
 
     @BeforeClass
     public void setup() throws Exception {
@@ -117,7 +118,7 @@ public class CasDatabusTest {
 
                 DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc", "app_remote:default"))
-                        .setCassandraClusters(ImmutableMap.of(
+                        .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
                                 "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
                                 "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
                         .setHistoryTtl(Duration.ofDays(2));
@@ -188,7 +189,7 @@ public class CasDatabusTest {
                 install(new DatabusModule(serviceMode, metricRegistry));
             }
         });
-        DatabusFactory bus = injector.getInstance(DatabusFactory.class);
+        _bus = injector.getInstance(DatabusFactory.class);
 
         _lifeCycle.start();
     }

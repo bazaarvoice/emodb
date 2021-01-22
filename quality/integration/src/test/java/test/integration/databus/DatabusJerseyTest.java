@@ -52,6 +52,8 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.servlet.AsyncContext;
 import javax.servlet.ServletOutputStream;
@@ -59,6 +61,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -106,7 +109,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule(
-            Collections.singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
+            Collections.<Object>singletonList(new DatabusResource1(_local, _client, mock(DatabusEventStore.class),
                     new DatabusResourcePoller(new MetricRegistry()))),
             ImmutableMap.of(
                     APIKEY_DATABUS, new ApiKey(INTERNAL_ID_DATABUS, ImmutableSet.of("databus-role")),
@@ -152,6 +155,10 @@ public class DatabusJerseyTest extends ResourceTest {
         return argThat(matchesSubject(APIKEY_DATABUS, INTERNAL_ID_DATABUS));
     }
 
+    private Subject isUnauthSubject() {
+        return argThat(matchesSubject(APIKEY_UNAUTHORIZED, INTERNAL_ID_UNAUTHORIZED));
+    }
+
     private Subject createSubject() {
         Subject subject = mock(Subject.class);
         when(subject.getAuthenticationId()).thenReturn(APIKEY_DATABUS);
@@ -167,19 +174,19 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), isNull(), eq(Long.MAX_VALUE))).thenReturn(Iterators.emptyIterator());
+        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
         assertFalse(actual.hasNext());
-        verify(_local).listSubscriptions(isSubject(), isNull(), eq(Long.MAX_VALUE));
+        verify(_local).listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE));
         verifyNoMoreInteractions(_local);
     }
 
     @Test
     public void testListSubscriptions2() {
         Date now = new Date();
-        List<Subscription> expected = ImmutableList.of(
+        List<Subscription> expected = ImmutableList.<Subscription>of(
                 new DefaultSubscription("queue-name1", Conditions.alwaysTrue(), now, Duration.ofHours(48)),
                 new DefaultSubscription("queue-name2", Conditions.intrinsic(Intrinsic.TABLE, "test"), now, Duration.ofDays(7)));
         when(_local.listSubscriptions(isSubject(), eq("queue-name"), eq(123L))).thenReturn(expected.iterator());
@@ -429,8 +436,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
     private void testPeek(boolean includeTags) {
         List<Event> peekResults = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
         when(_client.peek(isSubject(), eq("queue-name"), eq(123))).thenReturn(peekResults.iterator());
 
         List<Event> expected;
@@ -443,8 +450,8 @@ public class DatabusJerseyTest extends ResourceTest {
         } else {
             // Tags won't be returned
             expected = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -478,8 +485,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
     private void testPoll(boolean includeTags) {
         List<Event> pollResults = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
         when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(pollResults.iterator(), 2, false));
 
@@ -495,8 +502,8 @@ public class DatabusJerseyTest extends ResourceTest {
         } else {
             // Tags won't be returned
             expected = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -536,9 +543,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             List<Event> pollResults = ImmutableList.of(
-                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of(ImmutableList.of("tag-1"))),
-                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of(ImmutableList.of("tag-2"))));
-
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
+            //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
                     .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
                     .thenReturn(new PollResult(pollResults.iterator(), 2, true));
@@ -553,8 +560,8 @@ public class DatabusJerseyTest extends ResourceTest {
             } else {
                 // Tags won't be returned
                 expected = ImmutableList.of(
-                        new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
-                        new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
+                        new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                        new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
                 view = EventViews.ContentOnly.class;
             }
 
@@ -575,7 +582,8 @@ public class DatabusJerseyTest extends ResourceTest {
             assertTrue(complete.get());
 
             List<Event> actual = JsonHelper.convert(
-                    JsonHelper.fromJson(out.toString(), List.class), new TypeReference<List<Event>>() {});
+                    JsonHelper.fromJson(out.toString(), List.class), new TypeReference<List<Event>>() {
+                    });
 
             assertEquals(actual, expected);
             verify(request).startAsync();
@@ -676,7 +684,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         ServletOutputStream servletOutputStream = new ServletOutputStream() {
             @Override
-            public void write(int b) {
+            public void write(int b) throws IOException {
                 out.write(b);
             }
         };
@@ -686,9 +694,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
         AsyncContext asyncContext = mock(AsyncContext.class);
         when(asyncContext.getResponse()).thenReturn(response);
-        doAnswer(invocation -> {
-            complete.set(true);
-            return null;
+        doAnswer(new Answer() {
+            @Override
+            public Object answer(InvocationOnMock invocation) throws Throwable {
+                complete.set(true);
+                return null;
+            }
         }).when(asyncContext).complete();
 
         HttpServletRequest request = mock(HttpServletRequest.class);
@@ -732,8 +743,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testPollPartitioned() {
         List<Event> expected = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.of()),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.of()));
+                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
         when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(expected.iterator(), 2, true));
 

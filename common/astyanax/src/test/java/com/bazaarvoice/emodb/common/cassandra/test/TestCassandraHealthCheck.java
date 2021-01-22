@@ -33,7 +33,7 @@ import static org.testng.Assert.assertTrue;
 
 public class TestCassandraHealthCheck {
 
-    private static final String QUERY_STRING = "SELECT peer FROM system.peers LIMIT 1";
+    private String _queryString = "SELECT peer FROM system.peers LIMIT 1";
     private CqlStatement _astyanaxStatement;
     private Session _cqlSession;
     private Clock _clock;
@@ -44,7 +44,7 @@ public class TestCassandraHealthCheck {
         CassandraKeyspace keyspace = mock(CassandraKeyspace.class);
 
         _astyanaxStatement = mock(CqlStatement.class);
-        when(_astyanaxStatement.withCql(QUERY_STRING)).thenReturn(_astyanaxStatement);
+        when(_astyanaxStatement.withCql(_queryString)).thenReturn(_astyanaxStatement);
         when(_astyanaxStatement.withConsistencyLevel(any())).thenReturn(_astyanaxStatement);
 
         Keyspace astyanaxKeyspace = mock(Keyspace.class);
@@ -57,7 +57,7 @@ public class TestCassandraHealthCheck {
 
         _clock = mock(Clock.class);
 
-        _healthCheck = new CassandraHealthCheck(keyspace, QUERY_STRING, _clock);
+        _healthCheck = new CassandraHealthCheck(keyspace, _queryString, _clock);
     }
 
     @SuppressWarnings("unchecked")
@@ -67,7 +67,7 @@ public class TestCassandraHealthCheck {
         OperationResult operationResult = createPositiveOperationResult("host1");
         ResultSet resultSet = createPositiveResultSet("host1");
         when(_astyanaxStatement.execute()).thenReturn(operationResult);
-        when(_cqlSession.execute(QUERY_STRING)).thenReturn(resultSet);
+        when(_cqlSession.execute(_queryString)).thenReturn(resultSet);
 
         long now = 1478789200000L;
         when(_clock.millis()).thenReturn(now);
@@ -80,7 +80,7 @@ public class TestCassandraHealthCheck {
         operationResult = createPositiveOperationResult("host2");
         resultSet = createPositiveResultSet("host2");
         when(_astyanaxStatement.execute()).thenReturn(operationResult);
-        when(_cqlSession.execute(QUERY_STRING)).thenReturn(resultSet);
+        when(_cqlSession.execute(_queryString)).thenReturn(resultSet);
 
         // Move time forward 4.9 seconds to ensure the cached result is still returned
         when(_clock.millis()).thenReturn(now = now + 4900L);
@@ -106,7 +106,7 @@ public class TestCassandraHealthCheck {
         OperationResult operationResult = createPositiveOperationResult("host1");
         ResultSet resultSet = createPositiveResultSet("host1");
         when(_astyanaxStatement.execute()).thenReturn(operationResult);
-        when(_cqlSession.execute(QUERY_STRING)).thenReturn(resultSet);
+        when(_cqlSession.execute(_queryString)).thenReturn(resultSet);
 
         long now = 1478789200000L;
         when(_clock.millis()).thenReturn(now);
@@ -120,7 +120,7 @@ public class TestCassandraHealthCheck {
         final CountDownLatch cqlBlocked = new CountDownLatch(1);
         final CountDownLatch raiseConnectionException = new CountDownLatch(1);
 
-        when(_cqlSession.execute(QUERY_STRING)).thenAnswer(new Answer<ResultSet>() {
+        when(_cqlSession.execute(_queryString)).thenAnswer(new Answer<ResultSet>() {
             @Override
             public ResultSet answer(InvocationOnMock invocationOnMock) throws Throwable {
                 // Let the main thread know we are blocked

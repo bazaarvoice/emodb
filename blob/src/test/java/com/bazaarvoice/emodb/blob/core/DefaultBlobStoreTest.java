@@ -42,6 +42,7 @@ public class DefaultBlobStoreTest {
     private InMemoryTableDAO tableDao;
     private StorageProvider storageProvider;
     private MetadataProvider metadataProvider;
+    private MetricRegistry metricRegistry;
     private BlobStore blobStore;
     private static final String TABLE = "table1";
 
@@ -50,7 +51,7 @@ public class DefaultBlobStoreTest {
         tableDao = new InMemoryTableDAO();
         storageProvider = mock(StorageProvider.class);
         metadataProvider = mock(MetadataProvider.class);
-        MetricRegistry metricRegistry = mock(MetricRegistry.class);
+        metricRegistry = mock(MetricRegistry.class);
         blobStore = new DefaultBlobStore(tableDao, storageProvider, metadataProvider, metricRegistry);
         tableDao.create(TABLE, new TableOptionsBuilder().setPlacement("placement").build(), new HashMap<String, String>(), new AuditBuilder().setComment("create table").build());
     }

@@ -33,7 +33,7 @@ public class SubscriptionEvaluatorTest {
     public void testSubscriptionEvaluator() {
         DataProvider dataProvider = mock(DataProvider.class);
         when(dataProvider.getTable(anyString())).thenReturn(new InMemoryTable("table1",
-                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.newHashMap()));
+                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.<String, Object>newHashMap()));
         SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(dataProvider,
                 ConstantDatabusAuthorizer.ALLOW_ALL, mock(RateLimitedLogFactory.class));
         UpdateRef updateRef = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ignore", "ETL"));
@@ -47,7 +47,7 @@ public class SubscriptionEvaluatorTest {
         // The following databus event should match, as it doesn't have "ignore" tag
         UpdateRef updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
         assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2), null));
-        UpdateRef updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of());
+        UpdateRef updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.<String>of());
         assertTrue(subscriptionEvaluator.matches(skipIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3), null));
 
         // Subscription that explicitly asks for "ignore" events
@@ -58,7 +58,7 @@ public class SubscriptionEvaluatorTest {
         // The following databus event should *not* match, as it doesn't have "ignore" tag
         updateRef2 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ETL"));
         assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef2), null));
-        updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of());
+        updateRef3 = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.<String>of());
         assertFalse(subscriptionEvaluator.matches(getIgnoreSubscription, UpdateRefSerializer.toByteBuffer(updateRef3), null));
     }
 
@@ -66,7 +66,7 @@ public class SubscriptionEvaluatorTest {
     public void testUnauthorized() {
         DataProvider dataProvider = mock(DataProvider.class);
         when(dataProvider.getTable(anyString())).thenReturn(new InMemoryTable("table1",
-                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.newHashMap()));
+                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.<String, Object>newHashMap()));
         SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(dataProvider,
                 ConstantDatabusAuthorizer.DENY_ALL, mock(RateLimitedLogFactory.class));
         UpdateRef updateRef = new UpdateRef("table1", "some-key", TimeUUIDs.newUUID(), ImmutableSet.of("ignore", "ETL"));
@@ -81,7 +81,7 @@ public class SubscriptionEvaluatorTest {
     public void testSince() {
         DataProvider dataProvider = mock(DataProvider.class);
         when(dataProvider.getTable(anyString())).thenReturn(new InMemoryTable("table1",
-                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.newHashMap()));
+                new TableOptionsBuilder().setPlacement("app_global:ugc").build(), Maps.<String, Object>newHashMap()));
         SubscriptionEvaluator subscriptionEvaluator = new SubscriptionEvaluator(dataProvider,
                 ConstantDatabusAuthorizer.ALLOW_ALL, mock(RateLimitedLogFactory.class));
 

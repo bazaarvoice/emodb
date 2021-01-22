@@ -97,7 +97,7 @@ public class BlobStoreModuleTest {
 
         final CuratorFramework curator = mock(CuratorFramework.class);
         when(curator.getState()).thenReturn(CuratorFrameworkState.STARTED);
-        when(curator.newNamespaceAwareEnsurePath(Mockito.any())).thenReturn(mock(EnsurePath.class));
+        when(curator.newNamespaceAwareEnsurePath(Mockito.<String>any())).thenReturn(mock(EnsurePath.class));
 
         Injector injector = Guice.createInjector(new AbstractModule() {
             @Override

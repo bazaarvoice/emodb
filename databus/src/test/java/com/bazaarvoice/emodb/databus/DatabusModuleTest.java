@@ -73,7 +73,7 @@ public class DatabusModuleTest {
 
         final CuratorFramework curator = mock(CuratorFramework.class);
         when(curator.getState()).thenReturn(CuratorFrameworkState.STARTED);
-        when(curator.newNamespaceAwareEnsurePath(Mockito.any())).thenReturn(mock(EnsurePath.class));
+        when(curator.newNamespaceAwareEnsurePath(Mockito.<String>any())).thenReturn(mock(EnsurePath.class));
 
         return Guice.createInjector(new AbstractModule() {
             @Override
@@ -105,11 +105,11 @@ public class DatabusModuleTest {
                 bind(HostDiscovery.class).annotatedWith(DatabusHostDiscovery.class).toInstance(mock(HostDiscovery.class));
                 bind(String.class).annotatedWith(ReplicationKey.class).toInstance("password");
                 bind(String.class).annotatedWith(SystemIdentity.class).toInstance("system");
-                bind(new TypeLiteral<Collection<ClusterInfo>>() {}).annotatedWith(DatabusClusterInfo.class)
+                bind(new TypeLiteral<Collection<ClusterInfo>>(){}).annotatedWith(DatabusClusterInfo.class)
                         .toInstance(ImmutableList.of(new ClusterInfo("Test Cluster", "Test Metric Cluster")));
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
-                bind(new TypeLiteral<Supplier<Condition>>() {}).annotatedWith(DefaultJoinFilter.class)
+                bind(new TypeLiteral<Supplier<Condition>>(){}).annotatedWith(DefaultJoinFilter.class)
                         .toInstance(Suppliers.ofInstance(Conditions.alwaysFalse()));
                 bind(DatabusAuthorizer.class).toInstance(mock(DatabusAuthorizer.class));
 

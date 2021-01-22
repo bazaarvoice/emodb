@@ -57,7 +57,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-public class CasStashTableTest {
+public class CasStashTableTest  {
 
     private SimpleLifeCycleRegistry _lifeCycleRegistry;
     private AstyanaxTableDAO _astyanaxTableDAO;
@@ -264,7 +264,7 @@ public class CasStashTableTest {
 
         Table table18 = _astyanaxTableDAO.get("table18");
         List<StashTokenRange> expected = Lists.newArrayListWithCapacity(256);
-        for (int i = 0; i < 256; i++) {
+        for (int i=0; i < 256; i++){
             expected.add(new StashTokenRange(
                     toToken(String.format("%02x0000000000009000", i)),
                     toToken(String.format("%02x0000000000009001", i)),

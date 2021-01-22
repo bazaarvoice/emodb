@@ -42,7 +42,7 @@ public class GuavaCacheManagerTest {
             // Create multiple threads that attempt to register the cache concurrently
             final CountDownLatch latch = new CountDownLatch(threadCount);
 
-            for (int i = 0; i < threadCount; i++) {
+            for (int i=0; i < threadCount; i++) {
                 Callable<org.apache.shiro.cache.Cache> registerCache = new Callable<org.apache.shiro.cache.Cache>() {
                     @Override
                     public org.apache.shiro.cache.Cache call() throws Exception {
@@ -59,7 +59,7 @@ public class GuavaCacheManagerTest {
             }
 
             // Verify the same cache instance was returned by all threads
-            for (int i = 1; i < threadCount; i++) {
+            for (int i=1; i < threadCount; i++) {
                 assertSame(futures.get(0).get(10, TimeUnit.SECONDS), futures.get(i).get(10, TimeUnit.SECONDS));
             }
             verify(cacheRegistry, times(1)).register(eq("cacheName"), any(Cache.class), eq(true));
