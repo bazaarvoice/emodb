@@ -613,7 +613,7 @@ public class DatabusJerseyTest extends ResourceTest {
                 poller.poll(createSubject(), databus, "queue-name", Duration.ofSeconds(10), 100, request, false, helper);
                 fail("RuntimeException not thrown");
             } catch (RuntimeException e) {
-                assertEquals( e.getMessage(), "Simulated read failure from Cassandra");
+                assertEquals(e.getMessage(), "Simulated read failure from Cassandra");
             }
 
             verify(request, never()).startAsync();
