@@ -117,7 +117,8 @@ public class BlobStoreJerseyTest extends ResourceTest {
         return setupResourceTestRule(
                 Collections.singletonList(new BlobStoreResource1(_server, _approvedContentTypes, new MetricRegistry())),
                 authIdentityManager,
-                permissionManager);
+                permissionManager
+        );
     }
 
     @After
