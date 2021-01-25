@@ -15,7 +15,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import stDatadogMetricFilterTest.java atic org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -111,6 +111,7 @@ public class DefaultInvalidationProviderTest {
             public String getAddress() {
                 return "http://" + host + ":8081/tasks/invalidate";
             }
+
             @Override
             public boolean isValid() {
                 return valid;
