@@ -17,6 +17,11 @@
 
     <properties>
         <swagger.version>1.5.8</swagger.version>
+        <docker-maven-plugin.version>0.34.1</docker-maven-plugin.version>
+        <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
+        <docker.build.skipRun>true</docker.build.skipRun>
+        <docker.floating.tag>${project.version}</docker.floating.tag>
+        <docker.image.name>emodb/emodb-web</docker.image.name>
     </properties>
 
     <dependencies>
@@ -338,6 +343,65 @@
                                 </mapping>
                             </mappings>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>docker</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>${docker-maven-plugin.version}</version>
+                        <configuration>
+                            <images>
+                                <image>
+                                    <name>${docker.image.name}</name>
+                                    <alias>${project.artifactId}</alias>
+                                    <build>
+                                        <args>
+                                            <version>${project.version}</version>
+                                        </args>
+                                        <dockerFile>${docker.build.dockerFile}</dockerFile>
+                                        <tags>
+                                            <tag>${docker.floating.tag}</tag>
+                                        </tags>
+                                        <assembly>
+                                            <descriptorRef>artifact</descriptorRef>
+                                        </assembly>
+                                    </build>
+                                    <run>
+                                        <skip>${docker.build.skipRun}</skip>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>start</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                    <goal>start</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>stop</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>build</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
