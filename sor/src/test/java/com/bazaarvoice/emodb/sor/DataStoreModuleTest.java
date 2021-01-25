@@ -54,12 +54,11 @@ import org.apache.curator.utils.EnsurePath;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
 
-import javax.validation.Validation;
 import java.time.Clock;
 import java.time.Duration;
 
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -100,7 +99,7 @@ public class DataStoreModuleTest {
 
         final CuratorFramework curator = mock(CuratorFramework.class);
         when(curator.getState()).thenReturn(CuratorFrameworkState.STARTED);
-        when(curator.newNamespaceAwareEnsurePath(Mockito.<String>any())).thenReturn(mock(EnsurePath.class));
+        when(curator.newNamespaceAwareEnsurePath(Mockito.any())).thenReturn(mock(EnsurePath.class));
 
         Injector injector = Guice.createInjector(new AbstractModule() {
             @Override
@@ -143,8 +142,8 @@ public class DataStoreModuleTest {
                 bind(MetricRegistry.class).asEagerSingleton();
                 bind(JobService.class).toInstance(mock(JobService.class));
                 bind(JobHandlerRegistry.class).toInstance(mock(JobHandlerRegistry.class));
-                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForMultiGets.class).toInstance(Suppliers.ofInstance(true));
-                bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class).toInstance(Suppliers.ofInstance(true));
+                bind(new TypeLiteral<Supplier<Boolean>>() {}).annotatedWith(CqlForMultiGets.class).toInstance(Suppliers.ofInstance(true));
+                bind(new TypeLiteral<Supplier<Boolean>>() {}).annotatedWith(CqlForScans.class).toInstance(Suppliers.ofInstance(true));
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));

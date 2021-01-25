@@ -7,18 +7,13 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.queue.core.ByteBufferInputStream;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Charsets;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
-import java.util.HashMap;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.mockito.invocation.InvocationOnMock;
+import org.mockito.ArgumentMatcher;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
 
@@ -33,15 +28,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-import static junit.framework.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 public class S3ScanWriterTest {
 
@@ -58,16 +53,13 @@ public class S3ScanWriterTest {
             final Map<String, ByteBuffer> putObjects = Maps.newHashMap();
 
             when(amazonS3.putObject(any(PutObjectRequest.class)))
-                    .thenAnswer(new Answer<PutObjectResult>() {
-                        @Override
-                        public PutObjectResult answer(InvocationOnMock invocation) throws Throwable {
-                            PutObjectRequest request = (PutObjectRequest) invocation.getArguments()[0];
-                            assertEquals("test-bucket", request.getBucketName());
-                            putObjects.put(request.getKey(), ByteBuffer.wrap(Files.toByteArray(request.getFile())));
-                            PutObjectResult result = new PutObjectResult();
-                            result.setETag("etag");
-                            return result;
-                        }
+                    .thenAnswer((Answer<PutObjectResult>) invocation -> {
+                        PutObjectRequest request = (PutObjectRequest) invocation.getArguments()[0];
+                        assertEquals(request.getBucketName(), "test-bucket");
+                        putObjects.put(request.getKey(), ByteBuffer.wrap(Files.toByteArray(request.getFile())));
+                        PutObjectResult result = new PutObjectResult();
+                        result.setETag("etag");
+                        return result;
                     });
 
             Map<String, Object> doc = ImmutableMap.of("type", "review", "rating", 5);
@@ -146,7 +138,7 @@ public class S3ScanWriterTest {
 
             S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService, new ObjectMapper());
 
-            ScanDestinationWriter scanDestinationWriters[] = new ScanDestinationWriter[2];
+            ScanDestinationWriter[] scanDestinationWriters = new ScanDestinationWriter[2];
 
             for (int i = 0; i < 2; i++) {
                 scanDestinationWriters[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
@@ -184,9 +176,9 @@ public class S3ScanWriterTest {
 
             S3ScanWriter scanWriter = new S3ScanWriter(1, baseUri, Optional.of(2), new MetricRegistry(), amazonS3Provider, uploadService, new ObjectMapper());
 
-            ScanDestinationWriter scanDestinationWriters[] = new ScanDestinationWriter[2];
+            ScanDestinationWriter[] scanDestinationWriters = new ScanDestinationWriter[2];
 
-            for (int i=0; i < 2; i++) {
+            for (int i = 0; i < 2; i++) {
                 scanDestinationWriters[i] = scanWriter.writeShardRows("table" + i, "p0", 0, i);
                 scanDestinationWriters[i].writeDocument(ImmutableMap.of("type", "review", "rating", i));
             }
@@ -202,17 +194,16 @@ public class S3ScanWriterTest {
         }
     }
 
-    private Matcher<PutObjectRequest> putsIntoBucket(final String bucket) {
-        return new BaseMatcher<PutObjectRequest>() {
+    private ArgumentMatcher<PutObjectRequest> putsIntoBucket(final String bucket) {
+        return new ArgumentMatcher<PutObjectRequest>() {
             @Override
-            public boolean matches(Object item) {
-                PutObjectRequest request = (PutObjectRequest) item;
+            public boolean matches(PutObjectRequest request) {
                 return request != null && request.getBucketName().equals(bucket);
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("PutObjectRequest for bucket ").appendText(bucket);
+            public String toString() {
+                return "PutObjectRequest for bucket " + bucket;
             }
         };
     }

@@ -48,12 +48,10 @@ import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -77,14 +75,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -93,6 +86,11 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotSame;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link DatabusClient} are
@@ -139,17 +137,16 @@ public class DatabusJerseyTest extends ResourceTest {
                 .usingCredentials(APIKEY_UNAUTHORIZED);
     }
 
-    private Matcher<Subject> matchesSubject(final String apiKey, final String id) {
-        return new BaseMatcher<Subject>() {
+    private ArgumentMatcher<Subject> matchesSubject(final String apiKey, final String id) {
+        return new ArgumentMatcher<Subject>() {
             @Override
-            public boolean matches(Object o) {
-                Subject subject = (Subject) o;
+            public boolean matches(Subject subject) {
                 return subject != null && subject.getAuthenticationId().equals(apiKey) && subject.getId().equals(id);
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("API key ").appendText(apiKey);
+            public String toString() {
+                return "API key " + apiKey;
             }
         };
     }
@@ -260,7 +257,7 @@ public class DatabusJerseyTest extends ResourceTest {
         Duration eventTtl = Duration.ofDays(2);
 
         doThrow(new UnauthorizedSubscriptionException("Not owner", "queue-name")).
-            when(_local).subscribe(isSubject(), eq("queue-name"), eq(condition), eq(subscriptionTtl), eq(eventTtl), eq(true));
+                when(_local).subscribe(isSubject(), eq("queue-name"), eq(condition), eq(subscriptionTtl), eq(eventTtl), eq(true));
 
         try {
             databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
@@ -504,9 +501,9 @@ public class DatabusJerseyTest extends ResourceTest {
             expected = pollResults;
         } else {
             // Tags won't be returned
-             expected = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+            expected = ImmutableList.of(
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -586,7 +583,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             List<Event> actual = JsonHelper.convert(
                     JsonHelper.fromJson(out.toString(), List.class), new TypeReference<List<Event>>() {
-            });
+                    });
 
             assertEquals(actual, expected);
             verify(request).startAsync();
@@ -832,12 +829,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testReplay() {
-        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class))).thenReturn("replayId1");
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull())).thenReturn("replayId1");
         String replayId = databusClient().replayAsync("queue-name");
 
-        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class));
+        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull());
         verifyNoMoreInteractions(_local);
-        assertEquals(replayId, "replayId1");
+        assertEquals("replayId1", replayId);
     }
 
     @Test
@@ -848,7 +845,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now));
         verifyNoMoreInteractions(_local);
-        assertEquals(replayId, "replayId1");
+        assertEquals("replayId1", replayId);
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -867,8 +864,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getReplayStatus(isSubject(), eq("replayId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals(status.getSubscription(), "queue-name");
-        assertEquals(status.getStatus(), ReplaySubscriptionStatus.Status.IN_PROGRESS);
+        assertEquals("queue-name", status.getSubscription());
+        assertEquals(ReplaySubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
     }
 
     @Test
@@ -879,7 +876,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"));
         verifyNoMoreInteractions(_local);
-        assertEquals(moveId, "moveId1");
+        assertEquals("moveId1", moveId);
     }
 
     @Test
@@ -891,9 +888,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getMoveStatus(isSubject(), eq("moveId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals(status.getFrom(), "queue-src");
-        assertEquals(status.getTo(), "queue-dest");
-        assertEquals(status.getStatus(), MoveSubscriptionStatus.Status.IN_PROGRESS);
+        assertEquals("queue-src", status.getFrom());
+        assertEquals("queue-dest", status.getTo());
+        assertEquals(MoveSubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
     }
 
     @Test
