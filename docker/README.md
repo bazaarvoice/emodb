@@ -49,10 +49,6 @@ This is basically the same as Ctrl+C after running `docker-compose [...] up`, _b
 - You can run individual services to test them in isolation, like with `docker run -it bazaarvoice/emodb-megabus:latest`
 - You can attach a debugger like IntelliJ IDEA to a running process with a couple easy (albeit tedious) steps. First, add `-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005` to the `java -jar` line (before the `-jar` option) of the Dockerfile (currently in `$GITROOT/docker/Dockerfile`). Then, build the image. Next, update `docker-compose.yml` and expose port `5005` (there's a commented one in there at the moment, so it should be hard to miss the example). Finally, `docker-compose up` and wait until you see that familiar line about waiting for a debugger to attach, and then attach your debugger per usual. Yes, this really works.
 
-### Build docker image new way
-
-Execute `mvn clean `
-
 ### Documentation references
 
 - [Kafka docker image reference](https://docs.confluent.io/current/installation/docker/index.html) (helpful for things like knowing how to configure Kafka)
