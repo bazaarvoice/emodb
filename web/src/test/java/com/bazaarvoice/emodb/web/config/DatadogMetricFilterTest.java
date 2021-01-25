@@ -46,8 +46,8 @@ public class DatadogMetricFilterTest {
                         "\"host\": \"test-host\"," +
                         "\"includeExpansions\": [\"count\", \"min\", \"max\", \"p95\"]," +
                         "\"transport\": {" +
-                        "\"type\": \"http\"," +
-                        "\"apiKey\": \"12345\"" +
+                            "\"type\": \"http\"," +
+                            "\"apiKey\": \"12345\"" +
                         "}" +
                         "}";
 

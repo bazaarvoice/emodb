@@ -7,7 +7,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import org.testng.annotations.Test;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -16,7 +15,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import stDatadogMetricFilterTest.java atic org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
 
@@ -87,7 +86,7 @@ public class DefaultInvalidationProviderTest {
 
         EndPointProvider local = getEndPointProvider(getEndPoint("local1", false));
         RemoteInvalidationClient client = mock(RemoteInvalidationClient.class);
-        doThrow(IOException.class).when(client).invalidateAll("http://local1:8081/tasks/invalidate", InvalidationScope.LOCAL, event);
+        doThrow(RuntimeException.class).when(client).invalidateAll("http://local1:8081/tasks/invalidate", InvalidationScope.LOCAL, event);
 
         DefaultInvalidationProvider provider = new DefaultInvalidationProvider(
                 mock(LifeCycleRegistry.class), local, mock(EndPointProvider.class), client);
