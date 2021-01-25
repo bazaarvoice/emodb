@@ -42,14 +42,14 @@ public class DatadogMetricFilterTest {
     public void testExpansionFilterInclusion() throws Exception {
         String json =
                 "{" +
-                        "\"type\": \"datadogExpansionFiltered\"," +
-                        "\"host\": \"test-host\"," +
-                        "\"includeExpansions\": [\"count\", \"min\", \"max\", \"p95\"]," +
-                        "\"transport\": {" +
-                            "\"type\": \"http\"," +
-                            "\"apiKey\": \"12345\"" +
-                        "}" +
-                        "}";
+                    "\"type\": \"datadogExpansionFiltered\"," +
+                    "\"host\": \"test-host\"," +
+                    "\"includeExpansions\": [\"count\", \"min\", \"max\", \"p95\"]," +
+                    "\"transport\": {" +
+                        "\"type\": \"http\"," +
+                        "\"apiKey\": \"12345\"" +
+                    "}" +
+                "}";
 
 
         ScheduledReporter reporter = createReporter(json);
@@ -98,15 +98,14 @@ public class DatadogMetricFilterTest {
     public void testExpansionFilterExclusion() throws Exception {
         String json =
                 "{" +
-                        "\"type\": \"datadogExpansionFiltered\"," +
-                        "\"host\": \"test-host\"," +
-                        "\"excludeExpansions\": [\"min\", \"max\", \"p75\", \"p95\", \"p98\", \"p99\", \"p999\"]," +
-                        "\"transport\": {" +
+                    "\"type\": \"datadogExpansionFiltered\"," +
+                    "\"host\": \"test-host\"," +
+                    "\"excludeExpansions\": [\"min\", \"max\", \"p75\", \"p95\", \"p98\", \"p99\", \"p999\"]," +
+                    "\"transport\": {" +
                         "\"type\": \"http\"," +
                         "\"apiKey\": \"12345\"" +
-                        "}" +
-                        "}";
-
+                    "}" +
+                "}";
 
         ScheduledReporter reporter = createReporter(json);
 
