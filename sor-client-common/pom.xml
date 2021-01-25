@@ -21,24 +21,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>jersey-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>jersey-server</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.sun.jersey</groupId>
-                    <artifactId>jersey-servlet</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.hibernate</groupId>
-                    <artifactId>hibernate-validator</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -105,7 +87,7 @@
         <!-- 3rd-party dependencies -->
         <dependency>
             <groupId>com.amazonaws</groupId>
-            <artifactId>aws-java-sdk-s3</artifactId>
+            <artifactId>aws-java-sdk-core</artifactId>
         </dependency>
         <!-- Third party dependencies -->
         <dependency>
@@ -119,18 +101,6 @@
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-core</artifactId>
-            <version>${jersey.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.jersey</groupId>
-            <artifactId>jersey-client</artifactId>
-            <version>${jersey.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

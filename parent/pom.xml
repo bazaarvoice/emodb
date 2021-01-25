@@ -386,6 +386,11 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-core</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-cloudwatch</artifactId>
                 <version>${aws-sdk.version}</version>
             </dependency>
@@ -456,6 +461,12 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.objenesis</groupId>
+                <artifactId>objenesis</artifactId>
+                <version>3.1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
@@ -466,6 +477,12 @@
                 <artifactId>testng</artifactId>
                 <version>${testng.version}</version>
                 <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.inject</groupId>
+                        <artifactId>guice</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>junit</groupId>
@@ -624,6 +641,51 @@
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${nexus.autoReleaseAfterClose}</autoReleaseAfterClose>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.1.2</version>
+                <executions>
+                    <execution>
+                        <id>analyze</id>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration>
+                            <failOnWarning>false</failOnWarning>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.0.0-M3</version>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <!--Any 3.6 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[3.6,)</version>
+                                    <message>requires maven 3.6.x</message>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <!--Any 1.8 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[1.8,)</version>
+                                    <message>requires Java 1.8</message>
+                                </requireJavaVersion>
+                                <dependencyConvergence />
+<!--                                <requireUpperBoundDeps />-->
+                            </rules>
+                        </configuration>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

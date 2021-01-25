@@ -24,11 +24,6 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-dropwizard</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-cachemgr</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -57,10 +52,6 @@
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>

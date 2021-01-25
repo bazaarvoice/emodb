@@ -24,11 +24,6 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-sor-client</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-json</artifactId>
             <version>${project.version}</version>
         </dependency>

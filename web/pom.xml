@@ -85,6 +85,11 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-sor-client</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-stash</artifactId>
             <version>${project.version}</version>
             <exclusions>
@@ -198,10 +203,6 @@
             <artifactId>dropwizard-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-auth</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>jcl-over-slf4j</artifactId>
         </dependency>
@@ -212,10 +213,6 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
         </dependency>
         <dependency>
             <groupId>io.swagger</groupId>
@@ -238,10 +235,6 @@
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-test</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
         </dependency>
     </dependencies>
 
