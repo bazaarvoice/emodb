@@ -34,14 +34,14 @@ import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
-import java.time.Instant;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyCollectionOf;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -64,7 +64,7 @@ public class DefaultFanoutTest {
     private EventSource _eventSource;
     private List<String> _deletedKeys;
     private Instant _now;
-    
+
     @BeforeMethod
     private void setUp() {
         _eventsSinked = ArrayListMultimap.create();
@@ -85,7 +85,7 @@ public class DefaultFanoutTest {
         doAnswer(invocationOnMock -> {
             _deletedKeys.addAll((List<String>) invocationOnMock.getArguments()[0]);
             return null;
-        }).when(_eventSource).delete(anyCollectionOf(String.class));
+        }).when(_eventSource).delete(anyCollection());
 
         _subscriptionsSupplier = mock(Supplier.class);
         _currentDataCenter = mock(DataCenter.class);
@@ -110,7 +110,7 @@ public class DefaultFanoutTest {
         Clock clock = mock(Clock.class);
         when(clock.instant()).thenAnswer(ignore -> _now);
         when(clock.millis()).thenAnswer(ignore -> _now.toEpochMilli());
-        
+
         MetricRegistry metricRegistry = new MetricRegistry();
 
         _defaultFanout = new DefaultFanout("test", "test", _eventSource, eventSink, _outboundPartitionSelector,
@@ -199,7 +199,7 @@ public class DefaultFanoutTest {
         for (int partition=0; partition < 3; partition++) {
             remoteChannels.add(ChannelNames.getReplicationFanoutChannel(_remoteDataCenter, partition));
         }
-        
+
         List<EventData> events = Lists.newArrayListWithCapacity(4);
         for (int i=0; i < 4; i++) {
             EventData event = newEvent("id" + i, "partition-test-table", "key" + i);
@@ -225,7 +225,7 @@ public class DefaultFanoutTest {
 
         // Need to set the current time to match the time of the event
         _now = Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(UpdateRefSerializer.fromByteBuffer(event.getData().duplicate()).getChangeId()));
-        
+
         // For the first 30 seconds the event should neither be fanned out nor deleted
         for (int i=0; i <= 30; i++) {
             _defaultFanout.copyEvents(ImmutableList.of(event));

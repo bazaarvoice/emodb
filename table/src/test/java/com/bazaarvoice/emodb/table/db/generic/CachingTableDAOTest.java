@@ -14,7 +14,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;

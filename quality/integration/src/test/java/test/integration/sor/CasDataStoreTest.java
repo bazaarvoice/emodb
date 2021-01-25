@@ -71,7 +71,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -92,10 +91,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -204,7 +205,7 @@ public class CasDataStoreTest {
     @Test
     public void testHealthCheck() throws Exception {
         ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
-        verify(_healthChecks, atLeastOnce()).addHealthCheck(Matchers.anyString(), captor.capture());
+        verify(_healthChecks, atLeastOnce()).addHealthCheck(anyString(), captor.capture());
         List<HealthCheck> healthChecks = captor.getAllValues();
 
         int numCassandraHealthChecks = 0;

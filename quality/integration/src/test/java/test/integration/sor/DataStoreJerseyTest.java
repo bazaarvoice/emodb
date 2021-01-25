@@ -59,7 +59,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.UnmodifiableIterator;
-import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import io.dropwizard.testing.junit.ResourceTestRule;
@@ -71,6 +70,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.Stubber;
 
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.text.SimpleDateFormat;
@@ -85,14 +85,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anySetOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -102,6 +98,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link DataStoreClient} are
@@ -157,7 +157,7 @@ public class DataStoreJerseyTest extends ResourceTest {
 
     private DataStore sorClient(String apiKey) {
         return DataStoreAuthenticator.proxied(new DataStoreClient(URI.create("/sor/1"), new JerseyEmoClient(_resourceTestRule.client())))
-            .usingCredentials(apiKey);
+                .usingCredentials(apiKey);
     }
 
     @Test
@@ -285,25 +285,25 @@ public class DataStoreJerseyTest extends ResourceTest {
         final Map<String, Object> b1Doc = ImmutableMap.<String, Object>of("zxcv", "bnm,");
 
         when(_server.multiGet(ImmutableList.of(a1Id, a2Id), ReadConsistency.STRONG))
-            .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
-                    return ImmutableList.of(a1Doc, a2Doc).iterator();
-                }
-            });
+                .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                        return ImmutableList.of(a1Doc, a2Doc).iterator();
+                    }
+                });
 
         when(_server.multiGet(ImmutableList.of(b1Id), ReadConsistency.STRONG))
-            .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
-                    return ImmutableList.of(b1Doc).iterator();
-                }
-            });
+                .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                        return ImmutableList.of(b1Doc).iterator();
+                    }
+                });
 
         when(_server.multiGet(ImmutableList.of(a1Id, a2Id, b1Id), ReadConsistency.STRONG))
-            .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
-                @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
-                    return ImmutableList.of(a1Doc, a2Doc, b1Doc).iterator();
-                }
-            });
+                .thenAnswer(new Answer<Iterator<Map<String, Object>>>() {
+                    @Override public Iterator<Map<String, Object>> answer(final InvocationOnMock invocation) throws Throwable {
+                        return ImmutableList.of(a1Doc, a2Doc, b1Doc).iterator();
+                    }
+                });
 
         {
             final Set<Map<String, Object>> result = ImmutableSet.copyOf(sorClient(APIKEY_READ_TABLES_A).multiGet(ImmutableList.of(a1Id, a2Id), ReadConsistency.STRONG));
@@ -634,12 +634,12 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         List<Update> actualUpdates = Lists.newArrayList();
         //noinspection unchecked
-        doUpdateInto(actualUpdates).when(_server).updateAllForFacade(any(Iterable.class), anySetOf(String.class));
+        doUpdateInto(actualUpdates).when(_server).updateAllForFacade(any(Iterable.class), anySet());
 
         DataStoreStreaming.updateAllForFacade(sorClient(APIKEY_FACADE), updates);
 
         //noinspection unchecked
-        verify(_server).updateAllForFacade(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAllForFacade(any(Iterable.class), anySet());
         assertEquals(actualUpdates, updates);
         verifyNoMoreInteractions(_server);
     }
@@ -654,7 +654,7 @@ public class DataStoreJerseyTest extends ResourceTest {
                 new Update("table-name2", "row-key2", TimeUUIDs.newUUID(), Deltas.literal("hello world"), audit));
 
         //noinspection unchecked
-        doUpdateInto(Lists.<Update>newArrayList()).when(_server).updateAllForFacade(any(Iterable.class), anySetOf(String.class));
+        doUpdateInto(Lists.newArrayList()).when(_server).updateAllForFacade(any(Iterable.class), anySet());
 
         DataStore client = sorClient(APIKEY_TABLE);
         try {
@@ -665,7 +665,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
 
         //noinspection unchecked
-        verify(_server).updateAllForFacade(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAllForFacade(any(Iterable.class), anySet());
         verifyNoMoreInteractions(_server);
     }
 
@@ -1111,11 +1111,11 @@ public class DataStoreJerseyTest extends ResourceTest {
         Audit audit = new AuditBuilder().setLocalHost().build();
         List<Update> actualUpdates = Lists.newArrayList();
         //noinspection unchecked
-        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySet());
 
         sorClient(APIKEY_TABLE).update("table-name", "row-key", changeId, Deltas.literal("hello world"), audit);
 
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
         assertEquals(actualUpdates,
                 Lists.newArrayList(new Update("table-name", "row-key", changeId, Deltas.literal("hello world"), audit,
                         WriteConsistency.STRONG)));
@@ -1128,10 +1128,10 @@ public class DataStoreJerseyTest extends ResourceTest {
         Audit audit = new AuditBuilder().setLocalHost().build();
         List<Update> actualUpdates = Lists.newArrayList();
         //noinspection unchecked
-        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySet());
         sorClient(APIKEY_TABLE).update("table-name", "row-key", changeId, Deltas.literal("hello world"), audit, WriteConsistency.WEAK);
 
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
         assertEquals(actualUpdates,
                 Lists.newArrayList(new Update("table-name", "row-key", changeId, Deltas.literal("hello world"), audit,
                         WriteConsistency.WEAK)));
@@ -1147,12 +1147,12 @@ public class DataStoreJerseyTest extends ResourceTest {
 
         List<Update> actualUpdates = Lists.newArrayList();
         //noinspection unchecked
-        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        doUpdateInto(actualUpdates).when(_server).updateAll(any(Iterable.class), anySet());
 
         DataStoreStreaming.updateAll(sorClient(APIKEY_TABLE), updates);
 
         //noinspection unchecked
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
         assertEquals(actualUpdates, updates);
         verifyNoMoreInteractions(_server);
     }
@@ -1167,7 +1167,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         List<Update> actualUpdates = Lists.newArrayList();
         Set<String> actualTags = Sets.newHashSet("ignore");
         //noinspection unchecked
-        captureUpdatesAndTags(actualUpdates, actualTags).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        captureUpdatesAndTags(actualUpdates, actualTags).when(_server).updateAll(any(Iterable.class), anySet());
 
         DataStore client = sorClient(APIKEY_STANDARD_UPDATE);
         client.updateAll(updates, Sets.newHashSet("ignore"));
@@ -1175,7 +1175,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         assertEquals(actualUpdates, updates);
         assertEquals(actualTags, Sets.newHashSet("ignore"));
         //noinspection unchecked
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
         verifyNoMoreInteractions(_server);
     }
 
@@ -1189,14 +1189,14 @@ public class DataStoreJerseyTest extends ResourceTest {
         List<Update> actualUpdates = Lists.newArrayList();
         Set<String> actualTags = Sets.newHashSet("ignore");
         //noinspection unchecked
-        captureUpdatesAndTags(actualUpdates, actualTags).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        captureUpdatesAndTags(actualUpdates, actualTags).when(_server).updateAll(any(Iterable.class), anySet());
 
         DataStoreStreaming.updateAll(sorClient(APIKEY_TABLE), updates, Sets.newHashSet("ignore"));
 
         //noinspection unchecked
         assertEquals(actualUpdates, updates);
         assertEquals(actualTags, Sets.newHashSet("ignore"));
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
         verifyNoMoreInteractions(_server);
     }
 
@@ -1225,7 +1225,7 @@ public class DataStoreJerseyTest extends ResourceTest {
             sorClient(APIKEY_TABLE).createTable("table-name", options, attributes, audit);
             fail();
         } catch (TableExistsException e) {
-            assertEquals(e.getTable(), "table-name");
+            assertEquals( e.getTable(), "table-name");
         }
         verify(_server).createTable("table-name", options, attributes, audit);
         //verify(_dataCenters).getSelf();
@@ -1250,7 +1250,7 @@ public class DataStoreJerseyTest extends ResourceTest {
     @Test
     public void testUnknownPlacementException() {
         when(_server.get("table-name", "row-key", ReadConsistency.STRONG))
-            .thenThrow(new UnknownPlacementException("Table table-name is not available in this data center", "placement-name"));
+                .thenThrow(new UnknownPlacementException("Table table-name is not available in this data center", "placement-name"));
         try {
             sorClient(APIKEY_TABLE).get("table-name", "row-key", ReadConsistency.STRONG);
             fail();
@@ -1283,7 +1283,7 @@ public class DataStoreJerseyTest extends ResourceTest {
                 //noinspection unchecked
                 return Iterables.getLast(((Iterable<Update>) invocation.getArguments()[0]));  // Forces full iteration
             }
-        }).when(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        }).when(_server).updateAll(any(Iterable.class), anySet());
 
         // Because the Update constructor checks for empty keys we need to create it with a non-empty key
         // and then replace it in the JSON map later.
@@ -1314,12 +1314,12 @@ public class DataStoreJerseyTest extends ResourceTest {
                     .post(json);
             fail();
         } catch (UniformInterfaceException e) {
-            assertEquals(e.getResponse().getClientResponseStatus(), ClientResponse.Status.BAD_REQUEST);
+            assertEquals(Response.Status.BAD_REQUEST.getStatusCode(),e.getResponse().getStatus());
             assertEquals(e.getResponse().getHeaders().getFirst("X-BV-Exception"), JsonStreamProcessingException.class.getName());
         }
 
         //noinspection unchecked
-        verify(_server).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server).updateAll(any(Iterable.class), anySet());
     }
 
     @Test
@@ -1359,7 +1359,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         }
 
         verify(_server, times(6)).getTableMetadata(anyString());
-        verify(_server, times(4)).updateAll(any(Iterable.class), anySetOf(String.class));
+        verify(_server, times(4)).updateAll(any(Iterable.class), anySet());
     }
 
     private Answer<Table> returnMockTable(final String name, final String placement) {

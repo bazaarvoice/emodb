@@ -36,10 +36,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -84,7 +84,7 @@ public class TestJobOwnership {
                         invocationOnMock.getArguments()[1]));
                 return null;
             }
-        }).when(_queueService).send(eq("testqueue"), anyObject());
+        }).when(_queueService).send(eq("testqueue"), any());
 
         doAnswer(new Answer() {
             @Override
@@ -99,7 +99,7 @@ public class TestJobOwnership {
                 }
                 return null;
             }
-        }).when(_queueService).acknowledge(eq("testqueue"), anyListOf(String.class));
+        }).when(_queueService).acknowledge(eq("testqueue"), anyList());
 
         _jobStatusDAO = new InMemoryJobStatusDAO();
         _testingServer = new TestingServer();
@@ -163,7 +163,7 @@ public class TestJobOwnership {
 
         // Run all 10 jobs one at a time, alternating between service1 and service2
         for (int i=0; i < 10; i++) {
-           boolean jobRan = i % 2 == 0 ? _service1.runNextJob() : _service2.runNextJob();
+            boolean jobRan = i % 2 == 0 ? _service1.runNextJob() : _service2.runNextJob();
             assertTrue(jobRan);
         }
 
