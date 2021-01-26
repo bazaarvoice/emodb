@@ -1,5 +1,7 @@
-package com.bazaarvoice.emodb.common.dropwizard.jersey;
+package com.bazaarvoice.emodb.web.jersey;
 
+import com.bazaarvoice.emodb.common.dropwizard.jersey.Unbuffered;
+import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamFilter;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.model.AbstractMethod;
 import com.sun.jersey.spi.container.ContainerRequest;

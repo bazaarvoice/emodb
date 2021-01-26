@@ -22,7 +22,6 @@
         <config-blob-role-yaml>${project.basedir}/src/test/resources/config-blob-role.yaml</config-blob-role-yaml>
         <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
         <runAdaptiveCqlIntegrationTests>false</runAdaptiveCqlIntegrationTests>
-        <enforcer.skip>true</enforcer.skip>
     </properties>
 
     <dependencies>
@@ -80,12 +79,6 @@
             <artifactId>emodb-common-astyanax</artifactId>
             <version>${project.version}</version>
             <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-sdk</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
