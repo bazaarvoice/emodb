@@ -1,0 +1,6 @@
+FROM curlimages/curl:latest
+
+COPY set-role.sh set-role.sh
+
+ENTRYPOINT ["sh", "-c"]
+CMD ["sleep 20 & sh set-role.sh"]
