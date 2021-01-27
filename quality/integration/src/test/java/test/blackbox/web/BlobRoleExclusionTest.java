@@ -10,7 +10,7 @@ public class BlobRoleExclusionTest extends BaseRoleRestHelper {
 
     // configuration points directly to blob role server which should fail any non-blob role services
     BlobRoleExclusionTest() {
-        super ("/config-blob-role.yaml"); // mis-configured blob role
+        super ("/config-blob-dc1.yaml"); // mis-configured blob role
     }
 
     @AfterTest

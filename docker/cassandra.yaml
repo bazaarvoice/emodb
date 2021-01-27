@@ -24,7 +24,7 @@ commitlog_segment_size_in_mb: 32
 seed_provider:
   - class_name: org.apache.cassandra.locator.SimpleSeedProvider
     parameters:
-      - seeds:  "cassandra,cassandra-dc2"
+      - seeds:  "cassandra-dc1,cassandra-dc2"
 endpoint_snitch: GossipingPropertyFileSnitch
 concurrent_reads: 32
 concurrent_writes: 64

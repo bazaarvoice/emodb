@@ -28,7 +28,7 @@ public class HintsPollerTest extends BaseRoleConnectHelper {
     public static List<Host> ALL_SELECTED_HOSTS = new ArrayList<>();
 
     public HintsPollerTest() {
-        super("/config-main-role.yaml");
+        super("/config-main-dc1.yaml");
     }
 
     @Test

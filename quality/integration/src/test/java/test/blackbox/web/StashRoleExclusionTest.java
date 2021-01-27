@@ -10,7 +10,7 @@ public class StashRoleExclusionTest extends BaseRoleRestHelper {
 
     // configuration points directly to stash role server which should fail any non-stash role services
     StashRoleExclusionTest() {
-        super ("/config-stash-role.yaml");
+        super ("/config-stash-dc1.yaml");
     }
 
     @AfterTest

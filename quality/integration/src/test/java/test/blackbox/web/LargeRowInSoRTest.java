@@ -25,7 +25,7 @@ import static org.testng.Assert.fail;
 public class LargeRowInSoRTest extends BaseRoleConnectHelper {
 
     LargeRowInSoRTest() {
-        super("/config-main-role.yaml");
+        super("/config-main-dc1.yaml");
     }
 
     /**

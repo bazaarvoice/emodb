@@ -27,7 +27,7 @@ public class StashRoleInclusionTest extends BaseRoleRestHelper {
     AuthDataStore _dataStore;
 
     StashRoleInclusionTest() {
-        super("/config-stash-role.yaml");
+        super("/config-stash-dc1.yaml");
     }
 
     @BeforeTest
