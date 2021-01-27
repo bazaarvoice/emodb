@@ -18,9 +18,9 @@
         <skipTests>false</skipTests>
         <skipITs>false</skipITs>
         <emodb.pause>false</emodb.pause>
-        <config-main-role-yaml>${project.basedir}/src/test/resources/config-main-role.yaml</config-main-role-yaml>
-        <config-blob-role-yaml>${project.basedir}/src/test/resources/config-blob-role.yaml</config-blob-role-yaml>
-        <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
+        <config-main-role-yaml>${project.basedir}/src/test/resources/config-main-dc1.yaml</config-main-role-yaml>
+        <config-blob-role-yaml>${project.basedir}/src/test/resources/config-blob-dc1.yaml</config-blob-role-yaml>
+        <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-dc1.yaml</config-stash-role-yaml>
         <runAdaptiveCqlIntegrationTests>false</runAdaptiveCqlIntegrationTests>
     </properties>
 
