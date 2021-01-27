@@ -25,7 +25,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class UrlEncodedKeysTest {
-    //TODO
    /* private EmoClient _client = mock(EmoClient.class);
 
     @BeforeMethod

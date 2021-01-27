@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.resources.sor;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
-import com.bazaarvoice.emodb.common.dropwizard.jersey.Unbuffered;
+import com.bazaarvoice.emodb.web.jersey.Unbuffered;
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
