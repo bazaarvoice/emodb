@@ -148,8 +148,8 @@
                                     <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
                                     <arguments>
                                         <argument>server</argument>
-                                        <argument>${project.basedir}/${config.file}</argument>
-                                        <argument>${project.basedir}/${ddl.file}</argument>
+                                        <argument>${project.basedir}/configs/${config.file}</argument>
+                                        <argument>${project.basedir}/configs/${ddl.file}</argument>
                                         <argument>-z</argument>
                                         <argument>-p</argument>
                                         <argument>${permissions.file}</argument>
