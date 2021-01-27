@@ -28,19 +28,7 @@
         <!-- Bazaarvoice dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-sor</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-sor-client</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-databus</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>

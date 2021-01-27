@@ -31,6 +31,7 @@
         <module>common/zookeeper</module>
         <module>common/stash</module>
         <module>common/client</module>
+        <module>common/jersey-client</module>
         <module>common/dropwizard-client</module>
         <module>auth/auth-client</module>
         <module>auth/auth-core</module>
