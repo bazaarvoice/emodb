@@ -19,7 +19,7 @@
         <mavenPluginAnnotationsVersion>3.2</mavenPluginAnnotationsVersion>
         <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
         <config.file>config-local.yaml</config.file>
-        <ddl.file>config-ddl-local.yaml</ddl.file>
+        <ddl.file>config-ddl-local-dc1.yaml</ddl.file>
         <permissions.file />
     </properties>
 
