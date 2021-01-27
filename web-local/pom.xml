@@ -295,8 +295,8 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
-                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
                                     <autoStartCassandra>false</autoStartCassandra>
@@ -322,7 +322,7 @@
                                     <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
                                     <arguments>
                                         <argument>server</argument>
-                                        <argument>${project.basedir}/config-scantest.yaml</argument>
+                                        <argument>${project.basedir}/configs/config-scantest-dc1.yaml</argument>
                                         <argument>${project.basedir}/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
                                         <argument>-p</argument>
@@ -355,8 +355,8 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
-                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
                                     <autoStartCassandra>false</autoStartCassandra>
@@ -374,8 +374,8 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
-                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
                                     <autoStartCassandra>false</autoStartCassandra>
@@ -401,8 +401,8 @@
                                     <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
                                     <arguments>
                                         <argument>server</argument>
-                                        <argument>${project.basedir}/config-megabus.yaml</argument>
-                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>${project.basedir}/configs/config-megabus-dc1.yaml</argument>
+                                        <argument>${project.basedir}/configs/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
                                         <argument>-p</argument>
                                         <argument>${permissions.file}</argument>
