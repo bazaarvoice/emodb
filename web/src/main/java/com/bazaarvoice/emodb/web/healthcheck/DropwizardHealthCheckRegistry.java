@@ -1,5 +1,6 @@
-package com.bazaarvoice.emodb.common.dropwizard.healthcheck;
+package com.bazaarvoice.emodb.web.healthcheck;
 
+import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.codahale.metrics.health.HealthCheck;
 import com.google.inject.Inject;
 import io.dropwizard.setup.Environment;

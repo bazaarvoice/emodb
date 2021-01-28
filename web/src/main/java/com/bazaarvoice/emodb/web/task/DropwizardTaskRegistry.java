@@ -1,5 +1,6 @@
-package com.bazaarvoice.emodb.common.dropwizard.task;
+package com.bazaarvoice.emodb.web.task;
 
+import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
 import io.dropwizard.setup.Environment;
