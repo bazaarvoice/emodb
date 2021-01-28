@@ -688,14 +688,6 @@
                                 </requireJavaVersion>
                                 <dependencyConvergence />
                                 <requireUpperBoundDeps />
-<!--                                <bannedDependencies>
-                                    <excludes>
-                                        &lt;!&ndash; use org.slf4j:log4j-over-slf4j instead &ndash;&gt;
-                                        <exclude>log4j:log4j</exclude>
-                                        &lt;!&ndash; use org.slf4j:jcl-over-slf4j instead &ndash;&gt;
-                                        <exclude>commons-logging:commons-logging</exclude>
-                                    </excludes>
-                                </bannedDependencies>-->
                                 <banDuplicatePomDependencyVersions/>
                             </rules>
                         </configuration>
