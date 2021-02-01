@@ -39,7 +39,7 @@ dataCenter:
   currentDataCenter: datacenter1
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  cassandraDataCenter: DC1
+  cassandraDataCenter: datacenter1
 
   # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
   systemDataCenter: datacenter1
@@ -90,7 +90,7 @@ systemOfRecord:
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
-      cqlPort: 9042
+      cqlPort: 9164
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
@@ -117,11 +117,11 @@ databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
-    dataCenter: DC1
+    dataCenter: datacenter1
     seeds: 127.0.0.1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
-    cqlPort: 9042
+    cqlPort: 9164
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
@@ -153,11 +153,11 @@ blobStore:
     media:
       cluster: emo_cluster
       clusterMetric: emo_media_metric_name
-      dataCenter: DC1
+      dataCenter: datacenter1
       seeds: 127.0.0.1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
-      cqlPort: 9042
+      cqlPort: 9164
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
@@ -193,11 +193,11 @@ queueService:
   cassandra:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
-    dataCenter: DC1
+    dataCenter: datacenter1
     seeds: 127.0.0.1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
-    cqlPort: 9042
+    cqlPort: 9164
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop

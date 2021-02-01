@@ -10,7 +10,6 @@ cluster: local_default
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
 
-
 # Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
 #metrics:
 #  reporters:
@@ -34,9 +33,11 @@ systemTablePlacement: app_global:sys
 #      type: http
 #      apiKey: invalid-key
 
+
+
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter1
+  currentDataCenter: datacenter2
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
   cassandraDataCenter: datacenter1
@@ -45,10 +46,10 @@ dataCenter:
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8080
+  dataCenterServiceUri: http://localhost:9090
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8081
+  dataCenterAdminUri: http://localhost:9091
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
@@ -56,13 +57,7 @@ dataCenter:
 
 
 systemOfRecord:
-  deltaBlockSizeInKb: 16
-  cellTombstoneCompactionEnabled: true
-  cellTombstoneBlockLimit: 2
   stashRoot: s3://emodb-us-east-1/stash/ci
-
-  # Optional property - to exclude the tables satisfying the condition from the daily Stash run.
-  stashBlackListTableCondition: "intrinsic(\"~table\":like(\"nostash:*\"))"
 
   # How long should we retain historical deltas? To disable, use PT0S
   historyTtl: PT48H
@@ -74,7 +69,6 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
-  - "pii_us:pii"
   - "pii_eu:pii"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
@@ -100,20 +94,15 @@ systemOfRecord:
         app_global: {}
         ugc_global: {}
         catalog_global:  {}
-        pii_us: {}
+        pii_eu: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
     console:
       type: console
-#  auditWriter:
-#    logBucket: bv-emodb-local-audit
-#    logPath: localAudit
+
 
 databus:
-  longPollPollingThreadCount: 0
-  longPollKeepAliveThreadCount: 0
-
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
@@ -212,14 +201,14 @@ cqlDriver:
   multiRowPrefetchLimit: 50
 
 #jobs:
-#
-#Configure the ZooKeeper connection used for SOA service discovery
-# zooKeeper:
-#  #namespace: datacenter1
-#
-#  # ZooKeeper connection string that looks like "host:port,host:port,...".
-#  # It should include all members of the ZooKeeper ensemble.
-#  #connectString: localhost:2181
+
+# Configure the ZooKeeper connection used for SOA service discovery
+#zooKeeper:
+  #namespace: datacenter1
+
+  # ZooKeeper connection string that looks like "host:port,host:port,...".
+  # It should include all members of the ZooKeeper ensemble.
+  #connectString: localhost:2181
 
 auth:
   # The admin and replication API keys must be encrypted using the encrypt-configuration-api-key command
@@ -235,12 +224,10 @@ auth:
 server:
   applicationConnectors:
     - type: instrumentedHttp
-      port: 8080
+      port: 9090
   adminConnectors:
     - type: instrumentedHttp
-      port: 8081
-
-  shutdownGracePeriod: 60s
+      port: 9091
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.

@@ -6,5 +6,4 @@
 # data center.
 
 
-cd ..
-java -jar web/target/emodb-web-*.jar server web-local/config-dc2.yaml
+java -jar web/target/emodb-web-*.jar server web-local/configs/config-local-dc2.yaml web-local/configs/config-ddl-local-dc2.yaml

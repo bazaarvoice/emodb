@@ -18,7 +18,7 @@
         <mavenVersion>3.1.1</mavenVersion>
         <mavenPluginAnnotationsVersion>3.2</mavenPluginAnnotationsVersion>
         <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
-        <config.file>config-local.yaml</config.file>
+        <config.file>config-local-dc1.yaml</config.file>
         <ddl.file>config-ddl-local-dc1.yaml</ddl.file>
         <permissions.file />
     </properties>
@@ -242,8 +242,8 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
-                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local-dc1.yaml</ddlConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local-dc1.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local-dc1.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
                                     <autoStartCassandra>false</autoStartCassandra>
@@ -261,7 +261,7 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local-dc1.yaml</emoConfigurationFile>
                                     <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local-dc1.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
@@ -289,7 +289,7 @@
                                     <arguments>
                                         <argument>server</argument>
                                         <argument>${project.basedir}/configs/config-scantest-dc1.yaml</argument>
-                                        <argument>${project.basedir}/config-ddl-local-dc1.yaml</argument>
+                                        <argument>${project.basedir}/configs/config-ddl-local-dc1.yaml</argument>
                                         <argument>-z</argument>
                                         <argument>-p</argument>
                                         <argument>${permissions.file}</argument>
@@ -321,7 +321,7 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local-dc1.yaml</emoConfigurationFile>
                                     <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local-dc1.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>
@@ -340,7 +340,7 @@
                                 <configuration>
                                     <healthCheckPort>8081</healthCheckPort>
                                     <cassandraRpcPort>9160</cassandraRpcPort>
-                                    <emoConfigurationFile>${project.basedir}/configs/config-local.yaml</emoConfigurationFile>
+                                    <emoConfigurationFile>${project.basedir}/configs/config-local-dc1.yaml</emoConfigurationFile>
                                     <ddlConfigurationFile>${project.basedir}/configs/config-ddl-local-dc1.yaml</ddlConfigurationFile>
                                     <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
                                     <emoDir>emodb</emoDir>

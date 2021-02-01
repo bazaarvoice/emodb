@@ -1,7 +1,7 @@
 #!/bin/bash
 
-CONFIG_FILE="config-local.yaml"
-DDL_FILE="config-ddl-local.yaml"
+CONFIG_FILE="config-local-dc1.yaml"
+DDL_FILE="config-ddl-local-dc1.yaml"
 PERMISSIONS_FILE=""
 
 function print_usage_and_exit {
