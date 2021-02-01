@@ -1,8 +1,10 @@
-package com.bazaarvoice.emodb.common.dropwizard.lifecycle;
+package com.bazaarvoice.emodb.web.lifecycle;
 
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedCloseable;
 import com.google.inject.Inject;
-import io.dropwizard.setup.Environment;
 import io.dropwizard.lifecycle.Managed;
+import io.dropwizard.setup.Environment;
 
 import java.io.Closeable;
 

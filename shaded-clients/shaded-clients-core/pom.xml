@@ -15,6 +15,10 @@
 
     <name>EmoDB Shaded Clients Core</name>
 
+    <properties>
+        <enforcer.skip>true</enforcer.skip>
+    </properties>
+
     <dependencies>
         <!-- Bazaarvoice dependencies -->
         <dependency>

@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.common.dropwizard.command;
+package com.bazaarvoice.emodb.web.cli;
 
 import io.dropwizard.Application;
 import io.dropwizard.Configuration;

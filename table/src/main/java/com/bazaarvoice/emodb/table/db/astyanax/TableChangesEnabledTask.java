@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.inject.Inject;
-import io.dropwizard.jersey.params.BooleanParam;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.servlets.tasks.Task;
 import org.slf4j.Logger;
@@ -77,12 +76,22 @@ public class TableChangesEnabledTask extends Task {
     @Override
     public void execute(ImmutableMultimap<String, String> parameters, PrintWriter out) throws Exception {
         for (String enabled : parameters.get("enabled")) {
-            _enabled.set(new BooleanParam(enabled).get());
+            _enabled.set(parseBoolean(enabled));
 
             Thread.sleep(500);  // Wait for values to round trip through ZooKeeper.
         }
 
         out.printf("Table create/drop/update operations and table maintenance are: %s%n",
                 _enabled.get() ? "ENABLED" : "DISABLED");
+    }
+
+    private static Boolean parseBoolean(String input) throws Exception {
+        if ("true".equalsIgnoreCase(input)) {
+            return Boolean.TRUE;
+        } else if ("false".equalsIgnoreCase(input)) {
+            return Boolean.FALSE;
+        } else {
+            throw new Exception('"' + input + "\" must be \"true\" or \"false\".");
+        }
     }
 }

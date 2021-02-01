@@ -57,7 +57,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
+            <artifactId>httpcore</artifactId>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

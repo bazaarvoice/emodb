@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.common.dropwizard.jersey;
+package com.bazaarvoice.emodb.web.jersey;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.common.dropwizard.jersey;
+package com.bazaarvoice.emodb.web.jersey;
 
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.api.model.AbstractMethod;

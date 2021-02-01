@@ -1,5 +1,7 @@
-package com.bazaarvoice.emodb.common.dropwizard.guice;
+package com.bazaarvoice.emodb.web.guice;
 
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfAdminHostAndPort;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.google.common.base.Predicates;
 import com.google.common.collect.Iterables;
 import com.google.common.net.HostAndPort;

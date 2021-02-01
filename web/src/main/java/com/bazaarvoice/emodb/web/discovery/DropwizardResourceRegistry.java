@@ -1,5 +1,10 @@
-package com.bazaarvoice.emodb.common.dropwizard.discovery;
+package com.bazaarvoice.emodb.web.discovery;
 
+import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
+import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
+import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
+import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.discovery.ServiceNames;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfAdminHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
 import com.bazaarvoice.ostrich.ServiceEndPoint;

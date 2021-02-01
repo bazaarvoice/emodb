@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.common.dropwizard.jersey;
+package com.bazaarvoice.emodb.web.jersey;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;

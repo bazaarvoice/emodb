@@ -19,7 +19,7 @@
         <!-- Bazaarvoice dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-astyanax</artifactId>
+            <artifactId>emodb-common-dropwizard</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
