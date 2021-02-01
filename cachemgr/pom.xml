@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.2.4-SNAPSHOT</version>
+        <version>6.3.1-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -43,6 +43,10 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
+            <artifactId>ostrich-zookeeper-discovery</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.ostrich.zookeeper</groupId>
             <artifactId>ostrich-zookeeper-registry</artifactId>
         </dependency>
         <dependency>
@@ -66,17 +70,18 @@
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-core</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.dropwizard</groupId>
+                    <artifactId>dropwizard-jersey</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Test dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.curator</groupId>
             <artifactId>test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-testing</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

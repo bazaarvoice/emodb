@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.2.4-SNAPSHOT</version>
+        <version>6.3.1-SNAPSHOT</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -14,6 +14,10 @@
     <packaging>jar</packaging>
 
     <name>EmoDB Shaded Clients Core</name>
+
+    <properties>
+        <enforcer.skip>true</enforcer.skip>
+    </properties>
 
     <dependencies>
         <!-- Bazaarvoice dependencies -->

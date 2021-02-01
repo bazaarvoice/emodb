@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.cli;
 
-import com.bazaarvoice.emodb.common.dropwizard.command.NoOpService;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.table.db.astyanax.TableUuidFormat;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
