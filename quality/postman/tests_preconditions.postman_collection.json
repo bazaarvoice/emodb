@@ -1,0 +1,161 @@
+{
+	"info": {
+		"_postman_id": "fb76faff-5ac9-425e-a44f-a7da90600140",
+		"name": "Tests_Preconditions",
+		"description": "Operrations that should be done before tests are run",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup api keys",
+			"item": [
+				{
+					"name": "Get api key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code == 200) {",
+									"    postman.setNextRequest(null);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-BV-Api-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key/_key/{{api_key_no_rights}}",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key",
+								"_key",
+								"{{api_key_no_rights}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add user role",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-role",
+								"type": "text"
+							},
+							{
+								"key": "X-BV-Api-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\":\"Postman without permissions\",\n    \"description\":\"Postman without permissions\",\n    \"permissions\":[\"sor|read|__\"]\n}",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/role/reserved/postman_without_permissions1",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"role",
+								"reserved",
+								"postman_without_permissions1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add api key",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"const api_key_no_rights = pm.response.json().key",
+									"",
+									"pm.environment.set(\"api_key_no_rights\", api_key_no_rights);",
+									"",
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x.json-create-api-key",
+								"type": "text"
+							},
+							{
+								"key": "X-BV-Api-Key",
+								"value": "{{api_key}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"owner\":\"emodb-dev@bazaarvoice.com\",\n    \"description\":\"Postman Without Permissions API key\",\n    \"roles\":\n    [\n        {\"group\":\"reserved\",\"id\":\"postman_without_permissions\"}\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseurl_dc1}}/uac/1/api-key",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"uac",
+								"1",
+								"api-key"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "api keys are setup here for using them inside of the postman tests"
+		}
+	]
+}
