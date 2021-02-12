@@ -1,38 +1,12 @@
-# Select service mode - See EmoServiceMode class to see all available options
-# This allows you to split Emo's micro services deployed separately
+# Select service mode - Defaults to STANDARD_ALL
+
 serviceMode: STANDARD_ALL
-#serviceMode: STANDARD_MAIN
-#serviceMode: STANDARD_BLOB
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
-
-
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#metrics:
-#  reporters:
-#  - type: datadogExpansionFiltered
-#    host: test-host
-#    excludes:
-#    - ch.qos.logback
-#    - com.bazaarvoice.ostrich.pool
-#    excludeExpansions:
-#    - 5MinuteRate
-#    - 15MinuteRate
-#    - meanRate
-#    - min
-#    - max
-#    - mean
-#    - stddev
-#    - p95
-#    - p99
-#    - p999
-#    transport:
-#      type: http
-#      apiKey: invalid-key
 
 dataCenter:
   # Which data center does this server belong to?
@@ -59,10 +33,6 @@ systemOfRecord:
   deltaBlockSizeInKb: 16
   cellTombstoneCompactionEnabled: true
   cellTombstoneBlockLimit: 2
-  stashRoot: s3://emodb-us-east-1/stash/ci
-
-  # Optional property - to exclude the tables satisfying the condition from the daily Stash run.
-  stashBlackListTableCondition: "intrinsic(\"~table\":like(\"nostash:*\"))"
 
   # How long should we retain historical deltas? To disable, use PT0S
   historyTtl: PT48H
@@ -75,10 +45,6 @@ systemOfRecord:
   - "ugc_global:ugc"
   - "catalog_global:cat"
 
-  # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
-  # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
-  minimumSplitsPerTable: 8
-
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:
     emo_cluster:
@@ -86,9 +52,6 @@ systemOfRecord:
       clusterMetric: emo_sor_metric_name
       dataCenter: datacenter2
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
@@ -97,15 +60,12 @@ systemOfRecord:
       keyspaces:
         app_global: {}
         ugc_global: {}
-        catalog_global:  {}
+        catalog_global: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
     console:
       type: console
-#  auditWriter:
-#    logBucket: bv-emodb-local-audit
-#    logPath: localAudit
 
 databus:
   longPollPollingThreadCount: 0
@@ -116,20 +76,30 @@ databus:
     cluster: Databus Cluster
     dataCenter: datacenter2
     seeds: cassandra-dc2
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
     maxConnectionsPerHost: 5
     latencyAware: true
     partitioner: bop
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databusdc2: {}
+      databus: {}
 
+queueService:
+  # Cassandra connection settings
+  cassandra:
+    cluster: Databus Cluster
+    clusterMetric: Queue Cluster
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
+    maxConnectionsPerHost: 5
+    latencyAware: true
+    partitioner: bop
+    healthCheck:
+      name: queue-cassandra
+    keyspaces:
+      queue: {}
 
 blobStore:
-
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "media_global:ugc"
@@ -141,10 +111,6 @@ blobStore:
   placementsUnderMove:
     "media_global:ugc": media_global_mirror:media
 
-  # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
-  # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
-  minimumSplitsPerTable: 8
-
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:
     media:
@@ -152,9 +118,6 @@ blobStore:
       clusterMetric: emo_media_metric_name
       dataCenter: datacenter2
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
       maxConnectionsPerHost: 5
       latencyAware: true
       partitioner: bop
@@ -185,31 +148,12 @@ blobStore:
   - video/quicktime
   - video/x-msvideo
 
-queueService:
-  # Cassandra connection settings
-  cassandra:
-    cluster: Databus Cluster
-    clusterMetric: Queue Cluster
-    dataCenter: datacenter2
-    seeds: cassandra-dc2
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
-    maxConnectionsPerHost: 5
-    latencyAware: true
-    partitioner: bop
-    healthCheck:
-      name: queue-cassandra
-    keyspaces:
-      queuedc2: {}
-
-
 cqlDriver:
+  singleRowFetchSize: 100
+  singleRowPrefetchLimit: 50
   multiRowFetchSize: 100
   multiRowPrefetchLimit: 50
 
-#jobs:
-#
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
 #  namespace: datacenter2

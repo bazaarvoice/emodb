@@ -8,7 +8,7 @@ networks:
 
 services:
   zookeeper:
-    image: 'zookeeper:3.5'
+    image: 'zookeeper:3.4.14'
     networks:
       - emodb
     ports:
@@ -252,7 +252,7 @@ services:
       - emodb
     depends_on:
       - emodb-web-dc1
-      - emodb-web-dc2
+#      - emodb-web-dc2
 
   kafka-manager:
     image: hlebalbau/kafka-manager:stable
