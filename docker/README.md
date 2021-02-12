@@ -30,15 +30,67 @@ It's based on the official image, but in order to supply our own `cassandra.yml`
 
 Note that `docker-compose up` will build this for you if you skip this step and  the image hasn't been built before. If you make changes and want to rebuild, you can also skip this step and just include  the `--build` argument to `docker-compose up`, which will force rebuilding the Cassandra image.
 
-### start all services
+### Services start
 
-    docker-compose -f ./docker/docker-compose.yml up
+All services and apps (exclude kafka, kafka-manager, zookeeper) available in 2 dc (dc1 and dc2).
 
-### stop all services
+Related services:
 
-    docker-compose -f ./docker/docker-compose.yml down
+- cassandra
+- zookeeper
+- kafka
+- kafka-manager
 
-This is basically the same as Ctrl+C after running `docker-compose [...] up`, _but_ this does not cleanup/delete any data or temporary files. In fact, the Docker volumes, network and other resources ~~will~~ may hang around so if you are having trouble starting up services because of suspected lingering  data, you need to invoke the above command with the  `--volumes` option (just add it  to the end of the `down` command). This will, apparently, cleanup volumes and give you fresh, empty ones.
+Available apps:
+
+- emodb-web
+- emodb-blob
+- emodb-megabus
+- emodb-stash
+
+To start selected services use command:
+
+```
+docker-compose up -d service_name
+```
+
+example: will launch 2 C* nodes, kafka, zookeeper, 2 web and 2 megabus. Check with `docker ps`
+
+```
+➜ docker-compose up -d emodb-megabus-dc2
+Creating network "docker_emodb" with driver "bridge"
+Creating volume "docker_zookeeper_data" with local driver
+Creating volume "docker_cassandra-dc1_data" with local driver
+Creating volume "docker_cassandra-dc2_data" with local driver
+Creating volume "docker_kafka_data" with local driver
+Creating docker_cassandra-dc1_1 ... done
+Creating docker_zookeeper_1     ... done
+Creating docker_kafka_1         ... done
+Creating docker_cassandra-dc2_1 ... done
+Creating docker_emodb-web-dc1_1 ... done
+Creating docker_emodb-web-dc2_1 ... done
+Creating docker_emodb-megabus-dc2_1 ... done
+```
+
+Stopping and deleting services and apps:
+
+```
+➜ docker-compose down --remove-orphans -v
+Stopping docker_cassandra-dc2_1 ... done
+Stopping docker_emodb-web-dc1_1 ... done
+Stopping docker_zookeeper_1     ... done
+Stopping docker_cassandra-dc1_1 ... done
+Removing docker_emodb-web-dc2_1 ... done
+Removing docker_cassandra-dc2_1 ... done
+Removing docker_emodb-web-dc1_1 ... done
+Removing docker_zookeeper_1     ... done
+Removing docker_cassandra-dc1_1 ... done
+Removing network docker_emodb
+Removing volume docker_zookeeper_data
+Removing volume docker_cassandra-dc1_data
+Removing volume docker_cassandra-dc2_data
+Removing volume docker_kafka_data
+```
 
 ## References / useful but disorganized info that may save you from eating your hat/shoe/umbrella
 

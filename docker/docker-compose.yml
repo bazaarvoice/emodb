@@ -214,10 +214,10 @@ services:
     depends_on:
       zookeeper:
         condition: service_healthy
-#      cassandra-dc1:
-#        condition: service_healthy
-#      emodb-web-dc1:
-#        condition: service_started
+      cassandra-dc1:
+        condition: service_healthy
+      emodb-web-dc1:
+        condition: service_started
       kafka:
         condition: service_started
 
