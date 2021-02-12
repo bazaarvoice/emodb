@@ -1,105 +1,279 @@
-version: '3.7'
+# TODO: Store logs from app on local machine
+
+version: '3.9'
 
 networks:
-    emodb:
-        driver: bridge
+  emodb:
+    driver: bridge
 
 services:
-    zookeeper:
-        image: 'zookeeper:3.4.14'
-        networks:
-            - emodb
-        ports:
-            - '2181:2181'
-        volumes:
-            - 'zookeeper_data:/var/lib/zookeeeper/data'
-        environment:
-            - ALLOW_ANONYMOUS_LOGIN=yes
-    cassandra:
-        image: 'bazaarvoice/cassandra:2.2.4'
-        networks:
-            - emodb
-        build:
-            dockerfile: cassandra-Dockerfile
-            context: .
-        environment:
-            - CASSANDRA_DC=datacenter1
-        ports:
-            - '7000:7000'
-            - '7001:7001'
-            - '7199:7199'
-            - '9042:9042'
-            - '9160:9160'
-        volumes:
-            - 'cassandra_data:/var/lib/cassandra/data'
-        depends_on:
-            - zookeeper
-    kafka:
-        image: 'confluentinc/cp-kafka:5.3.1'
-        networks:
-            - emodb
-        ports:
-            - '9092:9092'
-        volumes:
-            - 'kafka_data:/var/lib/kafka/data'
-        environment:
-            - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
-            - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-            - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-            - ALLOW_PLAINTEXT_LISTENER=yes
-            - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-        depends_on:
-            - zookeeper
-    emodb-web-dc1:
-        image: 'bazaarvoice/emodb-web:latest'
-        networks:
-            - emodb
-        build:
-            dockerfile: docker/Dockerfile
-            context: ../
-            args:
-                - APP_ROLE=web
-                - DATACENTER=dc1
-                - PORTS=8080 8081
-                - STARTUP_DELAY=30
+  zookeeper:
+    image: 'zookeeper:3.5'
+    networks:
+      - emodb
+    ports:
+      - '2181:2181'
+    volumes:
+      - 'zookeeper_data:/var/lib/zookeeeper/data'
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc 127.0.0.1 2181 || exit 1"]
+      interval: 10s
 
-        ports:
-            - '8080:8080'
-            - '8081:8081'
-        depends_on:
-            - zookeeper
-            - cassandra
-    emodb-megabus:
-        image: 'bazaarvoice/emodb-megabus:latest'
-        networks:
-            - emodb
-        build:
-            dockerfile: docker/Dockerfile
-            context: ../
-            args:
-                - APP_ROLE=megabus
-                - DATACENTER=dc1
-                - PORTS=8082 8083
-                - STARTUP_DELAY=45
-        ports:
-            - '8082:8082'
-            - '8083:8083'
-            # If you build the image with attachment options,
-            # you can uncomment the following line and attach
-            # a debugger. Extremely useful for tracing what
-            # java.net does in a container when you're not
-            # looking.
-            # - '5005:5005'
-        depends_on:
-            - zookeeper
-            - cassandra
-            - emodb-web-dc1
-            - kafka
+  cassandra-dc1:
+    image: 'bazaarvoice/cassandra:2.2.4'
+    build:
+      context: .
+      dockerfile: cassandra-Dockerfile
+    networks:
+      - emodb
+    environment:
+      - CASSANDRA_DC=datacenter1
+    ports:
+      - '7000:7000'
+      - '7001:7001'
+      - '7199:7199'
+      - '9042:9042'
+      - '9160:9160'
+      - '9164:9164'
+    volumes:
+      - 'cassandra-dc1_data:/var/lib/cassandra/data'
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
+
+  cassandra-dc2:
+    image: 'bazaarvoice/cassandra:2.2.4'
+    build:
+      context: .
+      dockerfile: cassandra-Dockerfile
+    networks:
+      - emodb
+    environment:
+      - CASSANDRA_DC=datacenter2
+    ports:
+      - '7002:7000'
+      - '7003:7001'
+      - '7200:7199'
+      - '9043:9042'
+      - '9161:9160'
+      - '9165:9164'
+    volumes:
+      - 'cassandra-dc2_data:/var/lib/cassandra/data'
+    depends_on:
+      cassandra-dc1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
+
+  kafka:
+    image: 'confluentinc/cp-kafka:5.3.1'
+    networks:
+      - emodb
+    ports:
+      - '9092:9092'
+    volumes:
+      - 'kafka_data:/var/lib/kafka/data'
+    environment:
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    depends_on:
+      - zookeeper
+
+  emodb-blob-dc1:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+    - APP_ROLE=blob
+    - DATACENTER=dc1
+    ports:
+      - '8280:8080'
+      - '8281:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-web-dc1:
+        condition: service_started
+      cassandra-dc1:
+        condition: service_healthy
+      zookeeper:
+        condition: service_healthy
+
+  emodb-blob-dc2:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+      - APP_ROLE=blob
+      - DATACENTER=dc2
+    ports:
+      - '8385:8080'
+      - '8381:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-web-dc2:
+        condition: service_started
+      emodb-blob-dc1:
+        condition: service_started
+      cassandra-dc2:
+        condition: service_healthy
+
+  emodb-web-dc1:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+    - APP_ROLE=web
+    - DATACENTER=dc1
+    ports:
+      - '8080:8080'
+      - '8081:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+      cassandra-dc1:
+        condition: service_healthy
+
+  emodb-web-dc2:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+      - APP_ROLE=web
+      - DATACENTER=dc2
+    ports:
+      - '8180:8080'
+      - '8181:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-web-dc1:
+        condition: service_started
+      cassandra-dc2:
+        condition: service_healthy
+
+  emodb-stash-dc1:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+    - APP_ROLE=stash
+    - DATACENTER=dc1
+    ports:
+      - '8480:8080'
+      - '8481:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-web-dc1:
+        condition: service_started
+      zookeeper:
+        condition: service_healthy
+      cassandra-dc1:
+        condition: service_healthy
+
+  emodb-stash-dc2:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+      - APP_ROLE=stash
+      - DATACENTER=dc2
+    ports:
+      - '8580:8080'
+      - '8581:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-stash-dc1:
+        condition: service_started
+      emodb-web-dc1:
+        condition: service_started
+      cassandra-dc2:
+        condition: service_healthy
+
+  emodb-megabus-dc1:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+      - APP_ROLE=megabus
+      - DATACENTER=dc1
+    ports:
+      - '8680:8080'
+      - '8681:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+#      cassandra-dc1:
+#        condition: service_healthy
+#      emodb-web-dc1:
+#        condition: service_started
+      kafka:
+        condition: service_started
+
+  emodb-megabus-dc2:
+    image: 'bazaarvoice/emodb-web:latest'
+    networks:
+      - emodb
+    environment:
+      - APP_ROLE=megabus
+      - DATACENTER=dc2
+    ports:
+      - '8780:8080'
+      - '8781:8081'
+    volumes:
+      - './configs:/app/config'
+    depends_on:
+      emodb-web-dc2:
+        condition: service_started
+      kafka:
+        condition: service_started
+      zookeeper:
+        condition: service_started
+      cassandra-dc2:
+        condition: service_healthy
+
+  set-role:
+    image: 'bazaarvoice/set-emo-role:latest'
+    build:
+      context: .
+      dockerfile: set-role-Dockerfile
+    networks:
+      - emodb
+    depends_on:
+      - emodb-web-dc1
+      - emodb-web-dc2
+
+  kafka-manager:
+    image: hlebalbau/kafka-manager:stable
+    ports:
+      - "9000:9000"
+    environment:
+      ZK_HOSTS: "zookeeper:2181"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    networks:
+      - emodb
 
 volumes:
   zookeeper_data:
     driver: local
-  kafka_data:
+  cassandra-dc1_data:
     driver: local
-  cassandra_data:
+  cassandra-dc2_data:
+    driver: local
+  kafka_data:
     driver: local

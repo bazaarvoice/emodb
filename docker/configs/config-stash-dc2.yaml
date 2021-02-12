@@ -17,23 +17,23 @@ systemTablePlacement: app_global:sys
 
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter1
+  currentDataCenter: datacenter2
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  cassandraDataCenter: datacenter1
+  cassandraDataCenter: datacenter2
 
   # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://localhost:8680
+  dataCenterServiceUri: http://emodb-web-dc2:8080
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://localhost:8681
+  dataCenterAdminUri: http://emodb-web-dc2:8081
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
-  systemDataCenterServiceUri: http://localhost:8480
+  systemDataCenterServiceUri: http://emodb-web-dc1:8080
 
 
 systemOfRecord:
@@ -58,7 +58,7 @@ systemOfRecord:
       cluster: emo_cluster
       clusterMetric: emo_cluster_metric_name
       dataCenter: datacenter1
-      seeds: 127.0.0.1
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -83,7 +83,7 @@ databus:
   cassandra:
     cluster: Databus Cluster
     dataCenter: datacenter1
-    seeds: 127.0.0.1
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -93,7 +93,7 @@ databus:
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databus: {}
+      databusdc2: {}
 
 
 blobStore:
@@ -111,7 +111,7 @@ blobStore:
     media_global:
       cluster: emo_cluster
       dataCenter: datacenter1
-      seeds: 127.0.0.1
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -130,7 +130,7 @@ queueService:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
     dataCenter: datacenter1
-    seeds: 127.0.0.1
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -140,18 +140,17 @@ queueService:
     healthCheck:
       name: queue-cassandra
     keyspaces:
-      queue: {}
+      queuedc2: {}
 
 
 #jobs:
 
 # Configure the ZooKeeper connection used for SOA service discovery
-#zooKeeper:
-  #namespace: datacenter1
-
-  # ZooKeeper connection string that looks like "host:port,host:port,...".
-  # It should include all members of the ZooKeeper ensemble.
-  #connectString: localhost:2181
+zooKeeper:
+  namespace: datacenter2
+   ZooKeeper connection string that looks like "host:port,host:port,...".
+   It should include all members of the ZooKeeper ensemble.
+  connectString: zookeeper:2181
 
 auth:
   # The admin and replication API keys must be encrypted using the encrypt-configuration-api-key command

@@ -25,29 +25,22 @@ systemOfRecord:
                keyspace: app_global
                table.delta_v2: sys_delta_v2
                table.history: sys_history
-      pii_us:
-         replicationFactor: 1
-         tables:
-            default:
-               keyspace: pii_us
-               table.delta_v2: pii_delta_v2
-               table.history: pii_history
 
 databus:
    keyspaces:
-      databus:
+      databusdc2:
          replicationFactor: 1
          tables:
             default:
-               keyspace: databus
+               keyspace: databusdc2
 
 queue:
    keyspaces:
-      queue:
+      queuedc2:
          replicationFactor: 1
          tables:
             default:
-               keyspace: queue
+               keyspace: queuedc2
 
 blobStore:
    keyspaces:

@@ -74,8 +74,6 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
-  - "pii_us:pii"
-  - "pii_eu:pii"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
@@ -87,7 +85,7 @@ systemOfRecord:
       cluster: emo_cluster
       clusterMetric: emo_sor_metric_name
       dataCenter: datacenter1
-      seeds: cassandra
+      seeds: cassandra-dc1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -100,7 +98,6 @@ systemOfRecord:
         app_global: {}
         ugc_global: {}
         catalog_global:  {}
-        pii_us: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
@@ -118,7 +115,7 @@ databus:
   cassandra:
     cluster: Databus Cluster
     dataCenter: datacenter1
-    seeds: cassandra
+    seeds: cassandra-dc1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -128,7 +125,7 @@ databus:
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databus: {}
+      databusdc1: {}
 
 
 blobStore:
@@ -154,7 +151,7 @@ blobStore:
       cluster: emo_cluster
       clusterMetric: emo_media_metric_name
       dataCenter: datacenter1
-      seeds: cassandra
+      seeds: cassandra-dc1
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -194,7 +191,7 @@ queueService:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
     dataCenter: datacenter1
-    seeds: cassandra
+    seeds: cassandra-dc1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -204,7 +201,7 @@ queueService:
     healthCheck:
       name: queue-cassandra
     keyspaces:
-      queue: {}
+      queuedc1: {}
 
 
 cqlDriver:
@@ -215,7 +212,7 @@ cqlDriver:
 #
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: datacenter1
+#  namespace: datacenter1
   connectString: zookeeper:2181
 
 auth:

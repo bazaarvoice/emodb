@@ -1,5 +1,5 @@
 # Select service mode
-serviceMode: SCANNER
+serviceMode: STANDARD_BLOB
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
@@ -17,28 +17,29 @@ systemTablePlacement: app_global:sys
 
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter1
+  currentDataCenter: datacenter2
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  cassandraDataCenter: datacenter1
+  cassandraDataCenter: datacenter2
 
   # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
   systemDataCenter: datacenter1
 
   # Load-balanced highly available base URL for the EmoDB service (ie. Amazon ELB base url).
-  dataCenterServiceUri: http://emodb-web-dc1:8080
+  dataCenterServiceUri: http://emodb-web-dc2:8080
 
   # Load-balanced highly available base URL for the EmoDB administration tasks (ie. Amazon ELB base url).
-  dataCenterAdminUri: http://emodb-web-dc1:8081
+  dataCenterAdminUri: http://emodb-web-dc2:8081
 
   # Load-balanced highly available base URL for the EmoDB system data center
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
-  systemDataCenterServiceUri: http://emodb-web-dc1:8080
+  systemDataCenterServiceUri: http://emodb-web-dc2:8080
 
 
 systemOfRecord:
+
   # How long should we retain historical deltas? To disable, use PT0S
-  historyTtl: PT0S
+  historyTtl: PT48H
  
   # All valid placement strings for create table operations.
   validTablePlacements:
@@ -57,8 +58,8 @@ systemOfRecord:
     emo_cluster:
       cluster: emo_cluster
       clusterMetric: emo_cluster_metric_name
-      dataCenter: datacenter1
-      seeds: cassandra-dc1
+      dataCenter: datacenter2
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -82,8 +83,8 @@ databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
-    dataCenter: datacenter1
-    seeds: cassandra-dc1
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -93,7 +94,7 @@ databus:
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databusdc1: {}
+      databusdc2: {}
 
 
 blobStore:
@@ -110,8 +111,8 @@ blobStore:
   cassandraClusters:
     media_global:
       cluster: emo_cluster
-      dataCenter: datacenter1
-      seeds: cassandra-dc1
+      dataCenter: datacenter2
+      seeds: cassandra-dc2
       # zooKeeperServiceName: dev_sor_ugc_default-cassandra
       thriftPort: 9160
       cqlPort: 9164
@@ -123,14 +124,33 @@ blobStore:
       keyspaces:
         media_global: {}
 
+  approvedContentTypes:
+  - application/json
+  - audio/aac
+  - audio/mp4
+  - audio/mpeg
+  - audio/ogg
+  - audio/wav
+  - image/bmp
+  - image/gif
+  - image/jpeg
+  - image/png
+  - image/tiff
+  - image/x-xbitmap
+  - text/plain
+  - video/mp4
+  - video/mpeg
+  - video/ogg
+  - video/quicktime
+  - video/x-msvideo
 
 queueService:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
-    dataCenter: datacenter1
-    seeds: cassandra-dc1
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
@@ -140,14 +160,14 @@ queueService:
     healthCheck:
       name: queue-cassandra
     keyspaces:
-      queuedc1: {}
+      queuedc2: {}
 
 
 #jobs:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: datacenter1
+  namespace: datacenter2
 
   # ZooKeeper connection string that looks like "host:port,host:port,...".
   # It should include all members of the ZooKeeper ensemble.
@@ -163,21 +183,14 @@ auth:
   anonymousRoles:
   - anonymous
 
-scanner:
-  scanStatusTable: "__system_scan_upload"
-  scannerApiKey: "local_admin"
-  useSQSQueues: false
-  notifications:
-    enableCloudWatchMetrics: false
-
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:
     - type: http
-      port: 8680
+      port: 8080
   adminConnectors:
     - type: http
-      port: 8681
+      port: 8081
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
