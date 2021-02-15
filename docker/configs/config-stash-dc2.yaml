@@ -57,12 +57,9 @@ systemOfRecord:
     emo_cluster:
       cluster: emo_cluster
       clusterMetric: emo_cluster_metric_name
-      dataCenter: datacenter1
+      dataCenter: datacenter2
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
@@ -77,34 +74,39 @@ systemOfRecord:
     console:
       type: console
 
-
 databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
-    dataCenter: datacenter1
+    dataCenter: datacenter2
     seeds: cassandra-dc2
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
-    maxConnectionsPerHost: 5
+    maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databusdc2: {}
+      databus: {}
 
+queueService:
+  # Cassandra connection settings
+  cassandra:
+    cluster: Databus Cluster
+    clusterMetric: Queue Cluster
+    dataCenter: datacenter2
+    seeds: cassandra-dc2
+    maxConnectionsPerHost: 10
+    latencyAware: true
+    partitioner: bop
+    healthCheck:
+      name: queue-cassandra
+    keyspaces:
+      queue: {}
 
 blobStore:
-
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "media_global:ugc"
-
-  # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
-  # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
-  minimumSplitsPerTable: 8
 
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:
@@ -112,10 +114,7 @@ blobStore:
       cluster: emo_cluster
       dataCenter: datacenter1
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
@@ -123,33 +122,9 @@ blobStore:
       keyspaces:
         media_global: {}
 
-
-queueService:
-  # Cassandra connection settings
-  cassandra:
-    cluster: Databus Cluster
-    clusterMetric: Queue Cluster
-    dataCenter: datacenter1
-    seeds: cassandra-dc2
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
-    maxConnectionsPerHost: 5
-    latencyAware: true
-    partitioner: bop
-    healthCheck:
-      name: queue-cassandra
-    keyspaces:
-      queuedc2: {}
-
-
-#jobs:
-
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: datacenter2
-   ZooKeeper connection string that looks like "host:port,host:port,...".
-   It should include all members of the ZooKeeper ensemble.
+#  namespace: datacenter2
   connectString: zookeeper:2181
 
 auth:
@@ -163,7 +138,8 @@ auth:
   - anonymous
 
 scanner:
-  scanStatusTable: "__system_scan_upload"
+  scanStatusTable: "__system_scan_upload-dc2"
+  scanRequestTable: "__system_scan_requests-dc2"
   scannerApiKey: "local_admin"
   useSQSQueues: false
   notifications:
@@ -173,10 +149,10 @@ scanner:
 server:
   applicationConnectors:
     - type: http
-      port: 8680
+      port: 8080
   adminConnectors:
     - type: http
-      port: 8681
+      port: 8081
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.

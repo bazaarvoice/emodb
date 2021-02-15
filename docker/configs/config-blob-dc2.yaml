@@ -60,10 +60,7 @@ systemOfRecord:
       clusterMetric: emo_cluster_metric_name
       dataCenter: datacenter2
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
@@ -85,16 +82,13 @@ databus:
     cluster: Databus Cluster
     dataCenter: datacenter2
     seeds: cassandra-dc2
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
-    maxConnectionsPerHost: 5
+    maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
     healthCheck:
       name: databus-cassandra
     keyspaces:
-      databusdc2: {}
+      databus: {}
 
 
 blobStore:
@@ -113,10 +107,7 @@ blobStore:
       cluster: emo_cluster
       dataCenter: datacenter2
       seeds: cassandra-dc2
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
@@ -154,20 +145,20 @@ queueService:
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
-    maxConnectionsPerHost: 5
+    maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
     healthCheck:
       name: queue-cassandra
     keyspaces:
-      queuedc2: {}
+      queue: {}
 
 
 #jobs:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: datacenter2
+#  namespace: datacenter2
 
   # ZooKeeper connection string that looks like "host:port,host:port,...".
   # It should include all members of the ZooKeeper ensemble.
