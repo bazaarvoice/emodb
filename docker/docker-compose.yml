@@ -100,8 +100,6 @@ services:
         condition: service_started
       cassandra-dc1:
         condition: service_healthy
-      zookeeper:
-        condition: service_healthy
 
   emodb-blob-dc2:
     image: 'bazaarvoice/emodb-web:latest'
@@ -120,8 +118,6 @@ services:
         condition: service_started
       emodb-blob-dc1:
         condition: service_started
-      cassandra-dc2:
-        condition: service_healthy
 
   emodb-web-dc1:
     image: 'bazaarvoice/emodb-web:latest'
@@ -174,8 +170,6 @@ services:
     depends_on:
       emodb-web-dc1:
         condition: service_started
-      zookeeper:
-        condition: service_healthy
       cassandra-dc1:
         condition: service_healthy
 
@@ -212,8 +206,6 @@ services:
     volumes:
       - './configs:/app/config'
     depends_on:
-      zookeeper:
-        condition: service_healthy
       cassandra-dc1:
         condition: service_healthy
       emodb-web-dc1:
@@ -238,8 +230,6 @@ services:
         condition: service_started
       kafka:
         condition: service_started
-      zookeeper:
-        condition: service_started
       cassandra-dc2:
         condition: service_healthy
 
@@ -261,8 +251,6 @@ services:
     environment:
       ZK_HOSTS: "zookeeper:2181"
     depends_on:
-      zookeeper:
-        condition: service_healthy
       kafka:
         condition: service_started
     networks:
