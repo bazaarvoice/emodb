@@ -151,8 +151,6 @@ services:
     depends_on:
       emodb-web-dc1:
         condition: service_healthy
-      cassandra-dc2:
-        condition: service_healthy
 
   emodb-stash-dc1:
     image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
@@ -198,8 +196,6 @@ services:
       emodb-stash-dc1:
         condition: service_healthy
       emodb-web-dc1:
-        condition: service_healthy
-      cassandra-dc2:
         condition: service_healthy
 
   emodb-megabus-dc1:
@@ -265,8 +261,6 @@ volumes:
   zookeeper_data:
     driver: local
   cassandra-dc1_data:
-    driver: local
-  cassandra-dc2_data:
     driver: local
   kafka_data:
     driver: local
