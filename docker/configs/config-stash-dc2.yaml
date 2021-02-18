@@ -58,7 +58,7 @@ systemOfRecord:
       cluster: emo_cluster
       clusterMetric: emo_cluster_metric_name
       dataCenter: datacenter2
-      seeds: cassandra-dc2
+      seeds: cassandra-dc1
       maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
@@ -79,7 +79,7 @@ databus:
   cassandra:
     cluster: Databus Cluster
     dataCenter: datacenter2
-    seeds: cassandra-dc2
+    seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
@@ -94,7 +94,7 @@ queueService:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
     dataCenter: datacenter2
-    seeds: cassandra-dc2
+    seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
@@ -113,7 +113,7 @@ blobStore:
     media_global:
       cluster: emo_cluster
       dataCenter: datacenter1
-      seeds: cassandra-dc2
+      seeds: cassandra-dc1
       maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop

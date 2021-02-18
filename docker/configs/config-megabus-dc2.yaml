@@ -51,7 +51,7 @@ systemOfRecord:
       cluster: emo_cluster
       clusterMetric: emo_sor_metric_name
       dataCenter: datacenter2
-      seeds: cassandra-dc2
+      seeds: cassandra-dc1
       # TODO: check if it's multi or self discovered cassandra
       maxConnectionsPerHost: 10
       latencyAware: true
@@ -76,7 +76,7 @@ databus:
   cassandra:
     cluster: Databus Cluster
     dataCenter: datacenter2
-    seeds: cassandra-dc2
+    seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
@@ -91,7 +91,7 @@ queueService:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
     dataCenter: datacenter2
-    seeds: cassandra-dc2
+    seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
@@ -118,7 +118,7 @@ blobStore:
       cluster: emo_cluster
       clusterMetric: emo_media_metric_name
       dataCenter: datacenter2
-      seeds: cassandra-dc2
+      seeds: cassandra-dc1
       maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop

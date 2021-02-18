@@ -113,7 +113,7 @@ blobStore:
     media_global:
       cluster: emo_cluster
       dataCenter: datacenter1
-      seeds: cassandra-dc2
+      seeds: cassandra-dc1
       maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
