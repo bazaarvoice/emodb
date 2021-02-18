@@ -32,4 +32,4 @@ ENV PATH="/app/cassandra/bin:${PATH}"
 ENV JAVA_OPTS=""
 EXPOSE ${PORTS}
 ENTRYPOINT ["sh", "-c"]
-CMD ["nodetool --host cassandra-${DATACENTER} repair && java -jar emodb-web.jar server config/config-${APP_ROLE}-${DATACENTER}.yaml config/config-ddl-${DATACENTER}.yaml"]
+CMD ["java -jar emodb-web.jar server config/config-${APP_ROLE}-${DATACENTER}.yaml config/config-ddl-${DATACENTER}.yaml"]

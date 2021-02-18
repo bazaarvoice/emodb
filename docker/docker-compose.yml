@@ -43,31 +43,6 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
 
-  cassandra-dc2:
-    image: 'bazaarvoice/cassandra:2.1.22'
-    build:
-      context: .
-      dockerfile: cassandra-Dockerfile
-    networks:
-      - emodb
-    environment:
-      - LOCAL_JMX=no
-      - CASSANDRA_DC=datacenter2
-    ports:
-      - '7002:7000'
-      - '7003:7001'
-      - '7200:7199'
-      - '9043:9042'
-      - '9161:9160'
-      - '9165:9164'
-    volumes:
-      - 'cassandra-dc2_data:/var/lib/cassandra/data'
-    depends_on:
-      cassandra-dc1:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "nodetool status | grep UN || exit 1"]
-
   kafka:
     image: 'confluentinc/cp-kafka:5.3.1'
     networks:
