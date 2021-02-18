@@ -52,7 +52,6 @@ systemOfRecord:
       clusterMetric: emo_sor_metric_name
       dataCenter: datacenter1
       seeds: cassandra-dc1
-      # TODO: check if it's multi or self discovered cassandra
       maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop

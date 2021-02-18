@@ -349,7 +349,6 @@
                                             <version>${project.version}</version>
                                         </args>
                                         <contextDir>${project.basedir}/../docker</contextDir>
-                                        <dockerFile>${docker.build.dockerFile}</dockerFile>
                                         <tags>
                                             <tag>${docker.floating.tag}</tag>
                                         </tags>
