@@ -157,8 +157,8 @@ cqlDriver:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: local/dc2
-  connectString: zookeeper-dc1:2181,zookeeper-dc2:2181
+  #  namespace: datacenter2
+  connectString: zookeeper:2181
 
 kafka:
   bootstrapServers: kafka:9092
