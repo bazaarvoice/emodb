@@ -89,7 +89,7 @@ services:
       - emodb
     environment:
       - APP_ROLE=blob
-      - DATACENTER=dc2
+      - DATACENTER=dc1
     ports:
       - '8385:8080'
       - '8381:8081'
@@ -137,7 +137,7 @@ services:
       - emodb
     environment:
       - APP_ROLE=web
-      - DATACENTER=dc2
+      - DATACENTER=dc1
     ports:
       - '8180:8080'
       - '8181:8081'
@@ -181,7 +181,7 @@ services:
       - emodb
     environment:
       - APP_ROLE=stash
-      - DATACENTER=dc2
+      - DATACENTER=dc1
     ports:
       - '8580:8080'
       - '8581:8081'
@@ -229,7 +229,7 @@ services:
       - emodb
     environment:
       - APP_ROLE=megabus
-      - DATACENTER=dc2
+      - DATACENTER=dc1
     ports:
       - '8780:8080'
       - '8781:8081'

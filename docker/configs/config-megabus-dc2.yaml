@@ -10,10 +10,10 @@ systemTablePlacement: app_global:sys
 
 dataCenter:
   # Which data center does this server belong to?
-  currentDataCenter: datacenter2
+  currentDataCenter: datacenter1
 
   # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
-  cassandraDataCenter: datacenter2
+  cassandraDataCenter: datacenter1
 
   # All CREATE/DROP TABLE operations must occur in a single data center.  Which one is it?
   systemDataCenter: datacenter1
@@ -50,7 +50,7 @@ systemOfRecord:
     emo_cluster:
       cluster: emo_cluster
       clusterMetric: emo_sor_metric_name
-      dataCenter: datacenter2
+      dataCenter: datacenter1
       seeds: cassandra-dc1
       # TODO: check if it's multi or self discovered cassandra
       maxConnectionsPerHost: 10
@@ -75,7 +75,7 @@ databus:
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
-    dataCenter: datacenter2
+    dataCenter: datacenter1
     seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
@@ -90,7 +90,7 @@ queueService:
   cassandra:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
-    dataCenter: datacenter2
+    dataCenter: datacenter1
     seeds: cassandra-dc1
     maxConnectionsPerHost: 10
     latencyAware: true
@@ -117,7 +117,7 @@ blobStore:
     media:
       cluster: emo_cluster
       clusterMetric: emo_media_metric_name
-      dataCenter: datacenter2
+      dataCenter: datacenter1
       seeds: cassandra-dc1
       maxConnectionsPerHost: 10
       latencyAware: true
@@ -157,7 +157,7 @@ cqlDriver:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  #  namespace: datacenter2
+  #  namespace: datacenter1
   connectString: zookeeper:2181
 
 kafka:

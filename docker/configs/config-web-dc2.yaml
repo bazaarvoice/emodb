@@ -156,7 +156,7 @@ cqlDriver:
 
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-#  namespace: datacenter2
+#  namespace: datacenter1
   connectString: zookeeper:2181
 
 auth:
