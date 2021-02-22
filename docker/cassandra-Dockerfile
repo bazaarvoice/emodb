@@ -1,4 +1,3 @@
 FROM cassandra:2.1.22
 COPY ./cassandra.yaml /etc/cassandra/
-COPY ./cassandra-env.sh /etc/cassandra/
 CMD ["cassandra", "-f"]
