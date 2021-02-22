@@ -86,6 +86,13 @@ Removing volume docker_cassandra-dc1_data
 Removing volume docker_kafka_data
 ```
 
+### Logs
+In containers the app configured with 2 appenders:
+- console
+- file
+
+The file is used to store logs inside a container in the folder `/app/logs/`. This folder mounted outside of container in `web-local/target/logs/`.
+
 ## References / useful but disorganized info that may save you from eating your hat/shoe/umbrella
 
 ### Gotchas / surprising behavior
