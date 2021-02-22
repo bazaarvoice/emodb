@@ -61,7 +61,7 @@ services:
       - zookeeper
 
   emodb-blob-dc1:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
@@ -84,7 +84,7 @@ services:
         condition: service_healthy
 
   emodb-blob-dc2:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
@@ -107,7 +107,7 @@ services:
         condition: service_started
 
   emodb-web-dc1:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     restart: always
     networks:
       - emodb
@@ -131,7 +131,7 @@ services:
         condition: service_healthy
 
   emodb-web-dc2:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     restart: always
     networks:
       - emodb
@@ -153,7 +153,7 @@ services:
         condition: service_healthy
 
   emodb-stash-dc1:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
@@ -176,7 +176,7 @@ services:
         condition: service_healthy
 
   emodb-stash-dc2:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
@@ -199,7 +199,7 @@ services:
         condition: service_healthy
 
   emodb-megabus-dc1:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
@@ -224,7 +224,7 @@ services:
         condition: service_started
 
   emodb-megabus-dc2:
-    image: 'bazaarvoice/emodb-web:6.3.1-SNAPSHOT'
+    image: 'bazaarvoice/emodb-web:latest'
     networks:
       - emodb
     environment:
