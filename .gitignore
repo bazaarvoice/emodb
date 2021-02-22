@@ -19,6 +19,3 @@ target/
 # Site Files
 _site
 .sass-cache
-
-# Container logs
-docker/logs
