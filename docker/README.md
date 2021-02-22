@@ -22,11 +22,11 @@ Docker is now included with mvn and docker image will be built if we select prof
 
 Also, to speed things up, you can try skipping tests. I usually do ` -DskipTests -DskipITs` and then watch in awe as Maven proceeds to run all of the tests anyway.
 
-### build Cassandra 2.2.4
+### build Cassandra 2.1.22
 
 It's based on the official image, but in order to supply our own `cassandra.yml` configuration, we have to "inherit" the official build. Again, running from `$GITROOT`:
 
-    docker build $GITROOT -f ./docker/cassandra-Dockerfile -t bazaarvoice/cassandra:2.2.4
+    docker build $GITROOT -f ./docker/cassandra-Dockerfile -t bazaarvoice/cassandra:2.1.22
 
 Note that `docker-compose up` will build this for you if you skip this step and  the image hasn't been built before. If you make changes and want to rebuild, you can also skip this step and just include  the `--build` argument to `docker-compose up`, which will force rebuilding the Cassandra image.
 
@@ -54,19 +54,17 @@ To start selected services use command:
 docker-compose up -d service_name
 ```
 
-example: will launch 2 C* nodes, kafka, zookeeper, 2 web and 2 megabus. Check with `docker ps`
+example: will launch 1 C* node, kafka, zookeeper, 2 web and 2 megabus. Check with `docker ps`
 
 ```
 ➜ docker-compose up -d emodb-megabus-dc2
 Creating network "docker_emodb" with driver "bridge"
 Creating volume "docker_zookeeper_data" with local driver
 Creating volume "docker_cassandra-dc1_data" with local driver
-Creating volume "docker_cassandra-dc2_data" with local driver
 Creating volume "docker_kafka_data" with local driver
 Creating docker_cassandra-dc1_1 ... done
 Creating docker_zookeeper_1     ... done
 Creating docker_kafka_1         ... done
-Creating docker_cassandra-dc2_1 ... done
 Creating docker_emodb-web-dc1_1 ... done
 Creating docker_emodb-web-dc2_1 ... done
 Creating docker_emodb-megabus-dc2_1 ... done
@@ -76,19 +74,16 @@ Stopping and deleting services and apps:
 
 ```
 ➜ docker-compose down --remove-orphans -v
-Stopping docker_cassandra-dc2_1 ... done
 Stopping docker_emodb-web-dc1_1 ... done
 Stopping docker_zookeeper_1     ... done
 Stopping docker_cassandra-dc1_1 ... done
 Removing docker_emodb-web-dc2_1 ... done
-Removing docker_cassandra-dc2_1 ... done
 Removing docker_emodb-web-dc1_1 ... done
 Removing docker_zookeeper_1     ... done
 Removing docker_cassandra-dc1_1 ... done
 Removing network docker_emodb
 Removing volume docker_zookeeper_data
 Removing volume docker_cassandra-dc1_data
-Removing volume docker_cassandra-dc2_data
 Removing volume docker_kafka_data
 ```
 
@@ -106,4 +101,4 @@ Removing volume docker_kafka_data
 - [Kafka docker image reference](https://docs.confluent.io/current/installation/docker/index.html) (helpful for things like knowing how to configure Kafka)
 - [Kafka docker image on DockerHub](https://hub.docker.com/r/confluentinc/cp-kafka), because the image just named "kafka" is a packaged product. I don't know how they get away with this legally but whatever, I guess strictly speaking they didn't modify the software at all.
 - [Someone wrote this about Kafka and Compose](https://rmoff.net/2018/08/02/kafka-listeners-explained/) presumably to clear up the otherwise incredibly confusing networking concepts
-- [Cassandra 2.2.4 on DockerHub](https://hub.docker.com/_/cassandra), this is what I based the [Cassandra Dockerfile](./cassandra-Dockerfile) on. We have our own Dockerfile that does some kind of weird inheritance and allows us to override the Cassandra configuration that is used in the container. Don't ask me how this works (there's lengthy documentation on the subject), but the documentation written for the Cassandra Docker image on DockerHub helpfully explains that the entire process of setting your own Cassandra configuration is left as an "exercise for the reader." Not that I felt like I needed it, but I certainly feel exercised.
+- [Cassandra on DockerHub](https://hub.docker.com/_/cassandra), this is what I based the [Cassandra Dockerfile](./cassandra-Dockerfile) on. We have our own Dockerfile that does some kind of weird inheritance and allows us to override the Cassandra configuration that is used in the container. Don't ask me how this works (there's lengthy documentation on the subject), but the documentation written for the Cassandra Docker image on DockerHub helpfully explains that the entire process of setting your own Cassandra configuration is left as an "exercise for the reader." Not that I felt like I needed it, but I certainly feel exercised.
