@@ -32,14 +32,13 @@ Note that `docker-compose up` will build this for you if you skip this step and 
 
 ### Services start
 
-All services and apps (exclude kafka, kafka-manager, zookeeper) available in 2 dc (dc1 and dc2).
+All services and apps (exclude kafka, zookeeper) available in 2 dc (dc1 and dc2).
 
 Related services:
 
 - cassandra
 - zookeeper
 - kafka
-- kafka-manager
 
 Available apps:
 
