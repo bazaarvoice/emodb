@@ -27,7 +27,6 @@ services:
     networks:
       - emodb
     environment:
-      - LOCAL_JMX=no
       - CASSANDRA_DC=datacenter1
     ports:
       - '7000:7000'
@@ -252,16 +251,16 @@ services:
       emodb-megabus-dc1:
         condition: service_healthy
 
-#  set-role:
-#    image: 'bazaarvoice/set-emo-role:latest'
-#    build:
-#      context: .
-#      dockerfile: set-role-Dockerfile
-#    networks:
-#      - emodb
-#    depends_on:
-#      - emodb-web-dc1
-##      - emodb-web-dc2
+  set-role:
+    image: 'bazaarvoice/set-emo-role:latest'
+    build:
+      context: .
+      dockerfile: set-role-Dockerfile
+    networks:
+      - emodb
+    depends_on:
+      emodb-web-dc1:
+        condition: service_healthy
 
 volumes:
   zookeeper_data:
