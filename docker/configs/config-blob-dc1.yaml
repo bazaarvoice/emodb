@@ -7,14 +7,6 @@ cluster: local_default
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
 
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#datadog:
-#  apiKey: <api-key>
-#  host: <output-of-"hostname -f">
-#  whiteList:  # Exclude measurements that we don't use in Datadog graphs or alerts
-#  - ".*$(?<!5MinuteRate|15MinuteRate|meanRate|min|max|mean|stddev|95percentile|99percentile|999percentile)"
-
-
 dataCenter:
   # Which data center does this server belong to?
   currentDataCenter: datacenter1
@@ -35,9 +27,7 @@ dataCenter:
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
   systemDataCenterServiceUri: http://emodb-web-dc1:8080
 
-
 systemOfRecord:
-
   # How long should we retain historical deltas? To disable, use PT0S
   historyTtl: PT48H
  
@@ -75,7 +65,6 @@ systemOfRecord:
     console:
       type: console
 
-
 databus:
   # Cassandra connection settings
   cassandra:
@@ -90,9 +79,7 @@ databus:
     keyspaces:
       databus: {}
 
-
 blobStore:
-
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "media_global:ugc"
@@ -153,13 +140,9 @@ queueService:
     keyspaces:
       queue: {}
 
-
-#jobs:
-
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
 #  namespace: datacenter1
-
   # ZooKeeper connection string that looks like "host:port,host:port,...".
   # It should include all members of the ZooKeeper ensemble.
   connectString: zookeeper:2181
@@ -220,7 +203,6 @@ httpClient:
 
   # Re-use connections so we don't run out of ports if many requests are made in rapid succession.
   keepAlive: 2s
-
 
 # Configure Logback logging
 logging:
