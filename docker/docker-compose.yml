@@ -64,6 +64,11 @@ services:
     environment:
     - APP_ROLE=blob
     - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8280:8080'
       - '8281:8081'
@@ -88,6 +93,11 @@ services:
     environment:
       - APP_ROLE=blob
       - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8380:8080'
       - '8381:8081'
@@ -113,6 +123,11 @@ services:
     environment:
     - APP_ROLE=web
     - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8080:8080'
       - '8081:8081'
@@ -138,6 +153,11 @@ services:
     environment:
       - APP_ROLE=web
       - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8180:8080'
       - '8181:8081'
@@ -160,6 +180,11 @@ services:
     environment:
     - APP_ROLE=stash
     - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8480:8080'
       - '8481:8081'
@@ -184,6 +209,11 @@ services:
     environment:
       - APP_ROLE=stash
       - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8580:8080'
       - '8581:8081'
@@ -208,6 +238,11 @@ services:
     environment:
       - APP_ROLE=megabus
       - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8680:8080'
       - '8681:8081'
@@ -234,6 +269,11 @@ services:
     environment:
       - APP_ROLE=megabus
       - DATACENTER=dc1
+    deploy:
+      resources:
+        limits:
+          cpus: 0.5
+          memory: 512M
     ports:
       - '8780:8080'
       - '8781:8081'
