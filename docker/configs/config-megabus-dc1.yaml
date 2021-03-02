@@ -210,9 +210,11 @@ server:
   applicationConnectors:
     - type: instrumentedHttp
       port: 8080
+      bindHost: 0.0.0.0
   adminConnectors:
     - type: instrumentedHttp
       port: 8081
+      bindHost: 0.0.0.0
 
   shutdownGracePeriod: 60s
 
