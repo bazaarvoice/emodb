@@ -89,7 +89,7 @@ services:
       - APP_ROLE=blob
       - DATACENTER=dc1
     ports:
-      - '8385:8080'
+      - '8380:8080'
       - '8381:8081'
     volumes:
       - './configs:/app/config'
