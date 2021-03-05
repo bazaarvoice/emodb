@@ -31111,6 +31111,3411 @@
 											]
 										}
 									]
+								},
+								{
+									"name": "Retrieves all recorded history for a piece of content in sor GET /sor/1/{table}/{key}/timeline",
+									"item": [
+										{
+											"name": "TC: Request without api-key",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 403\", function () {",
+																	"    pm.response.to.have.status(403);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.text()).to.be.oneOf(['{\"reason\":\"not authorized\"}','[]']);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key_no_rights}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "false",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "limit",
+																	"value": "10",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request historical data of record",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Number of timeline events\", function () {",
+																	"    pm.expect(pm.response.json().length).to.eql(1);",
+																	"});",
+																	" ",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"const postman_changeId = pm.environment.get(\"change_id\");",
+																	" ",
+																	"pm.test(\"Body matches expectation\", function () {",
+																	"    const actualBody = pm.response.json();",
+																	"",
+																	"    delete actualBody[0].timestamp;",
+																	"",
+																	"    const expectedBody = [{",
+																	"        \"id\": `${postman_changeId}`,",
+																	"        \"delta\": `{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"${postman_table}\",\"template\":{\"test_field\":\"test_value_of_field\"}}`,",
+																	"        \"tags\": [",
+																	"            \"postman\"",
+																	"        ]",
+																	"    }];",
+																	"",
+																	"    pm.expect(actualBody).to.eql(expectedBody);",
+																	"});",
+																	"",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&audit=false&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "false"
+																},
+																{
+																	"key": "start",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 2,\n        \"extra_field\": \"some_value\",\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
+																	"const postman_change_id = pm.environment.get(\"change_id\");",
+																	"const actualBody = pm.response.json();",
+																	"",
+																	"pm.test(\"Assert latest update\", function () {",
+																	"    const actualUpdate = actualBody.find (update => update.id === postman_change_id);",
+																	"",
+																	"    delete actualUpdate.timestamp;",
+																	"",
+																	"    const expectedUpdate = {",
+																	"        \"id\": `${postman_change_id}`,",
+																	"        \"delta\": `{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"extra_field\":\"some_value\",\"id\":2,\"name\":\"${postman_table}\",\"template\":{\"test_field\":\"test_value_of_field\"}}`,",
+																	"        \"tags\": [",
+																	"            \"postman\"",
+																	"        ]",
+																	"    };",
+																	"    pm.expect(actualUpdate).to.eql(expectedUpdate);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&audit=false&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "false"
+																},
+																{
+																	"key": "start",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"template\": {\n            \"test_field\": \"test_value_of_field\",\n            \"new_field\": \"inside_template\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store. Copy",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var actualBody = pm.response.json();",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
+																	"const postman_change_id = pm.environment.get(\"change_id\");",
+																	"",
+																	"pm.test(\"Assert latest update\", function () {",
+																	"    const actualUpdate = actualBody.find (update => update.id === postman_change_id);",
+																	"",
+																	"    delete actualUpdate.timestamp;",
+																	"",
+																	"    const expectedUpdate = {",
+																	"         \"id\": `${postman_change_id}`,",
+																	"        \"delta\": `{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"name\":\"${postman_table}\",\"template\":{\"new_field\":\"inside_template\",\"test_field\":\"test_value_of_field\"}}`,",
+																	"        \"tags\": [\"postman\"]",
+																	"    }",
+																	"    pm.expect(actualUpdate).to.eql(expectedUpdate);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&audit=false&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "false"
+																},
+																{
+																	"key": "start",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Delete content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"options\": {\n            \"placement\": \"ugc_eu:ugc\",\n            \"facades\": []\n        },\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_eu:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var actualBody = pm.response.json();",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
+																	"const postman_change_id = pm.environment.get(\"change_id\");",
+																	"",
+																	"pm.test(\"Assert deleted update\", function () {",
+																	"    const deletedUpdate = actualBody.filter(obj => {",
+																	"        return obj.delta === \"~\";",
+																	"    }); ",
+																	"    ",
+																	"    const expectedUpdate = {",
+																	"        \"id\": `${postman_change_id}`,",
+																	"        \"delta\": \"~\",",
+																	"        \"tags\": []",
+																	"    };",
+																	"    ",
+																	"    pm.expect(deletedUpdate[0]).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
+																	"    pm.expect(deletedUpdate[0].delta).to.eql(\"~\");",
+																	"    pm.expect(deletedUpdate[0].tags).to.eql([]);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&audit=false&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "false"
+																},
+																{
+																	"key": "start",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request historical data of record with audit records",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store with data true and audit true",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 400\", function () {",
+																	"    pm.response.to.have.status(400);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\": \"Audit data is no longer accessable via EmoDB app servers.\",\"suppressed\": []});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&audit=true&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true"
+																},
+																{
+																	"key": "start",
+																	"value": "",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content with data false and audit false in the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql([]);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=false&audit=false&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "false"
+																},
+																{
+																	"key": "audit",
+																	"value": "false"
+																},
+																{
+																	"key": "start",
+																	"value": "",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request historical data of record with reversed false",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store_reversed true and start < end",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 400\", function () {",
+																	"    pm.response.to.have.status(400);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.text()).to.eql(\"Start must be >=End for reversed ranges\");",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
+																	"postman.setEnvironmentVariable('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&start={{startUUID}}&end={{endUUID}}&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "{{startUUID}}"
+																},
+																{
+																	"key": "end",
+																	"value": "{{endUUID}}"
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store_reversed true and start >= end",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"const response = pm.response.json();",
+																	"const change_id = pm.environment.get(\"change_id\");",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"",
+																	"pm.test(\"Number of elements in the response\", function () {",
+																	"    pm.expect(response.length, 1);",
+																	"});",
+																	"    ",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(response[0]).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
+																	"    pm.expect(response[0].id).to.eql(change_id);",
+																	"    pm.expect(response[0].delta).to.eql(`{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"${postman_table}\",\"template\":{\"test_field\":\"test_value_of_field\"}}`);",
+																	"    pm.expect(response[0].tags).to.eql([\"postman\"]);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
+																	"postman.setEnvironmentVariable('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&start={{endUUID}}&end={{startUUID}}&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "{{endUUID}}"
+																},
+																{
+																	"key": "end",
+																	"value": "{{startUUID}}"
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request historical data of record with reversed false/true with start and end params",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store reversed false",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql([]);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"console.log(new Date(Date.now()).toISOString());",
+																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&start={{startUUID}}&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "{{startUUID}}"
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store_reversed true",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"const response = pm.response.json();",
+																	"const change_id = pm.environment.get(\"change_id\");",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"",
+																	"pm.test(\"Number of elements in the response\", function () {",
+																	"    pm.expect(response.length, 1);",
+																	"});",
+																	"    ",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(response[0]).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
+																	"    pm.expect(response[0].id).to.eql(change_id);",
+																	"    pm.expect(response[0].delta).to.eql(`{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"${postman_table}\",\"template\":{\"test_field\":\"test_value_of_field\"}}`);",
+																	"    pm.expect(response[0].tags).to.eql([\"postman\"]);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&start={{startUUID}}&reversed=true&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "{{startUUID}}"
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "true"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request historical data of record from newest to oldest",
+											"item": [
+												{
+													"name": "Retrieves all recorded history for not existing table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 404\", function () {",
+																	"    pm.response.to.have.status(404);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"console.log(new Date(Date.now()).toISOString());",
+																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/not_existing_table/not_existing_document/timeline?data=true&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"not_existing_table",
+																"not_existing_document",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												}
+											]
+										}
+									]
 								}
 							]
 						}
