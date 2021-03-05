@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "da2ac7fe-038e-4359-8ab1-a644fa922457",
+		"_postman_id": "1ad497fe-9035-4ac5-af6a-f1884386138e",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -10,7 +10,7 @@
 			"name": "sor/1 test cases",
 			"item": [
 				{
-					"name": " table",
+					"name": " _table test cases",
 					"item": [
 						{
 							"name": "{table}",
@@ -2341,7 +2341,7 @@
 															},
 															{
 																"key": "X-BV-Api-Key",
-																"value": "{{api_key_no_rights}}",
+																"value": "{{api_key}}",
 																"type": "text"
 															}
 														],
@@ -2350,7 +2350,7 @@
 															"raw": "{}"
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table6}}",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -2358,7 +2358,7 @@
 																"sor",
 																"1",
 																"_table",
-																"{{table6}}"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -8208,7 +8208,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus1', purgeId.id);"
+																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);"
 																],
 																"type": "text/javascript"
 															}
@@ -8301,7 +8301,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"status\":\"IN_PROGRESS\"}'));",
+																	"    pm.expect(pm.response.text()).to.be.oneOf(['{\"status\":\"IN_PROGRESS\"}','{\"status\":\"ERROR\"}']);",
 																	"});",
 																	"",
 																	"const response = pm.response.json().status;",
@@ -8318,7 +8318,7 @@
 																	"const retryRequest = () => {",
 																	"    return new Promise((resolve, reject) => {",
 																	"        pm.sendRequest({",
-																	"            url: `${pm.environment.get(\"baseurl_dc1\")}/sor/1/_table/not_existing_table/purgestatus?id=${pm.environment.get(\"purgeStatus1\")}`,",
+																	"            url: `${pm.environment.get(\"baseurl_dc1\")}/sor/1/_table/not_existing_table/purgestatus?id=${pm.environment.get(\"purgeStatus\")}`,",
 																	"            method: 'POST',",
 																	"            header: {",
 																	"                \"X-BV-API-Key\": pm.environment.get(\"api-key\"),",
@@ -8346,7 +8346,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/not_existing_table/purgestatus?id={{purgeStatus1}}",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/not_existing_table/purgestatus?id={{purgeStatus}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -8360,7 +8360,7 @@
 															"query": [
 																{
 																	"key": "id",
-																	"value": "{{purgeStatus1}}"
+																	"value": "{{purgeStatus}}"
 																}
 															]
 														},
@@ -13779,12 +13779,12 @@
 															"script": {
 																"exec": [
 																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
+																	"    pm.response.to.have.status(403);",
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
 																	"    console.log(pm.response.text())",
-																	"    pm.expect(pm.response.text()).to.include(JSON.parse('[]'));",
+																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
 																	"});",
 																	"",
 																	"pm.test(\"Response Content-Type is json\", function () {",
@@ -21688,7 +21688,7 @@
 													},
 													{
 														"key": "X-BV-API-Key",
-														"value": "{{api_key_no_rights}}",
+														"value": "{{api_key}}",
 														"type": "text"
 													}
 												],
@@ -21752,6 +21752,4993 @@
 													"body": "{\n \"options\": {\n  \"placement\": \"cupidatat dolor Excepteur\",\n  \"facades\": [\n   {\n    \"placement\": \"laboris magna s\"\n   },\n   {\n    \"placement\": \"minim deserunt\"\n   }\n  ]\n },\n \"template\": {},\n \"name\": \"eiusmod\",\n \"availability\": {\n  \"placement\": \"quis\",\n  \"facade\": false\n }\n}"
 												}
 											]
+										}
+									]
+								}
+							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": ":table test cases",
+					"item": [
+						{
+							"name": "{key}",
+							"item": [
+								{
+									"name": "Get current version of piece of data in sor GET /sor/1/{table}/{key}",
+									"item": [
+										{
+											"name": "TC: Request without api-key",
+											"item": [
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 403\", function () {",
+																	"    pm.response.to.have.status(403);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key_no_rights}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/some_table/some_key?consistency=STRONG&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"some_table",
+																"some_key"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request to not existing table",
+											"item": [
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 404\", function () {",
+																	"    pm.response.to.have.status(404);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/some_table/:key?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"some_table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															],
+															"variable": [
+																{
+																	"key": "key",
+																	"value": "<string>",
+																	"description": "(Required) "
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request by using not allowed table name",
+											"item": [
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 400\", function () {",
+																	"    pm.response.to.have.status(400);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('Table name must be a lowercase ASCII string between 1 and 255 characters in length. Allowed punctuation characters are -.:@_ and the table name may not start with a single underscore character. An example of a valid table name would be \\'review:testcustomer\\'.'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/SOME_TABLE@/:key?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"SOME_TABLE@",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															],
+															"variable": [
+																{
+																	"key": "key",
+																	"value": ""
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Get current piece of data",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id1}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesAvailabilityActual = Object.keys(jsonData.availability);",
+																	"var responsePropertiesTemplateActual = Object.keys(jsonData.template);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"availability\",\"id\",\"name\",\"template\",\"test_field\",\"~table\",\"~version\",\"~lastMutateAt\",\"~deleted\",\"~lastUpdateAt\",\"~id\",\"client\",\"~signature\",\"type\",\"~firstUpdateAt\"];",
+																	"var responsePropertiesAvailabilityExpected = [\"facade\",\"placement\"];",
+																	"var responsePropertiesTemplateExpected = [\"test_field\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"    pm.expect(responsePropertiesAvailabilityExpected).to.have.deep.members(responsePropertiesAvailabilityExpected);",
+																	"    pm.expect(responsePropertiesTemplateActual).to.have.deep.members(responsePropertiesTemplateExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesAvailabilityActual = Object.keys(jsonData.availability);",
+																	"var responsePropertiesTemplateActual = Object.keys(jsonData.template);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"availability\",\"id\",\"name\",\"template\",\"test_field\",\"~table\",\"~version\",\"~lastMutateAt\",\"~deleted\",\"~lastUpdateAt\",\"~id\",\"client\",\"~signature\",\"type\",\"~firstUpdateAt\"];",
+																	"var responsePropertiesAvailabilityExpected = [\"facade\",\"placement\"];",
+																	"var responsePropertiesTemplateExpected = [\"test_field\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"    pm.expect(responsePropertiesAvailabilityExpected).to.have.deep.members(responsePropertiesAvailabilityExpected);",
+																	"    pm.expect(responsePropertiesTemplateActual).to.have.deep.members(responsePropertiesTemplateExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id1}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Delete content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table_name_1}}\",\n        \"options\": {\n            \"placement\": \"ugc_eu:ugc\",\n            \"facades\": []\n        },\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_eu:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{auditValue}}",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id1}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesAvailabilityActual = Object.keys(jsonData.availability);",
+																	"var responsePropertiesTemplateActual = Object.keys(jsonData.template);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"availability\",\"id\",\"name\",\"template\",\"test_field\",\"~table\",\"~version\",\"~lastMutateAt\",\"~deleted\",\"~lastUpdateAt\",\"~id\",\"client\",\"~signature\",\"type\",\"~firstUpdateAt\"];",
+																	"var responsePropertiesAvailabilityExpected = [\"facade\",\"placement\"];",
+																	"var responsePropertiesTemplateExpected = [\"test_field\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"    pm.expect(responsePropertiesAvailabilityExpected).to.have.deep.members(responsePropertiesAvailabilityExpected);",
+																	"    pm.expect(responsePropertiesTemplateActual).to.have.deep.members(responsePropertiesTemplateExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"client\",\"test_field\",\"type\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"type\":\"create_table_test\",\"test_field\":\"postman\",\"client\":\"iuliia_customer\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":true}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id1}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"client\",\"test_field\",\"type\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"type\":\"create_table_test\",\"test_field\":\"postman\",\"client\":\"iuliia_customer\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":true}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id1}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											],
+											"description": "Request with api-key which has  sor|read|{table} permission to the table which exists returns: List of items in the table (deleted items are not included in the result)"
+										},
+										{
+											"name": "TC: Get data by not existing document_id",
+											"item": [
+												{
+													"name": "Creates table /sor/1/_table/{table}",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates/Updates content in datastore /sor/1/{table}/{key}",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n        \"name\": \"{{table}}\",\n        \"id\": 1,\n        \"template\": {\n            \"test_field\": \"test_value_of_field\"\n        },\n        \"availability\": {\n            \"placement\": \"ugc_global:ugc\",\n            \"facade\": false\n        }\n    }",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{auditValue}}&consistency={{write_consistency_weak}}&tag=postman&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{auditValue}}"
+																},
+																{
+																	"key": "changeId",
+																	"value": "{{changeId}}",
+																	"disabled": true
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{write_consistency_weak}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "\"Creates or replaces a piece of content in the data store.  Overwrites the old\\n\" +\n                    \" version of the content, if it exists.  Expects a literal JSON representation\\n\" +\n                    \" of the object.\""
+													},
+													"response": []
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"",
+																	"var responsePropertiesMainExpected = [\"type\",\"test_field\",\"client\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(jsonData).to.have.keys(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"var postman_table_name = pm.environment.get(\"table\");",
+																	"",
+																	"var responseValuesExpected = {",
+																	"    \"type\": \"create_table_test\",",
+																	"    \"test_field\": \"postman\",",
+																	"    \"client\": \"iuliia_customer\",",
+																	"    \"~id\": \"not_exisiting_document\",",
+																	"    \"~table\": postman_table_name,",
+																	"    \"~version\": 0,",
+																	"    \"~signature\": \"00000000000000000000000000000000\",",
+																	"    \"~deleted\": true",
+																	"};",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/not_exisiting_document?consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"not_exisiting_document"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											],
+											"description": "Request with api-key which has  sor|read|{table} permission to the table which exists returns: List of items in the table (deleted items are not included in the result)"
+										},
+										{
+											"name": "Retrieves the current version of a piece of content from the data store.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 403\", function () {",
+															"    pm.response.to.have.status(403);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key_no_rights}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/not_existing_table/:key?consistency=STRONG&debug=true",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"not_existing_table",
+														":key"
+													],
+													"query": [
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "debug",
+															"value": "true"
+														}
+													],
+													"variable": [
+														{
+															"key": "key",
+															"value": "<string>",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": "Retrieves the current version of a piece of content from the data store."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																},
+																{
+																	"key": "key"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "Create/update/delete a piece of data in sor by applying a delta POST /sor/1/{table}/{key}",
+									"item": [
+										{
+											"name": "TC: Request without api-key",
+											"item": [
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 403\", function () {",
+																	"    pm.response.to.have.status(403);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-Api-key",
+																"value": "{{api_key_no_rights}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "\"<string>\""
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/not_existing_table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"not_existing_table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "key",
+																	"value": "<string>",
+																	"description": "(Required) "
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request to not existing table",
+											"item": [
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"//const uuid = require('cassandra-driver').types.uuid;",
+																	"//const timeuuid = require('cassandra-driver').types.TimeUuid;",
+																	"",
+																	"//const id = timeuuid.fromDate(new Date(), 0, \"postman\", 12);",
+																	"",
+																	"//console.log(id.toString());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 404\", function () {",
+																	"    pm.response.to.have.status(404);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \n}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/some_table/:key?audit=comment:'update+data'&consistency=STRONG&tag=<string>",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"some_table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																}
+															],
+															"variable": [
+																{
+																	"key": "key",
+																	"value": "<string>",
+																	"description": "(Required) "
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request to create, update, delete a piece of data",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store Copy",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesMainExpected = [\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\"];",
+																	"",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~signature\"];",
+																	"",
+																	"var stringToReplace = '{\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":0,\"~deleted\":true}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{..,\"status\":\"CREATED\"}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'update+data'&consistency=STRONG&tag=<string>&tag=<string>&=",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "",
+																	"value": ""
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesMainExpected = [\"status\",\"customer\",\"test_table\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"status\":\"CREATED\",\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{..,\"status\":\"UPDATED\"}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'update+data'&consistency=STRONG&tag=<string>&tag=<string>&=",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "",
+																	"value": ""
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store Copy 2",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"var responsePropertiesMainExpected = [\"status\",\"customer\",\"test_table\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"status\":\"UPDATED\",\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":false}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"console.log(JSON.stringify(jsonData));",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta Copy",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "~"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'update+data'&consistency=STRONG&tag=<string>&tag=<string>&=",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "",
+																	"value": ""
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainActual = Object.keys(jsonData);",
+																	"",
+																	"var responsePropertiesMainExpected = [\"customer\",\"test_table\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"",
+																	"var stringToReplace = '{\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":3,\"~deleted\":true}';",
+																	"",
+																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
+																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request with empty request body",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 400\", function () {",
+																	"    pm.response.to.have.status(400);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('Missing required JSON delta request entity.'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": ""
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/some_document?audit=comment:'update+data'&consistency=STRONG&tag=<string>&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"some_document"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request with debug set to true, consistency to Global",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{..,\"test_delta\":\"set\"}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'update+data'&consistency=GLOBAL&tag=test_tag&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "GLOBAL"
+																},
+																{
+																	"key": "tag",
+																	"value": "test_tag"
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainExpected = [\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(jsonData).to.have.keys(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"var postman_table_name = pm.environment.get(\"table\");",
+																	"var postman_document_id = pm.environment.get(\"document_id\");",
+																	"",
+																	"var responseValuesExpected = {",
+																	"    \"~table\": postman_table_name,",
+																	"    \"~version\": 1,",
+																	"    \"test_delta\": \"set\",",
+																	"    \"~deleted\": false,",
+																	"    \"~id\": postman_document_id,",
+																	"    \"test_table\": postman_table_name,",
+																	"    \"customer\": \"postman\"",
+																	"};",
+																	"",
+																	"delete jsonData[\"~lastMutateAt\"];",
+																	"delete jsonData[\"~lastUpdateAt\"];",
+																	"delete jsonData[\"~firstUpdateAt\"];",
+																	"delete jsonData[\"~signature\"];",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(jsonData.test_delta).to.eql(\"set\");",
+																	"    pm.expect(jsonData[\"~table\"]).to.eql(postman_table_name);",
+																	"    pm.expect(jsonData[\"~version\"]).to.eql(1);",
+																	"    pm.expect(jsonData[\"~deleted\"]).to.eql(false);",
+																	"    pm.expect(jsonData[\"~id\"]).to.eql(postman_document_id);",
+																	"    pm.expect(jsonData.test_table).to.eql(postman_table_name);",
+																	"    pm.expect(jsonData.customer).to.eql(\"postman\");",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request with debug set to false, consistency to Non Durable",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/x.json-delta"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{..,\"test_delta\":\"set\"}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/some_document?audit=comment:'update+data'&consistency=NON_DURABLE&tag=postman&debug=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"some_document"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'update+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "NON_DURABLE"
+																},
+																{
+																	"key": "tag",
+																	"value": "postman"
+																},
+																{
+																	"key": "debug",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves the current version of a piece of content from the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"var jsonData = pm.response.json();",
+																	"",
+																	"var responsePropertiesMainExpected = [\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\"];",
+																	"",
+																	"",
+																	"pm.test(\"Response fields\", function () {",
+																	"    pm.expect(pm.response.json()).to.have.keys(responsePropertiesMainExpected);",
+																	"});",
+																	"",
+																	"var postman_table_name = pm.environment.get(\"table\");",
+																	"var postman_document_id = pm.environment.get(\"document_id\");",
+																	"var responseValuesExpected = {",
+																	"    \"test_table\": postman_table_name,",
+																	"    \"customer\": \"postman\",",
+																	"    \"~id\": postman_document_id,",
+																	"    \"~table\": postman_table_name,",
+																	"    \"~version\": 0,",
+																	"    \"~signature\": \"00000000000000000000000000000000\",",
+																	"    \"~deleted\": true",
+																	"}",
+																	"",
+																	"pm.test(\"Response values \", function () {",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?consistency=STRONG&includedDeletes=false",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "includedDeletes",
+																	"value": "false"
+																}
+															]
+														},
+														"description": "Retrieves the current version of a piece of content from the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?consistency=STRONG&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"});",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 403\", function () {",
+															"    pm.response.to.have.status(403);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-delta"
+													},
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key_no_rights}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "\"<string>\""
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/not_existing_table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"not_existing_table",
+														":key"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "<string>"
+														},
+														{
+															"key": "audit",
+															"value": "<string>"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "debug",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "key",
+															"value": "<string>",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																},
+																{
+																	"key": "key"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									],
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
 										}
 									]
 								}
@@ -21846,6 +26833,12 @@
 					""
 				]
 			}
+		}
+	],
+	"variable": [
+		{
+			"key": "change_id1",
+			"value": "0f396790-7517-11eb-9892-0ac49ed803e6"
 		}
 	]
 }
