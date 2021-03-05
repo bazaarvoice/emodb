@@ -29441,6 +29441,1676 @@
 											]
 										}
 									]
+								},
+								{
+									"name": "Attempts to reduce the size of the specified content in sor POST /sor/1/{table}/{key}/compact",
+									"item": [
+										{
+											"name": "TC: Request without api-key",
+											"item": [
+												{
+													"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 403\", function () {",
+																	"    pm.response.to.have.status(403);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key",
+																"compact"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "<string>"
+																},
+																{
+																	"key": "readConsistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "writeConsistency",
+																	"value": "STRONG"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table",
+																	"value": "<string>",
+																	"description": "(Required) "
+																},
+																{
+																	"key": "key",
+																	"value": "<string>",
+																	"description": "(Required) "
+																}
+															]
+														},
+														"description": "Attempts to reduce the size of the specified content in the underlying storage.\n Normally compaction occurs automatically as a side effect of performing a\n {@link #get}, but it can be forced to occur using this method."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"compact"
+																	],
+																	"query": [
+																		{
+																			"key": "ttl",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "readConsistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "writeConsistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request compact for not existing table",
+											"item": [
+												{
+													"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 404\", function () {",
+																	"    pm.response.to.have.status(404);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "X-BV-Api-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/not_existing_table/{{document_id}}/compact?ttl=200&readConsistency=STRONG&writeConsistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"not_existing_table",
+																"{{document_id}}",
+																"compact"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "200"
+																},
+																{
+																	"key": "readConsistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "writeConsistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Attempts to reduce the size of the specified content in the underlying storage.\n Normally compaction occurs automatically as a side effect of performing a\n {@link #get}, but it can be forced to occur using this method."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"compact"
+																	],
+																	"query": [
+																		{
+																			"key": "ttl",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "readConsistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "writeConsistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request compact for not existing document",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "X-BV-Api-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/compact?ttl=200&readConsistency=STRONG&writeConsistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"compact"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "200"
+																},
+																{
+																	"key": "readConsistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "writeConsistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Attempts to reduce the size of the specified content in the underlying storage.\n Normally compaction occurs automatically as a side effect of performing a\n {@link #get}, but it can be forced to occur using this method."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"compact"
+																	],
+																	"query": [
+																		{
+																			"key": "ttl",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "readConsistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "writeConsistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "TC: Request data compaction",
+											"item": [
+												{
+													"name": "Creates a table",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_global:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options=<string>&audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Creates or replaces a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('key', uuid.v4());",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'create+piece+of+data'&consistency=STRONG&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'create+piece+of+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "Creates or replaces a piece of content in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Creates or replaces a piece of content in the data store.",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('key', uuid.v4());",
+																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"});",
+																	"",
+																	"pm.environment.set(\"change_id\", pm.response.json().debug.changeId);",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															},
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit=comment:'create+piece+of+data'&consistency=STRONG&debug=true",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'create+piece+of+data'"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "debug",
+																	"value": "true"
+																}
+															]
+														},
+														"description": "Creates or replaces a piece of content in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store before compaction",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"const response = pm.response.json();",
+																	"const change_id = pm.environment.get(\"change_id\");",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    var latestUpdate = response.find(e => e.id === change_id);",
+																	"    ",
+																	"    pm.expect(latestUpdate).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
+																	"    ",
+																	"    delete latestUpdate.timestamp;",
+																	"",
+																	"    const expectedUpdate = {",
+																	"        \"id\":change_id,",
+																	"        \"delta\":'{\"author\":\"Bob\",\"rating\":5,\"title\":\"Best Ever!\"}',",
+																	"        \"tags\": []",
+																	"    };",
+																	"    pm.expect(latestUpdate).to.eql(expectedUpdate);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "POST",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{key}}/compact?ttl=100&readConsistency=STRONG&writeConsistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{key}}",
+																"compact"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "100"
+																},
+																{
+																	"key": "readConsistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "writeConsistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Attempts to reduce the size of the specified content in the underlying storage.\n Normally compaction occurs automatically as a side effect of performing a\n {@link #get}, but it can be forced to occur using this method."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "POST",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"compact"
+																	],
+																	"query": [
+																		{
+																			"key": "ttl",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "readConsistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "writeConsistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												},
+												{
+													"name": "Retrieves all recorded history for a piece of content in the data store after compaction",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"const response = pm.response.json();",
+																	"const change_id = pm.environment.get(\"change_id\");",
+																	"const postman_table = pm.environment.get(\"table\");",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    var latestUpdate = response.find(e => e.id === change_id);",
+																	"    ",
+																	"    pm.expect(latestUpdate).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
+																	"    ",
+																	"    delete latestUpdate.timestamp;",
+																	"",
+																	"    const expectedUpdate = {",
+																	"        \"id\":change_id,",
+																	"        \"delta\":'{\"author\":\"Bob\",\"rating\":5,\"title\":\"Best Ever!\"}',",
+																	"        \"tags\": []",
+																	"    };",
+																	"    pm.expect(latestUpdate).to.eql(expectedUpdate);",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "GET",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"value": "{{api_key}}",
+																"type": "text"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}/timeline?data=true&reversed=false&limit=10&consistency=STRONG",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"{{table}}",
+																"{{document_id}}",
+																"timeline"
+															],
+															"query": [
+																{
+																	"key": "data",
+																	"value": "true"
+																},
+																{
+																	"key": "audit",
+																	"value": "true",
+																	"disabled": true
+																},
+																{
+																	"key": "start",
+																	"value": "",
+																	"disabled": true
+																},
+																{
+																	"key": "end",
+																	"value": "<string>",
+																	"disabled": true
+																},
+																{
+																	"key": "reversed",
+																	"value": "false"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																}
+															]
+														},
+														"description": "Retrieves all recorded history for a piece of content in the data store."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "GET",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/:table/:key/timeline?data=true&audit=false&start=<string>&end=<string>&reversed=true&limit=10&consistency=STRONG",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		":table",
+																		":key",
+																		"timeline"
+																	],
+																	"query": [
+																		{
+																			"key": "data",
+																			"value": "true"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "false"
+																		},
+																		{
+																			"key": "start",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "end",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "reversed",
+																			"value": "true"
+																		},
+																		{
+																			"key": "limit",
+																			"value": "10"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{}"
+														}
+													]
+												},
+												{
+													"name": "Drops a table",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "DELETE",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "comment:'table_removal'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is dropped"
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "DELETE",
+																"header": [],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		":table"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
+												}
+											]
+										},
+										{
+											"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+											"request": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														":table",
+														":key",
+														"compact"
+													],
+													"query": [
+														{
+															"key": "ttl",
+															"value": "<string>"
+														},
+														{
+															"key": "readConsistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "writeConsistency",
+															"value": "STRONG"
+														}
+													],
+													"variable": [
+														{
+															"key": "table",
+															"value": "<string>",
+															"description": "(Required) "
+														},
+														{
+															"key": "key",
+															"value": "<string>",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": "Attempts to reduce the size of the specified content in the underlying storage.\n Normally compaction occurs automatically as a side effect of performing a\n {@link #get}, but it can be forced to occur using this method."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table/:key/compact?ttl=<string>&readConsistency=STRONG&writeConsistency=STRONG",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key",
+																"compact"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "<string>"
+																},
+																{
+																	"key": "readConsistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "writeConsistency",
+																	"value": "STRONG"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																},
+																{
+																	"key": "key"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
 								}
 							]
 						}
