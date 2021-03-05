@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "1ad497fe-9035-4ac5-af6a-f1884386138e",
+		"_postman_id": "f0042c84-f477-4478-939a-e3bf35842c9c",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -3245,7 +3245,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3366,11 +3366,15 @@
 																	"    pm.response.to.have.status(409);",
 																	"});",
 																	"",
-																	"var stringToReplace = '{\"message\":\"Cannot create table that already exists: postman_table_name\",\"table\":\"postman_table_name\",\"suppressed\":[]}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table11\"));",
+																	"const postman_table_name = pm.environment.get(\"table11\");",
+																	"",
+																	"const expectedResponseBody = {",
+																	"    \"message\":`Cannot create table that already exists: ${postman_table_name}`,",
+																	"    \"table\":postman_table_name,",
+																	"    \"suppressed\":[]}",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3483,7 +3487,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3600,11 +3604,15 @@
 																	"    pm.response.to.have.status(404);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"message\":\"Unknown table: postman_test_table\",\"table\":\"postman_test_table\",\"suppressed\":[]}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_test_table/g, pm.environment.get(\"table12\"));",
+																	"const postman_test_table =pm.environment.get(\"table12\");",
+																	"",
+																	"const expectedResponseBody = {",
+																	"    \"message\":`Unknown table: ${postman_test_table}`,",
+																	"    \"table\":postman_test_table,",
+																	"    \"suppressed\":[]};",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3715,7 +3723,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3827,11 +3835,21 @@
 																	"    pm.response.to.have.status(200);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"name\":\"postman_test_table\",\"options\":{\"facades\":[],\"placement\":\"ugc_global:ugc\"},\"template\":{}}';",
-																	"const expectedResponceBody = stringToReplace.replace(/postman_test_table/, pm.environment.get(\"table12\"));",
+																	"const postman_test_table = pm.environment.get(\"table12\");",
+																	"const expectedResponceBody = {",
+																	"    \"availability\":{",
+																	"        \"facade\":false,",
+																	"        \"placement\":\"ugc_global:ugc\"",
+																	"    },",
+																	"    \"name\":postman_test_table,",
+																	"    \"options\":{",
+																	"        \"facades\":[],",
+																	"        \"placement\":\"ugc_global:ugc\"},",
+																	"        \"template\":{}",
+																	"    }",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponceBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponceBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -3923,7 +3941,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.include('{\"id\":');",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"id\");",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4017,7 +4035,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4465,7 +4483,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json().to.eql({\"success\":true}));",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4578,7 +4596,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4669,11 +4687,12 @@
 																	"    pm.response.to.have.status(400);",
 																	"});",
 																	"",
-																	"const stringToReplace = 'This table name is currently undergoing maintenance and therefore cannot be modified: postman_table_name';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table20\"));",
+																	"",
+																	"const postman_table_name = pm.environment.get(\"table20\");",
+																	"const expectedResponseBody = `This table name is currently undergoing maintenance and therefore cannot be modified: ${postman_table_name}`;",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4764,11 +4783,16 @@
 																	"    pm.response.to.have.status(404);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"message\":\"Unknown table: postman_table_name\",\"table\":\"postman_table_name\",\"suppressed\":[]}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table20\"));",
+																	"const postman_table_name = pm.environment.get(\"table20\");",
+																	"",
+																	"const expectedResponseBody = {",
+																	"        \"message\":`Unknown table: ${postman_table_name}`,",
+																	"        \"table\":postman_table_name,",
+																	"        \"suppressed\":[]",
+																	"    }",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4886,7 +4910,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4998,11 +5022,34 @@
 																	"    pm.response.to.have.status(200);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"name\":\"postman_table_name\",\"options\":{\"placement\":\"ugc_global:ugc\",\"facades\":[]},\"template\":{\"template\":{},\"name\":\"postman_table_name\",\"options\":{\"facades\":[],\"placement\":\"ugc_global:ugc\"},\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"}},\"availability\":{\"placement\":\"ugc_global:ugc\",\"facade\":false}}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table13\"));",
+																	"const postman_table_name = pm.environment.get(\"table13\");",
+																	"",
+																	"const expectedResponseBody = {",
+																	"        \"name\":postman_table_name,",
+																	"        \"options\":{",
+																	"            \"placement\":\"ugc_global:ugc\",",
+																	"            \"facades\":[]",
+																	"        },",
+																	"        \"template\":{",
+																	"            \"template\":{},",
+																	"            \"name\":postman_table_name,",
+																	"            \"options\":{",
+																	"                \"facades\":[],",
+																	"                \"placement\":\"ugc_global:ugc\"",
+																	"            },",
+																	"            \"availability\":{",
+																	"                \"facade\":false,",
+																	"                \"placement\":\"ugc_global:ugc\"",
+																	"            }",
+																	"        },",
+																	"        \"availability\":{",
+																	"            \"placement\":\"ugc_global:ugc\",",
+																	"            \"facade\":false",
+																	"        }",
+																	"}",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -5084,7 +5131,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json().to.eql({\"success\":true}));",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -5171,15 +5218,20 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 404\", function () {",
+																	"    pm.test(\"Status code is 404\", function () {",
 																	"    pm.response.to.have.status(404);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"message\":\"Unknown table: postman_table_name\",\"table\":\"postman_table_name\",\"suppressed\":[]}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table13\"));",
+																	"const postman_table_name = pm.environment.get(\"table13\");",
+																	"",
+																	"const expectedResponseBody = {",
+																	"        \"message\":`Unknown table: ${postman_table_name}`,",
+																	"        \"table\":postman_table_name,",
+																	"        \"suppressed\":[]",
+																	"}",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -5727,7 +5779,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -5839,8 +5891,22 @@
 																	"    pm.response.to.have.status(200);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"name\":\"postman_table_name\",\"options\":{\"placement\":\"ugc_global:ugc\",\"facades\":[]},\"template\":{\"test_table\":\"postman_table_name\",\"customer\":\"postman\"},\"availability\":{\"placement\":\"ugc_global:ugc\",\"facade\":false}}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table15\"));",
+																	"const postman_table_name = pm.environment.get(\"table15\");",
+																	"const expectedResponseBody = {",
+																	"    \"name\":postman_table_name,",
+																	"    \"options\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facades\":[]",
+																	"    },",
+																	"    \"template\":{",
+																	"        \"test_table\":postman_table_name,",
+																	"        \"customer\":\"postman\"",
+																	"    },",
+																	"    \"availability\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facade\":false",
+																	"    }",
+																	"}",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
 																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
@@ -5925,7 +5991,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.include('{\"id\":');",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"id\");",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -6019,7 +6085,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -12901,7 +12967,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -13013,8 +13079,22 @@
 																	"    pm.response.to.have.status(200);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"name\":\"postman_table_name\",\"options\":{\"placement\":\"ugc_global:ugc\",\"facades\":[]},\"template\":{\"test_table\":\"postman_table_name\",\"customer\":\"postman\"},\"availability\":{\"placement\":\"ugc_global:ugc\",\"facade\":false}}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table41\"));",
+																	"const postman_table_name = pm.environment.get(\"table41\");",
+																	"const expectedResponseBody = {",
+																	"    \"name\":postman_table_name,",
+																	"    \"options\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facades\":[]",
+																	"    },",
+																	"    \"template\":{",
+																	"        \"test_table\":postman_table_name,",
+																	"        \"customer\":\"postman\"",
+																	"    },",
+																	"    \"availability\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facade\":false  ",
+																	"    }",
+																	"}",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
 																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
@@ -13099,7 +13179,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -13204,11 +13284,25 @@
 																	"    pm.response.to.have.status(200);",
 																	"});",
 																	"",
-																	"const stringToReplace = '{\"name\":\"postman_table_name\",\"options\":{\"placement\":\"ugc_global:ugc\",\"facades\":[]},\"template\":{\"table_name\":\"some_table\",\"test_value\":\"some_table_filed\"},\"availability\":{\"placement\":\"ugc_global:ugc\",\"facade\":false}}';",
-																	"const expectedResponseBody = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table41\"));",
+																	"const postman_table_name = pm.environment.get(\"table41\");",
+																	"const expectedResponseBody = {",
+																	"    \"name\":postman_table_name,",
+																	"    \"options\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facades\":[]",
+																	"    },",
+																	"    \"template\":{",
+																	"        \"table_name\":\"some_table\",",
+																	"        \"test_value\":\"some_table_filed\"",
+																	"    },",
+																	"    \"availability\":{",
+																	"        \"placement\":\"ugc_global:ugc\",",
+																	"        \"facade\":false",
+																	"    }",
+																	"};",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body(expectedResponseBody));",
+																	"    pm.expect(pm.response.json()).to.eql(expectedResponseBody);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -13670,7 +13764,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -13778,13 +13872,12 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
+																	"pm.test(\"Status code is 403\", function () {",
 																	"    pm.response.to.have.status(403);",
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    console.log(pm.response.text())",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});",
 																	"",
 																	"pm.test(\"Response Content-Type is json\", function () {",
@@ -13881,7 +13974,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -21803,7 +21896,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -21911,7 +22004,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22152,7 +22245,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22215,7 +22308,9 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22304,7 +22399,9 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22413,13 +22510,30 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"var responseValuesExpected = {",
+																	"    \"availability\":{",
+																	"        \"facade\":false,",
+																	"        \"placement\":\"ugc_global:ugc\"},",
+																	"        \"id\":1,",
+																	"        \"name\":postman_table_name,",
+																	"        \"template\":{",
+																	"            \"test_field\":\"test_value_of_field\"",
+																	"            },",
+																	"            \"test_field\":\"postman\",",
+																	"            \"~table\":postman_table_name,",
+																	"            \"~version\":1,",
+																	"            \"~deleted\":false,",
+																	"            \"~id\":postman_document_id,",
+																	"            \"client\":\"iuliia_customer\",",
+																	"            \"type\":\"create_table_test\"",
+																	"}",
+																	"",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22543,13 +22657,30 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id1\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"var responseValuesExpected = {",
+																	"    \"availability\":{",
+																	"        \"facade\":false,",
+																	"        \"placement\":\"ugc_global:ugc\"",
+																	"    },",
+																	"    \"id\":1,",
+																	"    \"name\":postman_table_name,",
+																	"    \"template\":{",
+																	"        \"test_field\":\"test_value_of_field\"",
+																	"    },",
+																	"    \"test_field\":\"postman\",",
+																	"    \"~table\":postman_table_name,",
+																	"    \"~version\":1,",
+																	"    \"~deleted\":false,",
+																	"    \"~id\":postman_document_id,",
+																	"    \"client\":\"iuliia_customer\",",
+																	"    \"type\":\"create_table_test\"",
+																	"}",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22653,7 +22784,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22732,13 +22863,30 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false,\"~id\":\"postman_document_id\",\"client\":\"iuliia_customer\",\"type\":\"create_table_test\"}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"var responseValuesExpected = {",
+																	"    \"availability\":{",
+																	"        \"facade\":false,",
+																	"        \"placement\":\"ugc_global:ugc\"",
+																	"    },",
+																	"    \"id\":1,",
+																	"    \"name\":postman_table_name,",
+																	"    \"template\":{",
+																	"        \"test_field\":\"test_value_of_field\"",
+																	"    },",
+																	"    \"test_field\":\"postman\",",
+																	"    \"~table\":postman_table_name,",
+																	"    \"~version\":1,",
+																	"    \"~deleted\":false,",
+																	"    \"~id\":postman_document_id,",
+																	"    \"client\":\"iuliia_customer\",",
+																	"    \"type\":\"create_table_test\"",
+																	"    }",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22857,13 +23005,21 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"type\":\"create_table_test\",\"test_field\":\"postman\",\"client\":\"iuliia_customer\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":true}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id1\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"var responseValuesExpected = {",
+																	"        \"type\":\"create_table_test\",",
+																	"        \"test_field\":\"postman\",",
+																	"        \"client\":\"iuliia_customer\",",
+																	"        \"~id\":postman_document_id,",
+																	"        \"~table\":postman_table_name,",
+																	"        \"~version\":2,",
+																	"        \"~deleted\":true",
+																	"    };",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -22982,13 +23138,21 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"type\":\"create_table_test\",\"test_field\":\"postman\",\"client\":\"iuliia_customer\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":true}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id1\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+																	"var responseValuesExpected = {",
+																	"        \"type\":\"create_table_test\",",
+																	"        \"test_field\":\"postman\",",
+																	"        \"client\":\"iuliia_customer\",",
+																	"        \"~id\":postman_document_id,",
+																	"        \"~table\":postman_table_name,",
+																	"        \"~version\":2,",
+																	"        \"~deleted\":true",
+																	"    }",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23096,7 +23260,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23204,7 +23368,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json().to.eql({\"success\":true}));",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23267,7 +23431,9 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+																	"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																	"    pm.expect(pm.response.json().success).to.eql(true);",
+																	"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23378,7 +23544,7 @@
 																	"};",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(jsonData).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23482,7 +23648,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23577,7 +23743,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -23695,7 +23861,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -23845,12 +24011,7 @@
 															"listen": "prerequest",
 															"script": {
 																"exec": [
-																	"//const uuid = require('cassandra-driver').types.uuid;",
-																	"//const timeuuid = require('cassandra-driver').types.TimeUuid;",
-																	"",
-																	"//const id = timeuuid.fromDate(new Date(), 0, \"postman\", 12);",
-																	"",
-																	"//console.log(id.toString());"
+																	""
 																],
 																"type": "text/javascript"
 															}
@@ -23864,7 +24025,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24029,7 +24190,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json().to.eql({\"success\":true}));",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24153,13 +24314,20 @@
 																	"",
 																	"delete jsonData[\"~signature\"];",
 																	"",
-																	"var stringToReplace = '{\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":0,\"~deleted\":true}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"var responseValuesExpected = {",
+																	"        \"test_table\":postman_table_name,",
+																	"        \"customer\":\"postman\",",
+																	"        \"~id\":postman_document_id,",
+																	"        \"~table\":postman_table_name,",
+																	"        \"~version\":0,",
+																	"        \"~deleted\":true",
+																	"    }",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24267,7 +24435,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24438,13 +24606,21 @@
 																	"delete jsonData[\"~lastUpdateAt\"];",
 																	"delete jsonData[\"~lastMutateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"status\":\"CREATED\",\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":1,\"~deleted\":false}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"var responseValuesExpected = {",
+																	"    \"status\":\"CREATED\",",
+																	"    \"test_table\":postman_table_name,",
+																	"    \"customer\":\"postman\",",
+																	"    \"~id\":postman_document_id,",
+																	"    \"~table\":postman_table_name,",
+																	"    \"~version\":1,",
+																	"    \"~deleted\":false",
+																	"}",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24552,7 +24728,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24723,13 +24899,21 @@
 																	"delete jsonData[\"~lastUpdateAt\"];",
 																	"delete jsonData[\"~lastMutateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"status\":\"UPDATED\",\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":2,\"~deleted\":false}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
-																	"console.log(JSON.stringify(jsonData));",
+																	"var responseValuesExpected = {",
+																	"    \"status\":\"UPDATED\",",
+																	"    \"test_table\":postman_table_name,",
+																	"    \"customer\":\"postman\",",
+																	"    \"~id\":postman_document_id,",
+																	"    \"~table\":postman_table_name,",
+																	"    \"~version\":2,",
+																	"    \"~deleted\":false",
+																	"}",
+																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24837,7 +25021,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -24995,11 +25179,9 @@
 																	"});",
 																	"",
 																	"var jsonData = pm.response.json();",
-																	"",
 																	"var responsePropertiesMainActual = Object.keys(jsonData);",
 																	"",
 																	"var responsePropertiesMainExpected = [\"customer\",\"test_table\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\"];",
-																	"",
 																	"",
 																	"pm.test(\"Response fields\", function () {",
 																	"    pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
@@ -25010,13 +25192,20 @@
 																	"delete jsonData[\"~signature\"];",
 																	"delete jsonData[\"~firstUpdateAt\"];",
 																	"",
-																	"var stringToReplace = '{\"test_table\":\"postman_table_name\",\"customer\":\"postman\",\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":3,\"~deleted\":true}';",
+																	"const postman_table_name = pm.environment.get(\"table\");",
+																	"const postman_document_id = pm.environment.get(\"document_id\");",
 																	"",
-																	"stringToReplace = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-																	"var responseValuesExpected = stringToReplace.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+																	"var responseValuesExpected = {",
+																	"    \"test_table\":postman_table_name,",
+																	"    \"customer\":\"postman\",",
+																	"    \"~id\":postman_document_id,",
+																	"    \"~table\":postman_table_name,",
+																	"    \"~version\":3,",
+																	"    \"~deleted\":true",
+																	"}",
 																	"",
 																	"pm.test(\"Response values \", function () {",
-																	"    pm.expect(JSON.stringify(jsonData)).to.be.eql(responseValuesExpected);",
+																	"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -25124,7 +25313,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});",
 																	""
 																],
@@ -25234,7 +25423,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -25347,7 +25536,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('Missing required JSON delta request entity.'));",
+																	"    pm.expect(pm.response.text()).to.eql('Missing required JSON delta request entity.');",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -25487,7 +25676,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});",
 																	""
 																],
@@ -26582,7 +26771,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -26918,7 +27107,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: some_table\",\"table\":\"some_table\",\"suppressed\":[]});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -27068,7 +27257,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('Missing required query parameter: audit'));",
+																	"    pm.expect(pm.response.text()).to.eql('Missing required query parameter: audit');",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -27722,7 +27911,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -29584,7 +29773,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -29940,7 +30129,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -30926,7 +31115,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -31010,6 +31199,23 @@
 										},
 										{
 											"name": "Attempts to reduce the size of the specified content in the underlying storage.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 403\", function () {",
+															"    pm.response.to.have.status(403);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
 											"request": {
 												"method": "POST",
 												"header": [],
@@ -31140,7 +31346,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -31462,7 +31668,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -32365,12 +32571,6 @@
 																	"        return obj.delta === \"~\";",
 																	"    }); ",
 																	"    ",
-																	"    const expectedUpdate = {",
-																	"        \"id\": `${postman_change_id}`,",
-																	"        \"delta\": \"~\",",
-																	"        \"tags\": []",
-																	"    };",
-																	"    ",
 																	"    pm.expect(deletedUpdate[0]).to.have.keys(\"timestamp\",\"id\",\"delta\",\"tags\");",
 																	"    pm.expect(deletedUpdate[0].delta).to.eql(\"~\");",
 																	"    pm.expect(deletedUpdate[0].tags).to.eql([]);",
@@ -32520,7 +32720,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -32627,7 +32827,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.to.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -33094,7 +33294,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -33201,7 +33401,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -33954,7 +34154,6 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"console.log(new Date(Date.now()).toISOString());",
 																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
 																],
 																"type": "text/javascript"
@@ -34377,7 +34576,6 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"console.log(new Date(Date.now()).toISOString());",
 																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
 																],
 																"type": "text/javascript"
@@ -34537,7 +34735,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -34812,7 +35010,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -34875,8 +35073,11 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
-															"});"
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+															"});",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -34964,8 +35165,12 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
-															"});"
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+															"});",
+															"",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -35065,7 +35270,7 @@
 															"",
 															"    pm.test(\"Response fields\", function () {",
 															"        pm.expect(responsePropertiesMainActual).to.have.deep.members(responsePropertiesMainExpected);",
-															"        pm.expect(responsePropertiesAvailabilityExpected).to.have.deep.members(responsePropertiesAvailabilityExpected);",
+															"        pm.expect(responsePropertiesAvailabilityActual).to.have.deep.members(responsePropertiesAvailabilityExpected);",
 															"        pm.expect(responsePropertiesTemplateActual).to.have.deep.members(responsePropertiesTemplateExpected);",
 															"    });",
 															"",
@@ -35074,24 +35279,39 @@
 															"    delete update[\"~signature\"];",
 															"    delete update[\"~firstUpdateAt\"];",
 															"",
-															"    var stringToReplace = '{\"~deleted\":false,\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":1,\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"client\":\"iuliia_customer\",\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"type\":\"create_table_test\"}';",
+															"    const postman_table_name = pm.environment.get(\"table\");",
+															"    const postman_document_id = pm.environment.get(\"document_id\");",
 															"",
-															"    var responseValuesExpected = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-															"    responseValuesExpected = responseValuesExpected.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+															"    const responseValuesExpected = {",
+															"        \"~deleted\":false,",
+															"        \"~id\":postman_document_id,",
+															"        \"~table\":postman_table_name,",
+															"        \"~version\":1,",
+															"        \"availability\":{",
+															"            \"facade\":false,",
+															"            \"placement\":\"ugc_global:ugc\"",
+															"        },",
+															"        \"client\":\"iuliia_customer\",",
+															"        \"id\":1,",
+															"        \"name\":postman_table_name,",
+															"        \"template\":{",
+															"            \"test_field\":\"test_value_of_field\"",
+															"        },",
+															"        \"test_field\":\"postman\",",
+															"        \"type\":\"create_table_test\"",
+															"    };",
 															"",
-															"    console.log(stringToReplace);",
-															"    var responseValuesExpected1 = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-															"    responseValuesExpected1 = responseValuesExpected1.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+															"    const postman_document_id_1 = pm.environment.get(\"document_id1\");",
+															"",
+															"    const responseValuesExpected1 = {",
+															"        ...responseValuesExpected,",
+															"        \"~id\": postman_document_id_1",
+															"    };",
 															"",
 															"    pm.test(\"Response values \", function () {",
-															"        pm.expect(JSON.stringify(update)).to.be.oneOf([responseValuesExpected, responseValuesExpected1]);",
+															"        pm.expect(JSON.stringify(update)).to.be.deep.oneOf([JSON.stringify(responseValuesExpected), JSON.stringify(responseValuesExpected1)]);",
 															"    });",
 															"});",
-															"",
-															"",
-															"",
-															"",
-															"",
 															""
 														],
 														"type": "text/javascript"
@@ -35221,7 +35441,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -35301,24 +35521,38 @@
 															"    delete update[\"~signature\"];",
 															"    delete update[\"~firstUpdateAt\"];",
 															"",
-															"    var stringToReplace = '{\"~deleted\":false,\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":1,\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"client\":\"iuliia_customer\",\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"type\":\"create_table_test\"}';",
+															"    const postman_table_name = pm.environment.get(\"table\");",
+															"    const postman_document_id = pm.environment.get(\"document_id\");",
+															"    const postman_document_id_1 = pm.environment.get(\"document_id1\");",
+															"   ",
+															"    const responseValuesExpected = {",
+															"        \"~deleted\":false,",
+															"        \"~id\":postman_document_id,",
+															"        \"~table\":postman_table_name,",
+															"        \"~version\":1,",
+															"        \"availability\":{",
+															"            \"facade\":false,",
+															"            \"placement\":\"ugc_global:ugc\"",
+															"        },",
+															"        \"client\":\"iuliia_customer\",",
+															"        \"id\":1,",
+															"        \"name\":postman_table_name,",
+															"        \"template\":{",
+															"            \"test_field\":\"test_value_of_field\"",
+															"        },",
+															"        \"test_field\":\"postman\",",
+															"        \"type\":\"create_table_test\"",
+															"    };",
 															"",
-															"    var responseValuesExpected = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-															"    responseValuesExpected = responseValuesExpected.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
-															"",
-															"    console.log(stringToReplace);",
-															"    var responseValuesExpected1 = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-															"    responseValuesExpected1 = responseValuesExpected1.replace(/postman_document_id/g, pm.environment.get(\"document_id1\"));",
+															"    const responseValuesExpected1 = {",
+															"        ...responseValuesExpected,",
+															"        \"~id\": postman_document_id_1",
+															"    };",
 															"",
 															"    pm.test(\"Response values \", function () {",
-															"        pm.expect(JSON.stringify(update)).to.be.oneOf([responseValuesExpected, responseValuesExpected1]);",
+															"        pm.expect(JSON.stringify(update)).to.be.deep.oneOf([JSON.stringify(responseValuesExpected), JSON.stringify(responseValuesExpected1)]);",
 															"    });",
 															"});",
-															"",
-															"",
-															"",
-															"",
-															"",
 															""
 														],
 														"type": "text/javascript"
@@ -35473,20 +35707,31 @@
 															"delete jsonData[\"~signature\"];",
 															"delete jsonData[\"~firstUpdateAt\"];",
 															"",
-															"var stringToReplace = '{\"~deleted\":false,\"~id\":\"postman_document_id\",\"~table\":\"postman_table_name\",\"~version\":1,\"availability\":{\"facade\":false,\"placement\":\"ugc_global:ugc\"},\"client\":\"iuliia_customer\",\"id\":1,\"name\":\"postman_table_name\",\"template\":{\"test_field\":\"test_value_of_field\"},\"test_field\":\"postman\",\"type\":\"create_table_test\"}';",
+															"const postman_table_name = pm.environment.get(\"table\");",
+															"const postman_document_id = pm.environment.get(\"document_id\");",
 															"",
-															"var responseValuesExpected = stringToReplace.replace(/postman_table_name/g, pm.environment.get(\"table\"));",
-															"responseValuesExpected = responseValuesExpected.replace(/postman_document_id/g, pm.environment.get(\"document_id\"));",
+															"var responseValuesExpected = {",
+															"    \"~deleted\":false,",
+															"    \"~id\":postman_document_id,",
+															"    \"~table\":postman_table_name,",
+															"    \"~version\":1,",
+															"    \"availability\":{",
+															"        \"facade\":false,",
+															"        \"placement\":\"ugc_global:ugc\"",
+															"    },",
+															"    \"client\":\"iuliia_customer\",",
+															"    \"id\":1,",
+															"    \"name\":postman_table_name,",
+															"    \"template\":{",
+															"        \"test_field\":\"test_value_of_field\"",
+															"    },",
+															"    \"test_field\":\"postman\",",
+															"    \"type\":\"create_table_test\"",
+															"}",
 															"",
 															"pm.test(\"Response values \", function () {",
-															"    pm.expect(JSON.stringify(jsonData)).to.eql(responseValuesExpected);",
+															"    pm.expect(jsonData).to.eql(responseValuesExpected);",
 															"});",
-															"",
-															"",
-															"",
-															"",
-															"",
-															"",
 															""
 														],
 														"type": "text/javascript"
@@ -35615,7 +35860,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -37305,7 +37550,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -37368,8 +37613,11 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
-															"});"
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.eql(\"changeId\");",
+															"});",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -37457,7 +37705,9 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.eql(\"changeId\");",
 															"});"
 														],
 														"type": "text/javascript"
@@ -37546,7 +37796,9 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.eql(\"changeId\");",
 															"});"
 														],
 														"type": "text/javascript"
@@ -37635,7 +37887,9 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.include('{\"success\":true,\"debug\":{\"changeId\":\"');",
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"    pm.expect(pm.response.json().debug).to.eql(\"changeId\");",
 															"});"
 														],
 														"type": "text/javascript"
@@ -37851,7 +38105,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -38392,7 +38646,6 @@
 															"var jsonData = pm.response.json();",
 															"",
 															"pm.test(\"Number of returned documents\", async function () {",
-															"    console.log(jsonData.length);",
 															"    pm.expect(jsonData.length).eql(2);",
 															"});",
 															"",
@@ -38433,7 +38686,6 @@
 															"    };",
 															"",
 															"    pm.test(\"Response values \", function () {",
-															"        console.log(update, responseValuesExpected);",
 															"        pm.expect(update).to.eql(responseValuesExpected);",
 															"    });",
 															"});",
@@ -38832,7 +39084,7 @@
 													"});",
 													"",
 													"pm.test(\"Body matches string\", function () {",
-													"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+													"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 													"});"
 												],
 												"type": "text/javascript"
@@ -38948,6 +39200,1527 @@
 											],
 											"cookie": [],
 											"body": "{}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Imports an arbitrary size stream of deltas and/or JSON objects POST /sor/1/{table}",
+							"item": [
+								{
+									"name": "TC: Request import an arbitrary size of stream of JSON",
+									"item": [
+										{
+											"name": "Creates table /sor/1/_table/{table}",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"type": "text",
+														"value": "{{api_key}}"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "placement:'ugc_global:ugc'"
+														},
+														{
+															"key": "audit",
+															"value": "comment:'initial+provisioning'"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is created"
+											},
+											"response": []
+										},
+										{
+											"name": "Imports an arbitrary size stream of deltas and/or JSON objects.",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const uuid = require('uuid');",
+															"postman.setEnvironmentVariable('id1', uuid.v4());",
+															"postman.setEnvironmentVariable('id2', uuid.v4());",
+															"postman.setEnvironmentVariable('id3', uuid.v4());",
+															"postman.setEnvironmentVariable('id4', uuid.v4());",
+															"postman.setEnvironmentVariable('id5', uuid.v4());",
+															"postman.setEnvironmentVariable('id6', uuid.v4());",
+															"postman.setEnvironmentVariable('id7', uuid.v4());",
+															"postman.setEnvironmentVariable('id8', uuid.v4());",
+															"postman.setEnvironmentVariable('id9', uuid.v4());",
+															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"~id\": \"{{id1}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id2}}\",\n        \"key\": \"demo2\",\n        \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"Update and Add\"\n        }\n      },\n      {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id3}}\",\n        \"key\": \"demo3\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"NO_DURABLE\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n            {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id4}}\",\n        \"key\": \"demo4\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n            {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id5}}\",\n        \"key\": \"demo5\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id6}}\",\n        \"key\": \"demo6\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id7}}\",\n        \"key\": \"demo7\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id8}}\",\n        \"key\": \"demo8\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id9}}\",\n        \"key\": \"demo9\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id10}}\",\n        \"key\": \"demo10\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      }\n]",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "993091dd-7751-11eb-b70c-496d0c9f0df0",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "comment:'imports+an+arbitrary+size'"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "false"
+														},
+														{
+															"key": "tag",
+															"value": "<string>",
+															"disabled": true
+														}
+													]
+												},
+												"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "facade",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Retrieves a list of content items in a particular table.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"const jsonBody = pm.response.json();",
+															"",
+															"if(jsonBody.length > 0) {",
+															"    const postman_table_name = pm.environment.get(\"table\");",
+															"",
+															"    pm.test(\"Assert response body\", function () {",
+															"        jsonBody.forEach(update => {",
+															"            pm.expect(update).to.have.keys(\"~deleted\",\"~firstUpdateAt\",\"~id\",\"~lastMutateAt\",\"~lastUpdateAt\",\"~signature\",\"~table\",\"~version\",\"audit\",\"client\",\"consistency\",\"delta\",\"key\",\"table\",\"test_field\",\"type\");",
+															"            pm.expect(update.audit).to.have.keys(\"comment\");",
+															"            pm.expect(update[\"~table\"]).to.eql(postman_table_name);",
+															"        });",
+															"    });",
+															"}",
+															""
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?from=<string>&limit=10&includeDeletes=false&consistency=STRONG&debug=true&APIKey={{api_key}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "from",
+															"value": "<string>"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														},
+														{
+															"key": "includeDeletes",
+															"value": "false"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "debug",
+															"value": "true"
+														},
+														{
+															"key": "APIKey",
+															"value": "{{api_key}}",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": "Retrieves a list of content items in a particular table.  To retrieve <em>all</em> items in a table set the\n limit param to a very large value (eg. Long.MAX_VALUE), but for large tables be sure your client can stream the\n results without exhausting all available memory."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?from=<string>&limit=10&includeDeletes=false&consistency=STRONG&debug=<string>&APIKey=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "from",
+																	"value": "<string>"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "includeDeletes",
+																	"value": "false"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																},
+																{
+																	"key": "APIKey",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{}"
+												}
+											]
+										},
+										{
+											"name": "Drops a table",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"type": "text",
+														"value": "{{api_key}}"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "comment:'table_removal'"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is dropped"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request for not existing table",
+									"item": [
+										{
+											"name": "Imports an arbitrary size stream of deltas and/or JSON objects.",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const uuid = require('uuid');",
+															"postman.setEnvironmentVariable('id1', uuid.v4());",
+															"postman.setEnvironmentVariable('id2', uuid.v4());",
+															"postman.setEnvironmentVariable('id3', uuid.v4());",
+															"postman.setEnvironmentVariable('id4', uuid.v4());",
+															"postman.setEnvironmentVariable('id5', uuid.v4());",
+															"postman.setEnvironmentVariable('id6', uuid.v4());",
+															"postman.setEnvironmentVariable('id7', uuid.v4());",
+															"postman.setEnvironmentVariable('id8', uuid.v4());",
+															"postman.setEnvironmentVariable('id9', uuid.v4());",
+															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 404\", function () {",
+															"    pm.response.to.have.status(404);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
+															"});",
+															"",
+															""
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"~id\": \"{{id1}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id2}}\",\n        \"key\": \"demo2\",\n        \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"Update and Add\"\n        }\n      },\n      {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id3}}\",\n        \"key\": \"demo3\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"NO_DURABLE\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n            {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id4}}\",\n        \"key\": \"demo4\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n            {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id5}}\",\n        \"key\": \"demo5\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id6}}\",\n        \"key\": \"demo6\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id7}}\",\n        \"key\": \"demo7\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id8}}\",\n        \"key\": \"demo8\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id9}}\",\n        \"key\": \"demo9\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      },\n        {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id10}}\",\n        \"key\": \"demo10\",\n        \"delta\": \"{\\\"owner\\\":\\\"test@mail.com\\\",\\\"description\\\":\\\"Data Team QA\\\",\\\"issued\\\":\\\"2015-04-20T18:18:18.425+0000\\\",\\\"roles\\\":[\\\"data-team-qa\\\"]}\",\n        \"consistency\": \"WEAK\",\n        \"audit\": {\n          \"comment\": \"re-import\"\n        }\n      }\n]",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/not_existing_table?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"not_existing_table"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "993091dd-7751-11eb-b70c-496d0c9f0df0",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "comment:'imports+an+arbitrary+size'"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "false"
+														},
+														{
+															"key": "tag",
+															"value": "<string>",
+															"disabled": true
+														}
+													]
+												},
+												"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "facade",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request with empty body",
+									"item": [
+										{
+											"name": "Creates table /sor/1/_table/{table} Copy",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"type": "text",
+														"value": "{{api_key}}"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "placement:'ugc_global:ugc'"
+														},
+														{
+															"key": "audit",
+															"value": "comment:'initial+provisioning'"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is created"
+											},
+											"response": []
+										},
+										{
+											"name": "Imports an arbitrary size stream of deltas and/or JSON objects",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const uuid = require('uuid');",
+															"postman.setEnvironmentVariable('id1', uuid.v4());",
+															"postman.setEnvironmentVariable('id2', uuid.v4());",
+															"postman.setEnvironmentVariable('id3', uuid.v4());",
+															"postman.setEnvironmentVariable('id4', uuid.v4());",
+															"postman.setEnvironmentVariable('id5', uuid.v4());",
+															"postman.setEnvironmentVariable('id6', uuid.v4());",
+															"postman.setEnvironmentVariable('id7', uuid.v4());",
+															"postman.setEnvironmentVariable('id8', uuid.v4());",
+															"postman.setEnvironmentVariable('id9', uuid.v4());",
+															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});",
+															"",
+															""
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "993091dd-7751-11eb-b70c-496d0c9f0df0",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "comment:'imports+an+arbitrary+size'"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "false"
+														},
+														{
+															"key": "tag",
+															"value": "<string>",
+															"disabled": true
+														}
+													]
+												},
+												"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "facade",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Retrieves a list of content items in a particular table.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql('[]');",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "X-BV-Api-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?from=<string>&limit=10&includeDeletes=false&consistency=STRONG&debug=true&APIKey={{api_key}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "from",
+															"value": "<string>"
+														},
+														{
+															"key": "limit",
+															"value": "10"
+														},
+														{
+															"key": "includeDeletes",
+															"value": "false"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "debug",
+															"value": "true"
+														},
+														{
+															"key": "APIKey",
+															"value": "{{api_key}}",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": "Retrieves a list of content items in a particular table.  To retrieve <em>all</em> items in a table set the\n limit param to a very large value (eg. Long.MAX_VALUE), but for large tables be sure your client can stream the\n results without exhausting all available memory."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?from=<string>&limit=10&includeDeletes=false&consistency=STRONG&debug=<string>&APIKey=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "from",
+																	"value": "<string>"
+																},
+																{
+																	"key": "limit",
+																	"value": "10"
+																},
+																{
+																	"key": "includeDeletes",
+																	"value": "false"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																},
+																{
+																	"key": "APIKey",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{}"
+												}
+											]
+										},
+										{
+											"name": "Drops a table",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"type": "text",
+														"value": "{{api_key}}"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "comment:'table_removal'"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is dropped"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request without api-key and audit param",
+									"item": [
+										{
+											"name": "Imports an arbitrary size stream of deltas and/or JSON objects. Copy",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 400\", function () {",
+															"    pm.response.to.have.status(400);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql('Missing required query parameter: audit');",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/not_exisiting_table?consistency=STRONG&facade=false&tag=<string>",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"not_exisiting_table"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "<string>",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "<string>",
+															"disabled": true
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "false"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													]
+												},
+												"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "facade",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request without api-key",
+									"item": [
+										{
+											"name": "Imports an arbitrary size stream of deltas and/or JSON objects.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 403\", function () {",
+															"    pm.response.to.have.status(403);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key_no_rights}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														":table"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "<string>"
+														},
+														{
+															"key": "audit",
+															"value": "<string>"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "table",
+															"value": "<string>",
+															"description": "(Required) "
+														}
+													]
+												},
+												"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "facade",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "Imports an arbitrary size stream of deltas and/or JSON objects.",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/some_table?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false&tag=<string>",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"some_table"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "<string>",
+													"disabled": true
+												},
+												{
+													"key": "audit",
+													"value": "comment:'imports+an+arbitrary+size'"
+												},
+												{
+													"key": "consistency",
+													"value": "STRONG"
+												},
+												{
+													"key": "facade",
+													"value": "false"
+												},
+												{
+													"key": "tag",
+													"value": "<string>"
+												}
+											]
+										},
+										"description": " Imports an arbitrary size stream of deltas and/or JSON objects.  Two formats are supported: array syntax\n ('[' object ',' object ',' ... ']') and whitespace-separated objects (object whitespace object whitespace ...)\n Each piece of content must have a top-level \"~id\" attribute that determines the object key in the SoR."
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>&tag=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														":table"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "<string>"
+														},
+														{
+															"key": "audit",
+															"value": "<string>"
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
+														},
+														{
+															"key": "facade",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "table"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 										}
 									]
 								}
