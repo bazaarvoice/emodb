@@ -162,11 +162,9 @@ server:
   applicationConnectors:
     - type: http
       port: 8080
-      bindHost: 0.0.0.0
   adminConnectors:
     - type: http
       port: 8081
-      bindHost: 0.0.0.0
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
