@@ -16,7 +16,7 @@
     <name>EmoDB Authentication</name>
 
     <properties>
-        <shiro.version>1.2.6</shiro.version>
+        <shiro.version>1.4.2</shiro.version>
     </properties>
 
     <dependencies>
