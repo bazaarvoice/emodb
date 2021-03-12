@@ -154,7 +154,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});",
 																	"",
 																	""
@@ -2188,7 +2188,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -2761,7 +2761,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -4263,7 +4263,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -5335,7 +5335,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -5512,7 +5512,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -6309,7 +6309,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -6549,7 +6549,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -7161,7 +7161,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -7258,7 +7258,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -8511,7 +8511,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -8620,7 +8620,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});",
 																	""
 																],
@@ -10242,7 +10242,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});",
 															""
 														],
@@ -10494,7 +10494,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -12826,7 +12826,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 															"});"
 														],
 														"type": "text/javascript"
@@ -13409,7 +13409,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('{\"reason\":\"not authorized\"}'));",
+																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
 																	"});"
 																],
 																"type": "text/javascript"
