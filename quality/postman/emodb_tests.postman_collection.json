@@ -3604,7 +3604,7 @@
 																	"    pm.response.to.have.status(404);",
 																	"});",
 																	"",
-																	"const postman_test_table =pm.environment.get(\"table12\");",
+																	"const postman_test_table = pm.environment.get(\"table12\");",
 																	"",
 																	"const expectedResponseBody = {",
 																	"    \"message\":`Unknown table: ${postman_test_table}`,",
