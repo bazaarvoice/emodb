@@ -22,4 +22,4 @@ USER 1000
 ENV JAVA_OPTS=""
 EXPOSE ${PORTS}
 ENTRYPOINT ["sh", "-c"]
-CMD ["java -jar emodb-web.jar server config/config-${APP_ROLE}-role.yaml config/emodb-default-config-ddl.yaml"]
+CMD ["java -jar emodb-web.jar server config/config-${APP_ROLE}-${DATACENTER}.yaml config/config-ddl-${DATACENTER}.yaml"]
