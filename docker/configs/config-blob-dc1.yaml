@@ -1,38 +1,11 @@
-# Select service mode - See EmoServiceMode class to see all available options
-# This allows you to split Emo's micro services deployed separately
-serviceMode: STANDARD_ALL
-#serviceMode: STANDARD_MAIN
-#serviceMode: STANDARD_BLOB
+# Select service mode
+serviceMode: STANDARD_BLOB
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
-
-
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#metrics:
-#  reporters:
-#  - type: datadogExpansionFiltered
-#    host: test-host
-#    excludes:
-#    - ch.qos.logback
-#    - com.bazaarvoice.ostrich.pool
-#    excludeExpansions:
-#    - 5MinuteRate
-#    - 15MinuteRate
-#    - meanRate
-#    - min
-#    - max
-#    - mean
-#    - stddev
-#    - p95
-#    - p99
-#    - p999
-#    transport:
-#      type: http
-#      apiKey: invalid-key
 
 dataCenter:
   # Which data center does this server belong to?
@@ -54,19 +27,10 @@ dataCenter:
   # Should be identical to dataCenterServiceUri if this instance resides in the system data center
   systemDataCenterServiceUri: http://emodb-web-dc1:8080
 
-
 systemOfRecord:
-  deltaBlockSizeInKb: 16
-  cellTombstoneCompactionEnabled: true
-  cellTombstoneBlockLimit: 2
-  stashRoot: s3://emodb-us-east-1/stash/ci
-
-  # Optional property - to exclude the tables satisfying the condition from the daily Stash run.
-  stashBlackListTableCondition: "intrinsic(\"~table\":like(\"nostash:*\"))"
-
   # How long should we retain historical deltas? To disable, use PT0S
   historyTtl: PT48H
-
+ 
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "app_global:sys"
@@ -74,8 +38,6 @@ systemOfRecord:
   - "app_remote:default"          # a dummy placement specific to a remote data center.  for testing only, not for practical use
   - "ugc_global:ugc"
   - "catalog_global:cat"
-  - "pii_us:pii"
-  - "pii_eu:pii"
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
@@ -85,13 +47,10 @@ systemOfRecord:
   cassandraClusters:
     emo_cluster:
       cluster: emo_cluster
-      clusterMetric: emo_sor_metric_name
+      clusterMetric: emo_cluster_metric_name
       dataCenter: datacenter1
-      seeds: cassandra
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      seeds: cassandra-dc1
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
@@ -99,30 +58,20 @@ systemOfRecord:
       keyspaces:
         app_global: {}
         ugc_global: {}
-        catalog_global:  {}
-        pii_us: {}
+        catalog_global: {}
 
   slowQueryLog:
     tooManyDeltasThreshold: 20
     console:
       type: console
-#  auditWriter:
-#    logBucket: bv-emodb-local-audit
-#    logPath: localAudit
 
 databus:
-  longPollPollingThreadCount: 0
-  longPollKeepAliveThreadCount: 0
-
   # Cassandra connection settings
   cassandra:
     cluster: Databus Cluster
     dataCenter: datacenter1
-    seeds: cassandra
-    # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
-    thriftPort: 9160
-    cqlPort: 9164
-    maxConnectionsPerHost: 5
+    seeds: cassandra-dc1
+    maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
     healthCheck:
@@ -130,19 +79,10 @@ databus:
     keyspaces:
       databus: {}
 
-
 blobStore:
-
   # All valid placement strings for create table operations.
   validTablePlacements:
   - "media_global:ugc"
-  - "media_global_mirror:media"
-  - "blob_global:media"
-  - "blob_remote:media"     # a dummy placement specific to a remote data center.  for testing only, not for practical use
-
-  # source_placement: dest_placement
-  placementsUnderMove:
-    "media_global:ugc": media_global_mirror:media
 
   # Minimum number of splits per table for newly created tables.  Higher numbers spread the data around the
   # Cassandra ring more evenly, but lower numbers require fewer get split operations to scan an entire table.
@@ -150,23 +90,17 @@ blobStore:
 
   # A per-keyspace map of Cassandra connection settings
   cassandraClusters:
-    media:
+    media_global:
       cluster: emo_cluster
-      clusterMetric: emo_media_metric_name
       dataCenter: datacenter1
-      seeds: cassandra
-      # zooKeeperServiceName: dev_sor_ugc_default-cassandra
-      thriftPort: 9160
-      cqlPort: 9164
-      maxConnectionsPerHost: 5
+      seeds: cassandra-dc1
+      maxConnectionsPerHost: 10
       latencyAware: true
       partitioner: bop
       healthCheck:
         name: blob-cassandra
       keyspaces:
         media_global: {}
-        media_global_mirror: {}
-        blob_global: {}
 
   approvedContentTypes:
   - application/json
@@ -194,11 +128,11 @@ queueService:
     cluster: Databus Cluster
     clusterMetric: Queue Cluster
     dataCenter: datacenter1
-    seeds: cassandra
+    seeds: cassandra-dc1
     # zooKeeperServiceName: dev_datacenter1_databus_default-cassandra
     thriftPort: 9160
     cqlPort: 9164
-    maxConnectionsPerHost: 5
+    maxConnectionsPerHost: 10
     latencyAware: true
     partitioner: bop
     healthCheck:
@@ -206,16 +140,11 @@ queueService:
     keyspaces:
       queue: {}
 
-
-cqlDriver:
-  multiRowFetchSize: 100
-  multiRowPrefetchLimit: 50
-
-#jobs:
-#
 # Configure the ZooKeeper connection used for SOA service discovery
 zooKeeper:
-  namespace: datacenter1
+#  namespace: datacenter1
+  # ZooKeeper connection string that looks like "host:port,host:port,...".
+  # It should include all members of the ZooKeeper ensemble.
   connectString: zookeeper:2181
 
 auth:
@@ -231,13 +160,11 @@ auth:
 # Configure the HTTP server that listens for inbound requests
 server:
   applicationConnectors:
-    - type: instrumentedHttp
+    - type: http
       port: 8080
   adminConnectors:
-    - type: instrumentedHttp
+    - type: http
       port: 8081
-
-  shutdownGracePeriod: 60s
 
   gzip:
     # Most responses are small and not worth compressing.  Reduce CPU.
@@ -277,17 +204,16 @@ httpClient:
   # Re-use connections so we don't run out of ports if many requests are made in rapid succession.
   keepAlive: 2s
 
-serverStartedListeners:
-   - class: com.bazaarvoice.emodb.plugin.lifecycle.LoggingServerStartedListener
-
 # Configure Logback logging
 logging:
   level: INFO
-  appenders:
-    - type: console
-      logFormat: "%-5p [%d{ISO8601,UTC}] [%thread] %c: %m%n%xEx"
   loggers:
     "org.apache.zookeeper": OFF
     "org.apache.curator": WARN
-    "com.bazaarvoice.emodb.web.ddl.CassandraThriftFacade": DEBUG
-    "com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration": DEBUG
+    "com.bazaarvoice.emodb.web.ddl.CassandraThriftFacade": WARN
+  appenders:
+  - type: console
+  - type: file
+    currentLogFilename: /app/logs/blob-dc1.log
+    archive: false
+    logFormat: "%-5p [%d{ISO8601,UTC}] [%thread] %c: %m%n%xEx"
