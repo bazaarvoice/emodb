@@ -21,7 +21,7 @@
         <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
         <docker.build.skipRun>true</docker.build.skipRun>
         <docker.floating.tag>${project.version}</docker.floating.tag>
-        <docker.image.name>emodb/emodb-web</docker.image.name>
+        <docker.image.name>bazaarvoice/emodb-web</docker.image.name>
     </properties>
 
     <dependencies>
@@ -348,7 +348,7 @@
                                         <args>
                                             <version>${project.version}</version>
                                         </args>
-                                        <dockerFile>${docker.build.dockerFile}</dockerFile>
+                                        <contextDir>${project.basedir}/../docker</contextDir>
                                         <tags>
                                             <tag>${docker.floating.tag}</tag>
                                         </tags>
