@@ -40468,8 +40468,9 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
-															"});"
+															"    pm.expect(pm.response.json().reason).to.be.oneOf([`not authorized to update table ${pm.environment.get('table')}`, 'not authorized']);",
+															"});",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -40490,7 +40491,7 @@
 												],
 												"body": {
 													"mode": "raw",
-													"raw": ""
+													"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"~id\": \"{{id1}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id2}}\",\n        \"key\": \"demo2\",\n        \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"Update and Add\"\n        }\n      }\n]"
 												},
 												"url": {
 													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?audit=comment:'table_import'&consistency=STRONG",
@@ -40513,10 +40514,6 @@
 															"value": "comment:'table_import'"
 														},
 														{
-															"key": "consistency",
-															"value": "STRONG"
-														},
-														{
 															"key": "facade",
 															"value": "<string>",
 															"disabled": true
@@ -40525,6 +40522,10 @@
 															"key": "tag",
 															"value": "<string>",
 															"disabled": true
+														},
+														{
+															"key": "consistency",
+															"value": "STRONG"
 														}
 													]
 												},
