@@ -1,7 +1,7 @@
 {
 	"info": {
-		"_postman_id": "f0042c84-f477-4478-939a-e3bf35842c9c",
-		"name": "EmoDB_Tests Copy",
+		"_postman_id": "b11bffd1-ea1f-479c-9c5c-ed727f376197",
+		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -13876,7 +13876,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+																	"    pm.expect(pm.response.json()).to.eql({ reason: 'not authorized' });",
 																	"});",
 																	"",
 																	"pm.test(\"Response Content-Type is json\", function () {",
@@ -13896,8 +13896,8 @@
 															},
 															{
 																"key": "X-BV-API-Key",
-																"type": "text",
-																"value": "{{api_key_no_rights}}"
+																"value": "not_existing_key",
+																"type": "text"
 															}
 														],
 														"url": {
@@ -40349,7 +40349,7 @@
 												],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
+													"raw": ""
 												},
 												"url": {
 													"raw": "{{baseurl_dc1}}/sor/1/not_exisiting_table?consistency=STRONG&facade=false&tag=<string>",
@@ -40468,8 +40468,9 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
-															"});"
+															"    pm.expect(pm.response.json().reason).to.be.oneOf([`not authorized to update table ${pm.environment.get('table')}`, 'not authorized']);",
+															"});",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -40490,45 +40491,41 @@
 												],
 												"body": {
 													"mode": "raw",
-													"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
+													"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"~id\": \"{{id1}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n        \"table\": \"{{table}}\",\n        \"~id\": \"{{id2}}\",\n        \"key\": \"demo2\",\n        \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n        \"consistency\": \"STRONG\",\n        \"audit\": {\n          \"comment\": \"Update and Add\"\n        }\n      }\n]"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/:table?changeId=<string>&audit=<string>&consistency=STRONG&facade=<string>&tag=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}?audit=comment:'table_import'&consistency=STRONG",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
 														"1",
-														":table"
+														"{{table}}"
 													],
 													"query": [
 														{
 															"key": "changeId",
-															"value": "<string>"
+															"value": "<string>",
+															"disabled": true
 														},
 														{
 															"key": "audit",
-															"value": "<string>"
+															"value": "comment:'table_import'"
+														},
+														{
+															"key": "facade",
+															"value": "<string>",
+															"disabled": true
+														},
+														{
+															"key": "tag",
+															"value": "<string>",
+															"disabled": true
 														},
 														{
 															"key": "consistency",
 															"value": "STRONG"
-														},
-														{
-															"key": "facade",
-															"value": "<string>"
-														},
-														{
-															"key": "tag",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
 														}
 													]
 												},
@@ -40620,12 +40617,8 @@
 												"value": "application/json"
 											}
 										],
-										"body": {
-											"mode": "raw",
-											"raw": ""
-										},
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/some_table?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false&tag=<string>",
+											"raw": "{{baseurl_dc1}}/sor/1/some_table?audit=comment:'imports+an+arbitrary+size'&consistency=STRONG&facade=false&tag=postman",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -40654,7 +40647,7 @@
 												},
 												{
 													"key": "tag",
-													"value": "<string>"
+													"value": "postman"
 												}
 											]
 										},
