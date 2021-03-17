@@ -267,7 +267,7 @@ public class LazyJsonMap implements Map<String, Object> {
             return;
         }
 
-        JsonParser parser = codec.getFactory().createParser(deserState.json);
+        try (JsonParser parser = codec.getFactory().createParser(deserState.json)) {
         checkState(parser.nextToken() == JsonToken.START_OBJECT, "JSON did not contain an object");
         generator.writeStartObject();
 
@@ -315,6 +315,7 @@ public class LazyJsonMap implements Map<String, Object> {
         }
 
         generator.writeEndObject();
+        }
     }
 
     public LazyJsonMap lazyCopy() {
