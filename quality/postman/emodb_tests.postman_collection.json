@@ -43465,6 +43465,977 @@
 							]
 						}
 					]
+				},
+				{
+					"name": "Does update all for Facade",
+					"item": [
+						{
+							"name": "TC: Request without api-key",
+							"item": [
+								{
+									"name": "Does update all for Facade",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 403\", function () {",
+													"    pm.response.to.have.status(403);",
+													"});",
+													"",
+													"pm.test(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json().reason).to.be.oneOf([`not authorized to update table ${pm.environment.get('table')}`, 'not authorized']);",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "X-BV-API-Key",
+												"value": "{{api_key_no_rights}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo2\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n            \"comment\": \"Update and Add\"\n        }\n      }\n]"
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"_stream"
+											],
+											"query": [
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												},
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												}
+											]
+										},
+										"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_facade",
+														"_stream"
+													],
+													"query": [
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "TC: Request to not existing facade",
+							"item": [
+								{
+									"name": "Creates table /sor/1/_table/{table}",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var uuid = require('uuid');",
+													"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "X-BV-API-Key",
+												"type": "text",
+												"value": "{{api_key}}"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												"{{table}}"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "placement:'ugc_global:ugc'"
+												},
+												{
+													"key": "audit",
+													"value": "comment:'initial+provisioning'"
+												}
+											]
+										},
+										"description": "Returns a SuccessResponse if table is created"
+									},
+									"response": []
+								},
+								{
+									"name": "Does update all for Facade",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 403\", function () {",
+													"    pm.response.to.have.status(403);",
+													"});",
+													"",
+													"pm.test(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "X-BV-API-Key",
+												"value": "{{api_key}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo2\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n            \"comment\": \"Update and Add\"\n        }\n      }\n]"
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"_stream"
+											],
+											"query": [
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												},
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												}
+											]
+										},
+										"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_facade",
+														"_stream"
+													],
+													"query": [
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								},
+								{
+									"name": "Drops a table",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"pm.test(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"pm.test(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "X-BV-API-Key",
+												"type": "text",
+												"value": "{{api_key}}"
+											}
+										],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												"{{table}}"
+											],
+											"query": [
+												{
+													"key": "audit",
+													"value": "comment:'table_removal'"
+												}
+											]
+										},
+										"description": "Returns a SuccessResponse if table is dropped"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "DELETE",
+												"header": [],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														":table"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "table"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "TC: Request facade update with wrong/correct placement",
+							"item": [
+								{
+									"name": "Creates table /sor/1/_table/{table}",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var uuid = require('uuid');",
+													"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "X-BV-API-Key",
+												"type": "text",
+												"value": "{{api_key}}"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+											"options": {
+												"raw": {
+													"language": "json"
+												}
+											}
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												"{{table}}"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "placement:'ugc_eu:ugc'"
+												},
+												{
+													"key": "audit",
+													"value": "comment:'initial+provisioning'"
+												}
+											]
+										},
+										"description": "Returns a SuccessResponse if table is created"
+									},
+									"response": []
+								},
+								{
+									"name": "Creates a facade",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "PUT",
+										"header": [
+											{
+												"key": "X-BV-Api-Key",
+												"value": "{{api_key}}",
+												"type": "text"
+											}
+										],
+										"url": {
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+											"host": [
+												"{{baseurl_dc2}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"{{table}}"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "placement:'ugc_us:ugc'"
+												},
+												{
+													"key": "audit",
+													"value": "audit=comment:'initial+facade+provisioning'"
+												}
+											]
+										},
+										"description": "Returns a SuccessResponse if facade is created"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "PUT",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_facade",
+														":table"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "<string>"
+														},
+														{
+															"key": "audit",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "table"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								},
+								{
+									"name": "Does update all for Facade in correct datacenter",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\": true});",
+													"});",
+													""
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "X-BV-API-Key",
+												"value": "{{api_key}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo2\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n            \"comment\": \"Update and Add\"\n        }\n      }\n]"
+										},
+										"url": {
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/_stream",
+											"host": [
+												"{{baseurl_dc2}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"_stream"
+											],
+											"query": [
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												},
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												}
+											]
+										},
+										"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_facade",
+														"_stream"
+													],
+													"query": [
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								},
+								{
+									"name": "Does update all for Facade in a wrong datacenter",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 403\", function () {",
+													"    pm.response.to.have.status(403);",
+													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "POST",
+										"header": [
+											{
+												"key": "Content-Type",
+												"value": "application/json"
+											},
+											{
+												"key": "X-BV-API-Key",
+												"value": "{{api_key}}",
+												"type": "text"
+											}
+										],
+										"body": {
+											"mode": "raw",
+											"raw": "[\n         {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo1\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1\\\",\\\"field2\\\":\\\"value2\\\",\\\"field3\\\":\\\"value3\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n              \"comment\": \"Adding demo1 document\"\n            }\n          },\n          {\n            \"table\": \"{{table}}\",\n            \"key\": \"demo2\",\n            \"delta\": \"{\\\"field1\\\":\\\"value1.1\\\",\\\"field5\\\":\\\"value5\\\",\\\"field32\\\":\\\"value33\\\"}\",\n            \"consistency\": \"STRONG\",\n            \"audit\": {\n            \"comment\": \"Update and Add\"\n        }\n      }\n]"
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"_stream"
+											],
+											"query": [
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												},
+												{
+													"key": "tag",
+													"value": "<string>",
+													"disabled": true
+												}
+											]
+										},
+										"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "POST",
+												"header": [],
+												"url": {
+													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"host": [
+														"{{baseUrl}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_facade",
+														"_stream"
+													],
+													"query": [
+														{
+															"key": "tag",
+															"value": "<string>"
+														},
+														{
+															"key": "tag",
+															"value": "<string>"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								},
+								{
+									"name": "Drops a table",
+									"event": [
+										{
+											"listen": "test",
+											"script": {
+												"exec": [
+													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
+													"    pm.response.to.have.status(200);",
+													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+													"});"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
+									"request": {
+										"method": "DELETE",
+										"header": [
+											{
+												"key": "X-BV-API-Key",
+												"type": "text",
+												"value": "{{api_key}}"
+											}
+										],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												"{{table}}"
+											],
+											"query": [
+												{
+													"key": "audit",
+													"value": "comment:'table_removal'"
+												}
+											]
+										},
+										"description": "Returns a SuccessResponse if table is dropped"
+									},
+									"response": [
+										{
+											"name": "successful operation",
+											"originalRequest": {
+												"method": "DELETE",
+												"header": [],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														":table"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "<string>"
+														}
+													],
+													"variable": [
+														{
+															"key": "table"
+														}
+													]
+												}
+											},
+											"status": "OK",
+											"code": 200,
+											"_postman_previewlanguage": "json",
+											"header": [
+												{
+													"key": "Content-Type",
+													"value": "application/json"
+												}
+											],
+											"cookie": [],
+											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+										}
+									]
+								}
+							]
+						},
+						{
+							"name": "Does update all for Facade",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "\"<object>\""
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_facade",
+										"_stream"
+									],
+									"query": [
+										{
+											"key": "tag",
+											"value": "<string>"
+										},
+										{
+											"key": "tag",
+											"value": "<string>"
+										}
+									]
+								},
+								"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_facade",
+												"_stream"
+											],
+											"query": [
+												{
+													"key": "tag",
+													"value": "<string>"
+												},
+												{
+													"key": "tag",
+													"value": "<string>"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						}
+					]
 				}
 			],
 			"event": [
