@@ -42777,6 +42777,79 @@
 															}
 														},
 														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																"{{table}}"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "placement:'ugc_eu:ugc'"
+																},
+																{
+																	"key": "audit",
+																	"value": "comment:'initial+provisioning'"
+																}
+															]
+														},
+														"description": "Returns a SuccessResponse if table is created"
+													},
+													"response": []
+												},
+												{
+													"name": "Creates table /sor/1/_table/{table} Copy",
+													"event": [
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 200\", function () {",
+																	"    pm.response.to.have.status(200);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"});"
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "X-BV-API-Key",
+																"type": "text",
+																"value": "{{api_key}}"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+															"options": {
+																"raw": {
+																	"language": "json"
+																}
+															}
+														},
+														"url": {
 															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
@@ -42814,8 +42887,13 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.eql(`{\"message\":\"Unknown facade: ${pm.environment.get('table')} in catalog_global:cat\",\"facade\":\"${pm.environment.get('table')}\",\"suppressed\":[]}`);",
-																	"});"
+																	"    pm.expect(pm.response.json()).to.eql({",
+																	"        message:`Unknown facade: ${pm.environment.get('table')} in ugc_us:ugc`,",
+																	"        facade: pm.environment.get('table'),",
+																	"        suppressed:[]",
+																	"    });",
+																	"});",
+																	""
 																],
 																"type": "text/javascript"
 															}
@@ -42831,9 +42909,9 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=catalog_global:cat",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=ugc_us:ugc",
 															"host": [
-																"{{baseurl_dc1}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
@@ -42848,7 +42926,7 @@
 																},
 																{
 																	"key": "placement",
-																	"value": "catalog_global:cat"
+																	"value": "ugc_us:ugc"
 																}
 															]
 														},
@@ -42932,9 +43010,9 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=placement:'catalog_global:cat'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
-																"{{baseurl_dc1}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
@@ -42945,7 +43023,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'catalog_global:cat'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -43032,9 +43110,9 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=catalog_global:cat",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=ugc_us:ugc",
 															"host": [
-																"{{baseurl_dc1}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
@@ -43049,7 +43127,7 @@
 																},
 																{
 																	"key": "placement",
-																	"value": "catalog_global:cat"
+																	"value": "ugc_us:ugc"
 																}
 															]
 														},
@@ -43156,7 +43234,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -43169,7 +43247,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_global:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -43210,9 +43288,9 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=not_existing:placement",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=not_existing:placement",
 															"host": [
-																"{{baseurl_dc1}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
@@ -43457,6 +43535,1942 @@
 													],
 													"cookie": [],
 													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "{key}",
+									"item": [
+										{
+											"name": "Creates or replaces a piece of content of a facade in the data store",
+											"item": [
+												{
+													"name": "TC: Request without api-key",
+													"item": [
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data store",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 403\", function () {",
+																			"    pm.response.to.have.status(403);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+																			"});",
+																			""
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key_no_rights}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "",
+																	"options": {
+																		"raw": {
+																			"language": "json"
+																		}
+																	}
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{table}/{key}?audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{table}",
+																		"{key}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "TC: Request without audit param",
+													"item": [
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data store",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 400\", function () {",
+																			"    pm.response.to.have.status(400);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.text()).to.eql('Missing required query parameter: audit');",
+																			"});",
+																			""
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}",
+																	"options": {
+																		"raw": {
+																			"language": "json"
+																		}
+																	}
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{table}/{key}?consistency=STRONG&tag=postman&tag=postman1&debug=true",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{table}",
+																		"{key}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "TC: Request to not existing table",
+													"item": [
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data store",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 404\", function () {",
+																			"    pm.response.to.have.status(404);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_exiting_table\",\"table\":\"not_exiting_table\",\"suppressed\":[]});",
+																			"});",
+																			""
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-APi-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/not_exiting_table/{{key}}?audit=comment:'create+replace+piece+of+data'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"not_exiting_table",
+																		"{{key}}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'create+replace+piece+of+data'"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "TC: Request to table instead of facade",
+													"item": [
+														{
+															"name": "Creates table /sor/1/_table/{table}",
+															"event": [
+																{
+																	"listen": "prerequest",
+																	"script": {
+																		"exec": [
+																			"var uuid = require('uuid');",
+																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																		],
+																		"type": "text/javascript"
+																	}
+																},
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+																	"options": {
+																		"raw": {
+																			"language": "json"
+																		}
+																	}
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "placement:'ugc_eu:ugc'"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'initial+provisioning'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is created"
+															},
+															"response": []
+														},
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data store",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 403\", function () {",
+																			"    pm.response.to.have.status(403);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+																},
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}",
+																		"{{key}}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'update+piece+of+content'"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Drops a table",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "DELETE",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "comment:'table_removal'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is dropped"
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "DELETE",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																			"host": [
+																				"{{baseurl_dc1}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_table",
+																				":table"
+																			],
+																			"query": [
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "TC: Request to facade of removed table",
+													"item": [
+														{
+															"name": "Creates table /sor/1/_table/{table}",
+															"event": [
+																{
+																	"listen": "prerequest",
+																	"script": {
+																		"exec": [
+																			"var uuid = require('uuid');",
+																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																		],
+																		"type": "text/javascript"
+																	}
+																},
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+																	"options": {
+																		"raw": {
+																			"language": "json"
+																		}
+																	}
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "placement:'ugc_eu:ugc'"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'initial+provisioning'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is created"
+															},
+															"response": []
+														},
+														{
+															"name": "Creates a facade",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});",
+																			""
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "X-BV-Api-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "placement:'ugc_us:ugc'"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "audit=comment:'initial+facade+provisioning'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if facade is created"
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table"
+																			],
+																			"query": [
+																				{
+																					"key": "options",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data storebefore table removal",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body assertion\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+																},
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}",
+																		"{{key}}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'update+piece+of+content'"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG",
+																			"disabled": true
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman",
+																			"disabled": true
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1",
+																			"disabled": true
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true",
+																			"disabled": true
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Drops a table",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "DELETE",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "comment:'table_removal'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is dropped"
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "DELETE",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																			"host": [
+																				"{{baseurl_dc1}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_table",
+																				":table"
+																			],
+																			"query": [
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data store after table removal",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 404\", function () {",
+																			"    pm.response.to.have.status(404);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.text()).to.eql(`{\"message\":\"Unknown table: ${pm.environment.get('table')}\",\"table\":\"${pm.environment.get('table')}\",\"suppressed\":[]}`);",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+																},
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}",
+																		"{{key}}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'update+piece+of+content'"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "TC: Request to facade with all parameters populated",
+													"item": [
+														{
+															"name": "Creates table /sor/1/_table/{table}",
+															"event": [
+																{
+																	"listen": "prerequest",
+																	"script": {
+																		"exec": [
+																			"var uuid = require('uuid');",
+																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																		],
+																		"type": "text/javascript"
+																	}
+																},
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
+																	"options": {
+																		"raw": {
+																			"language": "json"
+																		}
+																	}
+																},
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "placement:'ugc_eu:ugc'"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'initial+provisioning'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is created"
+															},
+															"response": []
+														},
+														{
+															"name": "Creates a facade",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});",
+																			""
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "X-BV-Api-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "options",
+																			"value": "placement:'ugc_us:ugc'"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "audit=comment:'initial+facade+provisioning'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if facade is created"
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table"
+																			],
+																			"query": [
+																				{
+																					"key": "options",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Creates or replaces a piece of content of a facade in the data storebefore table removal",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body assertion\", function () {",
+																			"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																			"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																			"    pm.expect(pm.response.json().success).to.eql(true);",
+																			"",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "PUT",
+																"header": [
+																	{
+																		"key": "Content-Type",
+																		"value": "application/json"
+																	},
+																	{
+																		"key": "X-BV-API-Key",
+																		"value": "{{api_key}}",
+																		"type": "text"
+																	}
+																],
+																"body": {
+																	"mode": "raw",
+																	"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+																},
+																"url": {
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
+																	"host": [
+																		"{{baseurl_dc2}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		"{{table}}",
+																		"{{key}}"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>",
+																			"disabled": true
+																		},
+																		{
+																			"key": "audit",
+																			"value": "comment:'update+piece+of+content'"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "postman1"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "true"
+																		}
+																	]
+																},
+																"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "PUT",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																			"host": [
+																				"{{baseUrl}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_facade",
+																				":table",
+																				":key"
+																			],
+																			"query": [
+																				{
+																					"key": "changeId",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "consistency",
+																					"value": "STRONG"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "tag",
+																					"value": "<string>"
+																				},
+																				{
+																					"key": "debug",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				},
+																				{
+																					"key": "key"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														},
+														{
+															"name": "Drops a table",
+															"event": [
+																{
+																	"listen": "test",
+																	"script": {
+																		"exec": [
+																			"pm.test(\"Status code is 200\", function () {",
+																			"    pm.response.to.have.status(200);",
+																			"});",
+																			"",
+																			"pm.test(\"Body matches string\", function () {",
+																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"});"
+																		],
+																		"type": "text/javascript"
+																	}
+																}
+															],
+															"request": {
+																"method": "DELETE",
+																"header": [
+																	{
+																		"key": "X-BV-API-Key",
+																		"type": "text",
+																		"value": "{{api_key}}"
+																	}
+																],
+																"url": {
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+																	"host": [
+																		"{{baseurl_dc1}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_table",
+																		"{{table}}"
+																	],
+																	"query": [
+																		{
+																			"key": "audit",
+																			"value": "comment:'table_removal'"
+																		}
+																	]
+																},
+																"description": "Returns a SuccessResponse if table is dropped"
+															},
+															"response": [
+																{
+																	"name": "successful operation",
+																	"originalRequest": {
+																		"method": "DELETE",
+																		"header": [],
+																		"url": {
+																			"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																			"host": [
+																				"{{baseurl_dc1}}"
+																			],
+																			"path": [
+																				"sor",
+																				"1",
+																				"_table",
+																				":table"
+																			],
+																			"query": [
+																				{
+																					"key": "audit",
+																					"value": "<string>"
+																				}
+																			],
+																			"variable": [
+																				{
+																					"key": "table"
+																				}
+																			]
+																		}
+																	},
+																	"status": "OK",
+																	"code": 200,
+																	"_postman_previewlanguage": "json",
+																	"header": [
+																		{
+																			"key": "Content-Type",
+																			"value": "application/json"
+																		}
+																	],
+																	"cookie": [],
+																	"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+																}
+															]
+														}
+													]
+												},
+												{
+													"name": "Creates or replaces a piece of content of a facade in the data store",
+													"event": [
+														{
+															"listen": "test",
+															"script": {
+																"exec": [
+																	"pm.test(\"Status code is 403\", function () {",
+																	"    pm.response.to.have.status(403);",
+																	"});",
+																	"",
+																	"pm.test(\"Body matches string\", function () {",
+																	"    pm.expect(pm.response.json()).to.eql({ reason: 'not authorized' } );",
+																	"});",
+																	""
+																],
+																"type": "text/javascript"
+															}
+														}
+													],
+													"request": {
+														"method": "PUT",
+														"header": [
+															{
+																"key": "Content-Type",
+																"value": "application/json"
+															}
+														],
+														"body": {
+															"mode": "raw",
+															"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
+														},
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_facade",
+																":table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "<string>"
+																},
+																{
+																	"key": "audit",
+																	"value": "<string>"
+																},
+																{
+																	"key": "consistency",
+																	"value": "STRONG"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "tag",
+																	"value": "<string>"
+																},
+																{
+																	"key": "debug",
+																	"value": "<string>"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table",
+																	"value": "<string>",
+																	"type": "string",
+																	"description": "(Required) "
+																},
+																{
+																	"key": "key",
+																	"value": "<string>",
+																	"type": "string",
+																	"description": "(Required) "
+																}
+															]
+														},
+														"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
+													},
+													"response": [
+														{
+															"name": "successful operation",
+															"originalRequest": {
+																"method": "PUT",
+																"header": [],
+																"url": {
+																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"host": [
+																		"{{baseUrl}}"
+																	],
+																	"path": [
+																		"sor",
+																		"1",
+																		"_facade",
+																		":table",
+																		":key"
+																	],
+																	"query": [
+																		{
+																			"key": "changeId",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "audit",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "consistency",
+																			"value": "STRONG"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "tag",
+																			"value": "<string>"
+																		},
+																		{
+																			"key": "debug",
+																			"value": "<string>"
+																		}
+																	],
+																	"variable": [
+																		{
+																			"key": "table"
+																		},
+																		{
+																			"key": "key"
+																		}
+																	]
+																}
+															},
+															"status": "OK",
+															"code": 200,
+															"_postman_previewlanguage": "json",
+															"header": [
+																{
+																	"key": "Content-Type",
+																	"value": "application/json"
+																}
+															],
+															"cookie": [],
+															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+														}
+													]
 												}
 											]
 										}
@@ -44369,7 +46383,7 @@
 									"raw": "\"<object>\""
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream?tag=postman&tag=postman1",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -44382,11 +46396,11 @@
 									"query": [
 										{
 											"key": "tag",
-											"value": "<string>"
+											"value": "postman"
 										},
 										{
 											"key": "tag",
-											"value": "<string>"
+											"value": "postman1"
 										}
 									]
 								},
