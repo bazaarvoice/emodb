@@ -161,7 +161,7 @@ public class RestartingS3InputStream extends InputStream {
                 }
                 // Back-off on each retry
                 try {
-                    Thread.sleep(200L * attempt);
+                    Thread.sleep(200 * attempt);
                 } catch (InterruptedException interrupt) {
                     throw Throwables.propagate(interrupt);
                 }

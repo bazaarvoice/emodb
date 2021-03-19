@@ -13,7 +13,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class MetricCounterOutputStream extends FilterOutputStream {
 
-    private final static long FLUSH_COUNT = 20L * 1024 * 1024;  // 20 MB
+    private final static long FLUSH_COUNT = 20 * 1024 * 1024;  // 20 MB
     private final Counter _counter;
     private long _bufferedCount;
 
