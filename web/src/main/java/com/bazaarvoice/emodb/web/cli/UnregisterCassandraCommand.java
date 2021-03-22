@@ -31,21 +31,21 @@ public class UnregisterCassandraCommand extends ConfiguredCommand<EmoConfigurati
         String serviceName = namespace.getString("service");
 
         try (CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator()) {
-        curator.start();
+            curator.start();
 
-        HostAndPort host = HostAndPort.fromString(hostString).withDefaultPort(9160);
+            HostAndPort host = HostAndPort.fromString(hostString).withDefaultPort(9160);
 
-        ServiceEndPoint endPoint = new ServiceEndPointBuilder()
-                .withServiceName(serviceName)
-                .withId(host.toString())
-                .build();
+            ServiceEndPoint endPoint = new ServiceEndPointBuilder()
+                    .withServiceName(serviceName)
+                    .withId(host.toString())
+                    .build();
 
-        String dir = ZKPaths.makePath("ostrich", endPoint.getServiceName());
-        String path = ZKPaths.makePath(dir, endPoint.getId());
+            String dir = ZKPaths.makePath("ostrich", endPoint.getServiceName());
+            String path = ZKPaths.makePath(dir, endPoint.getId());
 
-        curator.newNamespaceAwareEnsurePath(dir).ensure(curator.getZookeeperClient());
-        curator.delete().forPath(path);
-        System.out.println("Deleted.");
+            curator.newNamespaceAwareEnsurePath(dir).ensure(curator.getZookeeperClient());
+            curator.delete().forPath(path);
+            System.out.println("Deleted.");
         } catch (KeeperException.NoNodeException e) {
             System.out.println("Not found.");
         }
