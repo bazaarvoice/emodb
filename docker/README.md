@@ -86,6 +86,15 @@ Removing volume docker_cassandra-dc1_data
 Removing volume docker_kafka_data
 ```
 
+To override host for local integration tests:
+```bash
+export EMODB_WEB_DC1_LOCAL_HOST=127.0.0.1; docker-compose up -d emodb-web-dc1
+...
+#run tests
+...
+docker-compose down --remove-orphans -v 
+```
+
 ### Logs
 In containers the app configured with 2 appenders:
 - console

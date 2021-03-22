@@ -87,12 +87,11 @@ public class SelfHostAndPortModule extends AbstractModule {
         }
     }
 
-
     private static String getLocalHost() {
         final String localHostEnvVariableName = "LOCAL_HOST";
         String localHost = System.getenv(localHostEnvVariableName);
 
-        if (null == localHost) {
+        if (null == localHost || localHost.trim().isEmpty()) {
             try {
                 localHost = InetAddress.getLocalHost().getHostAddress();
             } catch (IOException e) {
