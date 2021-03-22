@@ -72,6 +72,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
                 MetricRegistry.name("bv.emodb.scan.ScanUploader.placement", placement, _type + "-bytes-uploaded"));
     }
 
+    @SuppressWarnings("squid:S2095")
     protected OutputStream open(File file, @Nullable Counter counter) throws IOException {
         OutputStream stream = new BufferedOutputStream(new FileOutputStream(file));
         if (counter != null) {
@@ -90,6 +91,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
         return stream;
     }
 
+    @SuppressWarnings("squid:S2095")
     protected InputStream getInputStream(File file)
             throws IOException {
         InputStream in = new FileInputStream(file);

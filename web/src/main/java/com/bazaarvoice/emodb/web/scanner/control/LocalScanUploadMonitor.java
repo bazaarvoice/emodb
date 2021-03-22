@@ -416,12 +416,11 @@ public class LocalScanUploadMonitor extends AbstractService {
         }
 
         _log.info("Scan complete: {}", id);
+        // Mark the scan is complete
+        Set<ScanDestination> destinations = status.getOptions().getDestinations();
+        // Use -1 as the task ID since writing that the scan is complete is not associated with any scan range task.
 
-        try {
-            // Mark the scan is complete
-            Set<ScanDestination> destinations = status.getOptions().getDestinations();
-            // Use -1 as the task ID since writing that the scan is complete is not associated with any scan range task.
-            ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(-1, destinations);
+        try (ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(-1, destinations)) {
             scanWriter.writeScanComplete(id, _scanStatusDAO.getScanStatus(id).getStartTime());
 
             // Store the time the scan completed
