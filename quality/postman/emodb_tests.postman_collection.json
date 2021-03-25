@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "b11bffd1-ea1f-479c-9c5c-ed727f376197",
+		"_postman_id": "38d575c0-8d87-45b9-a871-fb058d3e4972",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -40786,7 +40786,6 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
@@ -42332,7 +42331,6 @@
 														{
 															"key": "table",
 															"value": "<string>",
-															"type": "string",
 															"description": "(Required) "
 														}
 													]
@@ -42555,7 +42553,6 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
@@ -42669,7 +42666,6 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
@@ -42746,13 +42742,18 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});"
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 200\", function () {",
+																	"        pm.response.to.have.status(200);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"    });",
+																	"}",
+																	""
 																],
 																"type": "text/javascript"
 															}
@@ -42803,97 +42804,27 @@
 													"response": []
 												},
 												{
-													"name": "Creates table /sor/1/_table/{table} Copy",
-													"event": [
-														{
-															"listen": "prerequest",
-															"script": {
-																"exec": [
-																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
-																],
-																"type": "text/javascript"
-															}
-														},
-														{
-															"listen": "test",
-															"script": {
-																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
-																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});"
-																],
-																"type": "text/javascript"
-															}
-														}
-													],
-													"request": {
-														"method": "PUT",
-														"header": [
-															{
-																"key": "X-BV-API-Key",
-																"type": "text",
-																"value": "{{api_key}}"
-															}
-														],
-														"body": {
-															"mode": "raw",
-															"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
-															"options": {
-																"raw": {
-																	"language": "json"
-																}
-															}
-														},
-														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
-															"host": [
-																"{{baseurl_dc1}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_table",
-																"{{table}}"
-															],
-															"query": [
-																{
-																	"key": "options",
-																	"value": "placement:'ugc_global:ugc'"
-																},
-																{
-																	"key": "audit",
-																	"value": "comment:'initial+provisioning'"
-																}
-															]
-														},
-														"description": "Returns a SuccessResponse if table is created"
-													},
-													"response": []
-												},
-												{
 													"name": "Drops a Facade before it is created",
 													"event": [
 														{
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 404\", function () {",
-																	"    pm.response.to.have.status(404);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({",
-																	"        message:`Unknown facade: ${pm.environment.get('table')} in ugc_us:ugc`,",
-																	"        facade: pm.environment.get('table'),",
-																	"        suppressed:[]",
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 404\", function () {",
+																	"        pm.response.to.have.status(404);",
 																	"    });",
-																	"});",
-																	""
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({",
+																	"            message:`Unknown facade: ${pm.environment.get('table')} in ugc_us:ugc`,",
+																	"            facade: pm.environment.get('table'),",
+																	"            suppressed:[]",
+																	"        });",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -42987,14 +42918,17 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});",
-																	""
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 200\", function () {",
+																	"        pm.response.to.have.status(200);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -43088,13 +43022,17 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});"
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 200\", function () {",
+																	"        pm.response.to.have.status(200);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -43203,13 +43141,17 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});"
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 200\", function () {",
+																	"        pm.response.to.have.status(200);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -43266,13 +43208,17 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 400\", function () {",
-																	"    pm.response.to.have.status(400);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.text()).to.eql('Unknown placement string: not_existing:placement');",
-																	"});"
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 400\", function () {",
+																	"        pm.response.to.have.status(400);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.text()).to.eql('Unknown placement string: not_existing:placement');",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -43366,13 +43312,17 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"pm.test(\"Status code is 200\", function () {",
-																	"    pm.response.to.have.status(200);",
-																	"});",
+																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"});"
+																	"if(!isLocal) {",
+																	"    pm.test(\"Status code is 200\", function () {",
+																	"        pm.response.to.have.status(200);",
+																	"    });",
+																	"",
+																	"    pm.test(\"Body matches string\", function () {",
+																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																	"    });",
+																	"}"
 																],
 																"type": "text/javascript"
 															}
@@ -43483,7 +43433,6 @@
 														{
 															"key": "table",
 															"value": "<string>",
-															"type": "string",
 															"description": "(Required) "
 														}
 													]
@@ -44033,13 +43982,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44096,13 +44049,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 403\", function () {",
-																			"    pm.response.to.have.status(403);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 403\", function () {",
+																			"        pm.response.to.have.status(403);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44242,13 +44199,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44349,13 +44310,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44412,14 +44377,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44513,14 +44481,18 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body assertion\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
 																			"",
-																			"});"
+																			"    pm.test(\"Body assertion\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44664,13 +44636,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({ \"success\": true });",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44756,13 +44732,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 404\", function () {",
-																			"    pm.response.to.have.status(404);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql(`{\"message\":\"Unknown table: ${pm.environment.get('table')}\",\"table\":\"${pm.environment.get('table')}\",\"suppressed\":[]}`);",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 404\", function () {",
+																			"        pm.response.to.have.status(404);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql(`{\"message\":\"Unknown table: ${pm.environment.get('table')}\",\"table\":\"${pm.environment.get('table')}\",\"suppressed\":[]}`);",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44917,13 +44897,18 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}",
+																			""
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44980,14 +44965,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45081,16 +45069,20 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body assertion\", function () {",
-																			"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
-																			"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
-																			"    pm.expect(pm.response.json().success).to.eql(true);",
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
 																			"",
-																			"});"
+																			"    pm.test(\"Body assertion\", function () {",
+																			"        pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																			"        pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																			"        pm.expect(pm.response.json().success).to.eql(true);",
+																			"",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45230,13 +45222,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45391,13 +45387,11 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																},
 																{
 																	"key": "key",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
@@ -45497,13 +45491,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45560,14 +45558,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45661,14 +45662,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 403\", function () {",
-																			"    pm.response.to.have.status(403);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 403\", function () {",
+																			"        pm.response.to.have.status(403);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45808,13 +45812,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45915,13 +45923,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45978,14 +45990,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46079,16 +46094,19 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
-																			"    pm.expect(pm.response.json().success).to.eql(true);",
-																			"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																			"        pm.expect(pm.response.json().success).to.eql(true);",
+																			"        pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46228,13 +46246,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46335,13 +46357,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46398,14 +46424,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46499,15 +46528,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
 																			"",
-																			"});",
-																			""
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({ \"success\": true });",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46647,13 +46678,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46754,13 +46789,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46817,14 +46856,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46918,14 +46960,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 403\", function () {",
-																			"    pm.response.to.have.status(403);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql(\"Access denied. Update intended for a facade, but the table would be updated.\");",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 403\", function () {",
+																			"        pm.response.to.have.status(403);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql(\"Access denied. Update intended for a facade, but the table would be updated.\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47065,13 +47110,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47172,13 +47221,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47235,14 +47288,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47336,14 +47392,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 404\", function () {",
-																			"    pm.response.to.have.status(404);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 404\", function () {",
+																			"        pm.response.to.have.status(404);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47483,13 +47542,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47590,13 +47653,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47653,14 +47720,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47754,15 +47824,19 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
-																			"    pm.expect(pm.response.json().success).to.eql(true);",
-																			"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																			"        pm.expect(pm.response.json().success).to.eql(true);",
+																			"        pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47902,13 +47976,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48009,13 +48087,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48072,14 +48154,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48173,13 +48258,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 400\", function () {",
-																			"    pm.response.to.have.status(400);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql(\"Invalid uuid parameter (must be a RFC 4122 version 1 time-based uuid): someIncorrectUUID\");",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 400\", function () {",
+																			"        pm.response.to.have.status(400);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql(\"Invalid uuid parameter (must be a RFC 4122 version 1 time-based uuid): someIncorrectUUID\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48318,13 +48407,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48425,13 +48518,18 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}",
+																			""
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48488,14 +48586,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48589,13 +48690,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 400\", function () {",
-																			"    pm.response.to.have.status(400);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql(\"Missing required query parameter: audit\");",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 400\", function () {",
+																			"        pm.response.to.have.status(400);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql(\"Missing required query parameter: audit\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48736,13 +48841,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48879,13 +48988,11 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																},
 																{
 																	"key": "key",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
@@ -48985,13 +49092,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"    if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49048,14 +49159,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49149,14 +49263,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 403\", function () {",
-																			"    pm.response.to.have.status(403);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"reason\": \"not authorized\"});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 403\", function () {",
+																			"        pm.response.to.have.status(403);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"reason\": \"not authorized\"});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49296,13 +49413,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49403,13 +49524,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49466,14 +49591,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49567,14 +49695,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 400\", function () {",
-																			"    pm.response.to.have.status(400);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql('Missing required query parameter: audit');",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 400\", function () {",
+																			"        pm.response.to.have.status(400);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql('Missing required query parameter: audit');",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49715,13 +49846,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49822,13 +49957,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49885,14 +50024,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49986,14 +50128,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50133,13 +50278,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50240,13 +50389,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50303,14 +50456,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50404,14 +50560,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 403\", function () {",
-																			"    pm.response.to.have.status(403);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 403\", function () {",
+																			"        pm.response.to.have.status(403);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.text()).to.eql('Access denied. Update intended for a facade, but the table would be updated.');",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50551,13 +50710,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50658,13 +50821,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50721,14 +50888,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50822,16 +50992,19 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
-																			"    pm.expect(pm.response.json().success).to.eql(true);",
-																			"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
-																			"});",
-																			""
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.have.keys(\"success\",\"debug\");",
+																			"        pm.expect(pm.response.json().success).to.eql(true);",
+																			"        pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50971,13 +51144,17 @@
 																	"listen": "test",
 																	"script": {
 																		"exec": [
-																			"pm.test(\"Status code is 200\", function () {",
-																			"    pm.response.to.have.status(200);",
-																			"});",
+																			"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																			"",
-																			"pm.test(\"Body matches string\", function () {",
-																			"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																			"});"
+																			"if(!isLocal) {",
+																			"    pm.test(\"Status code is 200\", function () {",
+																			"        pm.response.to.have.status(200);",
+																			"    });",
+																			"",
+																			"    pm.test(\"Body matches string\", function () {",
+																			"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
+																			"    });",
+																			"}"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -51266,13 +51443,11 @@
 																{
 																	"key": "table",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																},
 																{
 																	"key": "key",
 																	"value": "<string>",
-																	"type": "string",
 																	"description": "(Required) "
 																}
 															]
