@@ -61,7 +61,6 @@
         <module>blob-client</module>
         <module>blob</module>
         <module>uac-client</module>
-        <module>shaded-clients</module>
         <module>plugins</module>
         <module>web</module>
         <module>web-local</module>
