@@ -36,7 +36,9 @@ public class SelfHostAndPortModule extends AbstractModule {
     protected void configure() {
     }
 
-    @Provides @Singleton @SelfHostAndPort
+    @Provides
+    @Singleton
+    @SelfHostAndPort
     public HostAndPort provideSelfHostAndPort(ServerFactory serverFactory) {
         // Our method for obtaining connector factories from the server factory varies depending on the latter's type
         List<ConnectorFactory> appConnectorFactories;
@@ -51,7 +53,9 @@ public class SelfHostAndPortModule extends AbstractModule {
         return getHostAndPortFromConnectorFactories(appConnectorFactories);
     }
 
-    @Provides @Singleton @SelfAdminHostAndPort
+    @Provides
+    @Singleton
+    @SelfAdminHostAndPort
     public HostAndPort provideSelfAdminHostAndPort(ServerFactory serverFactory) {
         // Our method for obtaining connector factories from the server factory varies depending on the latter's type
         List<ConnectorFactory> adminConnectorFactories;
@@ -66,7 +70,7 @@ public class SelfHostAndPortModule extends AbstractModule {
         return getHostAndPortFromConnectorFactories(adminConnectorFactories);
     }
 
-    private HostAndPort getHostAndPortFromConnectorFactories(List<ConnectorFactory> connectors) {
+    private static HostAndPort getHostAndPortFromConnectorFactories(List<ConnectorFactory> connectors) {
         // find the first connector that matches and return it host/port information (in practice there should
         // be one, and just one, match)
         try {
@@ -74,7 +78,7 @@ public class SelfHostAndPortModule extends AbstractModule {
 
             String host = httpConnectorFactory.getBindHost();
             if (host == null) {
-                host = getLocalHost().getHostAddress();
+                host = getLocalHost();
             }
             int port = httpConnectorFactory.getPort();
             return HostAndPort.fromParts(host, port);
@@ -83,11 +87,18 @@ public class SelfHostAndPortModule extends AbstractModule {
         }
     }
 
-    private InetAddress getLocalHost() {
-        try {
-            return InetAddress.getLocalHost();
-        } catch (IOException e) {
-            throw new AssertionError(e); // Should never happen
+    private static String getLocalHost() {
+        final String localHostEnvVariableName = "LOCAL_HOST";
+        String localHost = System.getenv(localHostEnvVariableName);
+
+        if (null == localHost || localHost.trim().isEmpty()) {
+            try {
+                localHost = InetAddress.getLocalHost().getHostAddress();
+            } catch (IOException e) {
+                throw new AssertionError(e); // Should never happen
+            }
         }
+
+        return localHost;
     }
 }

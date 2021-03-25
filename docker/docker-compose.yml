@@ -123,6 +123,9 @@ services:
     environment:
     - APP_ROLE=web
     - DATACENTER=dc1
+    - LOCAL_HOST=${EMODB_WEB_DC1_LOCAL_HOST:-}
+    - LOCAL_PORT=${EMODB_WEB_DC1_LOCAL_PORT:-8080}
+    - LOCAL_ADMIN_PORT=${EMODB_WEB_DC1_LOCAL_PORT:-8081}
     deploy:
       resources:
         limits:
@@ -153,14 +156,17 @@ services:
     environment:
       - APP_ROLE=web
       - DATACENTER=dc1
+      - LOCAL_HOST=${EMODB_WEB_DC2_LOCAL_HOST:-}
+      - LOCAL_PORT=${EMODB_WEB_DC2_LOCAL_PORT:-8180}
+      - LOCAL_ADMIN_PORT=${EMODB_WEB_DC2_LOCAL_PORT:-8181}
     deploy:
       resources:
         limits:
           cpus: 0.5
           memory: 512M
     ports:
-      - '8180:8080'
-      - '8181:8081'
+      - '8180:8180'
+      - '8181:8181'
     volumes:
       - './configs:/app/config'
       - '../web-local/target/logs:/app/logs'
