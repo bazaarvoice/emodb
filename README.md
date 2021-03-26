@@ -42,7 +42,7 @@ Documentation
 
 [Security](https://bazaarvoice.github.io/emodb/securityadmin/)
 
-[Legacy Java Client Support](markdowns/LegacyJavaClients.md)
+[Java Client Support](markdowns/JavaClients.md)
 
 Quick Start
 -----------
