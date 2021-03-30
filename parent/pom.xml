@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.3.3-SNAPSHOT</version>
+    <version>6.4.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -548,7 +548,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra.version}-4</version>
+                    <version>${cassandra.version}-5</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
