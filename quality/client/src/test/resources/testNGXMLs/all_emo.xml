@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="EmoDB Tests">
+    <test verbose="1" name="Emodb Tests" parallel="methods" thread-count="7">
+        <groups>
+            <run>
+                <include name="emodb.core.all"/>
+            </run>
+        </groups>
+        <packages>
+            <package name="com.bazaarvoice.gatekeeper.emodb.tests.core.*"/>
+        </packages>
+    </test>
+</suite>
