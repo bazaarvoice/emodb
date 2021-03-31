@@ -27,11 +27,11 @@ npm install -g newman
 2.Execute preconditions postman collection which setups api keys in case they are missing on server used for testing:
 
 ```
-newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$EMODB_TEST_SERVER_ADMIN_APIKEY" --env-var "baseurl_dc1=$EMODB_URL_IN_DC1 --env-var "baseurl_dc2=$EMODB_URL_IN_DC2 --env-var "api_key_no_rights=$EMODB_TEST_SERVER_APIKEY_SOR_READ"
+newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$EMODB_TEST_SERVER_ADMIN_APIKEY" --env-var "baseurl_dc1=$EMODB_URL_IN_EU_DC --env-var "baseurl_dc2=$EMODB_URL_IN_US_DC --env-var "api_key_no_rights=$EMODB_TEST_SERVER_APIKEY_SOR_READ"
 --export-environment "sor-1-_table-table.postman_environment.json"
 ```
 `$EMODB_TEST_SERVER_ADMIN_APIKEY` is admin api key used on the server for running tests against.  
-`$EMODB_URL_IN_DC1` and `$EMODB_URL_IN_DC2` are different data centers where emodb is up and running. `$EMODB_URL_IN_DC2` is used for tests where facade is under tests.   
+`$EMODB_URL_IN_ EU_DC` and `$EMODB_URL_IN_US_DC` are different data centers where emodb is up and running. `$EMODB_URL_IN_US_DC` is used for tests where facade is under tests.   
 `$EMODB_TEST_SERVER_APIKEY_SOR_READ` is api key with only sor read permission. Specify only if this key created
 if not it can be omitted.  
 `--export-environment` is the parameter where file with postman environment variables should be supplied. 
