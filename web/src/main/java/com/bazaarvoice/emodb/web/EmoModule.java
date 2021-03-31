@@ -94,7 +94,6 @@ import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
-import com.bazaarvoice.emodb.web.report.ReportsModule;
 import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
@@ -186,7 +185,6 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
@@ -223,7 +221,6 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(report, new ReportSetup());
         evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
@@ -600,13 +597,6 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             install(new DataStoreAsyncModule());
-        }
-    }
-
-    private class ReportSetup extends AbstractModule  {
-        @Override
-        protected void configure() {
-            install(new ReportsModule());
         }
     }
 
