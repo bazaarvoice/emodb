@@ -27,14 +27,20 @@ npm install -g newman
 2.Execute preconditions postman collection which setups api keys in case they are missing on server used for testing:
 
 ```
-newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$EMODB_POSTMAN_CERT_ADMIN_APIKEY" --env-var "baseurl_dc1=$Region1 --env-var "baseurl_dc2=$Region2 --env-var "api_key_no_rights=$EMODB_POSTMAN_CERT_APIKEY_SOR_READ"
+newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$EMODB_TEST_SERVER_ADMIN_APIKEY" --env-var "baseurl_dc1=$EMODB_URL_IN_REGION1 --env-var "baseurl_dc2=$EMODB_URL_IN_REGION2 --env-var "api_key_no_rights=$EMODB_TEST_SERVER_APIKEY_SOR_READ"
 --export-environment "sor-1-_table-table.postman_environment.json"
 ```
-`$EMODB_POSTMAN_CERT_ADMIN_APIKEY` is admin api key used on the server for running tests against.  
-`$Region1` and `$Region2` are different regions where cassandra is up and running. Used for tests where facade is under tests.  
-`$EMODB_POSTMAN_CERT_APIKEY_SOR_READ` is api key with only sor read permission. Specify only if this key created
+`$EMODB_TEST_SERVER_ADMIN_APIKEY` is admin api key used on the server for running tests against.  
+`$EMODB_URL_IN_REGION1` and `$EMODB_URL_IN_REGION2` are different regions where emodb is up and running. `$EMODB_URL_IN_REGION2` is used for tests where facade is under tests.   
+`$EMODB_TEST_SERVER_APIKEY_SOR_READ` is api key with only sor read permission. Specify only if this key created
 if not it can be omitted.  
 `--export-environment` is the parameter where file with postman environment variables should be supplied. 
+
+Run the same on local:
+```
+newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=local_admin"
+--export-environment "sor-1-_table-table.postman_environment.json"
+```
 
 3. Run existing postman tests collection
 
@@ -43,4 +49,7 @@ newman run "emodb_tests.postman_collection.json" -e "sor-1-_table-table.postman_
 ```
 `$API_KEY` is admin api key that is available on the server under testing.
 
-
+Run the same on local:
+```
+newman run "emodb_tests.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=local_admin"
+```
