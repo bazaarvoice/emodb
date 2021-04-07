@@ -21,6 +21,17 @@
         <config-all-role-yaml>${project.basedir}/src/test/resources/config-all-role.yaml</config-all-role-yaml>
         <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
         <runAdaptiveCqlIntegrationTests>false</runAdaptiveCqlIntegrationTests>
+
+        <emodb.version>${project.version}</emodb.version>
+        <zkConnection>localhost:2181</zkConnection>
+        <zkNamespace></zkNamespace>
+        <clusterName>local_default</clusterName>
+        <placement>ugc_global:ugc</placement>
+        <remotePlacement>app_remote:default</remotePlacement>
+        <mediaPlacement>media_global:ugc</mediaPlacement>
+        <apiKey>local_admin</apiKey>
+        <clientHttpKeepAlive>1</clientHttpKeepAlive>
+        <clientHttpTimeout>10</clientHttpTimeout>
     </properties>
 
     <dependencies>
@@ -133,8 +144,27 @@
                                 <include>**/*Test.java</include>
                             </includes>
                             <skip>${skipTests}</skip>
+                            <suiteXmlFiles>
+                                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                            </suiteXmlFiles>
                             <systemPropertyVariables>
                                 <runAdaptiveCqlIntegrationTests>${runAdaptiveCqlIntegrationTests}</runAdaptiveCqlIntegrationTests>
+
+                                <emoVersion>${emodb.version}</emoVersion>
+
+                                <apiKey>${apiKey}</apiKey>
+                                <zkConnection>${zkConnection}</zkConnection>
+                                <zkNamespace>${zkNamespace}</zkNamespace>
+                                <clusterName>${clusterName}</clusterName>
+                                <placement>${placement}</placement>
+                                <remotePlacement>${remotePlacement}</remotePlacement>
+                                <mediaPlacement>${mediaPlacement}</mediaPlacement>
+
+                                <clientHttpKeepAlive>${clientHttpKeepAlive}</clientHttpKeepAlive>
+                                <clientHttpTimeout>${clientHttpTimeout}</clientHttpTimeout>
+
+                                <testng.dtd.http>true</testng.dtd.http>
+                                <resources>${project.basedir}/src/test/resources/</resources>
                             </systemPropertyVariables>
                         </configuration>
                     </execution>

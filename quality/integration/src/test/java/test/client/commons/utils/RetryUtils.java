@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.utils;
+package test.client.commons.utils;
 
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.google.common.base.Throwables;

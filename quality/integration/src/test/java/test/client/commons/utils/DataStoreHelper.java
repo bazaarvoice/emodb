@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.utils;
+package test.client.commons.utils;
 
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.Names.uniqueName;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
+import static test.client.commons.utils.Names.uniqueName;
+import static test.client.commons.utils.TableUtils.getAudit;
 
 public class DataStoreHelper {
 

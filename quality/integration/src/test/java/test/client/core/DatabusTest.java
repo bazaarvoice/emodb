@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
@@ -20,8 +20,6 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.uac.api.UserAccessControl;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
-import com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
@@ -41,6 +39,8 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
+import test.client.commons.utils.DataStoreHelper;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -54,24 +54,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.createDataTable;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.Names.uniqueName;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.snooze;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getTemplate;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.createApiKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.createRole;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.padKey;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static test.client.commons.utils.DataStoreHelper.createDataTable;
+import static test.client.commons.utils.Names.uniqueName;
+import static test.client.commons.utils.RetryUtils.snooze;
+import static test.client.commons.utils.TableUtils.getAudit;
+import static test.client.commons.utils.TableUtils.getTemplate;
+import static test.client.commons.utils.UserAccessControlUtils.createApiKey;
+import static test.client.commons.utils.UserAccessControlUtils.createRole;
+import static test.client.commons.utils.UserAccessControlUtils.padKey;
 
-@Test(groups = {"emodb.core.all", "emodb.core.databus", "databus"}, timeOut = 360000)
+@Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class DatabusTests {
+public class DatabusTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DatabusTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DatabusTest.class);
     private static final String DATABUS_TEST_CLIENT_NAME = "gatekeeper_databus_client";
     private static final AtomicInteger NEXT_API_KEY = new AtomicInteger(0);
 

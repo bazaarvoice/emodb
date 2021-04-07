@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons;
+package test.client.commons;
 
 import com.bazaarvoice.curator.dropwizard.ZooKeeperConfiguration;
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
@@ -21,7 +21,7 @@ import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.api.UserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlAuthenticator;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
-import com.bazaarvoice.gatekeeper.emodb.commons.annotations.ApiKeyTestDataStore;
+import test.client.commons.annotations.ApiKeyTestDataStore;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.ServiceFactory;
 import com.bazaarvoice.ostrich.discovery.zookeeper.ZooKeeperHostDiscovery;
@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -63,6 +64,7 @@ public class BaseTestsModule extends AbstractModule {
     private final Map<String, String> params;
 
     public BaseTestsModule(Map<String, String> params) {
+        LOGGER.warn("params: {}", params);
         this.params = params;
     }
 
@@ -83,11 +85,11 @@ public class BaseTestsModule extends AbstractModule {
     @Named("curator")
     private CuratorFramework getCurator(@Named("zkConnection") String zkConnection, @Named("zkNamespace") String zkNamespace) {
         Preconditions.checkNotNull(zkConnection, "zooKeeperConnection not configured");
+        LOGGER.info("zkNamespace:" + zkNamespace);
+        LOGGER.info("zkConnection:" + zkConnection);
         ZooKeeperConfiguration zkConfiguration = new ZooKeeperConfiguration();
         zkConfiguration.setConnectString(zkConnection);
         zkConfiguration.setRetryPolicy(new BoundedExponentialBackoffRetry(100, 10000, 10));
-        LOGGER.info("zkNamespace:" + zkNamespace);
-        LOGGER.info("zkConnection:" + zkConnection);
         if (!zkNamespace.equals("")) {
             zkConfiguration.setNamespace(zkNamespace);
         }
@@ -128,6 +130,10 @@ public class BaseTestsModule extends AbstractModule {
     @Named("emodbHost")
     private String getEmodbHost(@Named("clusterName") String clusterName, HttpClientConfiguration httpClientConfiguration,
                                   @Named("curator") CuratorFramework curator) {
+        Objects.requireNonNull(clusterName);
+        Objects.requireNonNull(httpClientConfiguration);
+        Objects.requireNonNull(curator);
+
         DataStoreClientFactory factory = DataStoreClientFactory.forClusterAndHttpConfiguration(clusterName, httpClientConfiguration, new MetricRegistry());
         Iterator<ServiceEndPoint> serviceEndPoints = new ZooKeeperHostDiscovery(curator, factory.getServiceName(), new MetricRegistry()).getHosts().iterator();
         String emodbHost = "http://" + serviceEndPoints.next().getId();

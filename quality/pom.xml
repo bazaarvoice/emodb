@@ -16,6 +16,5 @@
 
     <modules>
         <module>integration</module>
-        <module>client</module>
     </modules>
 </project>

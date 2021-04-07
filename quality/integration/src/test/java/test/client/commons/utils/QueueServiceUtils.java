@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.utils;
+package test.client.commons.utils;
 
 import com.google.common.collect.ImmutableMap;
 import org.slf4j.Logger;

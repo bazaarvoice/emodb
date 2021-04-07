@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.utils;
+package test.client.commons.utils;
 
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;

@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.annotations;
+package test.client.commons.annotations;
 
 import com.google.inject.BindingAnnotation;
 

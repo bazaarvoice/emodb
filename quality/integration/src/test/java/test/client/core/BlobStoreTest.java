@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.blob.api.RangeSpecifications;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.io.Files;
@@ -22,6 +21,7 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -47,19 +47,19 @@ import java.util.concurrent.Future;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.Names.uniqueName;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static test.client.commons.utils.Names.uniqueName;
+import static test.client.commons.utils.TableUtils.getAudit;
 
-@Test(groups = {"emodb.core.all", "emodb.core.blob", "blob"}, timeOut = 360000)
+@Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class BlobStoreTests {
+public class BlobStoreTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BlobStoreTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BlobStoreTest.class);
 
     private static final String BLOB_STORE_CLIENT_NAME = "gatekeeper_blobstore_client";
     private static final String DEFAULT_PHOTO_BLOB_NAME = "mandelbrot_color.jpg";

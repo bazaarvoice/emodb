@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons;
+package test.client.commons;
 
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.google.common.collect.ImmutableList;

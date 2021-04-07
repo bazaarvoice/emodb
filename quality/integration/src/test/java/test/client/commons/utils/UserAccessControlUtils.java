@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.commons.utils;
+package test.client.commons.utils;
 
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyResponse;
@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.withRetryOnServiceUnavailable;
+import static test.client.commons.utils.RetryUtils.withRetryOnServiceUnavailable;
 
 public class UserAccessControlUtils {
 

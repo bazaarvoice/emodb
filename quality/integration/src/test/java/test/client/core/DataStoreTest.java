@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -20,8 +20,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.client.DataStoreStreaming;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
-import com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -35,6 +33,8 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
+import test.client.commons.utils.DataStoreHelper;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -49,24 +49,24 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.compactdata;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.createDataTable;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.getTimelineChangeList;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.snooze;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getTemplate;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static test.client.commons.utils.DataStoreHelper.compactdata;
+import static test.client.commons.utils.DataStoreHelper.createDataTable;
+import static test.client.commons.utils.DataStoreHelper.getTimelineChangeList;
+import static test.client.commons.utils.RetryUtils.snooze;
+import static test.client.commons.utils.TableUtils.getAudit;
+import static test.client.commons.utils.TableUtils.getTemplate;
 
-@Test(groups = {"emodb.core.all", "emodb.core.datastore"}, timeOut = 360000)
+@Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class DataStoreTests {
+public class DataStoreTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DataStoreTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DataStoreTest.class);
 
     private static final String NON_EXISTENT_DOC_SIGNATURE = "00000000000000000000000000000000";
 

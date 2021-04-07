@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Change;
@@ -7,8 +7,6 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
-import com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -18,6 +16,8 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
+import test.client.commons.utils.DataStoreHelper;
 
 import java.time.Duration;
 import java.util.Date;
@@ -30,22 +30,22 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.compactdata;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.generateUpdatesList;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.getTimelineChangeList;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper.updateDocument;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.snooze;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
+import static test.client.commons.utils.DataStoreHelper.compactdata;
+import static test.client.commons.utils.DataStoreHelper.generateUpdatesList;
+import static test.client.commons.utils.DataStoreHelper.getTimelineChangeList;
+import static test.client.commons.utils.DataStoreHelper.updateDocument;
+import static test.client.commons.utils.RetryUtils.snooze;
+import static test.client.commons.utils.TableUtils.getAudit;
 
-@Test(groups = {"emodb.core.all", "emodb.core.intrinsic", "intrinsic"}, timeOut = 36000)
+@Test(timeOut = 30000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class IntrinsicTests {
+public class IntrinsicTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(IntrinsicTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(IntrinsicTest.class);
 
     private static final String NON_EXISTENT_DOC_SIGNATURE = "00000000000000000000000000000000";
 

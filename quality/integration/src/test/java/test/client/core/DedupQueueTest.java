@@ -1,8 +1,7 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.Message;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -13,6 +12,7 @@ import org.testng.annotations.AfterTest;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -24,16 +24,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.bazaarvoice.emodb.queue.api.MoveQueueStatus.Status.COMPLETE;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.Names.uniqueName;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.QueueServiceUtils.getMessageList;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.snooze;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static test.client.commons.utils.Names.uniqueName;
+import static test.client.commons.utils.QueueServiceUtils.getMessageList;
+import static test.client.commons.utils.RetryUtils.snooze;
 
-@Test(groups = {"emodb.core.all", "emodb.core.dedupqueueservice", "dedupqueueservice"}, timeOut = 360000)
+@Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class DedupQueueTests {
-    private static final Logger LOGGER = LoggerFactory.getLogger(DedupQueueTests.class);
+public class DedupQueueTest {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DedupQueueTest.class);
     private static final String DEDUP_QUEUE_SERVICE_TEST_CLIENT_NAME = "gatekeeper_dedup_queue_client";
 
     @Inject

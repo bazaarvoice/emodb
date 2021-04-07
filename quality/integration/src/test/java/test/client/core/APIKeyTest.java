@@ -1,4 +1,4 @@
-package com.bazaarvoice.gatekeeper.emodb.tests.core;
+package test.client.core;
 
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
@@ -17,10 +17,6 @@ import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.InvalidEmoPermissionException;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UserAccessControl;
-import com.bazaarvoice.gatekeeper.emodb.commons.TestModuleFactory;
-import com.bazaarvoice.gatekeeper.emodb.commons.annotations.ApiKeyTestDataStore;
-import com.bazaarvoice.gatekeeper.emodb.commons.utils.DataStoreHelper;
-import com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils;
 import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -35,6 +31,10 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
+import test.client.commons.TestModuleFactory;
+import test.client.commons.annotations.ApiKeyTestDataStore;
+import test.client.commons.utils.DataStoreHelper;
+import test.client.commons.utils.UserAccessControlUtils;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -43,37 +43,37 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.RetryUtils.withRetryOnServiceUnavailable;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getAudit;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.TableUtils.getTemplate;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.KEY_DESC;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.KEY_OWNER;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.addRolePermissions;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.addRolesToApiKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.apiKeyExistsByKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.createApiKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.createRole;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.deleteApiKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.deleteRole;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.getRoleKeyFromId;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.keysCleanup;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.migrateKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.revokeRolePermissions;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.roleExists;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.viewApiKeyByKey;
-import static com.bazaarvoice.gatekeeper.emodb.commons.utils.UserAccessControlUtils.viewRole;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static test.client.commons.utils.RetryUtils.withRetryOnServiceUnavailable;
+import static test.client.commons.utils.TableUtils.getAudit;
+import static test.client.commons.utils.TableUtils.getTemplate;
+import static test.client.commons.utils.UserAccessControlUtils.KEY_DESC;
+import static test.client.commons.utils.UserAccessControlUtils.KEY_OWNER;
+import static test.client.commons.utils.UserAccessControlUtils.addRolePermissions;
+import static test.client.commons.utils.UserAccessControlUtils.addRolesToApiKey;
+import static test.client.commons.utils.UserAccessControlUtils.apiKeyExistsByKey;
+import static test.client.commons.utils.UserAccessControlUtils.createApiKey;
+import static test.client.commons.utils.UserAccessControlUtils.createRole;
+import static test.client.commons.utils.UserAccessControlUtils.deleteApiKey;
+import static test.client.commons.utils.UserAccessControlUtils.deleteRole;
+import static test.client.commons.utils.UserAccessControlUtils.getRoleKeyFromId;
+import static test.client.commons.utils.UserAccessControlUtils.keysCleanup;
+import static test.client.commons.utils.UserAccessControlUtils.migrateKey;
+import static test.client.commons.utils.UserAccessControlUtils.revokeRolePermissions;
+import static test.client.commons.utils.UserAccessControlUtils.roleExists;
+import static test.client.commons.utils.UserAccessControlUtils.viewApiKeyByKey;
+import static test.client.commons.utils.UserAccessControlUtils.viewRole;
 
-@Test(groups = {"emodb.core.all", "emodb.core.apikey", "apikey"}, timeOut = 360000)
+@Test(timeOut = 360000)
 @Guice(moduleFactory = TestModuleFactory.class)
-public class APIKeyTests {
+public class APIKeyTest {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(APIKeyTests.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(APIKeyTest.class);
     private static final String APIKEY_TEST_CLIENT_NAME = "gatekeeper_apikey_client";
 
     private static final String BLOB_STANDARD_KEY = UserAccessControlUtils.padKey("BlobApiKeyStandard");
