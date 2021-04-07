@@ -19,7 +19,6 @@
         <skipITs>false</skipITs>
         <emodb.pause>false</emodb.pause>
         <config-main-role-yaml>${project.basedir}/src/test/resources/config-main-role.yaml</config-main-role-yaml>
-        <config-blob-role-yaml>${project.basedir}/src/test/resources/config-blob-role.yaml</config-blob-role-yaml>
         <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
         <runAdaptiveCqlIntegrationTests>false</runAdaptiveCqlIntegrationTests>
     </properties>
@@ -136,8 +135,6 @@
                             <skip>${skipTests}</skip>
                             <systemPropertyVariables>
                                 <runAdaptiveCqlIntegrationTests>${runAdaptiveCqlIntegrationTests}</runAdaptiveCqlIntegrationTests>
-                                <!--<mainConfigFile>${config-main-role-yaml}</mainConfigFile>-->
-                                <!--<blobConfigFile>${config-blob-role-yaml}</blobConfigFile>-->
                             </systemPropertyVariables>
                         </configuration>
                     </execution>
@@ -188,26 +185,6 @@
                                     </permissions>
                                 </role>
                             </roles>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>start-emodb-blob</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>start</goal>
-                        </goals>
-                        <configuration>
-                            <healthCheckPort>8581</healthCheckPort>
-                            <cassandraRpcPort>9160</cassandraRpcPort>
-                            <emoConfigurationFile>${config-blob-role-yaml}</emoConfigurationFile>
-                            <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
-                            <emoDir>emodb-blob</emoDir>
-                            <autoStartCassandra>false</autoStartCassandra>
-                            <autoStartZookeeper>false</autoStartZookeeper>
-                            <autoStartEmo>true</autoStartEmo>
-                            <emoLogFile>${basedir}/target/emodb-blob.log</emoLogFile>
-                            <skip>${skipTests}</skip>
                         </configuration>
                     </execution>
 
