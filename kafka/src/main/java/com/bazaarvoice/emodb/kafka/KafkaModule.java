@@ -6,7 +6,7 @@ import com.google.inject.Singleton;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
-import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.config.SaslConfigs;
 
 import javax.annotation.Nullable;
 import java.util.Properties;
@@ -28,19 +28,14 @@ public class KafkaModule extends PrivateModule {
 
     @Provides
     @Singleton
-    AdminClient provideAdminClient(@BootstrapServers String bootstrapServers, @Nullable SslConfiguration sslConfiguration) {
+    AdminClient provideAdminClient(@BootstrapServers String bootstrapServers, @Nullable SaslConfiguration saslConfiguration) {
         Properties properties = new Properties();
         properties.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
 
-        if (null != sslConfiguration) {
-            properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SslConfiguration.PROTOCOL);
-
-            properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, sslConfiguration.getTrustStoreLocation());
-            properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, sslConfiguration.getTrustStorePassword());
-
-            properties.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, sslConfiguration.getKeyStoreLocation());
-            properties.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, sslConfiguration.getKeyStorePassword());
-            properties.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, sslConfiguration.getKeyPassword());
+        if (null != saslConfiguration) {
+            properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SaslConfiguration.PROTOCOL);
+            properties.put(SaslConfigs.SASL_MECHANISM,SaslConfiguration.SASL_MECHANISM);
+            properties.put(SaslConfigs.SASL_JAAS_CONFIG, saslConfiguration.getJaasConfig());
         }
 
         return AdminClient.create(properties);
@@ -55,7 +50,7 @@ public class KafkaModule extends PrivateModule {
     @Nullable
     @Provides
     @Singleton
-    SslConfiguration provideSslConfiguration(KafkaConfiguration kafkaConfiguration) {
-        return kafkaConfiguration.getSslConfiguration();
+    SaslConfiguration provideSaslConfiguration(KafkaConfiguration kafkaConfiguration) {
+        return kafkaConfiguration.getSaslConfiguration();
     }
 }

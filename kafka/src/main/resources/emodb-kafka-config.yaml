@@ -3,9 +3,6 @@ producer:
   bufferMemory: 12356789
   batchSize: 100
   lingerMs: 5
-ssl:
-  trustStoreLocation: /abc/123
-  trustStorePassword: banana
-  keyStoreLocation: /def/456
-  keyStorePassword: apple
-  keyPassword: orange
+sasl:
+  username: username
+  password: password
