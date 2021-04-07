@@ -2,14 +2,14 @@ package com.bazaarvoice.megabus.service;
 
 import com.bazaarvoice.emodb.kafka.Constants;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
-import com.bazaarvoice.emodb.kafka.SslConfiguration;
+import com.bazaarvoice.emodb.kafka.SaslConfiguration;
 import com.bazaarvoice.emodb.kafka.metrics.DropwizardMetricsReporter;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.util.concurrent.AbstractService;
 import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
@@ -57,18 +57,12 @@ public abstract class KafkaStreamsService extends AbstractService implements Kaf
 
         _streamsConfiguration.put(StreamsConfig.CLIENT_ID_CONFIG, instanceId + "-" + serviceName);
 
-        SslConfiguration sslConfiguration = kafkaCluster.getSSLConfiguration();
-        if (null != sslConfiguration) {
-            _streamsConfiguration.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SslConfiguration.PROTOCOL);
-
-            _streamsConfiguration.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, sslConfiguration.getTrustStoreLocation());
-            _streamsConfiguration.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, sslConfiguration.getTrustStorePassword());
-
-            _streamsConfiguration.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, sslConfiguration.getKeyStoreLocation());
-            _streamsConfiguration.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, sslConfiguration.getKeyStorePassword());
-            _streamsConfiguration.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, sslConfiguration.getKeyPassword());
+        SaslConfiguration saslConfiguration = kafkaCluster.getSaslConfiguration();
+        if (null != saslConfiguration) {
+            _streamsConfiguration.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SaslConfiguration.PROTOCOL);
+            _streamsConfiguration.put(SaslConfigs.SASL_MECHANISM, SaslConfiguration.SASL_MECHANISM);
+            _streamsConfiguration.put(SaslConfigs.SASL_JAAS_CONFIG, saslConfiguration.getJaasConfig());
         }
-
         _streamsExceptionMeter = metricRegistry.meter("bv.emodb.megabus.kafka-streams-exceptions");
     }
 
