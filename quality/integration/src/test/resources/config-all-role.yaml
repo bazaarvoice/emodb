@@ -1,19 +1,11 @@
 # Select service mode
-serviceMode: STANDARD_MAIN
+serviceMode: STANDARD_ALL
 
 # A unique name for the cluster that this service node/instance belongs to; use alphanumeric and underscores only.
 cluster: local_default
 
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
-
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#datadog:
-#  apiKey: <api-key>
-#  host: <output-of-"hostname -f">
-#  whiteList:  # Exclude measurements that we don't use in Datadog graphs or alerts
-#  - ".*$(?<!5MinuteRate|15MinuteRate|meanRate|min|max|mean|stddev|95percentile|99percentile|999percentile)"
-
 
 dataCenter:
   # Which data center does this server belong to?
@@ -124,6 +116,25 @@ blobStore:
       keyspaces:
         media_global: {}
 
+  approvedContentTypes:
+    - application/json
+    - audio/aac
+    - audio/mp4
+    - audio/mpeg
+    - audio/ogg
+    - audio/wav
+    - image/bmp
+    - image/gif
+    - image/jpeg
+    - image/png
+    - image/tiff
+    - image/x-xbitmap
+    - text/plain
+    - video/mp4
+    - video/mpeg
+    - video/ogg
+    - video/quicktime
+    - video/x-msvideo
 
 queueService:
   # Cassandra connection settings

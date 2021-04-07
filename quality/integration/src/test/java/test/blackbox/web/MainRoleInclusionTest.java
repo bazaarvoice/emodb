@@ -25,7 +25,7 @@ public class MainRoleInclusionTest extends BaseRoleRestHelper {
 
 
     public MainRoleInclusionTest() {
-        super ("/config-main-role.yaml");
+        super ("/config-all-role.yaml");
     }
 
     @BeforeTest
