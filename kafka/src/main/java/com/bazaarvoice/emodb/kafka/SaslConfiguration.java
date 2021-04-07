@@ -29,11 +29,11 @@ public class SaslConfiguration {
         return this._saslPassword;
     }
 
-    public void set_SaslUserName(String saslUserName) {
+    public void setSaslUserName(String saslUserName) {
         this._saslUserName = saslUserName;
     }
 
-    public void set_SaslPassword(String saslPassword) {
+    public void setSaslPassword(String saslPassword) {
         this._saslPassword = saslPassword;
     }
 
