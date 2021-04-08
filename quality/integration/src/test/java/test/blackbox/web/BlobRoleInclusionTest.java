@@ -17,7 +17,7 @@ public class BlobRoleInclusionTest extends BaseRoleRestHelper {
     AuthBlobStore _blobStore;
 
     BlobRoleInclusionTest() {
-        super ("/config-blob-role.yaml");
+        super ("/config-all-role.yaml");
     }
 
     @BeforeTest
