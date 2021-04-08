@@ -14,6 +14,6 @@ public interface KafkaCluster {
 
     String getBootstrapServers();
 
-    SslConfiguration getSSLConfiguration();
+    SaslConfiguration getSaslConfiguration();
 
 }
