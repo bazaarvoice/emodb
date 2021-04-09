@@ -17,7 +17,7 @@
 
     <properties>
         <swagger.version>1.5.8</swagger.version>
-        <docker-maven-plugin.version>0.34.1</docker-maven-plugin.version>
+        <docker-maven-plugin.version>0.35.0</docker-maven-plugin.version>
         <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
         <docker.build.skipRun>true</docker.build.skipRun>
         <docker.floating.tag>${project.version}</docker.floating.tag>
@@ -291,7 +291,7 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>rpm-maven-plugin</artifactId>
-                        <version>2.1.5</version>
+                        <version>2.2.0</version>
                         <executions>
                             <execution>
                                 <phase>package</phase>
@@ -306,7 +306,7 @@
                         </executions>
                         <configuration>
                             <group>BV/EmoDB</group>
-                            <copyright>Other/Proprietary</copyright>
+                            <license>Other/Proprietary</license>
                             <defaultDirmode>755</defaultDirmode>
                             <defaultFilemode>644</defaultFilemode>
                             <defaultUsername>root</defaultUsername>

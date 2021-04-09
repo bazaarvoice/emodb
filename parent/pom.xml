@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
-        <version>1.4</version>
+        <version>1.11</version>
         <relativePath />
     </parent>
 
@@ -46,7 +46,6 @@
         <shiro.version>1.7.0</shiro.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
-        <dependency-check-maven.version>6.0.3</dependency-check-maven.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
@@ -62,7 +61,7 @@
         <jacoco.version>0.8.6</jacoco.version>
         <skipCC>true</skipCC>
 
-        <sonar.version>3.7.0.1746</sonar.version>
+        <sonar.version>3.8.0.2131</sonar.version>
         <sonar.sources>src/main</sonar.sources>
         <sonar.test.sources>src/test</sonar.test.sources>
 
@@ -571,7 +570,6 @@
                 <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>${dependency-check-maven.version}</version>
                     <configuration>
                         <!--
                             Default configuration skips dependency checks to reduce build time.  A build should be performed
@@ -654,7 +652,7 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.2</version>
+                <version>1.6.8</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>sonatype-nexus-staging</serverId>
@@ -665,7 +663,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.1.2</version>
                 <executions>
                     <execution>
                         <id>analyze</id>
@@ -681,7 +678,6 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>enforce</id>
