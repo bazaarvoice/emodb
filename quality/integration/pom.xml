@@ -184,7 +184,6 @@
 
     <profiles>
         <profile>
-            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
             <id>start-emodb</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
