@@ -17,6 +17,7 @@
     <properties>
         <skipTests>false</skipTests>
         <skipITs>false</skipITs>
+        <integration.suiteXmlFile>src/test/resources/all-testng.xml</integration.suiteXmlFile>
         <emodb.pause>false</emodb.pause>
         <config-all-role-yaml>${project.basedir}/src/test/resources/config-all-role.yaml</config-all-role-yaml>
         <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
@@ -145,9 +146,7 @@
                             </includes>
                             <skip>${skipTests}</skip>
                             <suiteXmlFiles>
-                                <suiteXmlFile>src/test/resources/blackbox-testng.xml</suiteXmlFile>
-                                <suiteXmlFile>src/test/resources/client-testng.xml</suiteXmlFile>
-                                <suiteXmlFile>src/test/resources/jersey-unit-testng.xml</suiteXmlFile>
+                                <suiteXmlFile>${integration.suiteXmlFile}</suiteXmlFile>
                             </suiteXmlFiles>
                             <systemPropertyVariables>
                                 <runAdaptiveCqlIntegrationTests>${runAdaptiveCqlIntegrationTests}</runAdaptiveCqlIntegrationTests>
