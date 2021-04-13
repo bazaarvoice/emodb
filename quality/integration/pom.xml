@@ -179,82 +179,94 @@
                 </executions>
             </plugin>
 
-            <!-- Start/stop a local zookeeper, one cassandra and 2 emodb servers, one per role. -->
-            <!-- Runs inside the Maven launcher's JVM. -->
-            <!-- Ports specified below must match config yaml entries -->
-            <plugin>
-                <groupId>com.bazaarvoice.emodb</groupId>
-                <artifactId>emodb-sdk</artifactId>
-                <version>${project.version}</version>
-                <executions>
-                    <execution>
-                        <id>start-emodb-all</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>start</goal>
-                        </goals>
-                        <configuration>
-                            <healthCheckPort>8481</healthCheckPort>
-                            <cassandraRpcPort>9160</cassandraRpcPort>
-                            <emoConfigurationFile>${config-all-role-yaml}</emoConfigurationFile>
-                            <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
-                            <emoDir>emodb-all</emoDir>
-                            <autoStartCassandra>true</autoStartCassandra>
-                            <autoStartZookeeper>true</autoStartZookeeper>
-                            <autoStartEmo>true</autoStartEmo>
-                            <skip>${skipTests}</skip>
-                            <emoLogFile>${basedir}/target/emodb-all.log</emoLogFile>
-                            <roles>
-                                <role>
-                                    <name>anonymous</name>
-                                    <permissions>
-                                        <permission>sor|if(or("read","create_table"))|*</permission>
-                                        <permission>blob|read|*</permission>
-                                        <permission>databus|*</permission>
-                                        <permission>queue|*</permission>
-                                        <permission>stash|*</permission>
-                                    </permissions>
-                                </role>
-                            </roles>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>start-emodb-stash</id>
-                        <phase>pre-integration-test</phase>
-                        <goals>
-                            <goal>start</goal>
-                        </goals>
-                        <configuration>
-                            <healthCheckPort>8681</healthCheckPort>
-                            <cassandraRpcPort>9160</cassandraRpcPort>
-                            <emoConfigurationFile>${config-stash-role-yaml}</emoConfigurationFile>
-                            <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
-                            <emoDir>emodb-stash</emoDir>
-                            <autoStartCassandra>false</autoStartCassandra>
-                            <autoStartZookeeper>false</autoStartZookeeper>
-                            <autoStartEmo>true</autoStartEmo>
-                            <emoLogFile>${basedir}/target/emodb-stash.log</emoLogFile>
-                            <skip>${skipTests}</skip>
-                        </configuration>
-                    </execution>
-
-                    <execution>
-                        <id>stop-all-emodbs</id>
-                        <phase>post-integration-test</phase>
-                        <goals>
-                            <goal>stop</goal>
-                        </goals>
-                    </execution>
-                </executions>
-                <configuration>
-                    <autoStartEmo>true</autoStartEmo>
-                    <skip>${skipTests}</skip>
-                    <waitForInterrupt>${emodb.pause}</waitForInterrupt>
-                </configuration>
-            </plugin>
-
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <!-- Start/stop a local zookeeper, one cassandra and 2 emodb servers, one per role. -->
+                    <!-- Runs inside the Maven launcher's JVM. -->
+                    <!-- Ports specified below must match config yaml entries -->
+                    <plugin>
+                        <groupId>com.bazaarvoice.emodb</groupId>
+                        <artifactId>emodb-sdk</artifactId>
+                        <version>${project.version}</version>
+                        <executions>
+                            <execution>
+                                <id>start-emodb-all</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8481</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${config-all-role-yaml}</emoConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb-all</emoDir>
+                                    <autoStartCassandra>true</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <skip>${skipTests}</skip>
+                                    <emoLogFile>${basedir}/target/emodb-all.log</emoLogFile>
+                                    <roles>
+                                        <role>
+                                            <name>anonymous</name>
+                                            <permissions>
+                                                <permission>sor|if(or("read","create_table"))|*</permission>
+                                                <permission>blob|read|*</permission>
+                                                <permission>databus|*</permission>
+                                                <permission>queue|*</permission>
+                                                <permission>stash|*</permission>
+                                            </permissions>
+                                        </role>
+                                    </roles>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>start-emodb-stash</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8681</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${config-stash-role-yaml}</emoConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb-stash</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>false</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${basedir}/target/emodb-stash.log</emoLogFile>
+                                    <skip>${skipTests}</skip>
+                                </configuration>
+                            </execution>
+
+                            <execution>
+                                <id>stop-all-emodbs</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <autoStartEmo>true</autoStartEmo>
+                            <skip>${skipTests}</skip>
+                            <waitForInterrupt>${emodb.pause}</waitForInterrupt>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
