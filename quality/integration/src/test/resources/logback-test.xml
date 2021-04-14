@@ -5,10 +5,11 @@
         </encoder>
     </appender>
 
-    <logger name="org.apache.zookeeper" level="OFF"/>
+    <logger name="org.apache.zookeeper" level="WARN"/>
     <logger name="org.apache.curator" level="WARN"/>
+    <logger name="org.apache.http" level="WARN"/>
 
-    <root level="DEBUG">
-	<!--<appender-ref ref="STDOUT" />-->
+    <root level="INFO">
+	    <appender-ref ref="STDOUT" />
     </root>
 </configuration>
