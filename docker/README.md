@@ -43,7 +43,6 @@ Related services:
 Available apps:
 
 - emodb-web
-- emodb-blob
 - emodb-megabus
 - emodb-stash
 

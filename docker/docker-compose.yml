@@ -57,64 +57,6 @@ services:
     depends_on:
       - zookeeper
 
-  emodb-blob-dc1:
-    image: 'bazaarvoice/emodb-web:latest'
-    networks:
-      - emodb
-    environment:
-    - APP_ROLE=blob
-    - DATACENTER=dc1
-    deploy:
-      resources:
-        limits:
-          cpus: 0.5
-          memory: 512M
-    ports:
-      - '8280:8080'
-      - '8281:8081'
-    volumes:
-      - './configs:/app/config'
-      - '../web-local/target/logs:/app/logs'
-    healthcheck:
-      interval: 1m
-      timeout: 10s
-      retries: 3
-      test: ["CMD-SHELL", "printf \"GET /healthcheck HTTP/1.1\n Accept-Encoding: gzip\nAccept: text/html\nHost: localhost\n\n\" | nc localhost 8081 || exit 1"]
-    depends_on:
-      emodb-web-dc1:
-        condition: service_healthy
-      cassandra-dc1:
-        condition: service_healthy
-
-  emodb-blob-dc2:
-    image: 'bazaarvoice/emodb-web:latest'
-    networks:
-      - emodb
-    environment:
-      - APP_ROLE=blob
-      - DATACENTER=dc1
-    deploy:
-      resources:
-        limits:
-          cpus: 0.5
-          memory: 512M
-    ports:
-      - '8380:8080'
-      - '8381:8081'
-    volumes:
-      - './configs:/app/config'
-      - '../web-local/target/logs:/app/logs'
-    healthcheck:
-      interval: 1m
-      timeout: 10s
-      retries: 3
-      test: ["CMD-SHELL", "printf \"GET /healthcheck HTTP/1.1\n Accept-Encoding: gzip\nAccept: text/html\nHost: localhost\n\n\" | nc localhost 8081 || exit 1"]
-    depends_on:
-      emodb-web-dc2:
-        condition: service_healthy
-      emodb-blob-dc1:
-        condition: service_started
-
   emodb-web-dc1:
     image: 'bazaarvoice/emodb-web:latest'
     restart: always
@@ -186,6 +128,8 @@ services:
     environment:
     - APP_ROLE=stash
     - DATACENTER=dc1
+    - LOCAL_PORT=8080
+    - LOCAL_ADMIN_PORT=8081
     deploy:
       resources:
         limits:
@@ -215,6 +159,8 @@ services:
     environment:
       - APP_ROLE=stash
       - DATACENTER=dc1
+      - LOCAL_PORT=8080
+      - LOCAL_ADMIN_PORT=8081
     deploy:
       resources:
         limits:
@@ -244,6 +190,8 @@ services:
     environment:
       - APP_ROLE=megabus
       - DATACENTER=dc1
+      - LOCAL_PORT=8080
+      - LOCAL_ADMIN_PORT=8081
     deploy:
       resources:
         limits:
@@ -275,6 +223,8 @@ services:
     environment:
       - APP_ROLE=megabus
       - DATACENTER=dc1
+      - LOCAL_PORT=8080
+      - LOCAL_ADMIN_PORT=8081
     deploy:
       resources:
         limits:
