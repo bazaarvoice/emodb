@@ -1,4 +1,4 @@
-FROM amazoncorretto:8-alpine
+FROM amazoncorretto:11-alpine
 
 ARG version
 ARG APP_ROLE
