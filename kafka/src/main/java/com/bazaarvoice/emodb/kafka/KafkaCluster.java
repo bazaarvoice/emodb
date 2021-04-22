@@ -17,6 +17,6 @@ public interface KafkaCluster {
 
     SaslConfiguration getSaslConfiguration();
 
-    Collection<String>getAllTopics();
+    Collection<String> getAllTopics();
 
 }

@@ -6,17 +6,21 @@ import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.codahale.metrics.health.HealthCheck;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeClusterResult;
+import org.apache.kafka.common.Node;
+import org.apache.kafka.common.utils.AppInfoParser;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Objects.requireNonNull;
 
 public class KafkaAdminHealthCheck extends HealthCheck {
     private final AdminClient adminClient;
     private final String bootstrapServers;
-    private final String KAFKA_VERSION = "2.3.0";
+    private final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
 
     @Inject
     public KafkaAdminHealthCheck(final AdminClient adminClient,
@@ -25,7 +29,7 @@ public class KafkaAdminHealthCheck extends HealthCheck {
                                  final KafkaConfiguration healthCheckConfiguration) {
         this.adminClient = requireNonNull(adminClient);
         this.bootstrapServers = requireNonNull(bootstrapServers);
-        healthCheckRegistry.addHealthCheck(healthCheckConfiguration.getName(), this);
+        healthCheckRegistry.addHealthCheck(healthCheckConfiguration.getAdminHealthCheckName(), this);
     }
 
     @Override
@@ -56,7 +60,13 @@ public class KafkaAdminHealthCheck extends HealthCheck {
                 final String errorMessage = String.join(",", errors);
                 return Result.unhealthy(errorMessage);
             }
-            return Result.healthy("Kafka version: " +KAFKA_VERSION);
+
+            Collection<Node> nodeCount = response.nodes().get();
+            Optional<Node> nodeDetails = nodeCount.stream().findFirst();
+
+            return Result.healthy("Kafka client version: " + KAFKA_CLIENT_VERSION + " | Node count: " + nodeCount.size() +
+                    " | Node(1) info: Host - " + nodeDetails.map(Node::host).orElse(null) +
+                    ". Port - " + nodeDetails.map(Node::port).orElse(null));
         } catch (final Exception e) {
             return Result.unhealthy("Error describing Kafka Cluster, servers=" + bootstrapServers + " error: " + e);
         }

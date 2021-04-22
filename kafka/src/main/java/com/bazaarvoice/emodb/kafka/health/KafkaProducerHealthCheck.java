@@ -5,13 +5,11 @@ import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.codahale.metrics.health.HealthCheck;
 import org.apache.kafka.clients.producer.Producer;
-import org.apache.kafka.common.PartitionInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.kafka.common.utils.AppInfoParser;
+
 
 import javax.inject.Inject;
 import java.util.Collection;
-import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
@@ -19,7 +17,7 @@ public class KafkaProducerHealthCheck extends HealthCheck {
 
     private final Producer producer;
     private final Collection<String> topics;
-    private final String KAFKA_VERSION = "2.3.0";
+    private final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
 
 
     @Inject
@@ -28,14 +26,16 @@ public class KafkaProducerHealthCheck extends HealthCheck {
                                     final KafkaConfiguration healthCheckConfiguration) {
         this.producer = requireNonNull(kafkaCluster.producer());
         this.topics = requireNonNull(kafkaCluster.getAllTopics());
-        healthCheckRegistry.addHealthCheck(healthCheckConfiguration.getProducerName(), this);
+
+        healthCheckRegistry.addHealthCheck(healthCheckConfiguration.
+                getKafkaProducerConfiguration().getProducerHealthCheckName(), this);
     }
 
     @Override
     protected Result check() {
         try {
             topics.forEach(producer::partitionsFor);
-            return Result.healthy(" Kafka version: "+KAFKA_VERSION);
+            return Result.healthy("Kafka client version: " + KAFKA_CLIENT_VERSION + " | Topics: " + topics.toString());
         } catch (Exception e) {
             return Result.unhealthy(e);
         }

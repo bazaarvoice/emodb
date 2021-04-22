@@ -20,11 +20,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.HashSet;
-import java.util.Collection;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -39,7 +39,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
     private final KafkaProducerConfiguration _kafkaProducerConfiguration;
     private final Supplier<Producer<String, JsonNode>> _producerSupplier;
     private final SaslConfiguration _saslConfiguration;
-    private Set<String> topics = new HashSet<>();
+    private final Set<String> topics = new HashSet<>();
 
     @Inject
     public DefaultKafkaCluster(AdminClient adminClient,
@@ -130,7 +130,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
     }
 
     @Override
-    public Collection<String> getAllTopics(){
+    public Collection<String> getAllTopics() {
         return topics;
     }
 }
