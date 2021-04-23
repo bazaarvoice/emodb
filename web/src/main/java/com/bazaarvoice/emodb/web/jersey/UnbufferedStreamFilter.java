@@ -9,6 +9,7 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.WriteListener;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpServletResponseWrapper;
 import java.io.IOException;
@@ -61,6 +62,16 @@ public class UnbufferedStreamFilter implements Filter {
                             getResponse().flushBuffer();
                             flushStopwatch.reset().start();
                         }
+                    }
+
+                    @Override
+                    public boolean isReady() {
+                        return true;
+                    }
+
+                    @Override
+                    public void setWriteListener(WriteListener writeListener) {
+                        // No-op because isReady() always returns true
                     }
                 };
             }

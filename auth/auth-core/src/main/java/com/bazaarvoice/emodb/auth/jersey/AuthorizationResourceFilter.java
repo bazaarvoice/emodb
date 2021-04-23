@@ -1,19 +1,18 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.permissions.MatchingPermission;
-import com.google.common.base.Function;
-import com.sun.jersey.api.core.HttpRequestContext;
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.shiro.authz.AuthorizationException;
 import org.apache.shiro.authz.annotation.Logical;
 import org.apache.shiro.subject.Subject;
 import org.apache.shiro.util.ThreadContext;
 
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,27 +20,17 @@ import java.util.regex.Pattern;
  * Resource filter for methods which require authorization.  The subject should already be authenticated prior
  * to this filter executing.
  */
-public class AuthorizationResourceFilter implements ResourceFilter, ContainerRequestFilter {
+public class AuthorizationResourceFilter implements ContainerRequestFilter {
 
     private final String[] _permissions;
     private final Logical _logical;
-    private final Map<String, Function<HttpRequestContext, String>> _substitutions;
+    private final Map<String, Function<ContainerRequestContext, String>> _substitutions;
 
     public AuthorizationResourceFilter(List<String> permissions, Logical logical,
-                                       Map<String, Function<HttpRequestContext, String>> substitutions) {
+                                       Map<String, Function<ContainerRequestContext, String>> substitutions) {
         _permissions = permissions.toArray(new String[permissions.size()]);
         _logical = logical;
         _substitutions = substitutions;
-    }
-
-    @Override
-    public ContainerRequestFilter getRequestFilter() {
-        return this;
-    }
-
-    @Override
-    public ContainerResponseFilter getResponseFilter() {
-        return null;
     }
 
     /**
@@ -49,7 +38,7 @@ public class AuthorizationResourceFilter implements ResourceFilter, ContainerReq
      * will be thrown, otherwise the original request is returned.
      */
     @Override
-    public ContainerRequest filter(ContainerRequest request) {
+    public void filter(ContainerRequestContext request) {
         Subject subject = ThreadContext.getSubject();
 
         String[] permissions = resolvePermissions(request);
@@ -73,8 +62,6 @@ public class AuthorizationResourceFilter implements ResourceFilter, ContainerReq
                 }
             }
         }
-
-        return request;
     }
 
     /**
@@ -82,7 +69,7 @@ public class AuthorizationResourceFilter implements ResourceFilter, ContainerReq
      * "get|{thing}" and the method's @Path annotation is "/resources/{thing}" then a request to
      * "/resources/table" will resolve to the permission "get|table".
      */
-    private String[] resolvePermissions(ContainerRequest request) {
+    private String[] resolvePermissions(ContainerRequestContext request) {
         String[] values = _permissions;
 
         if (_substitutions.isEmpty()) {
@@ -92,15 +79,30 @@ public class AuthorizationResourceFilter implements ResourceFilter, ContainerReq
         String[] permissions = new String[values.length];
         System.arraycopy(values, 0, permissions, 0, values.length);
 
-        for (Map.Entry<String, Function<HttpRequestContext, String>> entry : _substitutions.entrySet()) {
+        for (Map.Entry<String, Function<ContainerRequestContext, String>> entry : _substitutions.entrySet()) {
             String key = Pattern.quote(entry.getKey());
             String substitution = Matcher.quoteReplacement(MatchingPermission.escape(entry.getValue().apply(request)));
 
-            for (int i=0; i < values.length; i++) {
+            for (int i = 0; i < values.length; i++) {
                 permissions[i] = permissions[i].replaceAll(key, substitution);
             }
         }
 
         return permissions;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AuthorizationResourceFilter that = (AuthorizationResourceFilter) o;
+        return Arrays.equals(_permissions, that._permissions) && _logical == that._logical && _substitutions.equals(that._substitutions);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hash(_logical, _substitutions);
+        result = 31 * result + Arrays.hashCode(_permissions);
+        return result;
     }
 }

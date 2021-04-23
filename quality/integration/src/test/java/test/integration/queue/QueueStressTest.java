@@ -12,8 +12,10 @@ import com.bazaarvoice.ostrich.pool.ServiceCachingPolicyBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.logging.LoggingFactory;
@@ -22,11 +24,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
+import javax.ws.rs.client.Client;
 import java.io.File;
 import java.time.Duration;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
@@ -159,8 +163,11 @@ public class QueueStressTest {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        QueueClientFactory queueFactory = QueueClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        QueueClientFactory queueFactory = QueueClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthQueueService authQueueService = ServicePoolBuilder.create(AuthQueueService.class)
                 .withServiceFactory(queueFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, queueFactory.getServiceName(), metricRegistry))

@@ -29,7 +29,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.LongParam;
 import io.swagger.annotations.Api;
@@ -396,7 +395,7 @@ public class BlobStoreResource1 {
         if (range == null) {
             response.header(HttpHeaders.CONTENT_LENGTH, metadata.getLength());
         } else {
-            response.status(ClientResponse.Status.PARTIAL_CONTENT);
+            response.status(Response.Status.PARTIAL_CONTENT);
             response.header(HttpHeaders.CONTENT_LENGTH, range.getLength());
             response.header("Content-Range", "bytes " + range.getOffset() + "-" +
                     (range.getOffset() + range.getLength() - 1) + "/" + metadata.getLength());

@@ -1,20 +1,20 @@
 package com.bazaarvoice.emodb.web.throttling;
 
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponse;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilter;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
+import java.io.IOException;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * This filter limits the number of concurrent requests based on the request parameters.  It is mostly a thin
- * wrapper with the necessary Jersey interfaces for calling {@link ConcurrentRequestRegulator#throttle(ContainerRequest)}
- * and {@link ConcurrentRequestRegulator#release(ContainerRequest)} respectively at the beginning and end of processing
+ * wrapper with the necessary Jersey interfaces for calling {@link ConcurrentRequestRegulator#throttle(ContainerRequestContext)}
+ * and {@link ConcurrentRequestRegulator#release(ContainerRequestContext)} respectively at the beginning and end of processing
  * a request.
  */
-public class ConcurrentRequestsThrottlingFilter implements ResourceFilter, ContainerRequestFilter, ContainerResponseFilter {
+public class ConcurrentRequestsThrottlingFilter implements ContainerRequestFilter, ContainerResponseFilter {
 
     private final ConcurrentRequestRegulatorSupplier _regulatorSupplier;
 
@@ -24,24 +24,12 @@ public class ConcurrentRequestsThrottlingFilter implements ResourceFilter, Conta
     }
 
     @Override
-    public ContainerRequest filter(ContainerRequest request) {
-        _regulatorSupplier.forRequest(request).throttle(request);
-        return request;
+    public void filter(ContainerRequestContext requestContext) throws IOException {
+        _regulatorSupplier.forRequest(requestContext).throttle(requestContext);
     }
 
     @Override
-    public ContainerResponse filter(ContainerRequest request, ContainerResponse response) {
-        _regulatorSupplier.forRequest(request).release(request);
-        return response;
-    }
-
-    @Override
-    public ContainerRequestFilter getRequestFilter() {
-        return this;
-    }
-
-    @Override
-    public ContainerResponseFilter getResponseFilter() {
-        return this;
+    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
+        _regulatorSupplier.forRequest(requestContext).release(requestContext);
     }
 }

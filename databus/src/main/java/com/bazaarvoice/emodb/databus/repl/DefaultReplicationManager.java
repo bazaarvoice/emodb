@@ -26,13 +26,13 @@ import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 import io.dropwizard.lifecycle.Managed;
 import io.dropwizard.util.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;

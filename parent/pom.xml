@@ -29,12 +29,12 @@
         <cassandra.version>2.2.4</cassandra.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
-        <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>17.0</guava.version>
+        <dropwizard.version>0.8.5</dropwizard.version>
+        <guava.version>18.0</guava.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.6.7.2</jackson.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
-        <metrics.version>3.0.2</metrics.version>
+        <metrics.version>3.1.1</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.29</slf4j.version>
@@ -42,7 +42,8 @@
         <commons-compress.version>1.20</commons-compress.version>
         <aws-sdk.version>1.11.551</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
-        <jersey.version>1.18.1</jersey.version>
+        <jersey.version>2.21</jersey.version>
+        <swagger.version>1.5.13</swagger.version>
         <shiro.version>1.7.0</shiro.version>
         <cassandra.driver.version>3.1.1</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
@@ -92,6 +93,12 @@
                 <groupId>com.bazaarvoice.ostrich</groupId>
                 <artifactId>ostrich-core</artifactId>
                 <version>${ostrich.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.codahale.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.ostrich</groupId>
@@ -224,12 +231,12 @@
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
+                <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
@@ -300,6 +307,11 @@
                 <version>1.1.0.Final</version>
             </dependency>
             <dependency>
+                <groupId>javax.ws.rs</groupId>
+                <artifactId>javax.ws.rs-api</artifactId>
+                <version>2.1.1</version>
+            </dependency>
+            <dependency>
                 <groupId>joda-time</groupId>
                 <artifactId>joda-time</artifactId>
                 <version>${jodatime-version}</version>
@@ -367,6 +379,17 @@
                 <version>${jackson.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey</groupId>
+                <artifactId>jersey-bom</artifactId>
+                <version>${jersey.version}</version>
+                <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.shiro</groupId>
+                <artifactId>shiro-core</artifactId>
+                <version>${shiro.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -458,6 +481,25 @@
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>1.21</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-jersey2-jaxrs</artifactId>
+                <version>${swagger.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <artifactId>org.glassfish.jersey.core</artifactId>
+                        <groupId>*</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>org.glassfish.hk2.external</artifactId>
+                        <groupId>*</groupId>
+                    </exclusion>
+                    <exclusion>
+                        <artifactId>org.glassfish.jersey.containers</artifactId>
+                        <groupId>*</groupId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <!-- Megabus dependencies -->

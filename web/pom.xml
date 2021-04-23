@@ -16,7 +16,6 @@
     <name>EmoDB RESTful Web Server</name>
 
     <properties>
-        <swagger.version>1.5.8</swagger.version>
         <docker-maven-plugin.version>0.35.0</docker-maven-plugin.version>
         <docker.build.dockerFile>Dockerfile</docker.build.dockerFile>
         <docker.build.skipRun>true</docker.build.skipRun>
@@ -225,7 +224,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
+        <!--        TODO -->
+        <!--        <dependency>
+                    <groupId>io.swagger</groupId>
+                    <artifactId>swagger-jersey2-jaxrs</artifactId>
+                </dependency>-->
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>

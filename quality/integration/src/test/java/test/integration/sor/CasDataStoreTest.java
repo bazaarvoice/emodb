@@ -70,12 +70,14 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
+import org.glassfish.jersey.client.JerseyClientBuilder;
 import org.mockito.ArgumentCaptor;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import javax.validation.Validation;
+import javax.ws.rs.client.Client;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
@@ -96,6 +98,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
@@ -177,6 +180,8 @@ public class CasDataStoreTest {
 
                 bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
                 bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
+
+                bind(Client.class).toInstance(JerseyClientBuilder.createClient());
 
                 bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
                         Validation.buildDefaultValidatorFactory().getValidator(),
@@ -457,7 +462,7 @@ public class CasDataStoreTest {
         boolean found = false;
         while (tableIter.hasNext()) {
             Table table = tableIter.next();
-            assertTrue(!table.getName().startsWith("__")); // No internal tables
+            assertFalse(table.getName().startsWith("__")); // No internal tables
             if (TABLE.equals(table.getName())) {
                 assertEquals(table.getOptions(), new TableOptionsBuilder().setPlacement("ugc_global:ugc").build());
                 assertEquals(table.getTemplate(), ImmutableMap.of());

@@ -31,11 +31,9 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
-import org.apache.commons.codec.binary.Base64;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -43,7 +41,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -708,10 +705,6 @@ public class DataStoreClient implements AuthDataStore {
         }
 
         return e;
-    }
-
-    private String basicAuthCredentials(String credentials) {
-        return String.format("Basic %s", Base64.encodeBase64String(credentials.getBytes(Charsets.UTF_8)));
     }
 
     private Object[] optional(Object queryArg) {

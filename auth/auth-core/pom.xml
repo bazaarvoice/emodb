@@ -15,10 +15,6 @@
 
     <name>EmoDB Authentication</name>
 
-    <properties>
-        <shiro.version>1.2.6</shiro.version>
-    </properties>
-
     <dependencies>
         <!-- Bazaarvoice dependencies -->
         <dependency>
@@ -36,7 +32,6 @@
         <dependency>
             <groupId>org.apache.shiro</groupId>
             <artifactId>shiro-core</artifactId>
-            <version>${shiro.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>

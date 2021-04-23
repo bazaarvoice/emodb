@@ -2,19 +2,17 @@ package com.bazaarvoice.emodb.web.throttling;
 
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.Lists;
-import com.sun.jersey.api.model.AbstractMethod;
-import com.sun.jersey.spi.container.ResourceFilter;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 
 import javax.annotation.Nullable;
-import java.util.List;
+import javax.ws.rs.container.DynamicFeature;
+import javax.ws.rs.container.ResourceInfo;
+import javax.ws.rs.core.FeatureContext;
 
 /**
  * This factory checks for @ThrottleConcurrentRequests attribute on methods,
  * and instantiates a ResourceFilter for those methods.
  */
-public class ThrottlingFilterFactory implements ResourceFilterFactory {
+public class ThrottlingFilterFactory implements DynamicFeature {
 
     private final static String SEMAPHORE_PROPERTY = ThrottlingFilterFactory.class.getName() + ".semaphore";
 
@@ -29,15 +27,13 @@ public class ThrottlingFilterFactory implements ResourceFilterFactory {
     }
 
     @Override
-    public List<ResourceFilter> create(AbstractMethod abstractMethod) {
-        List<ResourceFilter> resourceFilters = Lists.newArrayList();
-        if (abstractMethod.isAnnotationPresent(ThrottleConcurrentRequests.class)) {
-            int maxRequests = abstractMethod.getAnnotation(ThrottleConcurrentRequests.class).maxRequests();
+    public void configure(ResourceInfo resourceInfo, FeatureContext context) {
+        if (resourceInfo.getResourceMethod().isAnnotationPresent(ThrottleConcurrentRequests.class)) {
+            int maxRequests = resourceInfo.getResourceMethod().getAnnotation(ThrottleConcurrentRequests.class).maxRequests();
             InstanceConcurrentRequestRegulatorSupplier regulatorSupplier =
                     new InstanceConcurrentRequestRegulatorSupplier(
                             new DefaultConcurrentRequestRegulator(SEMAPHORE_PROPERTY, maxRequests, _meter));
-            resourceFilters.add(new ConcurrentRequestsThrottlingFilter(regulatorSupplier));
+            context.register(new ConcurrentRequestsThrottlingFilter(regulatorSupplier));
         }
-        return resourceFilters;
     }
 }

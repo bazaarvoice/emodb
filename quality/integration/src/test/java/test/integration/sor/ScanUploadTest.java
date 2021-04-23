@@ -21,11 +21,11 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.net.HostAndPort;
-import com.sun.jersey.api.client.Client;
 import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
@@ -43,6 +43,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
 import javax.validation.ValidatorFactory;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import java.io.BufferedReader;
 import java.io.File;
@@ -169,11 +171,12 @@ public class ScanUploadTest {
 
             // Use the API to start the scan and upload
             Client client = new JerseyClientBuilder(environment).build("scanUploadTest");
-            ScanStatus scanStatus = client.resource(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId))
+            ScanStatus scanStatus = client.target(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId))
                     .queryParam("placement", "ugc_global:ugc")
                     .queryParam("dest", dir.toURI().toString())
+                    .request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
-                    .post(ScanStatus.class, null);
+                    .post(Entity.json(null), ScanStatus.class);
 
             assertNotNull(scanStatus);
             assertEquals(scanStatus.getScanId(), scanId);
@@ -183,7 +186,8 @@ public class ScanUploadTest {
             while (!complete) {
                 Thread.sleep(5000);
 
-                scanStatus = client.resource(URI.create(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId)))
+                scanStatus = client.target(URI.create(String.format("http://localhost:%d/stash/1/job/%s", hostAndPort.getPort(), scanId)))
+                        .request()
                         .accept(MediaType.APPLICATION_JSON_TYPE)
                         .get(ScanStatus.class);
 
@@ -264,8 +268,11 @@ public class ScanUploadTest {
         try (CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator()) {
             curator.start();
 
-            DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                    configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+            DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpClient(
+                    configuration.getCluster(), client);
             dataStore = ServicePoolBuilder.create(DataStore.class)
                     .withServiceFactory(dataStoreFactory.usingCredentials(configuration.getScanner().get().getScannerApiKey().get()))
                     .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
