@@ -20,7 +20,7 @@ import static java.util.Objects.requireNonNull;
 public class KafkaAdminHealthCheck extends HealthCheck {
     private final AdminClient adminClient;
     private final String bootstrapServers;
-    private final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
+    private static final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
 
     @Inject
     public KafkaAdminHealthCheck(final AdminClient adminClient,

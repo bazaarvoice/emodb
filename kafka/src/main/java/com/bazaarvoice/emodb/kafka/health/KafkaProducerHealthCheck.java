@@ -17,7 +17,7 @@ public class KafkaProducerHealthCheck extends HealthCheck {
 
     private final Producer producer;
     private final Collection<String> topics;
-    private final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
+    private static final String KAFKA_CLIENT_VERSION = AppInfoParser.getVersion();
 
 
     @Inject
