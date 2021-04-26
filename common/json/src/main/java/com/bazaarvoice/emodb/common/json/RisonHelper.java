@@ -28,8 +28,8 @@ public class RisonHelper {
             return false;
         }
 
-        @Override
-        protected RisonParser _createJsonParser(Reader r, IOContext ctxt)
+
+        protected RisonParser _createGenerator(Reader r, IOContext ctxt)
                 throws IOException, JsonParseException {
             return new RisonParser(ctxt, _parserFeatures, _risonParserFeatures, r, _objectCodec,
                     _rootCharSymbols.makeChild(

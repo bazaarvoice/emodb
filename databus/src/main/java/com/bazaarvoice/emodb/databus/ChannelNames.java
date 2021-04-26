@@ -14,7 +14,7 @@ public class ChannelNames {
     private static final DedupEventStoreChannels DEDUP_CHANNELS =
             DedupEventStoreChannels.sharedWriteChannel("__dedupq_read:");
 
-    public static boolean isSystemChannel(String channel) {
+    public static boolean  (String channel) {
         return channel.startsWith(SYSTEM_PREFIX);
     }
 

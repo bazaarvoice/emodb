@@ -76,10 +76,10 @@ abstract public class StashRowIterable implements Iterable<Map<String, Object>>,
             }
         }
     }
-
+    /*
     @Override
     protected void finalize() throws Throwable {
         super.finalize();
         close();
-    }
+    }*/
 }

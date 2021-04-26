@@ -2,9 +2,9 @@ package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -52,12 +52,12 @@ public class StandardStashReader extends StashReader {
     }
 
     public static StandardStashReader getInstance(URI stashRoot, String accessKey, String secretKey) {
-        return getInstance(stashRoot, new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)), null);
+        return getInstance(stashRoot, new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)), null);
     }
 
     public static StandardStashReader getInstance(URI stashRoot, String accessKey, String secretKey,
                                                   ClientConfiguration s3Config) {
-        return getInstance(stashRoot, new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)), s3Config);
+        return getInstance(stashRoot, new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)), s3Config);
     }
 
     public static StandardStashReader getInstance(URI stashRoot, AWSCredentialsProvider credentialsProvider,
