@@ -96,10 +96,6 @@ public class DefaultDatabusTest {
                 Duration.ofDays(7), Duration.ofDays(7));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
-
-        // reset mocked subscription DAO so it doesn't carry information about old interactions
-        reset(mockSubscriptionDao);
-
     }
 
     @Test

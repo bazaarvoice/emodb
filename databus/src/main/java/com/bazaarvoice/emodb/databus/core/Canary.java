@@ -71,14 +71,14 @@ public class Canary extends AbstractScheduledService {
     private String newTimerName(String name) {
         return MetricRegistry.name("bv.emodb.databus", "DatabusCanary", name, "readEvents");
     }
-    @Deprecated
+
     private void createCanarySubscription() {
         // Except for resetting the ttl, recreating a subscription that already exists has no effect.
         // Assume that multiple servers that manage the same subscriptions can each attempt to create
         // the subscription at startup.  The subscription should last basically forever.
         // Note: make sure that we don't ignore any events
         _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
+                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL);
     }
 
     @Override
