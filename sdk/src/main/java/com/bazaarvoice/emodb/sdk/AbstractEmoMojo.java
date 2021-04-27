@@ -34,7 +34,7 @@ public abstract class AbstractEmoMojo extends AbstractMojo {
     @Parameter( defaultValue = "${session}", required = true, readonly = true )
     protected MavenSession session;
 
-    @Parameter( defaultValue = "${plugin}", required = true, readonly = true )
+    @Component
     protected BuildPluginManager pluginManager;
 
     @Parameter(defaultValue = "false")
