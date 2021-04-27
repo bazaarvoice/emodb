@@ -59,12 +59,6 @@ public class CanaryTest {
 
         _canary = new Canary(clusterInfo, condition, _databus, rateLimitedLogFactory, new MetricRegistry(), service);
 
-
-        verify(_databus).subscribe("__system_bus:canary-cluster", Conditions.alwaysTrue(),
-                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL);
-
-
-
         _canary.startAsync();
 
         // Starting the canary sends a single initialization runnable to the service, so execute it now.
