@@ -36,7 +36,7 @@ public abstract class AbstractSubjectDatabus implements SubjectDatabus {
         databus(subject).subscribe(subscription, tableFilter, subscriptionTtl, eventTtl);
     }
 
-    @Override
+    @Deprecated
     public void subscribe(Subject subject, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         databus(subject).subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }

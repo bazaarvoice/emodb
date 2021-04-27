@@ -53,7 +53,7 @@ public class DatabusFactory {
                 _ownerAwareDatabus.subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl);
             }
 
-            @Override
+            @Deprecated
             public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean ignoreSuppressedEvents) {
                 _ownerAwareDatabus.subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl, ignoreSuppressedEvents);
             }

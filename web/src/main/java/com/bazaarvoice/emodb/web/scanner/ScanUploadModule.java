@@ -8,6 +8,8 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.Dimension;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sqs.AmazonSQS;
@@ -210,8 +212,15 @@ public class ScanUploadModule extends PrivateModule {
                                                                         @SelfHostAndPort HostAndPort hostAndPort) {
         AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
         if (_config.getS3AssumeRole().isPresent()) {
-            s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider(
-                    credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHostText());
+            final AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard()
+                    .withCredentials(s3CredentialsProvider)
+                    .withRegion(Regions.US_EAST_1)
+                    .build();
+            s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider
+                            .Builder(_config.getS3AssumeRole().get(),"stash-" + hostAndPort.getHostText())
+                            .withStsClient(sts)
+                            .build();
+
         }
         return s3CredentialsProvider;
     }
@@ -219,24 +228,24 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     protected AmazonSNS provideAmazonSNS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSNS amazonSNS = new AmazonSNSClient(credentialsProvider);
-        amazonSNS.setRegion(region);
+        AmazonSNS amazonSNS = AmazonSNSClient.builder().withCredentials(credentialsProvider)
+                .withRegion(String.valueOf(region)).build();
         return amazonSNS;
     }
 
     @Provides
     @Singleton
     protected AmazonSQS provideAmazonSQS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSQS amazonSQS = new AmazonSQSClient(credentialsProvider);
-        amazonSQS.setRegion(region);
+        AmazonSQS amazonSQS = AmazonSQSClient.builder().withCredentials(credentialsProvider)
+                .withRegion(String.valueOf(region)).build();
         return amazonSQS;
     }
 
     @Provides
     @Singleton
     protected AmazonCloudWatch provideAmazonCloudWatch(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonCloudWatch cloudWatch = new AmazonCloudWatchClient(credentialsProvider);
-        cloudWatch.setRegion(region);
+        AmazonCloudWatch cloudWatch = AmazonCloudWatchClient.builder().withCredentials(credentialsProvider)
+                .withRegion(String.valueOf(region)).build();
         return cloudWatch;
     }
 

@@ -75,9 +75,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -174,12 +172,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(),nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
         assertFalse(actual.hasNext());
-        verify(_local).listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE));
+        verify(_local).listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE));
         verifyNoMoreInteractions(_local);
     }
 
@@ -244,7 +242,7 @@ public class DatabusJerseyTest extends ResourceTest {
         Duration subscriptionTtl = Duration.ofDays(15);
         Duration eventTtl = Duration.ofDays(2);
 
-        databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl, false);
+        databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
 
         verify(_local).subscribe(isSubject(), eq("queue-name"), eq(condition), eq(subscriptionTtl), eq(eventTtl), eq(false));
         verifyNoMoreInteractions(_local);

@@ -86,6 +86,7 @@ final class CassandraThriftFacade implements Closeable {
     }
 
     /** @deprecated Remove once Cassandra 1.1 support is no longer necessary. */
+    @Deprecated
     public void executeCql3Script_1_1(String script) {
         try {
             _client.set_cql_version(CQL_VERSION);

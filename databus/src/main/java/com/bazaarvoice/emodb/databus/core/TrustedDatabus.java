@@ -76,7 +76,7 @@ public class TrustedDatabus implements AuthDatabus {
         subscribe(apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, true);
     }
 
-    @Override
+    @Deprecated
     public void subscribe(@Credential String apiKey, String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         _databus.subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }

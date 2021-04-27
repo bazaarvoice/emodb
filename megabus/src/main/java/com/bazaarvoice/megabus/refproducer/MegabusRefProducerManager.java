@@ -74,6 +74,7 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
         leaderServiceTask.register(SERVICE_NAME, this);
     }
 
+
     public void createRefSubscriptions() {
         // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
         // we should reconcile this inconsistency
@@ -84,7 +85,7 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
         for (int i = 0; i < _numRefPartitions; i++) {
             _databus.subscribe(ChannelNames.getMegabusRefProducerChannel(_applicationId, i),
                     Conditions.partition(_numRefPartitions, i + 1),
-                    DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL, false);
+                    DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL);
         }
     }
 

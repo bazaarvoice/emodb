@@ -337,7 +337,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Ma
         subscribe(ownerId, subscription, tableFilter, subscriptionTtl, eventTtl, true);
     }
 
-    @Override
+    @Deprecated
     public void subscribe(String ownerId, String subscription, Condition tableFilter, Duration subscriptionTtl,
                           Duration eventTtl, boolean includeDefaultJoinFilter) {
         // This call should be deprecated soon.
