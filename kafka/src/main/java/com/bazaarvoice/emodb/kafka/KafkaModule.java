@@ -1,5 +1,7 @@
 package com.bazaarvoice.emodb.kafka;
 
+import com.bazaarvoice.emodb.kafka.health.KafkaAdminHealthCheck;
+import com.bazaarvoice.emodb.kafka.health.KafkaProducerHealthCheck;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -16,6 +18,8 @@ public class KafkaModule extends PrivateModule {
     protected void configure() {
         bind(KafkaCluster.class).to(DefaultKafkaCluster.class).asEagerSingleton();
         expose(KafkaCluster.class);
+        bind(KafkaAdminHealthCheck.class).asEagerSingleton();
+        bind(KafkaProducerHealthCheck.class).asEagerSingleton();
     }
 
     @Provides

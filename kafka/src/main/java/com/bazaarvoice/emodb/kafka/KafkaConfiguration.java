@@ -21,6 +21,9 @@ public class KafkaConfiguration {
     @JsonProperty("producer")
     private KafkaProducerConfiguration _kafkaProducerConfiguration = new KafkaProducerConfiguration();
 
+    private final String adminHealthCheckName = "kafka-cluster";
+
+
     public String getBootstrapServers() {
         return _kafkaBootstrapServers;
     }
@@ -36,4 +39,9 @@ public class KafkaConfiguration {
     public void setSaslConfiguration(final SaslConfiguration saslConfiguration) {
         _saslConfiguration = saslConfiguration;
     }
+
+    public String getAdminHealthCheckName(){
+        return adminHealthCheckName;
+    }
+
 }
