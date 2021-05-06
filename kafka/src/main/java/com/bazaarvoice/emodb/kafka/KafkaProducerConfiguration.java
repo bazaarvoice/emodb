@@ -21,6 +21,8 @@ public class KafkaProducerConfiguration {
     @JsonProperty("lingerMs")
     private Optional<Long> _lingerMs = Optional.empty();
 
+    private final String producerHealthCheckName = "kafka-producer";
+
     public Optional<Long> getBufferMemory() {
         return _bufferMemory;
     }
@@ -31,5 +33,9 @@ public class KafkaProducerConfiguration {
 
     public Optional<Long> getLingerMs() {
         return _lingerMs;
+    }
+
+    public String getProducerHealthCheckName(){
+        return producerHealthCheckName;
     }
 }

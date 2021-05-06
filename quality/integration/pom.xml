@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.4.3-SNAPSHOT</version>
+        <version>6.4.4-SNAPSHOT</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -17,7 +17,7 @@
     <properties>
         <skipTests>false</skipTests>
         <skipITs>false</skipITs>
-        <integration.suiteXmlFile>src/test/resources/all-testng.xml</integration.suiteXmlFile>
+        <integration.suiteXmlFile>src/test/resources/integration-testng.xml</integration.suiteXmlFile>
         <emodb.pause>false</emodb.pause>
         <config-all-role-yaml>${project.basedir}/src/test/resources/config-all-role.yaml</config-all-role-yaml>
         <config-stash-role-yaml>${project.basedir}/src/test/resources/config-stash-role.yaml</config-stash-role-yaml>
@@ -25,7 +25,7 @@
 
         <emodb.version>${project.version}</emodb.version>
         <zkConnection>localhost:2181</zkConnection>
-        <zkNamespace></zkNamespace>
+        <zkNamespace />
         <clusterName>local_default</clusterName>
         <placement>ugc_global:ugc</placement>
         <remotePlacement>app_remote:default</remotePlacement>

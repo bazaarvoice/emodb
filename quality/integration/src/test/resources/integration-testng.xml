@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="EmoDB Tests">
+    <test verbose="1" name="Blackbox Integration Tests">
+        <packages>
+            <package name="test.blackbox.*"/>
+        </packages>
+    </test>
+    <test verbose="1" name="Integration Tests">
+        <packages>
+            <package name="test.integration.*"/>
+        </packages>
+    </test>
+</suite>

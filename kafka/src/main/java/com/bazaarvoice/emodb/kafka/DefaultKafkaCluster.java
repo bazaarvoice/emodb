@@ -20,8 +20,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -36,6 +39,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
     private final KafkaProducerConfiguration _kafkaProducerConfiguration;
     private final Supplier<Producer<String, JsonNode>> _producerSupplier;
     private final SaslConfiguration _saslConfiguration;
+    private final Set<String> topics = new HashSet<>();
 
     @Inject
     public DefaultKafkaCluster(AdminClient adminClient,
@@ -57,6 +61,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         newTopic.configs(config);
         try {
             _adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+            topics.add(topic.getName());
         } catch (ExecutionException | InterruptedException e) {
             if (e.getCause() instanceof TopicExistsException) {
                 checkTopicPropertiesMatching(topic);
@@ -73,6 +78,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         checkArgument(topicDescription.partitions().size() == topic.getPartitions());
         topicDescription.partitions().forEach(topicPartitionInfo ->
                 checkArgument(topicPartitionInfo.replicas().size() == topic.getReplicationFactor()));
+        topics.add(topic.getName());
     }
 
     private Producer<String, JsonNode> createProducer() {
@@ -121,5 +127,10 @@ public class DefaultKafkaCluster implements KafkaCluster {
     @Override
     public SaslConfiguration getSaslConfiguration() {
         return _saslConfiguration;
+    }
+
+    @Override
+    public Collection<String> getAllTopics() {
+        return topics;
     }
 }
