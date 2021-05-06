@@ -74,10 +74,10 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
             _in.close();
         }
     }
-    /*
-    @Override
+
+    @Deprecated
     protected void finalize() throws Throwable {
-        super.StashReader();
+        super.finalize();
         close();
-    }*/
+    }
 }
