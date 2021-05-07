@@ -976,7 +976,7 @@ public class DatabusTest {
     }
 
     private void subscribeAndCheckConditions(Databus databus, String subscription, Condition condition, int subTtl, int eventTtl) {
-        databus.subscribe(subscription, condition, Duration.ofMinutes(subTtl), Duration.ofMinutes(eventTtl));
+        databus.subscribe(subscription, condition, Duration.ofMinutes(subTtl), Duration.ofMinutes(eventTtl),false);
         subscriptionsToCleanupAfterTest.add(subscription);
         snooze(1);
         assertEquals(databus.getSubscription(subscription).getName(), subscription);
