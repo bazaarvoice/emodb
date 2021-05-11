@@ -208,8 +208,7 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     @S3CredentialsProvider
-    protected AWSCredentialsProvider provideAmazonS3CredentialsProvider(AWSCredentialsProvider credentialsProvider,
-                                                                        @SelfHostAndPort HostAndPort hostAndPort) {
+    protected AWSCredentialsProvider provideAmazonS3CredentialsProvider(Region region, AWSCredentialsProvider credentialsProvider,@SelfHostAndPort HostAndPort hostAndPort) {
         AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
         if (_config.getS3AssumeRole().isPresent()) {
             final AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard()
@@ -228,25 +227,22 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     protected AmazonSNS provideAmazonSNS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSNS amazonSNS = AmazonSNSClient.builder().withCredentials(credentialsProvider)
+        return AmazonSNSClient.builder().withCredentials(credentialsProvider)
                 .withRegion(String.valueOf(region)).build();
-        return amazonSNS;
     }
 
     @Provides
     @Singleton
     protected AmazonSQS provideAmazonSQS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSQS amazonSQS = AmazonSQSClient.builder().withCredentials(credentialsProvider)
+        return AmazonSQSClient.builder().withCredentials(credentialsProvider)
                 .withRegion(String.valueOf(region)).build();
-        return amazonSQS;
     }
 
     @Provides
     @Singleton
     protected AmazonCloudWatch provideAmazonCloudWatch(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonCloudWatch cloudWatch = AmazonCloudWatchClient.builder().withCredentials(credentialsProvider)
+        return AmazonCloudWatchClient.builder().withCredentials(credentialsProvider)
                 .withRegion(String.valueOf(region)).build();
-        return cloudWatch;
     }
 
     @Provides

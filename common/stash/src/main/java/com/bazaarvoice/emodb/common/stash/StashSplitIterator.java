@@ -75,7 +75,7 @@ class StashSplitIterator extends AbstractIterator<Map<String, Object>> implement
         }
     }
 
-    @Deprecated
+    @Override
     protected void finalize() throws Throwable {
         super.finalize();
         close();

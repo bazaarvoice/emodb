@@ -251,11 +251,6 @@ public final class CreateKeyspacesCommand extends ConfiguredCommand<EmoConfigura
         }
         // Create the column families using CQL
         for (String cql : createCfCqlScripts) {
-            /*if (beforeCassandra12) {
-                cassandra.executeCql3Script_1_1(cql);
-            } else {
-                cassandra.executeCql3Script(cql);
-            }*/
             cassandra.executeCql3Script(cql);
         }
         if (!ksDefWasNull) {

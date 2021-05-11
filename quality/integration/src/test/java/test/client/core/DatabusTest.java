@@ -856,6 +856,7 @@ public class DatabusTest {
 
         // The subscription doesn't have any read permissions so no results are excepted.
         assertFalse(bus0.peek(sub, 10).hasNext());
+        assertEquals(bus0.poll(sub, Duration.ofMinutes(1), 10), 0);
     }
 
     @Test(enabled = false)
@@ -976,7 +977,7 @@ public class DatabusTest {
     }
 
     private void subscribeAndCheckConditions(Databus databus, String subscription, Condition condition, int subTtl, int eventTtl) {
-        databus.subscribe(subscription, condition, Duration.ofMinutes(subTtl), Duration.ofMinutes(eventTtl),false);
+        databus.subscribe(subscription, condition, Duration.ofMinutes(subTtl), Duration.ofMinutes(eventTtl), false);
         subscriptionsToCleanupAfterTest.add(subscription);
         snooze(1);
         assertEquals(databus.getSubscription(subscription).getName(), subscription);

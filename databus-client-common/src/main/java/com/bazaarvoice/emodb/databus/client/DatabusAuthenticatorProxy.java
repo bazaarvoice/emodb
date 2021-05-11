@@ -103,7 +103,7 @@ class DatabusAuthenticatorProxy implements Databus {
         subscribe(subscription, tableFilter, subscriptionTtl, eventTtl, true);
     }
 
-    @Deprecated
+    @Override
     public void subscribe(String subscription, Condition tableFilter, Duration subscriptionTtl, Duration eventTtl, boolean includeDefaultJoinFilter) {
         _authDatabus.subscribe(_apiKey, subscription, tableFilter, subscriptionTtl, eventTtl, includeDefaultJoinFilter);
     }

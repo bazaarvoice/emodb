@@ -78,7 +78,7 @@ public class Canary extends AbstractScheduledService {
         // the subscription at startup.  The subscription should last basically forever.
         // Note: make sure that we don't ignore any events
         _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL);
+                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
     }
 
     @Override

@@ -85,23 +85,6 @@ final class CassandraThriftFacade implements Closeable {
         }
     }
 
-    /** @deprecated Remove once Cassandra 1.1 support is no longer necessary. */
-    @Deprecated
-    public void executeCql3Script_1_1(String script) {
-        try {
-            _client.set_cql_version(CQL_VERSION);
-            for (String cqlStatement : toCqlStatements(script)) {
-                if (StringUtils.isNotBlank(cqlStatement)) {
-                    cqlStatement += ";";
-                    _log.info("executing cql statement: " + cqlStatement);
-                    _client.execute_cql_query(ByteBuffer.wrap(cqlStatement.getBytes("UTF-8")), Compression.NONE);
-                }
-            }
-        } catch (Exception e) {
-            throw Throwables.propagate(e);
-        }
-    }
-
     public void executeCql3Script(String script) {
         try {
             for (String cqlStatement : toCqlStatements(script)) {

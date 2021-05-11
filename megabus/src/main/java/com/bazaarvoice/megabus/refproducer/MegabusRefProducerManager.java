@@ -85,7 +85,7 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
         for (int i = 0; i < _numRefPartitions; i++) {
             _databus.subscribe(ChannelNames.getMegabusRefProducerChannel(_applicationId, i),
                     Conditions.partition(_numRefPartitions, i + 1),
-                    DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL);
+                    DatabusChannelConfiguration.MEGABUS_TTL, DatabusChannelConfiguration.MEGABUS_TTL, false);
         }
     }
 

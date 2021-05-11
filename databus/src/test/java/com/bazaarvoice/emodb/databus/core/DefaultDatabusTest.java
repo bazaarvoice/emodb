@@ -96,6 +96,16 @@ public class DefaultDatabusTest {
                 Duration.ofDays(7), Duration.ofDays(7));
         verify(mockSubscriptionDao).getSubscription("test-subscription");
         verifyNoMoreInteractions(mockSubscriptionDao);
+
+        // reset mocked subscription DAO so it doesn't carry information about old interactions
+        reset(mockSubscriptionDao);
+        // Test condition is unchanged if includeDefaultJoinFilter is set to false
+        testDatabus.subscribe("id", "test-subscription", originalCondition, Duration.ofDays(7),
+                Duration.ofDays(7), false);
+        verify(mockSubscriptionDao).insertSubscription("id", "test-subscription", originalCondition, Duration.ofDays(7),
+                Duration.ofDays(7));
+        verify(mockSubscriptionDao).getSubscription("test-subscription");
+        verifyNoMoreInteractions(mockSubscriptionDao);
     }
 
     @Test
