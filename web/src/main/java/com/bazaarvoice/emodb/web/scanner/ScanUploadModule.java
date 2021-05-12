@@ -213,7 +213,7 @@ public class ScanUploadModule extends PrivateModule {
         if (_config.getS3AssumeRole().isPresent()) {
             final AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard()
                     .withCredentials(s3CredentialsProvider)
-                    .withRegion(Regions.US_EAST_1)
+                    .withRegion(String.valueOf(region))
                     .build();
             s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider
                             .Builder(_config.getS3AssumeRole().get(),"stash-" + hostAndPort.getHostText())
