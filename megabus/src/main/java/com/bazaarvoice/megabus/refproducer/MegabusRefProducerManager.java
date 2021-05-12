@@ -74,7 +74,6 @@ public class MegabusRefProducerManager extends PartitionedLeaderService {
         leaderServiceTask.register(SERVICE_NAME, this);
     }
 
-
     public void createRefSubscriptions() {
         // TODO: since partitioned databus subscriptions are 1-based, we must add one to the partition condition. At some point in the future,
         // we should reconcile this inconsistency
