@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.json.JsonHelper;

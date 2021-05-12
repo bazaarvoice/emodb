@@ -856,7 +856,7 @@ public class DatabusTest {
 
         // The subscription doesn't have any read permissions so no results are excepted.
         assertFalse(bus0.peek(sub, 10).hasNext());
-        assertEquals(bus0.poll(sub, Duration.ofMinutes(1), 10), 10);
+        assertFalse(bus0.poll(sub, Duration.ofMinutes(1), 10).hasMoreEvents());
     }
 
     @Test(enabled = false)
