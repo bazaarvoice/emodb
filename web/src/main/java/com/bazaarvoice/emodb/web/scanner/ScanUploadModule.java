@@ -228,21 +228,21 @@ public class ScanUploadModule extends PrivateModule {
     @Singleton
     protected AmazonSNS provideAmazonSNS(Region region, AWSCredentialsProvider credentialsProvider) {
         return AmazonSNSClient.builder().withCredentials(credentialsProvider)
-                .withRegion(String.valueOf(region)).build();
+                .withRegion(region.getName()).build();
     }
 
     @Provides
     @Singleton
     protected AmazonSQS provideAmazonSQS(Region region, AWSCredentialsProvider credentialsProvider) {
         return AmazonSQSClient.builder().withCredentials(credentialsProvider)
-                .withRegion(String.valueOf(region)).build();
+                .withRegion(region.getName()).build();
     }
 
     @Provides
     @Singleton
     protected AmazonCloudWatch provideAmazonCloudWatch(Region region, AWSCredentialsProvider credentialsProvider) {
         return AmazonCloudWatchClient.builder().withCredentials(credentialsProvider)
-                .withRegion(String.valueOf(region)).build();
+                .withRegion(region.getName()).build();
     }
 
     @Provides
