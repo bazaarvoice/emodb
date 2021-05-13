@@ -24,17 +24,18 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv9</astyanax.version>
+        <astyanax.version>3.8.0-bv10</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra.version>2.2.4</cassandra.version>
+        <cassandra.version>2.2.19</cassandra.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
         <guava.version>17.0</guava.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.6.7.2</jackson.version>
+        <jna.version>4.1.0</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
-        <metrics.version>3.0.2</metrics.version>
+        <metrics.version>3.1.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.29</slf4j.version>
@@ -44,7 +45,7 @@
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.18.1</jersey.version>
         <shiro.version>1.7.0</shiro.version>
-        <cassandra.driver.version>3.1.1</cassandra.driver.version>
+        <cassandra.driver.version>3.1.4</cassandra.driver.version>
         <kafka.version>2.3.0</kafka.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
@@ -110,6 +111,21 @@
             </dependency>
 
             <!-- 3rd-party dependencies -->
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-servlets</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-jvm</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
@@ -222,16 +238,6 @@
                         <artifactId>commons-logging</artifactId>
                     </exclusion>
                 </exclusions>
-            </dependency>
-            <dependency>
-                <groupId>com.codahale.metrics</groupId>
-                <artifactId>metrics-core</artifactId>
-                <version>${metrics.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.codahale.metrics</groupId>
-                <artifactId>metrics-jvm</artifactId>
-                <version>${metrics.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -459,6 +465,11 @@
                 <artifactId>snakeyaml</artifactId>
                 <version>1.21</version>
             </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>${jna.version}</version>
+            </dependency>
 
             <!-- Megabus dependencies -->
             <dependency>
@@ -547,7 +558,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra.version}-5</version>
+                    <version>${cassandra.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
