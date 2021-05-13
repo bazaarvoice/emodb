@@ -85,7 +85,7 @@ public class AmazonS3Provider {
     public AmazonS3 createS3ClientForRegion(String regionName) {
         AmazonS3  s3;
         return AmazonS3ClientBuilder.standard().withCredentials(_credentialsProvider)
-                .withRegion(String.format("s3.%s.amazonaws.com", regionName)).build();
+                .withRegion(regionName).build();
     }
 
     public String getRegionForBucket(String bucket) {
