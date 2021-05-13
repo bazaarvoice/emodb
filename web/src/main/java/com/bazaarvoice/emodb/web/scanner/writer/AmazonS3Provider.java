@@ -83,7 +83,6 @@ public class AmazonS3Provider {
      * necessity to code in the s3 endpoint pattern, but this is extremely unlikely to change.
      */
     public AmazonS3 createS3ClientForRegion(String regionName) {
-        AmazonS3  s3;
         return AmazonS3ClientBuilder.standard().withCredentials(_credentialsProvider)
                 .withRegion(regionName).build();
     }
