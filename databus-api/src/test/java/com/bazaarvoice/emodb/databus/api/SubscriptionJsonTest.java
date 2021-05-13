@@ -21,7 +21,7 @@ public class SubscriptionJsonTest {
     @Test
     public void testSubscriptionJson() throws Exception {
         Date now = new Date();
-        String nowString = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC).format(now.toInstant());
+        String nowString = DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(now.toInstant());
 
         Subscription expected = new DefaultSubscription("test-subscription",
                 Conditions.intrinsic(Intrinsic.TABLE, "review:testcustomer"),
