@@ -45,7 +45,7 @@ public class DropwizardMetricsReporter implements MetricsReporter {
         _log.debug("Processing a metric change for {}", metric.metricName());
         String name = metricName(metric);
 
-        Gauge<Double> gauge = metric::value;
+        Gauge<Double> gauge = () -> (Double) metric.metricValue();
 
         _log.debug("Registering {}", name);
         try {

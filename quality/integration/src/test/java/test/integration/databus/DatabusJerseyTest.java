@@ -76,6 +76,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
@@ -174,12 +175,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
         assertFalse(actual.hasNext());
-        verify(_local).listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE));
+        verify(_local).listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE));
         verifyNoMoreInteractions(_local);
     }
 
