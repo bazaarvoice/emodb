@@ -121,7 +121,7 @@ public class DatadogMetricFilterTest {
         verify(_request).addGauge(argThat(hasGauge("test.histogram.count", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.mean", 2)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.median", 2)));
-        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 1.0)));
+        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 0.816496580927726)));
 
         // Send was called exactly once
         verify(_request).send();
