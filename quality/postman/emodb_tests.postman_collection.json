@@ -52530,8 +52530,8 @@
 															"var uuid = require('uuid');",
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
-															"pm.environment.set(\"ttl\", \"86400000\");",
-															"pm.environment.set(\"eventTtl\", \"86400000\");"
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");"
 														],
 														"type": "text/javascript"
 													}
@@ -52570,7 +52570,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -52580,6 +52580,14 @@
 														"{{subscription}}"
 													],
 													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -52665,7 +52673,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")*1000));",
 															"});",
 															""
 														],
@@ -52877,7 +52885,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")*1000));",
 															"});",
 															""
 														],
@@ -52963,8 +52971,8 @@
 															"var uuid = require('uuid');",
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
-															"pm.environment.set(\"ttl\", \"86400000\");",
-															"pm.environment.set(\"eventTtl\", \"86400000\");"
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");"
 														],
 														"type": "text/javascript"
 													}
@@ -53003,7 +53011,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53013,6 +53021,14 @@
 														"{{subscription}}"
 													],
 													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -53095,11 +53111,10 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    console.log(pm.response.json());",
+															"pm.test(\"Body matches string\", function () {    ",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")*1000));",
 															"});",
 															""
 														],
@@ -53397,8 +53412,8 @@
 															"var uuid = require('uuid');",
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
-															"pm.environment.set(\"ttl\", \"86400000\");",
-															"pm.environment.set(\"eventTtl\", \"86400000\");"
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");"
 														],
 														"type": "text/javascript"
 													}
@@ -53437,7 +53452,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53447,6 +53462,14 @@
 														"{{subscription}}"
 													],
 													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -53532,7 +53555,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")*1000));",
 															"});",
 															""
 														],
