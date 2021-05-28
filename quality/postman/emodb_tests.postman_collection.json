@@ -53842,6 +53842,18 @@
 								},
 								{
 									"name": "Unsubscribe operation.",
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"pm.environment.set(\"partitioned\", \"<string>\");",
+													"pm.environment.set(\"subscriptionOperation\", \"<string>\");"
+												],
+												"type": "text/javascript"
+											}
+										}
+									],
 									"request": {
 										"method": "DELETE",
 										"header": [
@@ -53855,7 +53867,7 @@
 											"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
 										},
 										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned=<string>",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -53867,13 +53879,13 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "<string>"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
 												{
 													"key": "subscription",
-													"value": "<string>",
+													"value": "{{subscriptionOperation}}",
 													"description": "(Required) "
 												}
 											]
