@@ -52533,7 +52533,8 @@
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
 															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
+															"pm.environment.set(\"partitionedTrue\", true);"
 														],
 														"type": "text/javascript"
 													}
@@ -52613,7 +52614,7 @@
 															"raw": "\"<string>\""
 														},
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=<string>&includeDefaultJoinFilter=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -52625,19 +52626,19 @@
 															"query": [
 																{
 																	"key": "ttl",
-																	"value": "86400"
+																	"value": "{{ttl}}"
 																},
 																{
 																	"key": "eventTtl",
-																	"value": "86400"
+																	"value": "{{eventTtl}}"
 																},
 																{
 																	"key": "ignoreSuppressedEvents",
-																	"value": "<string>"
+																	"value": "{{ignoreSuppressedEvents}}"
 																},
 																{
 																	"key": "includeDefaultJoinFilter",
-																	"value": "<string>"
+																	"value": "{{includeDefaultJoinFilter}}"
 																}
 															],
 															"variable": [
@@ -52812,7 +52813,7 @@
 													"raw": "{}"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned=true",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitionedTrue}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -52824,7 +52825,7 @@
 													"query": [
 														{
 															"key": "partitioned",
-															"value": "true"
+															"value": "{{partitionedTrue}}"
 														}
 													]
 												},
@@ -52837,7 +52838,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitionedTrue}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -52849,7 +52850,7 @@
 															"query": [
 																{
 																	"key": "partitioned",
-																	"value": "<string>"
+																	"value": "{{partitionedTrue}}"
 																}
 															],
 															"variable": [
@@ -52976,7 +52977,8 @@
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
 															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
+															"pm.environment.set(\"partitionedTrue\", true);"
 														],
 														"type": "text/javascript"
 													}
@@ -53056,7 +53058,7 @@
 															"raw": "\"<string>\""
 														},
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=<string>&includeDefaultJoinFilter=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -53068,19 +53070,19 @@
 															"query": [
 																{
 																	"key": "ttl",
-																	"value": "86400"
+																	"value": "{{ttl}}"
 																},
 																{
 																	"key": "eventTtl",
-																	"value": "86400"
+																	"value": "{{eventTtl}}"
 																},
 																{
 																	"key": "ignoreSuppressedEvents",
-																	"value": "<string>"
+																	"value": "{{ignoreSuppressedEvents}}"
 																},
 																{
 																	"key": "includeDefaultJoinFilter",
-																	"value": "<string>"
+																	"value": "{{includeDefaultJoinFilter}}"
 																}
 															],
 															"variable": [
@@ -53281,7 +53283,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitionedTrue}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -53293,7 +53295,7 @@
 															"query": [
 																{
 																	"key": "partitioned",
-																	"value": "<string>"
+																	"value": "{{partitionedTrue}}"
 																}
 															],
 															"variable": [
@@ -53419,7 +53421,8 @@
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
 															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
+															"pm.environment.set(\"partitionedFalse\", false);"
 														],
 														"type": "text/javascript"
 													}
@@ -53499,7 +53502,7 @@
 															"raw": "\"<string>\""
 														},
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=<string>&includeDefaultJoinFilter=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -53511,19 +53514,19 @@
 															"query": [
 																{
 																	"key": "ttl",
-																	"value": "86400"
+																	"value": "{{ttl}}"
 																},
 																{
 																	"key": "eventTtl",
-																	"value": "86400"
+																	"value": "{{eventTtl}}"
 																},
 																{
 																	"key": "ignoreSuppressedEvents",
-																	"value": "<string>"
+																	"value": "{{ignoreSuppressedEvents}}"
 																},
 																{
 																	"key": "includeDefaultJoinFilter",
-																	"value": "<string>"
+																	"value": "{{includeDefaultJoinFilter}}"
 																}
 															],
 															"variable": [
@@ -53699,7 +53702,7 @@
 													"raw": ""
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitionedFalse}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53711,7 +53714,7 @@
 													"query": [
 														{
 															"key": "partitioned",
-															"value": "false"
+															"value": "{{partitionedFalse}}"
 														}
 													]
 												},
@@ -53724,7 +53727,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned=<string>",
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitionedFalse}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -53736,7 +53739,7 @@
 															"query": [
 																{
 																	"key": "partitioned",
-																	"value": "<string>"
+																	"value": "{{partitionedFalse}}"
 																}
 															],
 															"variable": [
@@ -53853,7 +53856,7 @@
 											"listen": "prerequest",
 											"script": {
 												"exec": [
-													"pm.environment.set(\"partitioned\", true);"
+													""
 												],
 												"type": "text/javascript"
 											}
@@ -53872,7 +53875,7 @@
 											"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
 										},
 										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitionedTrue}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -53884,7 +53887,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "{{partitioned}}"
+													"value": "{{partitionedTrue}}"
 												}
 											],
 											"variable": [
@@ -53904,7 +53907,7 @@
 												"method": "DELETE",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/bus/1/:subscription?partitioned=<string>",
+													"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitionedTrue}}",
 													"host": [
 														"{{baseUrl}}"
 													],
@@ -53916,7 +53919,7 @@
 													"query": [
 														{
 															"key": "partitioned",
-															"value": "<string>"
+															"value": "{{partitionedTrue}}"
 														}
 													],
 													"variable": [
