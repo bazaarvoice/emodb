@@ -53847,8 +53847,7 @@
 											"listen": "prerequest",
 											"script": {
 												"exec": [
-													"pm.environment.set(\"partitioned\", \"<string>\");",
-													"pm.environment.set(\"subscriptionOperation\", \"<string>\");"
+													"pm.environment.set(\"partitioned\", true);"
 												],
 												"type": "text/javascript"
 											}
@@ -53885,7 +53884,7 @@
 											"variable": [
 												{
 													"key": "subscription",
-													"value": "{{subscriptionOperation}}",
+													"value": "{{subscription}}",
 													"description": "(Required) "
 												}
 											]
