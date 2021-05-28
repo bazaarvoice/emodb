@@ -52528,7 +52528,10 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400000\");",
+															"pm.environment.set(\"eventTtl\", \"86400000\");"
 														],
 														"type": "text/javascript"
 													}
@@ -52542,7 +52545,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
 															"});"
 														],
 														"type": "text/javascript"
@@ -52567,7 +52570,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -52577,14 +52580,6 @@
 														"{{subscription}}"
 													],
 													"query": [
-														{
-															"key": "ttl",
-															"value": "86400"
-														},
-														{
-															"key": "eventTtl",
-															"value": "86400"
-														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -52670,7 +52665,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(86400000);",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
 															"});",
 															""
 														],
@@ -52882,7 +52877,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(86400000);",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
 															"});",
 															""
 														],
@@ -52966,7 +52961,10 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400000\");",
+															"pm.environment.set(\"eventTtl\", \"86400000\");"
 														],
 														"type": "text/javascript"
 													}
@@ -52980,7 +52978,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
 															"});"
 														],
 														"type": "text/javascript"
@@ -53005,7 +53003,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53015,14 +53013,6 @@
 														"{{subscription}}"
 													],
 													"query": [
-														{
-															"key": "ttl",
-															"value": "86400"
-														},
-														{
-															"key": "eventTtl",
-															"value": "86400"
-														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -53106,9 +53096,10 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
+															"    console.log(pm.response.json());",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(86400000);",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
 															"});",
 															""
 														],
@@ -53404,7 +53395,10 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400000\");",
+															"pm.environment.set(\"eventTtl\", \"86400000\");"
 														],
 														"type": "text/javascript"
 													}
@@ -53418,7 +53412,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('{\"success\":true}'));",
+															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
 															"});"
 														],
 														"type": "text/javascript"
@@ -53443,7 +53437,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53453,14 +53447,6 @@
 														"{{subscription}}"
 													],
 													"query": [
-														{
-															"key": "ttl",
-															"value": "86400"
-														},
-														{
-															"key": "eventTtl",
-															"value": "86400"
-														},
 														{
 															"key": "ignoreSuppressedEvents",
 															"value": "false"
@@ -53546,7 +53532,7 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"name\", \"tableFilter\",\"expiresAt\",\"eventTtl\");",
 															"    pm.expect(pm.response.json().name).to.eql(pm.environment.get(\"subscription\"));",
-															"    pm.expect(pm.response.json().eventTtl).to.eql(86400000);",
+															"    pm.expect(pm.response.json().eventTtl).to.eql(parseInt(pm.environment.get(\"eventTtl\")));",
 															"});",
 															""
 														],
