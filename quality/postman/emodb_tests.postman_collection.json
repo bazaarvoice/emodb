@@ -52531,7 +52531,9 @@
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");"
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 														],
 														"type": "text/javascript"
 													}
@@ -52570,7 +52572,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -52590,11 +52592,11 @@
 														},
 														{
 															"key": "ignoreSuppressedEvents",
-															"value": "false"
+															"value": "{{ignoreSuppressedEvents}}"
 														},
 														{
 															"key": "includeDefaultJoinFilter",
-															"value": "false"
+															"value": "{{includeDefaultJoinFilter}}"
 														}
 													]
 												},
@@ -52972,7 +52974,9 @@
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");"
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 														],
 														"type": "text/javascript"
 													}
@@ -53011,7 +53015,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53031,11 +53035,11 @@
 														},
 														{
 															"key": "ignoreSuppressedEvents",
-															"value": "false"
+															"value": "{{ignoreSuppressedEvents}}"
 														},
 														{
 															"key": "includeDefaultJoinFilter",
-															"value": "false"
+															"value": "{{includeDefaultJoinFilter}}"
 														}
 													]
 												},
@@ -53413,7 +53417,9 @@
 															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");"
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 														],
 														"type": "text/javascript"
 													}
@@ -53452,7 +53458,7 @@
 													"raw": "intrinsic(\"~table\":\"{{table}}\")"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents=false&includeDefaultJoinFilter=false",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -53472,11 +53478,11 @@
 														},
 														{
 															"key": "ignoreSuppressedEvents",
-															"value": "false"
+															"value": "{{ignoreSuppressedEvents}}"
 														},
 														{
 															"key": "includeDefaultJoinFilter",
-															"value": "false"
+															"value": "{{includeDefaultJoinFilter}}"
 														}
 													]
 												},
