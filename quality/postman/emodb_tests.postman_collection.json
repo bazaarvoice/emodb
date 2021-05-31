@@ -53872,7 +53872,7 @@
 										],
 										"body": {
 											"mode": "raw",
-											"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
+											"raw": "{\n    \"subscription\": {{subscription}}    \n}"
 										},
 										"url": {
 											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
@@ -53894,7 +53894,8 @@
 												{
 													"key": "subscription",
 													"value": "{{subscription}}",
-													"description": "(Required) "
+													"type": "text",
+													"enabled": true
 												}
 											]
 										},
