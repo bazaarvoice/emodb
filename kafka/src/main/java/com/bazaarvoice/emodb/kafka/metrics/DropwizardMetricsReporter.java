@@ -47,6 +47,7 @@ public class DropwizardMetricsReporter implements MetricsReporter {
 
         final Gauge<Object> gauge = metric::metricValue;
 
+
         _log.debug("Registering {}", name);
         try {
             _registry.register(name, gauge);
