@@ -1,19 +1,18 @@
 package com.bazaarvoice.emodb.sor.audit.s3;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.PutObjectResult;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
 import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.sor.api.Audit;
-import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
 import com.bazaarvoice.emodb.sor.audit.AuditStore;
-import com.bazaarvoice.emodb.sor.audit.AuditWriter;
 import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.MetricRegistry;
@@ -42,7 +41,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
@@ -193,16 +191,15 @@ public class AthenaAuditWriter implements AuditStore {
 
         AWSCredentialsProvider credentialsProvider;
         if (configuration.getS3AccessKey() != null && configuration.getS3SecretKey() != null) {
-            credentialsProvider = new StaticCredentialsProvider(
+            credentialsProvider = new AWSStaticCredentialsProvider(
                     new BasicAWSCredentials(configuration.getS3AccessKey(), configuration.getS3SecretKey()));
         } else {
             credentialsProvider = new DefaultAWSCredentialsProviderChain();
         }
 
-        AmazonS3 s3 = new AmazonS3Client(credentialsProvider)
-                .withRegion(Regions.fromName(configuration.getLogBucketRegion()));
-
-        if (configuration.getS3Endpoint() != null) {
+        AmazonS3 s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider)
+                .withRegion(Regions.fromName(configuration.getLogBucketRegion())).build();
+         if (configuration.getS3Endpoint() != null) {
             s3.setEndpoint(configuration.getS3Endpoint());
         }
         return s3;

@@ -49,8 +49,8 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
             JavaType javaType = mapper.constructType(elementType);
             //noinspection unchecked
             _type = (Class<? extends T>) javaType.getRawClass();
-            _jp = mapper.getFactory().createJsonParser(in);
-            _reader = mapper.reader(javaType);
+            _jp = mapper.getFactory().createParser(in);
+            _reader = mapper.readerFor(javaType);
 
             // Parse at least the first byte of the response to make sure the input stream is valid.
             if (_jp.nextToken() != JsonToken.START_ARRAY) {
