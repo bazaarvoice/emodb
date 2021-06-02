@@ -24,8 +24,6 @@ import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
 import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
-import com.bazaarvoice.emodb.web.cli.RegisterCassandraCommand;
-import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
@@ -147,9 +145,7 @@ public class EmoService extends Application<EmoConfiguration> {
     @Override
     public void initialize(Bootstrap<EmoConfiguration> bootstrap) {
         bootstrap.addCommand(new CreateKeyspacesCommand());
-        bootstrap.addCommand(new RegisterCassandraCommand());
         bootstrap.addCommand(new ListCassandraCommand());
-        bootstrap.addCommand(new UnregisterCassandraCommand());
         bootstrap.addCommand(new PurgeDatabusEventsCommand());
         bootstrap.addCommand(new EncryptConfigurationApiKeyCommand());
         EmoServiceObjectMapperFactory.configure(bootstrap.getObjectMapper());
