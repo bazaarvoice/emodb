@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.common.stash;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
-import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3;
 
 import java.net.URI;
@@ -19,7 +19,7 @@ public class FixedStashReader extends StashReader {
     }
 
     public static FixedStashReader getInstance(URI stashRoot, String accessKey, String secretKey) {
-        return getInstance(stashRoot, new StaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)));
+        return getInstance(stashRoot, new AWSStaticCredentialsProvider(new BasicAWSCredentials(accessKey, secretKey)));
     }
 
     public static FixedStashReader getInstance(URI stashRoot, AWSCredentialsProvider credentialsProvider) {
