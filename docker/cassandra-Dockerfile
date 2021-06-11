@@ -1,3 +1,3 @@
 FROM cassandra:2.2.19
 COPY ./cassandra.yaml /etc/cassandra/
-CMD ["cassandra", "-f", "-Dcassandra.ignore_rack=true"]
+CMD ["cassandra", "-f"]
