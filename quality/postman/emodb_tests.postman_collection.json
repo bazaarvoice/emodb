@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "ee79ce72-d427-49af-9ad6-59fdaa1885dd",
+		"_postman_id": "9699cd7d-01dc-4b14-a469-3c86acb9a664",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -55403,8 +55403,7 @@
 															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
-															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");",
-															""
+															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
 														],
 														"type": "text/javascript"
 													}
@@ -55417,7 +55416,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Successful PUT request\", function () {    ",
 															"    pm.expect(pm.response.json().success).eql(true);",
 															"});"
 														],
@@ -55545,7 +55544,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Successful PUT request\", function () {",
 															"    pm.expect(pm.response.json().success).eql(true);",
 															"});"
 														],
@@ -55671,7 +55670,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);    ",
@@ -55818,25 +55817,12 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=true&limit=5`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        },async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
-															"    if (pm.response.status !== 200) {",
+															"    if (response.status !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
 															"            response = await retryRequest();",
 															"            return response.code === 200;",
@@ -55845,8 +55831,8 @@
 															"    pm.response.to.have.status(200);",
 															"}));",
 															"",
-															"pm.test(\"Body matches string\", asyncTest(async function () {",
-															"    if (pm.response.status !== 200) {",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
+															"    if (response.status !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
 															"            response = await retryRequest();",
 															"            return response.json() === 1;",
@@ -55863,8 +55849,12 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", true);",
-															"pm.environment.set(\"limit\", \"5\");"
+															"pm.environment.set(\"partitioned\", false);",
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -56067,35 +56057,20 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=20&limit=5&ignoreLongPoll=true&includeTags=false`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
 															"var response = pm.response;",
-															"",
 															"pm.test(\"Status code is 200\", function () {",
-															"    pm.response.to.have.status(200);",
+															"    response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
 															"    if(response.json().length === 0) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
 															"            response = await retryRequest();",
 															"            return response.json().length === 1;",
-															"        }, \"Retrying erequest\");",
+															"        }, \"Retrying request\");",
 															"    }",
 															"",
 															"    pm.expect(response.json().length).eql(1);",
@@ -56116,7 +56091,11 @@
 															"pm.environment.set(\"ttl\", \"30\");",
 															"pm.environment.set(\"limit\", \"5\");",
 															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-															"pm.environment.set(\"includeTags\", \"false\");"
+															"pm.environment.set(\"includeTags\", \"false\");",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -56238,29 +56217,16 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=false`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
-															"    pm.response.to.have.status(200);",
+															"    response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", asyncTest(async function () {",
-															"    if(pm.response.status !== 200) {",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
+															"    if(response.status !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
 															"            response = await retryRequest();",
 															"            return response.json() >= 1;",
@@ -56277,7 +56243,11 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", false);"
+															"pm.environment.set(\"partitioned\", false);",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -56367,24 +56337,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=true`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        },async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
-															"var response = pm.response;",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
 															"    if(response.code !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -56395,7 +56351,7 @@
 															"    pm.expect(response.code).to.be.eql(200);",
 															"}));",
 															"",
-															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"pm.test(\"Successful DELETE request\", asyncTest(async function () {    ",
 															"    if(response.code !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
 															"            response = await retryRequest();",
@@ -56413,7 +56369,11 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -56509,7 +56469,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Successful DELETE request\", function () {",
 															"    pm.expect(pm.response.json().success).eql(true);    ",
 															"});"
 														],
@@ -56520,7 +56480,8 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+															"pm.environment.set(\"audit\", \"comment:'remove+table'\");",
+															"pm.globals.clear();"
 														],
 														"type": "text/javascript"
 													}
@@ -56598,6 +56559,26 @@
 													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 												}
 											]
+										}
+									],
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
 										}
 									]
 								},
@@ -56882,7 +56863,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -57030,28 +57011,14 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=true&limit=5`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"var response = pm.response;",
 															"pm.test(\"Body matches string\", asyncTest(async function () {",
 															"    if(response.json() < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -57071,7 +57038,11 @@
 													"script": {
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
-															"pm.environment.set(\"limit\", \"5\");"
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -57274,25 +57245,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=false&ttl=30&limit=5&ignoreLongPoll=false&includeTags=false`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
 															"var response = pm.response;",
-															"",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
@@ -57323,7 +57279,11 @@
 															"pm.environment.set(\"ttl\", \"30\");",
 															"pm.environment.set(\"limit\", \"5\");",
 															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-															"pm.environment.set(\"includeTags\", \"false\");"
+															"pm.environment.set(\"includeTags\", \"false\");",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -57445,28 +57405,14 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=true`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"var response = pm.response;",
 															"pm.test(\"Body matches string\", asyncTest(async function () {",
 															"    if(response.json() < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -57486,7 +57432,11 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -57576,25 +57526,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=true`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        },async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
 															"var response = pm.response;",
-															"",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
 															"    if(response.code !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -57623,7 +57558,11 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -58088,28 +58027,14 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=true&limit=5`,",
-															"            method: 'GET',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"var response = pm.response;",
 															"pm.test(\"Body matches string\", asyncTest(async function () {",
 															"    pm.expect(response.json()).to.be.eql(0);",
 															"}));",
@@ -58123,7 +58048,11 @@
 													"script": {
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
-															"pm.environment.set(\"limit\", \"5\");"
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -58569,25 +58498,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=true`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        },async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
 															"var response = pm.response;",
-															"",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
 															"    if(response.code !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -58616,7 +58530,11 @@
 													"listen": "prerequest",
 													"script": {
 														"exec": [
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", concatUrl);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -58913,6 +58831,47 @@
 											]
 										}
 									]
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const retryRequest = () => {",
+											"    return new Promise((resolve, reject) => {",
+											"        pm.sendRequest({",
+											"            url: `${pm.environment.get(\"url\")}`,",
+											"            method: `${pm.environment.get(\"method\")}`,",
+											"            header: {",
+											"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+											"            }",
+											"        }, (error, response) => {",
+											"            if (error) {",
+											"                reject(error);",
+											"            }",
+											"            resolve(response);            ",
+											"        });",
+											"    });",
+											"};",
+											"",
+											"const retryRequestCall = {",
+											"    retryRequest: retryRequest.toString()",
+											"};",
+											"",
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
 								}
 							]
 						}
