@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "6c46ebb0-9bcc-482d-9023-c3aa1b6e5ce7",
+		"_postman_id": "9699cd7d-01dc-4b14-a469-3c86acb9a664",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -55364,6 +55364,3495 @@
 											"            resolve(response);",
 											"            callback();",
 											"        });        ",
+											"    });",
+											"};",
+											"",
+											"const retryRequestCall = {",
+											"    retryRequest: retryRequest.toString()",
+											"};",
+											"",
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Get claimcount",
+							"item": [
+								{
+									"name": "TC: Request with access to claimcount, with some claimed events and partitioned = false",
+									"item": [
+										{
+											"name": "Creates a table",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"",
+															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Successful PUT request\", function () {    ",
+															"    pm.expect(pm.response.json().success).eql(true);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "{{options}}"
+														},
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is created"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "{{options}}"
+																},
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Subscribe operation.",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Successful PUT request\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-condition"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "intrinsic(\"~table\":\"{{table}}\")"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
+														{
+															"key": "ignoreSuppressedEvents",
+															"value": "{{ignoreSuppressedEvents}}"
+														},
+														{
+															"key": "includeDefaultJoinFilter",
+															"value": "{{includeDefaultJoinFilter}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": ""
+														},
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "eventTtl",
+																	"value": "{{eventTtl}}"
+																},
+																{
+																	"key": "ignoreSuppressedEvents",
+																	"value": "{{ignoreSuppressedEvents}}"
+																},
+																{
+																	"key": "includeDefaultJoinFilter",
+																	"value": "{{includeDefaultJoinFilter}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches strings\", function () {",
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);    ",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
+															"pm.environment.set(\"consistency\", \"GLOBAL\");",
+															"pm.environment.set(\"tag\", \"test_tag\");",
+															"pm.environment.set(\"debug\", \"true\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-delta"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{..,\"test_delta\":\"set\"}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}",
+														"{{document_id}}"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "{{change_id}}",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														},
+														{
+															"key": "consistency",
+															"value": "{{consistency}}"
+														},
+														{
+															"key": "tag",
+															"value": "{{tag}}"
+														},
+														{
+															"key": "debug",
+															"value": "{{debug}}"
+														}
+													]
+												},
+												"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table/:key?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "{{change_id}}",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{consistency}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "{{tag}}"
+																},
+																{
+																	"key": "debug",
+																	"value": "{{debug}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																},
+																{
+																	"key": "key"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Gets the event count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", asyncTest(async function () {",
+															"    if (response.status !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        });",
+															"    }",
+															"    pm.response.to.have.status(200);",
+															"}));",
+															"",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
+															"    if (response.status !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json() === 1;",
+															"        });",
+															"    }",
+															"    pm.expect(response.json()).to.be.eql(1);",
+															"}));",
+															" "
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", false);",
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/size?partitioned={{partitioned}}&limit={{limit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"size"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/size?partitioned={{partitioned}}&limit={{limit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"size"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.to.have.body('0'));",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", false);"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Poll operation",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
+															"    if(response.json().length === 0) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json().length === 1;",
+															"        }, \"Retrying request\");",
+															"    }",
+															"",
+															"    pm.expect(response.json().length).eql(1);",
+															"",
+															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+															"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", \"false\");",
+															"pm.environment.set(\"ttl\", \"30\");",
+															"pm.environment.set(\"limit\", \"5\");",
+															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
+															"pm.environment.set(\"includeTags\", \"false\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"poll"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														},
+														{
+															"key": "ignoreLongPoll",
+															"value": "{{ignoreLongPoll}}"
+														},
+														{
+															"key": "includeTags",
+															"value": "{{includeTags}}"
+														}
+													]
+												},
+												"description": "Returns a Response."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"poll"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																},
+																{
+																	"key": "ignoreLongPoll",
+																	"value": "{{ignoreLongPoll}}"
+																},
+																{
+																	"key": "includeTags",
+																	"value": "{{includeTags}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "Internal Server Error",
+													"code": 500,
+													"_postman_previewlanguage": "text",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "text/plain"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Successful GET request\", asyncTest(async function () {",
+															"    if(response.status !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json() >= 1;",
+															"        }, \"Retrying request\");",
+															"    }",
+															"    pm.expect(response.json()).to.be.eql(1);",
+															"}));",
+															" "
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", false);",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Unsubscribe operation.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", asyncTest(async function () {",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking status \");",
+															"    }",
+															"    pm.expect(response.code).to.be.eql(200);",
+															"}));",
+															"",
+															"pm.test(\"Successful DELETE request\", asyncTest(async function () {    ",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking success\");",
+															"    }",
+															"    pm.expect(response.json().success).to.be.eql(true);",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns an Iterator of Subscription."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Drops a table",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Successful DELETE request\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);    ",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"audit\", \"comment:'remove+table'\");",
+															"pm.globals.clear();"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is dropped"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									],
+									"event": [
+										{
+											"listen": "prerequest",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
+										},
+										{
+											"listen": "test",
+											"script": {
+												"type": "text/javascript",
+												"exec": [
+													""
+												]
+											}
+										}
+									]
+								},
+								{
+									"name": "TC: Request with access to claimcount, with some claimed events and partitioned = true",
+									"item": [
+										{
+											"name": "Creates a table",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"",
+															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "{{options}}"
+														},
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is created"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "{{options}}"
+																},
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Subscribe operation.",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-condition"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "intrinsic(\"~table\":\"{{table}}\")"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
+														{
+															"key": "ignoreSuppressedEvents",
+															"value": "{{ignoreSuppressedEvents}}"
+														},
+														{
+															"key": "includeDefaultJoinFilter",
+															"value": "{{includeDefaultJoinFilter}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": ""
+														},
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "eventTtl",
+																	"value": "{{eventTtl}}"
+																},
+																{
+																	"key": "ignoreSuppressedEvents",
+																	"value": "{{ignoreSuppressedEvents}}"
+																},
+																{
+																	"key": "includeDefaultJoinFilter",
+																	"value": "{{includeDefaultJoinFilter}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches strings\", function () {",
+															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+															"    pm.expect(pm.response.json().success).to.eql(true);",
+															"",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
+															"pm.environment.set(\"consistency\", \"GLOBAL\");",
+															"pm.environment.set(\"tag\", \"test_tag\");",
+															"pm.environment.set(\"debug\", \"true\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "POST",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-delta"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{..,\"test_delta\":\"set\"}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"{{table}}",
+														"{{document_id}}"
+													],
+													"query": [
+														{
+															"key": "changeId",
+															"value": "{{change_id}}",
+															"disabled": true
+														},
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														},
+														{
+															"key": "consistency",
+															"value": "{{consistency}}"
+														},
+														{
+															"key": "tag",
+															"value": "{{tag}}"
+														},
+														{
+															"key": "debug",
+															"value": "{{debug}}"
+														}
+													]
+												},
+												"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "POST",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/:table/:key?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																":table",
+																":key"
+															],
+															"query": [
+																{
+																	"key": "changeId",
+																	"value": "{{change_id}}",
+																	"disabled": true
+																},
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																},
+																{
+																	"key": "consistency",
+																	"value": "{{consistency}}"
+																},
+																{
+																	"key": "tag",
+																	"value": "{{tag}}"
+																},
+																{
+																	"key": "debug",
+																	"value": "{{debug}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																},
+																{
+																	"key": "key"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Gets the event count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.json() < 1) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json() > 1;",
+															"        });",
+															"    }",
+															"    pm.expect(response.json()).to.be.above(0);",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/size?partitioned={{partitioned}}&limit={{limit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"size"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/size?partitioned={{partitioned}}&limit={{limit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"size"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.to.have.body('0'));",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Poll operation",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.json().length < 0) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json().length === 1;",
+															"        }, \"Retrying request\");",
+															"    }",
+															"",
+															"    pm.expect(response.json().length).to.be.eql(1);",
+															"",
+															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+															"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", \"false\");",
+															"pm.environment.set(\"ttl\", \"30\");",
+															"pm.environment.set(\"limit\", \"5\");",
+															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
+															"pm.environment.set(\"includeTags\", \"false\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"poll"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														},
+														{
+															"key": "ignoreLongPoll",
+															"value": "{{ignoreLongPoll}}"
+														},
+														{
+															"key": "includeTags",
+															"value": "{{includeTags}}"
+														}
+													]
+												},
+												"description": "Returns a Response."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"poll"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																},
+																{
+																	"key": "ignoreLongPoll",
+																	"value": "{{ignoreLongPoll}}"
+																},
+																{
+																	"key": "includeTags",
+																	"value": "{{includeTags}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "Internal Server Error",
+													"code": 500,
+													"_postman_previewlanguage": "text",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "text/plain"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.json() < 1) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.json() > 0;",
+															"        }, \"Retrying request\");",
+															"    }",
+															"    ",
+															"    pm.expect(response.json()).to.be.above(0);",
+															"}));",
+															" "
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Unsubscribe operation.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", asyncTest(async function () {",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking status \");",
+															"    }",
+															"    pm.expect(response.code).to.be.eql(200);",
+															"}));",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking success\");",
+															"    }",
+															"    pm.expect(response.json().success).to.be.eql(true);",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns an Iterator of Subscription."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Drops a table",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is dropped"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request to subscription without claimed events",
+									"item": [
+										{
+											"name": "Creates a table",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"",
+															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);    ",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+													"options": {
+														"raw": {
+															"language": "json"
+														}
+													}
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "options",
+															"value": "{{options}}"
+														},
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is created"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"url": {
+															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+															"host": [
+																"{{baseurl_dc1}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "options",
+																	"value": "{{options}}"
+																},
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Subscribe operation.",
+											"event": [
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"",
+															"pm.environment.set(\"ttl\", \"86400\");",
+															"pm.environment.set(\"eventTtl\", \"86400\");",
+															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);    ",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "PUT",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/x.json-condition"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "intrinsic(\"~table\":\"{{table}}\")"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "eventTtl",
+															"value": "{{eventTtl}}"
+														},
+														{
+															"key": "ignoreSuppressedEvents",
+															"value": "{{ignoreSuppressedEvents}}"
+														},
+														{
+															"key": "includeDefaultJoinFilter",
+															"value": "{{includeDefaultJoinFilter}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "PUT",
+														"header": [],
+														"body": {
+															"mode": "raw",
+															"raw": ""
+														},
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "eventTtl",
+																	"value": "{{eventTtl}}"
+																},
+																{
+																	"key": "ignoreSuppressedEvents",
+																	"value": "{{ignoreSuppressedEvents}}"
+																},
+																{
+																	"key": "includeDefaultJoinFilter",
+																	"value": "{{includeDefaultJoinFilter}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Gets the event count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    pm.expect(response.json()).to.be.eql(0);",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"pm.environment.set(\"limit\", \"5\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/size?partitioned={{partitioned}}&limit={{limit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"size"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/size?partitioned={{partitioned}}&limit={{limit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"size"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.to.have.body('0'));",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Poll operation",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", false);",
+															"pm.environment.set(\"ttl\", \"30\");",
+															"pm.environment.set(\"limit\", \"5\");",
+															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
+															"pm.environment.set(\"includeTags\", \"false\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"poll"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														},
+														{
+															"key": "ttl",
+															"value": "{{ttl}}"
+														},
+														{
+															"key": "limit",
+															"value": "{{limit}}"
+														},
+														{
+															"key": "ignoreLongPoll",
+															"value": "{{ignoreLongPoll}}"
+														},
+														{
+															"key": "includeTags",
+															"value": "{{includeTags}}"
+														}
+													]
+												},
+												"description": "Returns a Response."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"poll"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																},
+																{
+																	"key": "ttl",
+																	"value": "{{ttl}}"
+																},
+																{
+																	"key": "limit",
+																	"value": "{{limit}}"
+																},
+																{
+																	"key": "ignoreLongPoll",
+																	"value": "{{ignoreLongPoll}}"
+																},
+																{
+																	"key": "includeTags",
+																	"value": "{{includeTags}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "Internal Server Error",
+													"code": 500,
+													"_postman_previewlanguage": "text",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "text/plain"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json()).to.be.eql(0);",
+															"});",
+															" "
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										},
+										{
+											"name": "Unsubscribe operation.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
+															"pm.test(\"Status code is 200\", asyncTest(async function () {",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking status \");",
+															"    }",
+															"    pm.expect(response.code).to.be.eql(200);",
+															"}));",
+															"",
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.code !== 200) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code === 200;",
+															"        }, \"Error retrying unsubscribe checking success\");",
+															"    }",
+															"    pm.expect(response.json().success).to.be.eql(true);",
+															"}));",
+															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", true);",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"body": {
+													"mode": "raw",
+													"raw": "{}"
+												},
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns an Iterator of Subscription."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										},
+										{
+											"name": "Drops a table",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 200\", function () {",
+															"    pm.response.to.have.status(200);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);    ",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "DELETE",
+												"header": [
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"sor",
+														"1",
+														"_table",
+														"{{table}}"
+													],
+													"query": [
+														{
+															"key": "audit",
+															"value": "{{audit}}"
+														}
+													]
+												},
+												"description": "Returns a SuccessResponse if table is dropped"
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "DELETE",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"sor",
+																"1",
+																"_table",
+																":table"
+															],
+															"query": [
+																{
+																	"key": "audit",
+																	"value": "{{audit}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "table"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+												}
+											]
+										}
+									]
+								},
+								{
+									"name": "TC: Request without access to claimcount",
+									"item": [
+										{
+											"name": "Gets the claim count.",
+											"event": [
+												{
+													"listen": "test",
+													"script": {
+														"exec": [
+															"pm.test(\"Status code is 403\", function () {",
+															"    pm.response.to.have.status(403);",
+															"});",
+															"",
+															"pm.test(\"Body matches string\", function () {",
+															"    pm.expect(pm.response.json().reason).to.be.oneOf([`not authorized to update table ${pm.environment.get('table')}`, 'not authorized']);",
+															"});"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", false);"
+														],
+														"type": "text/javascript"
+													}
+												}
+											],
+											"request": {
+												"method": "GET",
+												"header": [
+													{
+														"key": "Content-Type",
+														"value": "application/json"
+													},
+													{
+														"key": "X-BV-API-Key",
+														"value": "{{api_key_no_rights}}",
+														"type": "text"
+													}
+												],
+												"url": {
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
+													"host": [
+														"{{baseurl_dc1}}"
+													],
+													"path": [
+														"bus",
+														"1",
+														"{{subscription}}",
+														"claimcount"
+													],
+													"query": [
+														{
+															"key": "partitioned",
+															"value": "{{partitioned}}"
+														}
+													]
+												},
+												"description": "Returns a long."
+											},
+											"response": [
+												{
+													"name": "successful operation",
+													"originalRequest": {
+														"method": "GET",
+														"header": [],
+														"url": {
+															"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+															"host": [
+																"{{baseUrl}}"
+															],
+															"path": [
+																"bus",
+																"1",
+																":subscription",
+																"claimcount"
+															],
+															"query": [
+																{
+																	"key": "partitioned",
+																	"value": "{{partitioned}}"
+																}
+															],
+															"variable": [
+																{
+																	"key": "subscription"
+																}
+															]
+														}
+													},
+													"status": "OK",
+													"code": 200,
+													"_postman_previewlanguage": "json",
+													"header": [
+														{
+															"key": "Content-Type",
+															"value": "application/json"
+														}
+													],
+													"cookie": [],
+													"body": ""
+												}
+											]
+										}
+									]
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const retryRequest = () => {",
+											"    return new Promise((resolve, reject) => {",
+											"        pm.sendRequest({",
+											"            url: `${pm.environment.get(\"url\")}`,",
+											"            method: `${pm.environment.get(\"method\")}`,",
+											"            header: {",
+											"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+											"            }",
+											"        }, (error, response) => {",
+											"            if (error) {",
+											"                reject(error);",
+											"            }",
+											"            resolve(response);            ",
+											"        });",
 											"    });",
 											"};",
 											"",
