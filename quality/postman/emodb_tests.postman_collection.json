@@ -55852,8 +55852,8 @@
 															"pm.environment.set(\"partitioned\", false);",
 															"pm.environment.set(\"limit\", \"5\");",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -56093,8 +56093,8 @@
 															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
 															"pm.environment.set(\"includeTags\", \"false\");",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -56245,8 +56245,8 @@
 														"exec": [
 															"pm.environment.set(\"partitioned\", false);",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -56371,8 +56371,8 @@
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
@@ -57040,8 +57040,8 @@
 															"pm.environment.set(\"partitioned\", true);",
 															"pm.environment.set(\"limit\", \"5\");",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -57281,8 +57281,8 @@
 															"pm.environment.set(\"ignoreLongPoll\", \"false\");",
 															"pm.environment.set(\"includeTags\", \"false\");",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?partitioned=${pm.environment.get(\"partitioned\")}&ttl=${pm.environment.get(\"ttl\")}&limit=${pm.environment.get(\"limit\")}&ignoreLongPoll=${pm.environment.get(\"ignoreLongPoll\")}&includeTags=${pm.environment.get(\"includeTags\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -57434,8 +57434,8 @@
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -57560,8 +57560,8 @@
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
@@ -58050,8 +58050,8 @@
 															"pm.environment.set(\"partitioned\", true);",
 															"pm.environment.set(\"limit\", \"5\");",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
@@ -58532,8 +58532,8 @@
 														"exec": [
 															"pm.environment.set(\"partitioned\", true);",
 															"",
-															"const concatUrl = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
-															"pm.environment.set(\"url\", concatUrl);",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
 															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
