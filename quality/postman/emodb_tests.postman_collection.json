@@ -59015,12 +59015,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -60143,12 +60138,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -61982,9 +61972,8 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.be.above(10);",
-															"});",
-															""
+															"    pm.expect(pm.response.json()).length > 10;",
+															"});"
 														],
 														"type": "text/javascript"
 													}
@@ -62211,8 +62200,8 @@
 															"            response = await retryRequest();",
 															"            return response.json().length > 0;",
 															"        }, \"Retrying to get body\");",
-															"    };",
-															"    pm.expect(response.json().length).to.be.above(0);",
+															"    };    ",
+															"    pm.expect(response.json().length > 0);",
 															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
 															"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
 															"}));"
@@ -62932,12 +62921,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -63073,12 +63057,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription1', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"postman.setEnvironmentVariable('subscription1', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -63576,18 +63555,18 @@
 															"pm.test(\"Number of events as expected\", asyncTest(async function () {",
 															"    if (response.json().length < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
-															"            response = await retryRequest();",
-															"            return response.json().length >= 1;",
+															"            response = await retryRequest();            ",
+															"            return response.json().length != 0;",
 															"        }, \"Retrying to get number of events\");",
 															"    }",
-															"    pm.expect(response.json().length >= 1);",
+															"    pm.expect(response.json().length != 0);",
 															"}));",
 															"",
 															"pm.test(\"Body matches string\", asyncTest(async function () {",
 															"     if (response.json().length < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
-															"            response = await retryRequest();",
-															"            return response.json().length >= 1;",
+															"            response = await retryRequest();            ",
+															"            return response.json().length != 0;",
 															"        }, \"Retrying to get body\");",
 															"    };",
 															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\", \"tags\");",
@@ -63724,18 +63703,18 @@
 															"pm.test(\"Number of events as expected\", asyncTest(async function () {",
 															"    if (response.json().length < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
-															"            response = await retryRequest();",
-															"            return response.json().length >= 1;",
+															"            response = await retryRequest();            ",
+															"            return response.json().length != 0;",
 															"        }, \"Retrying to get number of events\");",
 															"    }",
-															"    pm.expect(response.json().length >= 1);",
+															"    pm.expect(response.json().length != 0);",
 															"}));",
 															"",
 															"pm.test(\"Body matches string\", asyncTest(async function () {",
 															"     if (response.json().length < 1) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
-															"            response = await retryRequest();",
-															"            return response.json().length >= 1;",
+															"            response = await retryRequest();            ",
+															"            return response.json().length != 0;",
 															"        }, \"Retrying to get body\");",
 															"    };",
 															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\", \"tags\");",
@@ -64451,12 +64430,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -66456,7 +66430,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.be.above(11);",
+															"    pm.expect(pm.response.json()).length > 11;",
 															"});"
 														],
 														"type": "text/javascript"
@@ -66680,10 +66654,9 @@
 															"            response = await retryRequest();",
 															"            return response.json().length > 0;",
 															"        },\"Retrying getting body\");",
-															"     }",
-															"",
-															"    pm.expect(response.json().length).to.be.above(0);",
-															"    pm.expect(response.json().length).to.be.below(12);",
+															"     }    ",
+															"    pm.expect(response.json().length > 0);",
+															"    pm.expect(response.json().length < 12);",
 															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\", \"tags\");",
 															"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
 															"    pm.expect(response.json()[0].tags[0][0]).to.be.eql(\"test_tag\");",
@@ -67299,7 +67272,12 @@
 											"    retryRequest: retryRequest.toString()",
 											"};",
 											"",
-											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+											"",
+											"pm.environment.set(\"ttl\", \"86400\");",
+											"pm.environment.set(\"eventTtl\", \"86400\");",
+											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 										]
 									}
 								},
@@ -67315,6 +67293,26 @@
 							]
 						}
 					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
