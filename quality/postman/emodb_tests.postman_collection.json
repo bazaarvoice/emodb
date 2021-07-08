@@ -61967,13 +61967,26 @@
 													"listen": "test",
 													"script": {
 														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).length > 10;",
-															"});"
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.json() != 11) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            if(response.json() == 11) {",
+															"            return response.json() == 11;",
+															"            }        ",
+															"        }, \"Retrying request\");",
+															"    }",
+															"    pm.expect(response.json() == 11);",
+															"}));",
+															""
 														],
 														"type": "text/javascript"
 													}
@@ -61983,7 +61996,11 @@
 													"script": {
 														"exec": [
 															"pm.environment.set(\"partitioned\", \"true\");",
-															"pm.environment.set(\"limit\", \"10\");"
+															"pm.environment.set(\"limit\", \"10\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -66425,13 +66442,23 @@
 													"listen": "test",
 													"script": {
 														"exec": [
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
+															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", function () {",
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).length > 11;",
-															"});"
+															"pm.test(\"Body matches string\", asyncTest(async function () {",
+															"    if(response.json() != 12) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();            ",
+															"            return response.json() == 12;                 ",
+															"        }, \"Retrying request\");",
+															"    }",
+															"    pm.expect(response.json() == 12);",
+															"}));"
 														],
 														"type": "text/javascript"
 													}
@@ -66441,7 +66468,11 @@
 													"script": {
 														"exec": [
 															"pm.environment.set(\"partitioned\", \"true\");",
-															"pm.environment.set(\"limit\", \"10\");"
+															"pm.environment.set(\"limit\", \"10\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/size?partitioned=${pm.environment.get(\"partitioned\")}&limit=${pm.environment.get(\"limit\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"GET\");"
 														],
 														"type": "text/javascript"
 													}
@@ -66654,9 +66685,8 @@
 															"            response = await retryRequest();",
 															"            return response.json().length == 1;",
 															"        },\"Retrying getting body\");",
-															"     }    ",
-															"    pm.expect(response.json().length == 1);",
-															"    pm.expect(response.json().length < 12);",
+															"     }     ",
+															"    pm.expect(response.json().length == 1);  ",
 															"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\", \"tags\");",
 															"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
 															"    pm.expect(response.json()[0].tags[0][0]).to.be.eql(\"test_tag\");",
