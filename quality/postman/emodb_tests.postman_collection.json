@@ -29,7 +29,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table1', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table1', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -363,7 +363,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table2', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table2', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -800,7 +800,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table3', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table3', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -1219,7 +1219,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table4', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table4', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -1644,7 +1644,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table5', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table5', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -2311,7 +2311,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table6', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table6', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -2457,7 +2457,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table7', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table7', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -2602,7 +2602,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table8', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table8', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -2747,7 +2747,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table9', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table9', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -2896,7 +2896,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table10', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table10', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -3231,7 +3231,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table11', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table11', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -3623,7 +3623,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table12', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table12', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -4469,7 +4469,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table20', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table20', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -4895,7 +4895,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table13', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table13', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -5432,7 +5432,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table14', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table14', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -5764,7 +5764,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table15', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table15', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -6422,7 +6422,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table40', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table40', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -6725,7 +6725,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table16', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table16', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -7498,7 +7498,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table17', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table17', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -7722,8 +7722,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('uuid', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id2', 'document_id2_' + uuid.v4());",
+																	"pm.environment.set('uuid', uuid.v4());",
+																	"pm.environment.set('document_id2', 'document_id2_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -7807,8 +7807,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('uuid', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id2', 'document_id2_' + uuid.v4());",
+																	"pm.environment.set('uuid', uuid.v4());",
+																	"pm.environment.set('document_id2', 'document_id2_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -7892,8 +7892,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('uuid', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id2', 'document_id2_' + uuid.v4());",
+																	"pm.environment.set('uuid', uuid.v4());",
+																	"pm.environment.set('document_id2', 'document_id2_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -7968,7 +7968,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);",
+																	"pm.environment.set('purgeStatus', purgeId.id);",
 																	""
 																],
 																"type": "text/javascript"
@@ -8279,7 +8279,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);"
+																	"pm.environment.set('purgeStatus', purgeId.id);"
 																],
 																"type": "text/javascript"
 															}
@@ -8728,7 +8728,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table18', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table18', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -9038,7 +9038,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);",
+																	"pm.environment.set('purgeStatus', purgeId.id);",
 																	""
 																],
 																"type": "text/javascript"
@@ -9246,7 +9246,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table19', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table19', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -9461,7 +9461,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);",
+																	"pm.environment.set('purgeStatus', purgeId.id);",
 																	""
 																],
 																"type": "text/javascript"
@@ -9771,7 +9771,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table19', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table19', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -9994,7 +9994,7 @@
 																	"});",
 																	"",
 																	"const purgeId = JSON.parse(responseBody);",
-																	"postman.setEnvironmentVariable('purgeStatus', purgeId.id);",
+																	"pm.environment.set('purgeStatus', purgeId.id);",
 																	""
 																],
 																"type": "text/javascript"
@@ -10364,7 +10364,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table21', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table21', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -10679,7 +10679,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table22', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table22', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -10905,7 +10905,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id1_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id1_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11075,7 +11075,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id1_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id1_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11151,7 +11151,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id1_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id1_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11227,7 +11227,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id1_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id1_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11303,7 +11303,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id1_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id1_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11582,7 +11582,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table24', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table24', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -11714,7 +11714,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11790,7 +11790,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11866,7 +11866,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -11942,7 +11942,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -12018,7 +12018,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -12094,7 +12094,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('document_id3', 'document_id3_' + uuid.v4());",
+																	"pm.environment.set('document_id3', 'document_id3_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -12487,7 +12487,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table23', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table23', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -12948,7 +12948,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table41', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table41', 'postman_'+uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -13746,7 +13746,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table28', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table28', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14084,7 +14084,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table29', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table29', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14207,7 +14207,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table30', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table30', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14330,7 +14330,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table31', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table31', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14453,7 +14453,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table32', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table32', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14576,7 +14576,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table33', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table33', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14699,7 +14699,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table34', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table34', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14822,7 +14822,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table35', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table35', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -14945,7 +14945,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table36', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table36', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -15068,7 +15068,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table37', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table37', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -15191,7 +15191,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table38', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table38', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -15314,7 +15314,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table39', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table39', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -16680,7 +16680,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table29', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table29', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -16803,7 +16803,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table30', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table30', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -16926,7 +16926,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table31', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table31', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17049,7 +17049,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table32', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table32', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17172,7 +17172,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table33', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table33', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17295,7 +17295,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table34', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table34', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17418,7 +17418,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table35', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table35', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17541,7 +17541,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table36', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table36', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17664,7 +17664,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table37', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table37', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17787,7 +17787,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table38', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table38', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -17910,7 +17910,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table39', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table39', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19168,7 +19168,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table29', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table29', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19291,7 +19291,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table30', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table30', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19414,7 +19414,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table31', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table31', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19537,7 +19537,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table32', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table32', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19660,7 +19660,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table33', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table33', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19783,7 +19783,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table34', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table34', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -19906,7 +19906,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table35', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table35', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -20029,7 +20029,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table36', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table36', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -20152,7 +20152,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table37', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table37', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -20275,7 +20275,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table38', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table38', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -20398,7 +20398,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table39', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table39', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -22227,7 +22227,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -22317,9 +22317,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -22408,9 +22408,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id1', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -23350,7 +23350,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -23440,9 +23440,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -24170,9 +24170,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -25403,9 +25403,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -25766,9 +25766,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -26272,9 +26272,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -26941,7 +26941,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('uuid', uuid.v4());"
+																	"pm.environment.set('uuid', uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -27395,7 +27395,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+																	"pm.environment.set('table', 'postman_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -27518,8 +27518,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('key', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('key', uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -27893,7 +27893,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('uuid', uuid.v4());"
+															"pm.environment.set('uuid', uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -28371,9 +28371,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -28496,8 +28496,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('key', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('key', uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -28795,9 +28795,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -28920,8 +28920,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('key', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('key', uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -29883,9 +29883,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -30218,9 +30218,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+																	"pm.environment.set('table', 'postman_'+uuid.v4());",
 																	"",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -30343,8 +30343,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('key', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('key', uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -30496,8 +30496,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('key', uuid.v4());",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());"
+																	"pm.environment.set('key', uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -31328,7 +31328,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -31650,7 +31650,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -31741,9 +31741,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -32809,7 +32809,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -32900,9 +32900,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -33383,7 +33383,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -33474,9 +33474,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -33563,8 +33563,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
-																	"postman.setEnvironmentVariable('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
+																	"pm.environment.set('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
+																	"pm.environment.set('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
 																],
 																"type": "text/javascript"
 															}
@@ -33731,8 +33731,8 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
-																	"postman.setEnvironmentVariable('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
+																	"pm.environment.set('startUUID', new Date(Date.now() - 1000 * 120).toISOString());",
+																	"pm.environment.set('endUUID', new Date(Date.now() + 1000 * 120).toISOString());"
 																],
 																"type": "text/javascript"
 															}
@@ -33970,7 +33970,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -34061,9 +34061,9 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+																	"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 																	" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-																	"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+																	"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 																	""
 																],
 																"type": "text/javascript"
@@ -34150,7 +34150,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																	"pm.environment.set('startUUID', new Date(Date.now()).toISOString());"
 																],
 																"type": "text/javascript"
 															}
@@ -34318,7 +34318,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																	"pm.environment.set('startUUID', new Date(Date.now()).toISOString());"
 																],
 																"type": "text/javascript"
 															}
@@ -34572,7 +34572,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('startUUID', new Date(Date.now()).toISOString());"
+																	"pm.environment.set('startUUID', new Date(Date.now()).toISOString());"
 																],
 																"type": "text/javascript"
 															}
@@ -34992,7 +34992,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -35083,9 +35083,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -35176,9 +35176,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id1', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -35950,7 +35950,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -36040,9 +36040,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -36131,9 +36131,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id1', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -36222,9 +36222,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id2', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id2', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -36313,9 +36313,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id3', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id3', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -37532,7 +37532,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -37623,9 +37623,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -37714,9 +37714,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id1', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -37805,9 +37805,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id2', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id2', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -37896,9 +37896,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id3', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id3', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -38195,7 +38195,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -38286,9 +38286,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -38378,9 +38378,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id1', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id1', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -38470,9 +38470,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id2', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id2', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -38562,9 +38562,9 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('auditValue', 'comment:\\'auditValue+'",
+															"pm.environment.set('auditValue', 'comment:\\'auditValue+'",
 															" + pm.variables.replaceIn('{{$randomInt}}') + '\\'' );",
-															"postman.setEnvironmentVariable('document_id3', 'document_id_' + uuid.v4());",
+															"pm.environment.set('document_id3', 'document_id_' + uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -39203,7 +39203,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -39276,16 +39276,16 @@
 													"script": {
 														"exec": [
 															"const uuid = require('uuid');",
-															"postman.setEnvironmentVariable('id1', uuid.v4());",
-															"postman.setEnvironmentVariable('id2', uuid.v4());",
-															"postman.setEnvironmentVariable('id3', uuid.v4());",
-															"postman.setEnvironmentVariable('id4', uuid.v4());",
-															"postman.setEnvironmentVariable('id5', uuid.v4());",
-															"postman.setEnvironmentVariable('id6', uuid.v4());",
-															"postman.setEnvironmentVariable('id7', uuid.v4());",
-															"postman.setEnvironmentVariable('id8', uuid.v4());",
-															"postman.setEnvironmentVariable('id9', uuid.v4());",
-															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															"pm.environment.set('id1', uuid.v4());",
+															"pm.environment.set('id2', uuid.v4());",
+															"pm.environment.set('id3', uuid.v4());",
+															"pm.environment.set('id4', uuid.v4());",
+															"pm.environment.set('id5', uuid.v4());",
+															"pm.environment.set('id6', uuid.v4());",
+															"pm.environment.set('id7', uuid.v4());",
+															"pm.environment.set('id8', uuid.v4());",
+															"pm.environment.set('id9', uuid.v4());",
+															"pm.environment.set('id10', uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -39676,16 +39676,16 @@
 													"script": {
 														"exec": [
 															"const uuid = require('uuid');",
-															"postman.setEnvironmentVariable('id1', uuid.v4());",
-															"postman.setEnvironmentVariable('id2', uuid.v4());",
-															"postman.setEnvironmentVariable('id3', uuid.v4());",
-															"postman.setEnvironmentVariable('id4', uuid.v4());",
-															"postman.setEnvironmentVariable('id5', uuid.v4());",
-															"postman.setEnvironmentVariable('id6', uuid.v4());",
-															"postman.setEnvironmentVariable('id7', uuid.v4());",
-															"postman.setEnvironmentVariable('id8', uuid.v4());",
-															"postman.setEnvironmentVariable('id9', uuid.v4());",
-															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															"pm.environment.set('id1', uuid.v4());",
+															"pm.environment.set('id2', uuid.v4());",
+															"pm.environment.set('id3', uuid.v4());",
+															"pm.environment.set('id4', uuid.v4());",
+															"pm.environment.set('id5', uuid.v4());",
+															"pm.environment.set('id6', uuid.v4());",
+															"pm.environment.set('id7', uuid.v4());",
+															"pm.environment.set('id8', uuid.v4());",
+															"pm.environment.set('id9', uuid.v4());",
+															"pm.environment.set('id10', uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -39844,7 +39844,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -39917,16 +39917,16 @@
 													"script": {
 														"exec": [
 															"const uuid = require('uuid');",
-															"postman.setEnvironmentVariable('id1', uuid.v4());",
-															"postman.setEnvironmentVariable('id2', uuid.v4());",
-															"postman.setEnvironmentVariable('id3', uuid.v4());",
-															"postman.setEnvironmentVariable('id4', uuid.v4());",
-															"postman.setEnvironmentVariable('id5', uuid.v4());",
-															"postman.setEnvironmentVariable('id6', uuid.v4());",
-															"postman.setEnvironmentVariable('id7', uuid.v4());",
-															"postman.setEnvironmentVariable('id8', uuid.v4());",
-															"postman.setEnvironmentVariable('id9', uuid.v4());",
-															"postman.setEnvironmentVariable('id10', uuid.v4());",
+															"pm.environment.set('id1', uuid.v4());",
+															"pm.environment.set('id2', uuid.v4());",
+															"pm.environment.set('id3', uuid.v4());",
+															"pm.environment.set('id4', uuid.v4());",
+															"pm.environment.set('id5', uuid.v4());",
+															"pm.environment.set('id6', uuid.v4());",
+															"pm.environment.set('id7', uuid.v4());",
+															"pm.environment.set('id8', uuid.v4());",
+															"pm.environment.set('id9', uuid.v4());",
+															"pm.environment.set('id10', uuid.v4());",
 															""
 														],
 														"type": "text/javascript"
@@ -40944,7 +40944,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -41217,7 +41217,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -41488,7 +41488,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -41759,7 +41759,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -42030,7 +42030,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -42718,7 +42718,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -43117,7 +43117,7 @@
 															"script": {
 																"exec": [
 																	"var uuid = require('uuid');",
-																	"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																	"pm.environment.set('table', 'table_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -43958,7 +43958,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44286,7 +44286,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -44873,7 +44873,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45467,7 +45467,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -45899,7 +45899,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46333,7 +46333,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -46765,7 +46765,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47197,7 +47197,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -47629,7 +47629,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48063,7 +48063,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -48494,7 +48494,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49068,7 +49068,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49500,7 +49500,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -49933,7 +49933,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50365,7 +50365,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -50797,7 +50797,7 @@
 																	"script": {
 																		"exec": [
 																			"var uuid = require('uuid');",
-																			"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+																			"pm.environment.set('table', 'table_'+uuid.v4());"
 																		],
 																		"type": "text/javascript"
 																	}
@@ -51638,7 +51638,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -51914,7 +51914,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'table_'+uuid.v4());"
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -52528,7 +52528,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -52972,7 +52972,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -53416,7 +53416,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -53958,7 +53958,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -54398,7 +54398,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -54837,7 +54837,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -55400,7 +55400,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -55526,7 +55526,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -56593,7 +56593,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -56719,7 +56719,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -57761,7 +57761,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -57887,7 +57887,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 															"",
 															"pm.environment.set(\"ttl\", \"86400\");",
 															"pm.environment.set(\"eventTtl\", \"86400\");",
@@ -58904,7 +58904,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -59015,7 +59015,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -59169,7 +59169,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -60012,7 +60012,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -60138,7 +60138,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -60291,7 +60291,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -60445,7 +60445,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -60599,7 +60599,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -60753,7 +60753,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -60907,7 +60907,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61061,7 +61061,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61215,7 +61215,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61369,7 +61369,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61523,7 +61523,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61677,7 +61677,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -61831,7 +61831,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -62686,7 +62686,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -62812,7 +62812,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table1', 'postman_'+uuid.v4());",
+															"pm.environment.set('table1', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -62938,7 +62938,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -63074,7 +63074,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription1', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription1', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -63245,7 +63245,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -63421,7 +63421,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -64321,7 +64321,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -64447,7 +64447,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -64601,7 +64601,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -64756,7 +64756,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -64911,7 +64911,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65066,7 +65066,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65221,7 +65221,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65376,7 +65376,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65531,7 +65531,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65686,7 +65686,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65841,7 +65841,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -65996,7 +65996,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -66151,7 +66151,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -66306,7 +66306,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -67336,7 +67336,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -67462,7 +67462,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -67742,7 +67742,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned=true",
+													"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -67755,7 +67755,7 @@
 													"query": [
 														{
 															"key": "partitioned",
-															"value": "true"
+															"value": "{{partitioned}}"
 														}
 													]
 												},
@@ -68299,7 +68299,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -68425,7 +68425,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -68579,7 +68579,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -68734,7 +68734,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -68889,7 +68889,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69044,7 +69044,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69199,7 +69199,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69354,7 +69354,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69509,7 +69509,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69664,7 +69664,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69819,7 +69819,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -69974,7 +69974,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -70129,7 +70129,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -71020,7 +71020,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -71146,7 +71146,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -71300,7 +71300,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -71372,7 +71372,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71385,27 +71385,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -71443,7 +71439,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -71458,7 +71454,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -71530,7 +71526,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71543,27 +71539,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -71601,7 +71593,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -71616,7 +71608,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -71688,7 +71680,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71701,27 +71693,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -71759,7 +71747,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -71774,7 +71762,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -71846,7 +71834,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71859,27 +71847,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -71917,7 +71901,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -71932,7 +71916,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72004,7 +71988,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72017,27 +72001,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72075,7 +72055,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72090,7 +72070,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72162,7 +72142,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72175,27 +72155,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72233,7 +72209,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72248,7 +72224,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72320,7 +72296,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72333,27 +72309,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72391,7 +72363,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72406,7 +72378,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72478,7 +72450,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72491,27 +72463,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72549,7 +72517,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72564,7 +72532,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72636,7 +72604,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72649,27 +72617,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72707,7 +72671,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72722,7 +72686,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72794,7 +72758,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72807,27 +72771,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -72865,7 +72825,7 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
+															"pm.test(\"Body matches strings\", function () {",
 															"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 															"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 															"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -72880,7 +72840,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -72952,7 +72912,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72965,27 +72925,23 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": "{{change_id}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "{{audit}}"
 																},
 																{
 																	"key": "consistency",
-																	"value": "STRONG"
+																	"value": "{{consistency}}"
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
+																	"value": "{{includeTags}}"
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "{{debug}}"
 																}
 															],
 															"variable": [
@@ -73650,7 +73606,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -73776,7 +73732,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table1', 'postman_'+uuid.v4());",
+															"pm.environment.set('table1', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -73902,7 +73858,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -74038,7 +73994,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription1', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription1', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -74193,7 +74149,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id', uuid.v4());",
+															"pm.environment.set('document_id', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -74348,7 +74304,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -75126,7 +75082,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}}}",
+															"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -75139,7 +75095,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "{{audit}}}}"
+																	"value": "{{audit}}"
 																}
 															],
 															"variable": [
@@ -75277,7 +75233,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());",
+															"pm.environment.set('table', 'postman_'+uuid.v4());",
 															"",
 															"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
 															"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
@@ -75403,7 +75359,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -75557,7 +75513,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -75711,7 +75667,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -75865,7 +75821,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76019,7 +75975,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76173,7 +76129,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76327,7 +76283,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76481,7 +76437,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76635,7 +76591,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76789,7 +76745,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -76943,7 +76899,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -77097,7 +77053,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"postman.setEnvironmentVariable('document_id1', uuid.v4());",
+															"pm.environment.set('document_id1', uuid.v4());",
 															"",
 															"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 															"pm.environment.set(\"consistency\", \"GLOBAL\");",
@@ -78722,7 +78678,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
 										],
 										"type": "text/javascript"
 									}
@@ -79060,7 +79016,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
 										],
 										"type": "text/javascript"
 									}
@@ -79398,7 +79354,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
 										],
 										"type": "text/javascript"
 									}
@@ -79742,7 +79698,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
 										],
 										"type": "text/javascript"
 									}
@@ -80183,7 +80139,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"postman.setEnvironmentVariable('table', 'postman_'+uuid.v4());"
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
 										],
 										"type": "text/javascript"
 									}
