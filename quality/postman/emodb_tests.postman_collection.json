@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "e2b584f3-8872-454c-b5ed-797860a95abc",
+		"_postman_id": "b312d562-6dff-4894-a092-310c3830b90c",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -71372,7 +71372,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71397,7 +71397,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -71526,7 +71526,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71551,7 +71551,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -71680,7 +71680,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71705,7 +71705,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -71834,7 +71834,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -71859,7 +71859,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -71988,7 +71988,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72013,7 +72013,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72142,7 +72142,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72167,7 +72167,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72296,7 +72296,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72321,7 +72321,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72450,7 +72450,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72475,7 +72475,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72604,7 +72604,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72629,7 +72629,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72758,7 +72758,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72783,7 +72783,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
@@ -72912,7 +72912,7 @@
 														"method": "POST",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{includeTags}}&debug={{debug}}",
+															"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 															"host": [
 																"{{baseUrl}}"
 															],
@@ -72937,7 +72937,7 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "{{includeTags}}"
+																	"value": "{{tag}}"
 																},
 																{
 																	"key": "debug",
