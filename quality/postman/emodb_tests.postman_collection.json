@@ -77730,8 +77730,7 @@
 															"        }, \"Error retrying unsubscribe checking success\");",
 															"    }",
 															"    pm.expect(response.json().success).eql(true);",
-															"}));",
-															""
+															"}));"
 														],
 														"type": "text/javascript"
 													}
