@@ -114,6 +114,7 @@ public class DatabusResource1 {
         // By default, include the default join filter condition
         // Note:  Historically this feature used to be called "ignoreSuppressedEvents".  To provide backwards
         //        compatibility both parameter names are accepted though precedence is given to the newer parameter.
+        _log.info("Databus API subscribe() called");
         boolean includeDefaultJoinFilter =
                 includeDefaultJoinFilterParam != null ? includeDefaultJoinFilterParam.get() :
                         (ignoreSuppressedEventsParam != null ? ignoreSuppressedEventsParam.get() : true);

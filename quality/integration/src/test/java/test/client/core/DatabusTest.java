@@ -107,6 +107,9 @@ public class DatabusTest {
     @Named("runID")
     private String runID;
 
+    @Inject
+    private Client client;
+
     @BeforeTest(alwaysRun = true)
     public void beforeTest() {
         tablesToCleanupAfterTest = new HashSet<>();
@@ -762,12 +765,21 @@ public class DatabusTest {
 
     @Test
     public void testPermissions_claim_sub() {
+        LOGGER.info("testPermissions_claim_sub called.......");
         String sub = uniqueName("permission_claim_sub", "databus", null, runID);
+        LOGGER.info("***** Creating API key0 *********");
         String key0 = createNewDatabusApiKey(uac);
+        LOGGER.info("***** API key created *********");
+        LOGGER.info("***** Creating DatabusClient bus0 *****");
         final Databus bus0 = createNewDatabusClient(key0, clusterName, emodbHost);
+        LOGGER.info("***** bus0 created *********");
 
+        LOGGER.info("***** Creating API key1 *********");
         String key1 = createNewDatabusApiKey(uac);
+        LOGGER.info("***** API key created *********");
+        LOGGER.info("***** Creating DatabusClient bus1 *****");
         final Databus bus1 = createNewDatabusClient(key1, clusterName, emodbHost);
+        LOGGER.info("***** bus1 created *********");
 
         subscribeAndCheckConditions(bus0, sub, Conditions.alwaysTrue());
 
@@ -1039,16 +1051,13 @@ public class DatabusTest {
         return eventKeys;
     }
 
-    private static Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
+    private Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
         MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
 
-        Client client = new JerseyClientBuilder(metricRegistry)
-                .using(Executors.newSingleThreadExecutor())
-                .using(new ObjectMapper())
-                .build("DatabusClient");
+
         return ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, client).usingCredentials(apiKey))
+                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, this.client).usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }
