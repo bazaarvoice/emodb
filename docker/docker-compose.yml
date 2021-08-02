@@ -20,7 +20,7 @@ services:
       interval: 10s
 
   cassandra-dc1:
-    image: 'bazaarvoice/cassandra:2.1.22'
+    image: 'bazaarvoice/cassandra:2.2.19'
     build:
       context: .
       dockerfile: cassandra-Dockerfile
