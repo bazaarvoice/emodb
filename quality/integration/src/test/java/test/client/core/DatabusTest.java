@@ -35,6 +35,7 @@ import com.google.common.collect.TreeMultimap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterTest;
@@ -108,7 +109,7 @@ public class DatabusTest {
     private String runID;
 
     @Inject
-    private Client client;
+    private JerseyClientConfiguration clientConfiguration;
 
     @BeforeTest(alwaysRun = true)
     public void beforeTest() {
@@ -1042,11 +1043,15 @@ public class DatabusTest {
 
     private Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
         MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
-
+        Client client = new JerseyClientBuilder(metricRegistry)
+                .using(this.clientConfiguration)
+                .using(Executors.newSingleThreadExecutor())
+                .using(new ObjectMapper())
+                .build("DatabusClient");
 
         return ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, this.client).usingCredentials(apiKey))
+                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, client).usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }

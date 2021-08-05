@@ -86,18 +86,14 @@ public class JerseyEmoResource implements EmoResource {
             } else {
                 response = builder().method(method, Entity.entity(entity, type()));
             }
-//TODO !!!
             // This is as per jax-rs invocation builder code.
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
                 throw new WebApplicationException(response);
             } else {
-//                LOG.info("AYYYYYY, we closed the connection");
                 // hack: we can call response.close but it generates errors on the server
                 // this way, we read the entire response and _then_ close, always, even
                 // though we don't need to read the response
                 response.readEntity(Object.class);
-//                TODO
-//                response.close();
             }
 
             return null;
@@ -123,10 +119,9 @@ public class JerseyEmoResource implements EmoResource {
             Response response = entity == null ?
                     builder().method(method) :
                     builder().method(method, Entity.entity(entity, type()));
-//TODO
+
             // This is as per jax-rs invocation builder code.
             if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
-//                response.close();
                 throw new WebApplicationException(response);
             }
 
