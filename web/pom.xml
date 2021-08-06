@@ -222,14 +222,23 @@
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>javax.ws.rs</groupId>
+                    <artifactId>jsr311-api</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
-        <!--        TODO -->
-        <!--        <dependency>
-                    <groupId>io.swagger</groupId>
-                    <artifactId>swagger-jersey2-jaxrs</artifactId>
-                </dependency>-->
-        <!-- Test dependencies -->
+       <dependency>
+           <groupId>io.swagger</groupId>
+           <artifactId>swagger-jersey2-jaxrs</artifactId>
+           <scope>test</scope>
+           <exclusions>
+               <exclusion>
+                   <groupId>org.glassfish.jersey.media</groupId>
+                   <artifactId>jersey-media-multipart</artifactId>
+               </exclusion>
+           </exclusions>
+       </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
