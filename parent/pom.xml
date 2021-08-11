@@ -499,16 +499,16 @@
                 <version>${swagger.version}</version>
                 <exclusions>
                     <exclusion>
-                        <artifactId>org.glassfish.jersey.core</artifactId>
-                        <groupId>*</groupId>
+                        <groupId>org.glassfish.jersey.core</groupId>
+                        <artifactId>jersey-server</artifactId>
                     </exclusion>
                     <exclusion>
-                        <artifactId>org.glassfish.hk2.external</artifactId>
-                        <groupId>*</groupId>
+                        <groupId>org.glassfish.hk2.external</groupId>
+                        <artifactId>javax.inject</artifactId>
                     </exclusion>
                     <exclusion>
-                        <artifactId>org.glassfish.jersey.containers</artifactId>
-                        <groupId>*</groupId>
+                        <groupId>org.glassfish.jersey.containers</groupId>
+                        <artifactId>jersey-container-servlet-core</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>

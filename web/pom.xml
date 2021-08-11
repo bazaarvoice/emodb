@@ -216,21 +216,6 @@
        <dependency>
            <groupId>io.swagger</groupId>
            <artifactId>swagger-jersey2-jaxrs</artifactId>
-           <version>${swagger.version}</version>
-           <exclusions>
-               <exclusion>
-                   <groupId>org.glassfish.jersey.core</groupId>
-                   <artifactId>jersey-server</artifactId>
-               </exclusion>
-               <exclusion>
-                   <groupId>org.glassfish.hk2.external</groupId>
-                   <artifactId>javax.inject</artifactId>
-               </exclusion>
-               <exclusion>
-                   <groupId>org.glassfish.jersey.containers</groupId>
-                   <artifactId>jersey-container-servlet-core</artifactId>
-               </exclusion>
-           </exclusions>
        </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
