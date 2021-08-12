@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "7fc01635-4a88-44fd-92b7-232384f505c1",
+		"_postman_id": "ece436a3-2568-4552-ba23-51c924e9a505",
 		"name": "EmoDB_Tests",
 		"description": "Postman tests that are meant to cover most of positive and negative scenarios",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -52528,13 +52528,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -52547,8 +52541,8 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
+															"pm.test(\"Successful PUT request\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -52754,23 +52748,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key_no_rights\"),",
-															"            }",
-															"        }, async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 403\", asyncTest(async function () {",
 															"    if(pm.response.status !== 403) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -52790,6 +52771,20 @@
 															"    }",
 															"    pm.expect(pm.response.json().reason).to.be.oneOf([`not authorized to update table ${pm.environment.get('table')}`, 'not authorized']);",
 															"}));"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", \"true\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");",
+															"pm.environment.set(\"api_key\", \"api_key_no_rights\");"
 														],
 														"type": "text/javascript"
 													}
@@ -52894,6 +52889,15 @@
 														],
 														"type": "text/javascript"
 													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"api_key\", \"local_admin\");"
+														],
+														"type": "text/javascript"
+													}
 												}
 											],
 											"request": {
@@ -52972,13 +52976,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
-															"pm.environment.set(\"partitioned\", true);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -52991,8 +52989,8 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
+															"pm.test(\"Successful PUT request\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -53198,23 +53196,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=true`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        },async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
 															"    if(pm.response.status !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -53235,6 +53220,19 @@
 															"    pm.expect(response.json().success).eql(true);",
 															"}));",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", \"true\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -53416,13 +53414,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);",
-															"pm.environment.set(\"partitioned\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -53435,8 +53427,8 @@
 															"    pm.response.to.have.status(200);",
 															"});",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({'success':true}); ",
+															"pm.test(\"Successful PUT request\", function () {",
+															"    pm.expect(pm.response.json().success).eql(true);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -53642,23 +53634,10 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"const retryRequest = () => {",
-															"    return new Promise((resolve, reject) => {",
-															"        pm.sendRequest({",
-															"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}`,",
-															"            method: 'DELETE',",
-															"            header: {",
-															"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-															"            }",
-															"        }, async (error, response) => {",
-															"            if (error) {",
-															"                reject(error);",
-															"            }",
-															"            resolve(response);",
-															"        });",
-															"    });",
-															"};",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
+															"var response = pm.response;",
 															"pm.test(\"Status code is 200\", asyncTest(async function () {",
 															"    if(pm.response.status !== 200) {",
 															"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -53679,6 +53658,19 @@
 															"    pm.expect(response.json().success).eql(true);",
 															"}));",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"pm.environment.set(\"partitioned\", \"false\");",
+															"",
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -53848,99 +53840,52 @@
 											]
 										}
 									]
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const retryRequest = () => {",
+											"    return new Promise((resolve, reject) => {",
+											"        pm.sendRequest({",
+											"            url: `${pm.environment.get(\"url\")}`,",
+											"            method: `${pm.environment.get(\"method\")}`,",
+											"            header: {",
+											"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+											"            }",
+											"        }, (error, response) => {",
+											"            if (error) {",
+											"                reject(error);",
+											"            }",
+											"            resolve(response);",
+											"        });",
+											"    });",
+											"};",
+											"",
+											"const retryRequestCall = {",
+											"    retryRequest: retryRequest.toString()",
+											"};",
+											"",
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+											"",
+											"pm.environment.set(\"ttl\", \"86400\");",
+											"pm.environment.set(\"eventTtl\", \"86400\");",
+											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+										]
+									}
 								},
 								{
-									"name": "Unsubscribe operation.",
-									"event": [
-										{
-											"listen": "prerequest",
-											"script": {
-												"exec": [
-													"pm.environment.set(\"partitioned\", true);"
-												],
-												"type": "text/javascript"
-											}
-										}
-									],
-									"request": {
-										"method": "DELETE",
-										"header": [
-											{
-												"key": "Content-Type",
-												"value": "application/json"
-											}
-										],
-										"body": {
-											"mode": "raw",
-											"raw": "{\n    \"subscription\": {{subscription}}    \n}"
-										},
-										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
-											"host": [
-												"{{baseurl_dc1}}"
-											],
-											"path": [
-												"bus",
-												"1",
-												":subscription"
-											],
-											"query": [
-												{
-													"key": "partitioned",
-													"value": "{{partitioned}}"
-												}
-											],
-											"variable": [
-												{
-													"key": "subscription",
-													"value": "{{subscription}}"
-												}
-											]
-										},
-										"description": "Returns an Iterator of Subscription."
-									},
-									"response": [
-										{
-											"name": "successful operation",
-											"originalRequest": {
-												"method": "DELETE",
-												"header": [],
-												"url": {
-													"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
-													"host": [
-														"{{baseUrl}}"
-													],
-													"path": [
-														"bus",
-														"1",
-														":subscription"
-													],
-													"query": [
-														{
-															"key": "partitioned",
-															"value": "{{partitioned}}"
-														}
-													],
-													"variable": [
-														{
-															"key": "subscription"
-														}
-													]
-												}
-											},
-											"status": "OK",
-											"code": 200,
-											"_postman_previewlanguage": "json",
-											"header": [
-												{
-													"key": "Content-Type",
-													"value": "application/json"
-												}
-											],
-											"cookie": [],
-											"body": "{\n \"success\": true,\n \"debug\": {}\n}"
-										}
-									]
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
 								}
 							]
 						},
@@ -53958,12 +53903,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -54398,12 +54338,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -54837,12 +54772,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -55265,82 +55195,6 @@
 											]
 										}
 									]
-								},
-								{
-									"name": "Gets a Subscription.",
-									"event": [
-										{
-											"listen": "test",
-											"script": {
-												"exec": [
-													""
-												],
-												"type": "text/javascript"
-											}
-										}
-									],
-									"request": {
-										"method": "GET",
-										"header": [
-											{
-												"key": "Content-Type",
-												"value": "application/json"
-											},
-											{
-												"key": "X-BV-API-Key",
-												"value": "{{api_key}}",
-												"type": "text"
-											}
-										],
-										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}",
-											"host": [
-												"{{baseurl_dc1}}"
-											],
-											"path": [
-												"bus",
-												"1",
-												"{{subscription}}"
-											]
-										},
-										"description": "Returns a Subscription."
-									},
-									"response": [
-										{
-											"name": "successful operation",
-											"originalRequest": {
-												"method": "GET",
-												"header": [],
-												"url": {
-													"raw": "{{baseUrl}}/bus/1/:subscription",
-													"host": [
-														"{{baseUrl}}"
-													],
-													"path": [
-														"bus",
-														"1",
-														":subscription"
-													],
-													"variable": [
-														{
-															"key": "subscription"
-														}
-													]
-												}
-											},
-											"status": "OK",
-											"code": 200,
-											"_postman_previewlanguage": "json",
-											"header": [
-												{
-													"key": "Content-Type",
-													"value": "application/json"
-												}
-											],
-											"cookie": [],
-											"body": "{\n \"expiresAt\": \"2004-07-30T23:17:47.534Z\",\n \"name\": \"nostrud irure et dolor\",\n \"eventTtl\": {\n  \"seconds\": 79588479,\n  \"zero\": false,\n  \"negative\": false,\n  \"units\": [\n   {\n    \"duration\": {\n     \"value\": \"<Circular reference to #/components/schemas/Duration detected>\"\n    },\n    \"durationEstimated\": false,\n    \"timeBased\": false,\n    \"dateBased\": false\n   },\n   {\n    \"duration\": {\n     \"value\": \"<Circular reference to #/components/schemas/Duration detected>\"\n    },\n    \"durationEstimated\": false,\n    \"timeBased\": false,\n    \"dateBased\": false\n   }\n  ],\n  \"nano\": 54804863\n },\n \"tableFilter\": {}\n}"
-										}
-									]
 								}
 							],
 							"event": [
@@ -55371,7 +55225,12 @@
 											"    retryRequest: retryRequest.toString()",
 											"};",
 											"",
-											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+											"",
+											"pm.environment.set(\"ttl\", \"86400\");",
+											"pm.environment.set(\"eventTtl\", \"86400\");",
+											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 										]
 									}
 								},
@@ -55526,12 +55385,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -56719,12 +56573,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -57887,12 +57736,7 @@
 													"script": {
 														"exec": [
 															"var uuid = require('uuid');",
-															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-															"",
-															"pm.environment.set(\"ttl\", \"86400\");",
-															"pm.environment.set(\"eventTtl\", \"86400\");",
-															"pm.environment.set(\"ignoreSuppressedEvents\", false);",
-															"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+															"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 														],
 														"type": "text/javascript"
 													}
@@ -58860,7 +58704,12 @@
 											"    retryRequest: retryRequest.toString()",
 											"};",
 											"",
-											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+											"",
+											"pm.environment.set(\"ttl\", \"86400\");",
+											"pm.environment.set(\"eventTtl\", \"86400\");",
+											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 										]
 									}
 								},
