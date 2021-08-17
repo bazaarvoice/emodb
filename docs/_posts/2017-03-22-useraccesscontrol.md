@@ -40,7 +40,8 @@ MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singl
 Client jerseyClient = new JerseyClientBuilder(metricRegistry)
         .using(Executors.newSingleThreadExecutor())
         .using(Jackson.newObjectMapper())
-        .build("BlobClient");        
+        .build("BlobClient");
+jerseyClient.register(JacksonJasonProvider.class);
         
 ServiceFactory<UserAccessControl> userAccessControlFactory =
         UserAccessControlClientFactory.forClusterAndHttpClient("local_default", jerseyClient).usingCredentials(apiKey);

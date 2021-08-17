@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.common.jersey.dropwizard;
 
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.client.EmoResource;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.client.Client;
 import java.net.URI;
@@ -18,7 +17,6 @@ public class JerseyEmoClient implements EmoClient {
 
     public JerseyEmoClient(Client client) {
         _client = checkNotNull(client, "client");
-        _client.register(JacksonJsonProvider.class);
     }
 
     @Override

@@ -45,6 +45,8 @@ Client jerseyClient = new JerseyClientBuilder(metricRegistry)
         .using(Executors.newSingleThreadExecutor())
         .using(Jackson.newObjectMapper())
         .build("BlobClient");
+jerseyClient.register(JacksonJasonProvider.class);
+
 ServiceFactory<BlobStore> blobStoreFactory =
         BlobStoreClientFactory.forClusterAndHttpClient("local_default", jerseyClient).usingCredentials(apiKey);
 BlobStore blobStore = ServicePoolBuilder.create(BlobStore.class)

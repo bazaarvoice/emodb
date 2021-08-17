@@ -24,6 +24,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.io.ByteStreams;
@@ -255,6 +256,7 @@ public class EmoServiceWithZK {
                 .using(Executors.newSingleThreadExecutor())
                 .using(objectMapper)
                 .build(cluster);
+        client.register(JacksonJsonProvider.class);
         UserAccessControl uac = ServicePoolBuilder.create(UserAccessControl.class)
                 .withHostDiscoverySource(new UserAccessControlFixedHostDiscoverySource("http://localhost:" + selfHostAndPort.getPort()))
                 .withServiceFactory(UserAccessControlClientFactory.forClusterAndHttpClient(cluster, client).usingCredentials(adminApiKey))

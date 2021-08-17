@@ -58,6 +58,7 @@ Client jerseyClient = new JerseyClientBuilder(metricRegistry)
                 .using(Executors.newSingleThreadExecutor())
                 .using(Jackson.newObjectMapper())
                 .build("DatabusClient");
+jerseyClient.register(JacksonJasonProvider.class);
 Databus databus = ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
                 .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, jerseyClient).usingCredentials(apiKey))
