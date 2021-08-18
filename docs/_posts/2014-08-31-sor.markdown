@@ -36,7 +36,6 @@ Client jerseyClient = new JerseyClientBuilder(metricRegistry)
                 .using(Executors.newSingleThreadExecutor())
                 .using(Jackson.newObjectMapper())
                 .build("SOR client");
-jerseyClient.register(JacksonJasonProvider.class);
 ServiceFactory<DataStore> dataStoreFactory =
         DataStoreClientFactory.forClusterAndHttpClient("local_default", jerseyClient).usingCredentials(apiKey);
 DataStore dataStore = ServicePoolBuilder.create(DataStore.class)

@@ -8,7 +8,6 @@ import com.bazaarvoice.emodb.queue.client.QueueClient;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.codahale.metrics.MetricRegistry;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.dropwizard.cli.ConfiguredCommand;
@@ -95,8 +94,6 @@ public class PurgeDatabusEventsCommand extends ConfiguredCommand<EmoConfiguratio
     }
 
     private static Client createDefaultJerseyClient(JerseyClientConfiguration configuration, MetricRegistry metricRegistry, String serviceName) {
-        Client client = new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
-        client.register(JacksonJsonProvider.class);
-        return client;
+        return new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
     }
 }

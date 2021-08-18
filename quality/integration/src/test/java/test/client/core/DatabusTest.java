@@ -24,7 +24,6 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -1049,7 +1048,6 @@ public class DatabusTest {
                 .using(Executors.newSingleThreadExecutor())
                 .using(new ObjectMapper())
                 .build("DatabusClient");
-        client.register(JacksonJsonProvider.class);
 
         return ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))

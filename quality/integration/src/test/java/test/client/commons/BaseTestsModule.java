@@ -28,7 +28,6 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -112,14 +111,12 @@ public class BaseTestsModule extends AbstractModule {
     @Provides
     @Singleton
     private Client createClient(JerseyClientConfiguration httpClientConfiguration, CredentialsProvider credentialsProvider) {
-        Client client= new JerseyClientBuilder(new MetricRegistry())
+        return new JerseyClientBuilder(new MetricRegistry())
                     .using(httpClientConfiguration)
                     .using(Executors.newSingleThreadExecutor())
                     .using(new ObjectMapper())
                 .using(credentialsProvider)
                 .build("Gatekeeper");
-        client.register(JacksonJsonProvider.class);
-        return client;
     }
 
     @Provides
