@@ -17,8 +17,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Resource filter for methods which require authorization.  The subject should already be authenticated prior
- * to this filter executing.
+ * Base Resource filter class. Use the sub classes ClassAnnotatedAuthorizationResourceFilter and
+ * MethodAnnotatedAuthorizationResourceFilter to prevent component register errors.
  */
 public class AuthorizationResourceFilter implements ContainerRequestFilter {
 

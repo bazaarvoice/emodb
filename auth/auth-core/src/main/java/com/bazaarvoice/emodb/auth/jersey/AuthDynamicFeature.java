@@ -70,7 +70,7 @@ public class AuthDynamicFeature implements DynamicFeature {
         RequiresPermissions permAnnotation = resourceInfo.getResourceClass().getAnnotation(RequiresPermissions.class);
         if (permAnnotation != null) {
             filters.add(new PrioritizedContainerRequestFilter(
-                    new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
+                    new ClassAnnotatedAuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
                             permAnnotation.logical(), createSubstitutionMap(permAnnotation, resourceInfo)),
                     Priorities.AUTHORIZATION));
         }
@@ -79,7 +79,7 @@ public class AuthDynamicFeature implements DynamicFeature {
         permAnnotation = resourceInfo.getResourceMethod().getAnnotation(RequiresPermissions.class);
         if (permAnnotation != null) {
             filters.add(new PrioritizedContainerRequestFilter(
-                    new AuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
+                    new MethodAnnotatedAuthorizationResourceFilter(ImmutableList.copyOf(permAnnotation.value()),
                             permAnnotation.logical(), createSubstitutionMap(permAnnotation, resourceInfo)),
                     Priorities.AUTHORIZATION));
         }
