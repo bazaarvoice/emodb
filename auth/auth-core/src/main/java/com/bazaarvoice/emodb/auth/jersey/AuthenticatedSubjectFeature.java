@@ -50,6 +50,7 @@ public class AuthenticatedSubjectFeature implements Feature {
 
         @Override
         public void dispose(SecurityManager s) {
+            //No operation necessary
         }
     }
 }

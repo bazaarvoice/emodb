@@ -53,10 +53,9 @@ import static java.util.Objects.requireNonNull;
  */
 public class AuthDynamicFeature implements DynamicFeature {
 
-    private final static Pattern SUBSTITUTION_MATCHER = Pattern.compile("\\{(?<param>(\\?[^}]|[^?}])[^}]*)}");
-
     private final SecurityManager _securityManager;
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
+    private final static Pattern SUBSTITUTION_MATCHER = Pattern.compile("\\{(?<param>(\\?[^}]|[^?}])[^}]*)}");
 
     public AuthDynamicFeature(SecurityManager securityManager, AuthenticationTokenGenerator<?> tokenGenerator) {
         _securityManager = requireNonNull(securityManager, "securityManager");
