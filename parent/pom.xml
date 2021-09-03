@@ -24,9 +24,10 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv10</astyanax.version>
+        <astyanax.version>3.8.0-bv12</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra.version>2.2.19</cassandra.version>
+        <cassandra-server.version>2.2.19</cassandra-server.version>
+        <cassandra-client.version>3.0.25</cassandra-client.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
@@ -124,6 +125,11 @@
             <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-logback</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
@@ -318,7 +324,7 @@
             <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
-                <version>${cassandra.version}</version>
+                <version>${cassandra-client.version}</version>
                 <exclusions>
                     <!-- ignore stuff that conflicts with Dropwizard -->
                     <exclusion>
@@ -461,6 +467,11 @@
                 <version>${cassandra.driver.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>5.0.4</version>
+            </dependency>
+            <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
                 <version>1.21</version>
@@ -558,7 +569,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra.version}</version>
+                    <version>${cassandra-server.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
