@@ -34134,8 +34134,6 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"console.log(\"test\");",
-																	"console.log(pm.globals.get(\"retryRequestCall\"));",
 																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
 																	"const retryRequest = eval(retryRequestCall.retryRequest);",
 																	"",
@@ -39324,6 +39322,47 @@
 											"body": "{}"
 										}
 									]
+								}
+							],
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											"const retryRequest = () => {",
+											"    return new Promise((resolve, reject) => {",
+											"        pm.sendRequest({",
+											"            url: `${pm.environment.get(\"url\")}`,",
+											"            method: `${pm.environment.get(\"method\")}`,",
+											"            header: {",
+											"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+											"            }",
+											"        }, (error, response) => {",
+											"            if (error) {",
+											"                reject(error);",
+											"            }",
+											"            resolve(response);            ",
+											"        });",
+											"    });",
+											"};",
+											"",
+											"const retryRequestCall = {",
+											"    retryRequest: retryRequest.toString()",
+											"};",
+											"",
+											"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+										]
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"type": "text/javascript",
+										"exec": [
+											""
+										]
+									}
 								}
 							]
 						},
@@ -73043,7 +73082,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json() === 0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -73319,7 +73358,7 @@
 															"",
 															"pm.test(\"Body matches string\", asyncTest(async function () {    ",
 															"    if(response.json() === 0) {        ",
-															"        await waitUntil(setTimeout, clearTimeout, async () => {            ",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {           ",
 															"            response = await retryRequest();",
 															"            return response.json() > 0;",
 															"        }, \"Retrying request\");",
