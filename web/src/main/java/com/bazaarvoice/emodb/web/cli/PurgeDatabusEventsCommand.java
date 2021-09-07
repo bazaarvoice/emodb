@@ -10,23 +10,14 @@ import com.bazaarvoice.emodb.web.EmoConfiguration;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.client.apache4.ApacheHttpClient4;
-import com.sun.jersey.client.apache4.ApacheHttpClient4Handler;
-import com.sun.jersey.client.apache4.config.ApacheHttpClient4Config;
-import com.sun.jersey.client.apache4.config.DefaultApacheHttpClient4Config;
 import io.dropwizard.cli.ConfiguredCommand;
-import io.dropwizard.client.HttpClientBuilder;
-import io.dropwizard.client.HttpClientConfiguration;
-import io.dropwizard.jackson.Jackson;
-import io.dropwizard.jersey.jackson.JacksonMessageBodyProvider;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.setup.Bootstrap;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
-import org.apache.http.client.HttpClient;
 
-import javax.validation.Validation;
-import javax.validation.ValidatorFactory;
+import javax.ws.rs.client.Client;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
@@ -35,8 +26,6 @@ import java.util.Set;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class PurgeDatabusEventsCommand extends ConfiguredCommand<EmoConfiguration> {
-
-    private static ValidatorFactory _validatorFactory = Validation.buildDefaultValidatorFactory();
 
     public PurgeDatabusEventsCommand() {
         super("purge-databus-events", "Purges selected databus events from a subscription based on table/key match.");
@@ -104,11 +93,7 @@ public class PurgeDatabusEventsCommand extends ConfiguredCommand<EmoConfiguratio
         }
     }
 
-    private static ApacheHttpClient4 createDefaultJerseyClient(HttpClientConfiguration configuration, MetricRegistry metricRegistry, String serviceName) {
-        HttpClient httpClient = new HttpClientBuilder(metricRegistry).using(configuration).build(serviceName);
-        ApacheHttpClient4Handler handler = new ApacheHttpClient4Handler(httpClient, null, true);
-        ApacheHttpClient4Config config = new DefaultApacheHttpClient4Config();
-        config.getSingletons().add(new JacksonMessageBodyProvider(Jackson.newObjectMapper(), _validatorFactory.getValidator()));
-        return new ApacheHttpClient4(handler, config);
+    private static Client createDefaultJerseyClient(JerseyClientConfiguration configuration, MetricRegistry metricRegistry, String serviceName) {
+        return new JerseyClientBuilder(metricRegistry).using(configuration).build(serviceName);
     }
 }

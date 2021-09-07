@@ -41,7 +41,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.junit.After;
 import org.junit.Rule;
@@ -50,6 +49,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -854,17 +854,18 @@ public class BlobStoreJerseyTest extends ResourceTest {
         // The blob store client doesn't interact directly with the Content-Type header.  Therefore this test must bypass
         // and use the underlying client.
 
-        ClientResponse response = _resourceTestRule.client().resource("/blob/1/table-name/blob-id")
+        Response response = _resourceTestRule.client().target("/blob/1/table-name/blob-id")
+                .request()
                 .accept("*")
                 .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
-                .get(ClientResponse.class);
+                .get();
 
         assertEquals(response.getStatus(), 200);
-        assertEquals(metadataContentType, response.getHeaders().getFirst("X-BVA-content-type"));
-        assertEquals(expectedContentType, response.getType().toString());
+        assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
+        assertEquals(response.getMediaType().toString(), expectedContentType);
 
         byte[] actual = new byte[content.length];
-        InputStream in = response.getEntityInputStream();
+        InputStream in = response.readEntity(InputStream.class);
         assertEquals(content.length, in.read(actual, 0, content.length));
         assertEquals(-1, in.read());
         assertEquals(actual, content);

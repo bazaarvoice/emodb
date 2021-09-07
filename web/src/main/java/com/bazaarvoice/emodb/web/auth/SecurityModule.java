@@ -67,13 +67,13 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
-import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.authz.permission.PermissionResolver;
 import org.apache.shiro.mgt.SecurityManager;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.net.URI;
 import java.util.Date;
 import java.util.List;

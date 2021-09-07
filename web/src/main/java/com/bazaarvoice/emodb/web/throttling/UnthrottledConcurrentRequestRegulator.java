@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.throttling;
 
-import com.sun.jersey.spi.container.ContainerRequest;
+import javax.ws.rs.container.ContainerRequestContext;
 
 /**
  * Concurrent request regulator implementation which performs no throttling.
@@ -18,12 +18,12 @@ public class UnthrottledConcurrentRequestRegulator implements ConcurrentRequestR
     }
 
     @Override
-    public void throttle(ContainerRequest request) {
+    public void throttle(ContainerRequestContext request) {
         // no-op
     }
 
     @Override
-    public void release(ContainerRequest request) {
+    public void release(ContainerRequestContext request) {
         // no-op
     }
 }

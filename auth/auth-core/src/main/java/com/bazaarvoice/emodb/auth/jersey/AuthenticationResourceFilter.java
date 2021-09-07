@@ -2,11 +2,6 @@ package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
 import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponse;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilter;
 import org.apache.shiro.authc.AuthenticationToken;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.Subject;
@@ -16,14 +11,20 @@ import org.eclipse.jetty.server.HttpConnection;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.UserIdentity;
 
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ContainerResponseContext;
+import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.SecurityContext;
+import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Resource filter for authentication.  This filter attempts to log the client in prior to handling each request.
  * Because the API is assumed to be RESTful this call also logs the user back out once the request is complete.
  * Internal caching performed by Shiro should make re-authentication of multiple calls from the same user efficient.
  */
-public class AuthenticationResourceFilter implements ResourceFilter, ContainerRequestFilter, ContainerResponseFilter {
+public class AuthenticationResourceFilter implements ContainerRequestFilter, ContainerResponseFilter {
 
     private final SecurityManager _securityManager;
     private final AuthenticationTokenGenerator<?> _tokenGenerator;
@@ -34,17 +35,7 @@ public class AuthenticationResourceFilter implements ResourceFilter, ContainerRe
     }
 
     @Override
-    public ContainerRequestFilter getRequestFilter() {
-        return this;
-    }
-
-    @Override
-    public ContainerResponseFilter getResponseFilter() {
-        return this;
-    }
-
-    @Override
-    public ContainerRequest filter(ContainerRequest request) {
+    public void filter(ContainerRequestContext request) {
         Subject subject = new Subject.Builder(_securityManager).buildSubject();
         ThreadContext.bind(subject);
 
@@ -57,11 +48,10 @@ public class AuthenticationResourceFilter implements ResourceFilter, ContainerRe
         // The user has been successfully logged in.  Update the container authentication.
         setJettyAuthentication(subject);
 
-        return request;
     }
 
     @Override
-    public ContainerResponse filter(ContainerRequest request, ContainerResponse response) {
+    public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
         Subject subject = ThreadContext.getSubject();
         if (subject != null) {
             if (subject.isAuthenticated()) {
@@ -69,7 +59,6 @@ public class AuthenticationResourceFilter implements ResourceFilter, ContainerRe
             }
             ThreadContext.unbindSubject();
         }
-        return response;
     }
 
     /**
@@ -93,5 +82,18 @@ public class AuthenticationResourceFilter implements ResourceFilter, ContainerRe
         UserIdentity identity = principal.toUserIdentity();
 
         jettyRequest.setAuthentication(new UserAuthentication(SecurityContext.BASIC_AUTH, identity));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AuthenticationResourceFilter that = (AuthenticationResourceFilter) o;
+        return _securityManager.equals(that._securityManager) && _tokenGenerator.equals(that._tokenGenerator);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(_securityManager, _tokenGenerator);
     }
 }

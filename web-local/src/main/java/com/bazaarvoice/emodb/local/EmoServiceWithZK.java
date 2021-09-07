@@ -36,16 +36,18 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.server.ServerFactory;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.apache.cassandra.service.CassandraDaemon;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.curator.test.TestingServer;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.Client;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -249,9 +251,13 @@ public class EmoServiceWithZK {
         }
 
         // Create a client for the local EmoDB service
+        final Client client = new JerseyClientBuilder(metricRegistry)
+                .using(Executors.newSingleThreadExecutor())
+                .using(objectMapper)
+                .build(cluster);
         UserAccessControl uac = ServicePoolBuilder.create(UserAccessControl.class)
                 .withHostDiscoverySource(new UserAccessControlFixedHostDiscoverySource("http://localhost:" + selfHostAndPort.getPort()))
-                .withServiceFactory(UserAccessControlClientFactory.forCluster(cluster, metricRegistry).usingCredentials(adminApiKey))
+                .withServiceFactory(UserAccessControlClientFactory.forClusterAndHttpClient(cluster, client).usingCredentials(adminApiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
 

@@ -2,9 +2,10 @@ package com.bazaarvoice.emodb.auth.dropwizard;
 
 import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfiguration;
 import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfigurationBuilder;
-import com.sun.jersey.spi.container.ResourceFilterFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.shiro.mgt.SecurityManager;
+
+import javax.ws.rs.container.DynamicFeature;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -40,9 +41,9 @@ public class DropwizardAuthConfigurator {
         checkNotNull(environment, "environment");
         JerseyAuthConfiguration config = JerseyAuthConfigurationBuilder.build(_securityManager);
 
-        for (ResourceFilterFactory resourceFilterFactory : config.getResourceFilterFactories()) {
+        for (DynamicFeature dynamicFeature : config.getDynamicFeatures()) {
             //noinspection unchecked
-            environment.jersey().getResourceConfig().getResourceFilterFactories().add(resourceFilterFactory);
+            environment.jersey().getResourceConfig().register(dynamicFeature);
         }
         for (Object provider : config.getProviderInstances()) {
             environment.jersey().register(provider);

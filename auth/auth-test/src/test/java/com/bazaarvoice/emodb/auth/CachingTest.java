@@ -21,8 +21,6 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.core.DefaultCacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.codahale.metrics.MetricRegistry;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.junit.Rule;
@@ -33,9 +31,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.function.Supplier;
 
 import static com.bazaarvoice.emodb.auth.permissions.MatchingPermission.escape;
@@ -201,22 +199,22 @@ public class CachingTest {
     }
 
     private void testGetWithMatchingPermissions(String key, String country, String city) throws Exception {
-        ClientResponse response = getCountryAndCity(country, city, key);
+        Response response = getCountryAndCity(country, city, key);
         assertEquals(response.getStatus(), Response.Status.OK.getStatusCode());
-        assertEquals(response.getEntity(String.class), "Welcome to " + city + ", " + country);
+        assertEquals(response.readEntity(String.class), "Welcome to " + city + ", " + country);
     }
 
     private void testGetWithMissingPermissions(String key, String country, String city) throws Exception {
-        ClientResponse response = getCountryAndCity(country, city, key);
+        Response response = getCountryAndCity(country, city, key);
         assertEquals(response.getStatus(), Response.Status.FORBIDDEN.getStatusCode());
     }
 
-    private ClientResponse getCountryAndCity(String country, String city, String apiKey) {
+    private Response getCountryAndCity(String country, String city, String apiKey) {
         String uri = format("/explicit/country/%s/city/%s", country, city);
-        WebResource resource = _resourceTestRule.client().resource(uri);
+        WebTarget resource = _resourceTestRule.client().target(uri);
         if (apiKey != null) {
-            return resource.header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get(ClientResponse.class);
+            return resource.request().header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey).get();
         }
-        return resource.get(ClientResponse.class);
+        return resource.request().get();
     }
 }

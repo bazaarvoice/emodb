@@ -502,7 +502,7 @@ public class EmoUriComponent {
      */
     public static MultivaluedMap<String, String> decodeQuery(String q, boolean decodeNames, boolean decodeValues) {
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        MultivaluedMap<String, String> queryParameters = EmoMultivaluedMap.create();
+        MultivaluedMap<String, String> queryParameters = new EmoMultivaluedMap();
 
         if (q == null || q.length() == 0) {
             return queryParameters;
@@ -553,7 +553,7 @@ public class EmoUriComponent {
 
         PathSegmentImpl(String path, boolean decode) {
             // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-            this(path, decode, EmoMultivaluedMap.<String, String>create());
+            this(path, decode, new EmoMultivaluedMap<>());
         }
 
         PathSegmentImpl(String path, boolean decode, MultivaluedMap<String, String> matrixParameters) {
@@ -669,7 +669,7 @@ public class EmoUriComponent {
      */
     public static MultivaluedMap<String, String> decodeMatrix(String pathSegment, boolean decode) {
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        MultivaluedMap<String, String> matrixMap = EmoMultivaluedMap.create();
+        MultivaluedMap<String, String> matrixMap = new EmoMultivaluedMap<>();
 
         // Skip over path segment
         int s = pathSegment.indexOf(';') + 1;

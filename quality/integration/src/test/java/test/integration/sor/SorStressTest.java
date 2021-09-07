@@ -25,12 +25,14 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import io.dropwizard.client.JerseyClientBuilder;
 import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.logging.LoggingFactory;
@@ -39,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
+import javax.ws.rs.client.Client;
 import java.io.File;
 import java.time.Duration;
 import java.util.Iterator;
@@ -47,6 +50,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -205,8 +209,11 @@ public class SorStressTest  {
         CuratorFramework curator = configuration.getZooKeeperConfiguration().newCurator();
         curator.start();
 
-        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Client client = new JerseyClientBuilder(metricRegistry).using(configuration.getHttpClientConfiguration()).using(executorService, new ObjectMapper()).build("dw");
+
+        DataStoreClientFactory dataStoreFactory = DataStoreClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDataStore authDataStore = ServicePoolBuilder.create(AuthDataStore.class)
                 .withServiceFactory(dataStoreFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName(), metricRegistry))
@@ -215,8 +222,8 @@ public class SorStressTest  {
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
         DataStore dataStore = DataStoreAuthenticator.proxied(authDataStore).usingCredentials(apiKey);
 
-        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpConfiguration(
-                configuration.getCluster(), configuration.getHttpClientConfiguration(), metricRegistry);
+        DatabusClientFactory databusFactory = DatabusClientFactory.forClusterAndHttpClient(
+                configuration.getCluster(), client);
         AuthDatabus authDatabus = ServicePoolBuilder.create(AuthDatabus.class)
                 .withServiceFactory(databusFactory)
                 .withHostDiscovery(new ZooKeeperHostDiscovery(curator, databusFactory.getServiceName(), metricRegistry))

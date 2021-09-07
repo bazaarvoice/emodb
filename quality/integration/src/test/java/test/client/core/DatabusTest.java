@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.uac.api.UserAccessControl;
 import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -33,6 +34,8 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.TreeMultimap;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import io.dropwizard.client.JerseyClientBuilder;
+import io.dropwizard.client.JerseyClientConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.AfterTest;
@@ -42,6 +45,7 @@ import org.testng.annotations.Test;
 import test.client.commons.TestModuleFactory;
 import test.client.commons.utils.DataStoreHelper;
 
+import javax.ws.rs.client.Client;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,6 +53,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -102,6 +107,9 @@ public class DatabusTest {
     @Inject
     @Named("runID")
     private String runID;
+
+    @Inject
+    private JerseyClientConfiguration clientConfiguration;
 
     @BeforeTest(alwaysRun = true)
     public void beforeTest() {
@@ -761,10 +769,8 @@ public class DatabusTest {
         String sub = uniqueName("permission_claim_sub", "databus", null, runID);
         String key0 = createNewDatabusApiKey(uac);
         final Databus bus0 = createNewDatabusClient(key0, clusterName, emodbHost);
-
         String key1 = createNewDatabusApiKey(uac);
         final Databus bus1 = createNewDatabusClient(key1, clusterName, emodbHost);
-
         subscribeAndCheckConditions(bus0, sub, Conditions.alwaysTrue());
 
         try {
@@ -1035,12 +1041,17 @@ public class DatabusTest {
         return eventKeys;
     }
 
-    private static Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
+    private Databus createNewDatabusClient(String apiKey, String clusterName, String emodbHost) {
         MetricRegistry metricRegistry = new MetricRegistry(); // This is usually a singleton passed
+        Client client = new JerseyClientBuilder(metricRegistry)
+                .using(this.clientConfiguration)
+                .using(Executors.newSingleThreadExecutor())
+                .using(new ObjectMapper())
+                .build("DatabusClient");
 
         return ServicePoolBuilder.create(Databus.class)
                 .withHostDiscoverySource(new DatabusFixedHostDiscoverySource(emodbHost))
-                .withServiceFactory(DatabusClientFactory.forCluster(clusterName, new MetricRegistry()).usingCredentials(apiKey))
+                .withServiceFactory(DatabusClientFactory.forClusterAndHttpClient(clusterName, client).usingCredentials(apiKey))
                 .withMetricRegistry(metricRegistry)
                 .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
     }

@@ -5,40 +5,50 @@ import com.bazaarvoice.emodb.client.EmoResource;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.EntityHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.InputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * EmoResource implementation that uses a WebResource returned by a Jersey client.
  */
 public class JerseyEmoResource implements EmoResource {
 
-    private WebResource _resource;
-    private WebResource.Builder _builder;
+    private WebTarget _target;
+    private Invocation.Builder _builder;
+    private MediaType _type;
 
-    JerseyEmoResource(WebResource resource) {
-        _resource = checkNotNull(resource, "resource");
+    private static final Logger LOG = LoggerFactory.getLogger(JerseyEmoResource.class);
+
+    JerseyEmoResource(WebTarget resource) {
+        _target = requireNonNull(resource, "target");
     }
 
     @Override
     public EmoResource queryParam(String key, String value) {
-        checkState(_resource != null, "Invalid state to add a query param");
-        _resource = _resource.queryParam(key, value);
+        if(_target == null) {
+            throw new IllegalStateException("Invalid state to add a query param");
+        }
+        _target = _target.queryParam(key, value);
         return this;
     }
 
     @Override
     public EmoResource path(String path) {
-        checkState(_resource != null, "Invalid state to add a path");
-        _resource = _resource.path(path);
+        if (_target == null) {
+            throw new IllegalStateException("Invalid state to add a path");
+        }
+        _target = _target.path(path);
         return this;
     }
 
@@ -50,7 +60,7 @@ public class JerseyEmoResource implements EmoResource {
 
     @Override
     public EmoResource type(MediaType mediaType) {
-        _builder = builder().type(mediaType);
+        _type = mediaType;
         return this;
     }
 
@@ -70,13 +80,24 @@ public class JerseyEmoResource implements EmoResource {
      */
     private <T> T send(String method, @Nullable Object entity) {
         try {
+            Response response;
             if (entity == null) {
-                builder().method(method);
+                response = builder().method(method);
             } else {
-                builder().method(method, entity);
+                response = builder().method(method, Entity.entity(entity, type()));
             }
+            // This is as per jax-rs invocation builder code.
+            if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+                throw new WebApplicationException(response);
+            } else {
+                // hack: we can call response.close but it generates errors on the server
+                // this way, we read the entire response and _then_ close, always, even
+                // though we don't need to read the response
+                response.readEntity(Object.class);
+            }
+
             return null;
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw asEmoClientException(e);
         }
     }
@@ -90,25 +111,26 @@ public class JerseyEmoResource implements EmoResource {
         if (responseType == EmoResponse.class) {
             // noinspection unchecked
             return (T) toEmoResponse(entity == null ?
-                    builder().method(method, ClientResponse.class) :
-                    builder().method(method, ClientResponse.class, entity));
+                    builder().method(method) :
+                    builder().method(method, Entity.entity(entity, type())));
         }
 
         try {
-            ClientResponse response = entity == null ?
-                    builder().method(method, ClientResponse.class) :
-                    builder().method(method, ClientResponse.class, entity);
+            Response response = entity == null ?
+                    builder().method(method) :
+                    builder().method(method, Entity.entity(entity, type()));
 
-            // This is as per Jersey's WebResource builder() code.
-            if (response.getStatus() >= 300) {
-                throw new UniformInterfaceException(response);
+            // This is as per jax-rs invocation builder code.
+            if (!response.getStatusInfo().getFamily().equals(Response.Status.Family.SUCCESSFUL)) {
+                throw new WebApplicationException(response);
             }
 
-            if (!response.getType().equals(MediaType.APPLICATION_JSON_TYPE)) {
-                return response.getEntity(responseType);
+            if (!response.getMediaType().equals(MediaType.APPLICATION_JSON_TYPE)) {
+                LOG.error("response type is {} [{}]", responseType.toString(), responseType.toGenericString());
+                return response.readEntity(responseType);
             }
-            return EntityHelper.getEntity(response.getEntity(InputStream.class), responseType);
-        } catch (UniformInterfaceException e) {
+            return EntityHelper.getEntity(response.readEntity(InputStream.class), responseType);
+        } catch (WebApplicationException e) {
             throw asEmoClientException(e);
         }
     }
@@ -121,21 +143,21 @@ public class JerseyEmoResource implements EmoResource {
         try {
             InputStream responseStream = entity == null ?
                     builder().method(method, InputStream.class) :
-                    builder().method(method, InputStream.class, entity);
+                    builder().method(method, Entity.entity(entity, type()), InputStream.class);
 
             return EntityHelper.getEntity(responseStream, responseType);
-        } catch (UniformInterfaceException e) {
+        } catch (WebApplicationException e) {
             throw asEmoClientException(e);
         }
     }
 
     /** Returns a thin EmoResponse wrapper around the Jersey response. */
-    private EmoResponse toEmoResponse(ClientResponse clientResponse) {
-        return new JerseyEmoResponse(clientResponse);
+    private EmoResponse toEmoResponse(Response response) {
+        return new JerseyEmoResponse(response);
     }
 
     /** Returns an EmoClientException with a thin wrapper around the Jersey exception response. */
-    private EmoClientException asEmoClientException(UniformInterfaceException e)
+    private EmoClientException asEmoClientException(WebApplicationException e)
             throws EmoClientException {
         throw new EmoClientException(e.getMessage(), e, toEmoResponse(e.getResponse()));
     }
@@ -205,12 +227,17 @@ public class JerseyEmoResource implements EmoResource {
         return send("DELETE", type, null);
     }
 
-    private WebResource.Builder builder() {
+    private Invocation.Builder builder() {
         if (_builder == null) {
-            _builder = _resource.getRequestBuilder();
+            _builder = _target.request();
             // Null resource out to force no further resource-only calls, such a queryParam().
-            _resource = null;
+            _target = null;
         }
         return _builder;
+    }
+
+    private MediaType type() {
+        requireNonNull(_type, "You must set the media type for the request");
+        return _type;
     }
 }

@@ -58,10 +58,10 @@ public class EmoUriBuilder extends UriBuilder {
         this.port = that.port;
         this.path = new StringBuilder(that.path);
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        this.matrixParams = that.matrixParams == null ? null : EmoMultivaluedMap.copy(that.matrixParams);
+        this.matrixParams = that.matrixParams == null ? null : new EmoMultivaluedMap(that.matrixParams);
         this.query = new StringBuilder(that.query);
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        this.queryParams = that.queryParams == null ? null : EmoMultivaluedMap.copy(that.queryParams);
+        this.queryParams = that.queryParams == null ? null : new EmoMultivaluedMap(that.queryParams);
         this.fragment = that.fragment;
     }
 
@@ -147,6 +147,12 @@ public class EmoUriBuilder extends UriBuilder {
         }
 
         return this;
+    }
+
+    @Override
+    public UriBuilder uri(String uriTemplate) {
+        // EMODB-MODIFICATION:  Templates are not supported, so parsing uriTemplate is not supported
+        throw new UnsupportedOperationException("Templates not supported, so uriTemplate can not be parsed.");
     }
 
     @Override
@@ -516,6 +522,42 @@ public class EmoUriBuilder extends UriBuilder {
         return this;
     }
 
+    @Override
+    public UriBuilder resolveTemplate(String name, Object value) {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplate is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplate cannot be executed");
+    }
+
+    @Override
+    public UriBuilder resolveTemplate(String name, Object value, boolean encodeSlashInPath) {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplate is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplate(String, Object, boolean) cannot be executed");
+    }
+
+    @Override
+    public UriBuilder resolveTemplateFromEncoded(String name, Object value) {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplateFromEncoded is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplateFromEncoded cannot be executed");
+    }
+
+    @Override
+    public UriBuilder resolveTemplates(Map<String, Object> templateValues) {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplate is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplates cannot be executed");
+    }
+
+    @Override
+    public UriBuilder resolveTemplates(Map<String, Object> templateValues, boolean encodeSlashInPath) throws IllegalArgumentException {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplates is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplates(Map, boolean) cannot be executed");
+    }
+
+    @Override
+    public UriBuilder resolveTemplatesFromEncoded(Map<String, Object> templateValues) {
+        // EMODB-MODIFICATION:  Templates are not supported, so resolveTemplatesFromEncoded is not supported
+        throw new UnsupportedOperationException("Templates not supported,so resolveTemplatesFromEncoded cannot be executed");
+    }
+
     private void checkSsp() {
         if (ssp != null) {
             throw new IllegalArgumentException("Schema specific part is opaque");
@@ -609,13 +651,19 @@ public class EmoUriBuilder extends UriBuilder {
     @Override
     public URI buildFromMap(Map<String, ?> values) {
         // EMODB-MODIFICATION:  Templates are not supported, so buildFromMap is not supported
-        throw new UnsupportedOperationException("Templates not supported");
+        throw new UnsupportedOperationException("Templates not supported,so buildFromMap cannot be executed");
+    }
+
+    @Override
+    public URI buildFromMap(Map<String, ?> values, boolean encodeSlashInPath) throws IllegalArgumentException, UriBuilderException {
+        // EMODB-MODIFICATION:  Templates are not supported, so buildFromMap is not supported
+        throw new UnsupportedOperationException("Templates not supported,so buildFromMap(Map,boolean) cannot be executed");
     }
 
     @Override
     public URI buildFromEncodedMap(Map<String, ?> values) throws IllegalArgumentException, UriBuilderException {
-        // EMODB-MODIFICATION:  Templates are not supported, so buildFromMap is not supported
-        throw new UnsupportedOperationException("Templates not supported");
+        // EMODB-MODIFICATION:  Templates are not supported, so buildFromEncodedMap is not supported
+        throw new UnsupportedOperationException("Templates not supported, so buildFromEncodedMap cannot be executed");
     }
 
     @Override
@@ -624,8 +672,19 @@ public class EmoUriBuilder extends UriBuilder {
     }
 
     @Override
+    public URI build(Object[] values, boolean encodeSlashInPath) throws IllegalArgumentException, UriBuilderException {
+        return _build(encodeSlashInPath, values);
+    }
+
+    @Override
     public URI buildFromEncoded(Object... values) {
         return _build(false, values);
+    }
+
+    @Override
+    public String toTemplate() {
+        // EMODB-MODIFICATION:  Templates are not supported, so buildFromMap is not supported
+        throw new UnsupportedOperationException("Templates not supported");
     }
 
     private URI _build(boolean encode, Object... values) {

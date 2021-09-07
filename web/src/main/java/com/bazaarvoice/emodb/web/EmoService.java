@@ -5,7 +5,6 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
-import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamFilter;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
@@ -27,7 +26,8 @@ import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
 import com.bazaarvoice.emodb.web.jersey.ServerErrorResponseMetricsFilter;
-import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamResourceFilterFactory;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamDynamicFeature;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamFilter;
 import com.bazaarvoice.emodb.web.megabus.resource.MegabusResource1;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
@@ -76,7 +76,7 @@ import io.swagger.jaxrs.config.BeanConfig;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -186,7 +186,7 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Configure support for streaming JSON responses without long delays due to buffering
         //noinspection unchecked
-        environment.jersey().getResourceConfig().getResourceFilterFactories().add(new UnbufferedStreamResourceFilterFactory());
+        environment.jersey().getResourceConfig().register(UnbufferedStreamDynamicFeature.class);
         environment.getApplicationContext().addFilter(new FilterHolder(new UnbufferedStreamFilter()), "/*", EnumSet.of(DispatcherType.REQUEST));
 
         // Create all the major EmoDB components using Guice.  Note: This code is organized such that almost all
@@ -223,8 +223,7 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Add a filter to provide finer 5xx metrics than the default DropWizard metrics include.
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getContainerResponseFilters()
-                .add(new ServerErrorResponseMetricsFilter(_environment.metrics()));
+        _environment.jersey().getResourceConfig().register(new ServerErrorResponseMetricsFilter(_environment.metrics()));
     }
 
     private void evaluateInvalidateCaches()
@@ -363,12 +362,16 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Add a resource factory that creates throttling related Resource Filters for appropriate resource methods
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getResourceFilterFactories().add(new ThrottlingFilterFactory(_environment.metrics()));
+        _environment.jersey().getResourceConfig().register(new ThrottlingFilterFactory(_environment.metrics()));
 
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getContainerRequestFilters().add(adHocThrottleFilter);
+
+//        _environment.jersey().getResourceConfig().getContainerRequestFilters().add(adHocThrottleFilter);
         //noinspection unchecked
-        _environment.jersey().getResourceConfig().getContainerResponseFilters().add(adHocThrottleFilter);
+//        _environment.jersey().getResourceConfig().getContainerResponseFilters().add(adHocThrottleFilter);
+
+
+        _environment.jersey().getResourceConfig().register(adHocThrottleFilter);
     }
 
     private void evaluateSecurity() {

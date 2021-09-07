@@ -2,7 +2,8 @@ package com.bazaarvoice.emodb.auth.apikey;
 
 import com.bazaarvoice.emodb.auth.jersey.AuthenticationTokenGenerator;
 import com.google.common.base.Strings;
-import com.sun.jersey.api.core.HttpRequestContext;
+
+import javax.ws.rs.container.ContainerRequestContext;
 
 /**
  * {@link AuthenticationTokenGenerator} implementation for ApiKeys.  Key can arrive as either a header or query param.
@@ -11,10 +12,10 @@ import com.sun.jersey.api.core.HttpRequestContext;
 public class ApiKeyAuthenticationTokenGenerator implements AuthenticationTokenGenerator<ApiKey> {
 
     @Override
-    public ApiKeyAuthenticationToken createToken(HttpRequestContext context) {
-        String apiKey = context.getHeaderValue(ApiKeyRequest.AUTHENTICATION_HEADER);
+    public ApiKeyAuthenticationToken createToken(ContainerRequestContext context) {
+        String apiKey = context.getHeaderString(ApiKeyRequest.AUTHENTICATION_HEADER);
         if (Strings.isNullOrEmpty(apiKey)) {
-            apiKey = context.getQueryParameters().getFirst(ApiKeyRequest.AUTHENTICATION_PARAM);
+            apiKey = context.getUriInfo().getQueryParameters().getFirst(ApiKeyRequest.AUTHENTICATION_PARAM);
             if (Strings.isNullOrEmpty(apiKey)) {
                 return null;
             }
