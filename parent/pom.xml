@@ -24,9 +24,10 @@
     </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv10</astyanax.version>
+        <astyanax.version>3.8.0-bv12</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra.version>2.2.19</cassandra.version>
+        <cassandra-server.version>2.2.19</cassandra-server.version>
+        <cassandra-client.version>3.0.25</cassandra-client.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
@@ -39,8 +40,8 @@
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.29</slf4j.version>
-        <commons-io.version>2.5</commons-io.version>
-        <commons-compress.version>1.20</commons-compress.version>
+        <commons-io.version>2.7</commons-io.version>
+        <commons-compress.version>1.21</commons-compress.version>
         <aws-sdk.version>1.11.551</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.18.1</jersey.version>
@@ -69,6 +70,7 @@
         <mockito.version>3.7.0</mockito.version>
         <testng.version>7.3.0</testng.version>
         <junit.version>4.13.1</junit.version>
+        <logback.version>1.1.3</logback.version>
     </properties>
 
     <dependencyManagement>
@@ -124,6 +126,11 @@
             <dependency>
                 <groupId>io.dropwizard.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-logback</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
@@ -277,7 +284,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.5.5</version>
+                <version>4.5.13</version>
                 <exclusions>
                     <exclusion>
                         <groupId>commons-logging</groupId>
@@ -313,12 +320,12 @@
             <dependency>
                 <groupId>org.apache.thrift</groupId>
                 <artifactId>libthrift</artifactId>
-                <version>0.9.3-1</version>
+                <version>0.12.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
-                <version>${cassandra.version}</version>
+                <version>${cassandra-client.version}</version>
                 <exclusions>
                     <!-- ignore stuff that conflicts with Dropwizard -->
                     <exclusion>
@@ -326,46 +333,24 @@
                         <artifactId>commons-logging</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>javax.servlet</groupId>
-                        <artifactId>servlet-api</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>junit</groupId>
-                        <artifactId>junit</artifactId>
-                    </exclusion>
-                    <exclusion>
                         <groupId>log4j</groupId>
                         <artifactId>log4j</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.mortbay.jetty</groupId>
-                        <artifactId>jetty</artifactId>
                     </exclusion>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
-                    <exclusion>
-                        <groupId>com.yammer.metrics</groupId>
-                        <artifactId>metrics-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>io.dropwizard.metrics</groupId>
-                        <artifactId>metrics-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>ch.qos.logback</groupId>
-                        <artifactId>logback-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>ch.qos.logback</groupId>
-                        <artifactId>logback-classic</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.hibernate</groupId>
-                        <artifactId>hibernate-validator</artifactId>
-                    </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${logback.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.fasterxml.jackson</groupId>
@@ -459,6 +444,11 @@
                 <groupId>com.datastax.cassandra</groupId>
                 <artifactId>cassandra-driver-mapping</artifactId>
                 <version>${cassandra.driver.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>5.0.4</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -558,7 +548,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra.version}</version>
+                    <version>${cassandra-server.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
