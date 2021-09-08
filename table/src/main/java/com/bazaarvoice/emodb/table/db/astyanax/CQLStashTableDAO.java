@@ -18,6 +18,7 @@ import com.google.inject.Inject;
 import com.netflix.astyanax.model.ByteBufferRange;
 
 import java.nio.ByteBuffer;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -156,7 +157,7 @@ public class CQLStashTableDAO {
         Row row = resultSet.one();
 
         if (row == null) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         TableJson tableJson = toTableJson(row.getString(0));

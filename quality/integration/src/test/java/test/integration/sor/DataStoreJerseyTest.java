@@ -894,7 +894,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         UUID startUuid = TimeUUIDs.uuidForTimestamp(start);
         UUID endUuid = TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(end.getTime() + 1));
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, false, 10, ReadConsistency.STRONG))
-                .thenReturn(Iterators.<Change>emptyIterator());
+                .thenReturn(Collections.<Change>emptyIterator());
 
         DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")
@@ -921,7 +921,7 @@ public class DataStoreJerseyTest extends ResourceTest {
         UUID startUuid = TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(start.getTime() + 1));
         UUID endUuid = TimeUUIDs.uuidForTimestamp(end);
         when(_server.getTimeline("table-name", "row-key", true, false, startUuid, endUuid, true, 10, ReadConsistency.STRONG))
-                .thenReturn(Iterators.<Change>emptyIterator());
+                .thenReturn(Collections.<Change>emptyIterator());
 
         DateTimeFormatter format = DateTimeFormatter.ISO_INSTANT;
         URI uri = UriBuilder.fromUri("/sor/1")

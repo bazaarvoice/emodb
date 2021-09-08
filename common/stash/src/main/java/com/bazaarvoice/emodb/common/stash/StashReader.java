@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -156,7 +158,7 @@ abstract public class StashReader {
         final String prefix = String.format("%s/", root);
 
         return new AbstractIterator<StashTable>() {
-            Iterator<String> _commonPrefixes = Iterators.emptyIterator();
+            Iterator<String> _commonPrefixes = Collections.emptyIterator();
             String _marker = null;
             boolean _truncated = true;
 
@@ -208,7 +210,7 @@ abstract public class StashReader {
 
         return new AbstractIterator<StashTableMetadata>() {
             PeekingIterator<S3ObjectSummary> _listResponse =
-                    Iterators.peekingIterator(Iterators.<S3ObjectSummary>emptyIterator());
+                    Iterators.peekingIterator(Collections.<S3ObjectSummary>emptyIterator());
             String _marker = null;
             boolean _truncated = true;
 

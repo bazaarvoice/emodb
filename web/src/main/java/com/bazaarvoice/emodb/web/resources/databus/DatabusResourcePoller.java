@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -139,7 +140,7 @@ public class DatabusResourcePoller {
                         // We're in an async context and have already returned a 200 response.  Since we can't
                         // retroactively change to 500 finish the request with an empty response and log the error.
                         _log.error("Failed to perform asynchronous poll on subscription {}", _subscription, e);
-                        result = new PollResult(Iterators.emptyIterator(), 0, false);
+                        result = new PollResult(Collections.emptyIterator(), 0, false);
                         pollFailed = true;
                     }
 

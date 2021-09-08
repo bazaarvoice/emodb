@@ -46,12 +46,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -368,7 +363,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                 // Channel was completely empty.  Cache a TimeUUID for the current time.  This will cause future calls
                 // to read at most 1 minute of tombstones until the cache expires 10 seconds later.
                 cacheOldestSlabForChannel(channel, TimeUUIDs.newUUID());
-                return Iterators.emptyIterator();
+                return Collections.emptyIterator();
             }
         }
     }
