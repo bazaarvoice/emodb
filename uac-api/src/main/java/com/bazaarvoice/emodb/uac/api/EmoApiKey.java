@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.uac.api;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableSet;
 
 import java.util.Date;
@@ -77,7 +77,7 @@ public class EmoApiKey {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(EmoApiKey.class)
+        return MoreObjects.toStringHelper(EmoApiKey.class)
                 .add("id", getId())
                 .add("owner", getOwner())
                 .add("description", getDescription())

@@ -12,6 +12,7 @@ import com.bazaarvoice.emodb.event.db.EventSink;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
 import com.google.common.cache.Cache;
@@ -624,7 +625,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         @Override
         public String toString() {
-            return Objects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this)
                     .add("channel", _channel)
                     .add("slabId", ByteBufferUtil.bytesToHex(_slabId.asReadOnlyBuffer()))
                     .toString();

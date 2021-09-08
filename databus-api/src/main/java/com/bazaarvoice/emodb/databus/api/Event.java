@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.databus.api;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import java.util.Collections;
@@ -77,7 +77,7 @@ public class Event {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("eventKey", _eventKey)
                 .add("content", _content)
                 .add("tags", _tags)
