@@ -10806,7 +10806,7 @@
 																	"});",
 																	"",
 																	"pm.test(\"Body matches string\", function () {",
-																	"    pm.expect(pm.response.to.have.body('0'));",
+																	"    pm.expect(pm.response.json()).to.eql(0);",
 																	"});"
 																],
 																"type": "text/javascript"
@@ -58599,7 +58599,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -59787,7 +59787,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -60797,7 +60797,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -62062,7 +62062,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -62319,7 +62319,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -64745,7 +64745,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -64993,7 +64993,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -69463,7 +69463,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -73040,7 +73040,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json() === 0);",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -75621,7 +75621,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
@@ -79969,7 +79969,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.to.have.body('0'));",
+															"    pm.expect(pm.response.json()).to.eql(0);",
 															"});"
 														],
 														"type": "text/javascript"
