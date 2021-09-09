@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.web.throttling;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 
 import java.time.Instant;
@@ -72,7 +73,7 @@ public class AdHocThrottle {
     }
 
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("limit", _limit)
                 .add("expiration", _expiration)
                 .toString();

@@ -220,7 +220,7 @@ public class PartitionedLeaderService implements Managed {
                 public void terminated(Service.State from) {
                     _terminatedFuture.set(null);
                 }
-            }, MoreExecutors.sameThreadExecutor());
+            }, MoreExecutors.newDirectExecutorService());
         }
 
         Future<Void> startAsync() {

@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -175,11 +176,11 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);
-        when(targetIdQueryNode2.iterator()).thenReturn(Iterators.emptyIterator());
+        when(targetIdQueryNode2.iterator()).thenReturn(Collections.emptyIterator());
 
         // The following line mocks all the results we will get back from our CQL queries
         doReturn(targetIdQueryNode1).when(mockSession).execute(argThat(getHostStatementMatcher(node1,
@@ -235,7 +236,7 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);

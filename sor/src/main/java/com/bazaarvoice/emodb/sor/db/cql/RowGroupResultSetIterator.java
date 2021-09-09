@@ -111,7 +111,7 @@ abstract public class RowGroupResultSetIterator extends AbstractIterator<RowGrou
         // If we've reached the prefetch limit and there are more results to fetch then prefetch them now.
         if (_prefetchFuture == null && _resultSet.getAvailableWithoutFetching() <= _prefetchLimit && !_resultSet.isFullyFetched()) {
             _prefetchFuture = _resultSet.fetchMoreResults();
-            _prefetchFuture.addListener(_onPrefetchComplete, MoreExecutors.sameThreadExecutor());
+            _prefetchFuture.addListener(_onPrefetchComplete, MoreExecutors.newDirectExecutorService());
         }
 
         return _resultSet.one();
