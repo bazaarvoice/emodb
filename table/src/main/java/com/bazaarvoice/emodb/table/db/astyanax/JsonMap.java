@@ -1,10 +1,7 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
-import com.bazaarvoice.emodb.common.json.JsonHelper;
-import com.fasterxml.jackson.databind.util.ISO8601Utils;
-import org.joda.time.DateTime;
-
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -59,8 +56,8 @@ class JsonMap {
         }
     }
 
-    static class TimestampAttribute extends Attribute<DateTime> {
-        static Attribute<DateTime> create(String key) {
+    static class TimestampAttribute extends Attribute<Instant> {
+        static Attribute<Instant> create(String key) {
             return new TimestampAttribute(key);
         }
 
@@ -69,16 +66,16 @@ class JsonMap {
         }
 
         @Override
-        DateTime get(Map<String, ?> json) {
+        Instant get(Map<String, ?> json) {
             return parse((String) json.get(_key));
         }
 
-        static String format(DateTime timestamp) {
-            return timestamp != null ? ISO8601Utils.format(new Date(timestamp.getMillis()), true) : null;
+        static String format(Instant timestamp) {
+            return timestamp != null ? timestamp.toString() : null;
         }
 
-        static DateTime parse(String string) {
-            return string != null ? new DateTime(JsonHelper.parseTimestamp(string).getTime()) : null;
+        static Instant parse(String string) {
+            return string != null ? ZonedDateTime.parse(string).toInstant() : null;
         }
     }
 }

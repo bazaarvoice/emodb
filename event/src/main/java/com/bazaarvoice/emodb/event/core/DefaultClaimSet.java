@@ -5,8 +5,8 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -47,12 +47,13 @@ public class DefaultClaimSet implements ClaimSet {
     @Override
     public synchronized boolean acquire(byte[] claimId, Duration ttl) {
         checkNotNull(claimId, "claimId");
-        checkArgument(ttl.getMillis() >= 0, "Ttl must be >=0");
+        long ttlMillis = ttl.toMillis();
+        checkArgument(ttlMillis >= 0, "Ttl must be >=0");
 
         long now = System.currentTimeMillis();
         processExpirationQueues(now);
 
-        Claim claim = new Claim(claimId, ttl.getMillis(), now + ttl.getMillis());
+        Claim claim = new Claim(claimId, ttlMillis, now + ttlMillis);
         if (_claimMap.containsKey(claim)) {
             return false;
         }
@@ -70,13 +71,14 @@ public class DefaultClaimSet implements ClaimSet {
     @Override
     public synchronized void renewAll(Collection<byte[]> claimIds, Duration ttl, boolean extendOnly) {
         checkNotNull(claimIds, "claimIds");
-        checkArgument(ttl.getMillis() >= 0, "Ttl must be >=0");
+        long ttlMillis = ttl.toMillis();
+        checkArgument(ttlMillis >= 0, "Ttl must be >=0");
 
         long now = System.currentTimeMillis();
         processExpirationQueues(now);
 
         for (byte[] claimId : claimIds) {
-            Claim claim = new Claim(claimId, ttl.getMillis(), now + ttl.getMillis());
+            Claim claim = new Claim(claimId, ttlMillis, now + ttlMillis);
             Claim oldClaim = _claimMap.put(claim, claim);
 
             if (extendOnly && oldClaim != null && oldClaim.getExpireAt() >= claim.getExpireAt()) {

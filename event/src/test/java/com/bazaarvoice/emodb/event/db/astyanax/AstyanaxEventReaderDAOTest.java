@@ -6,27 +6,26 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.netflix.astyanax.connectionpool.OperationResult;
-import com.netflix.astyanax.model.ByteBufferRange;
 import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
 import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.ConsistencyLevel;
 import com.netflix.astyanax.query.ColumnCountQuery;
 import com.netflix.astyanax.query.ColumnFamilyQuery;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
-import org.joda.time.DateTime;
-import org.mockito.Matchers;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -42,7 +41,7 @@ public class AstyanaxEventReaderDAOTest {
         final int count = 0;
 
         CassandraKeyspace cassandraKeyspace = mock(CassandraKeyspace.class);
-        when(cassandraKeyspace.prepareQuery(Matchers.<ColumnFamily<String, ByteBuffer>>any(), Matchers.<ConsistencyLevel>any()))
+        when(cassandraKeyspace.prepareQuery(any(), any()))
                 // 'manifest' query
                 .then(new Answer<Object>() {
                     @Override
@@ -63,14 +62,14 @@ public class AstyanaxEventReaderDAOTest {
                         when(result2.getResult()).thenReturn(list2);
 
                         RowQuery<String, ByteBuffer> rowQuery = mock(RowQuery.class);
-                        when(rowQuery.withColumnRange(Matchers.<ByteBufferRange>any())).thenReturn(rowQuery);
-                        when(rowQuery.autoPaginate(Matchers.anyBoolean())).thenReturn(rowQuery);
+                        when(rowQuery.withColumnRange(any())).thenReturn(rowQuery);
+                        when(rowQuery.autoPaginate(anyBoolean())).thenReturn(rowQuery);
                         when(rowQuery.execute())
                                 .thenReturn(result1)  // first page
                                 .thenReturn(result2); // second page
 
                         ColumnFamilyQuery<String, ByteBuffer> cfQuery = mock(ColumnFamilyQuery.class);
-                        when(cfQuery.getKey(Matchers.<String>any())).thenReturn(rowQuery);
+                        when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
                         return (ColumnFamilyQuery) cfQuery;
                     }
@@ -90,7 +89,7 @@ public class AstyanaxEventReaderDAOTest {
                         when(rowQuery.getCount()).thenReturn(countQuery);
 
                         ColumnFamilyQuery<ByteBuffer, Integer> cfQuery = mock(ColumnFamilyQuery.class);
-                        when(cfQuery.getKey(Matchers.<ByteBuffer>any())).thenReturn(rowQuery);
+                        when(cfQuery.getKey(any())).thenReturn(rowQuery);
 
                         return (ColumnFamilyQuery) cfQuery;
                     }
@@ -98,7 +97,7 @@ public class AstyanaxEventReaderDAOTest {
 
         // Mutations are not allowed!  Fail if async deletion gets scheduled.
         ExecutorService executorService = mock(ExecutorService.class);
-        when(executorService.submit(Matchers.<Runnable>any())).thenThrow(AssertionError.class);
+        when(executorService.submit(any(Runnable.class))).thenThrow(AssertionError.class);
 
         AstyanaxEventReaderDAO readerDao = new AstyanaxEventReaderDAO(
                 cassandraKeyspace, mock(ManifestPersister.class), "metricsGroup", executorService, new MetricRegistry());
@@ -113,18 +112,18 @@ public class AstyanaxEventReaderDAOTest {
     public void testSlabFilterSince() {
         // Test that SlabFilter returns the correct slabs to read if we are only interested in
         // events after a certain time
-        DateTime now = DateTime.now();
+        Instant now = Instant.now();
         final MetricRegistry metricRegistry = new MetricRegistry();
         TimeUUIDSerializer serializer = TimeUUIDSerializer.get();
-        UUID slabId1 = TimeUUIDs.uuidForTimestamp(now.minusHours(6).toDate());
-        UUID slabId2 = TimeUUIDs.uuidForTimestamp(now.minusHours(5).toDate());
-        UUID slabId3 = TimeUUIDs.uuidForTimestamp(now.minusHours(4).toDate());
-        UUID slabId4 = TimeUUIDs.uuidForTimestamp(now.minusHours(3).toDate());
-        UUID slabId5 = TimeUUIDs.uuidForTimestamp(now.minusHours(1).toDate());
+        UUID slabId1 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(6)).toEpochMilli());
+        UUID slabId2 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(5)).toEpochMilli());
+        UUID slabId3 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(4)).toEpochMilli());
+        UUID slabId4 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(3)).toEpochMilli());
+        UUID slabId5 = TimeUUIDs.uuidForTimeMillis(now.minus(Duration.ofHours(2)).toEpochMilli());
 
         List<UUID> orderedSlabIds = Lists.newArrayList(slabId1, slabId2, slabId3, slabId4, slabId5);
         // We are only interested in slabs that *may* contain events on or after 'since' date
-        Date since = now.minusHours(2).toDate();
+        Date since = Date.from(now.minus(Duration.ofHours(2)));
         AstyanaxEventReaderDAO eventReaderDAO = new AstyanaxEventReaderDAO(
                 mock(CassandraKeyspace.class), mock(ManifestPersister.class), "metricsGroup", mock(ExecutorService.class), metricRegistry);
         SlabFilter slabFilterSince = eventReaderDAO.getSlabFilterSince(since, "testchannel");
@@ -136,8 +135,8 @@ public class AstyanaxEventReaderDAOTest {
                     : null;
             boolean actual = slabFilterSince.accept(slabId, false, nextSlabId);
             // Slabs slabId4 and slabId5 are the only interesting ones for us
-            boolean expected = currSlabId.equals(slabId4) || currSlabId.equals(slabId5);
-            assertEquals(actual, expected, "slabId4 and slabId5 are the only ones we care about.");
+            boolean expected = currSlabId.equals(slabId3) || currSlabId.equals(slabId4) || currSlabId.equals(slabId5);
+            assertEquals(actual, expected, "slabId3, slabId4, and slabId5 are the only ones we care about.");
         }
     }
 }

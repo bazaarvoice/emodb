@@ -14,9 +14,9 @@ import com.netflix.astyanax.MutationBatch;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
 import com.netflix.astyanax.model.ConsistencyLevel;
-import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 
 /**
@@ -116,7 +116,7 @@ public class AstyanaxManifestPersister implements ManifestPersister {
     }
 
     private Duration getTtl(String channel, boolean open) {
-        // When a slab is open set its TTL for an extra day to make sure the manifest entry doesn't expire before the
+        // When a slab is open set its TTL for an extra hour to make sure the manifest entry doesn't expire before the
         // events it points to.  When a slab is closed, set it to the regular event TTL.  There's no point in it
         // outliving the events it contains.
         Duration eventTtl = _channelConfiguration.getEventTtl(channel);

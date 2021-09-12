@@ -19,11 +19,11 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.pool.ServicePoolProxies;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
@@ -136,10 +136,32 @@ public class DefaultReplicationManager extends AbstractScheduledService {
         final ReplicationSource replicationSource = newRemoteReplicationSource(dataCenter);
 
         // Start asynchronously downloading events from the remote data center.
-        final Managed fanout = new GuavaServiceController(_replicationEnabled, new Supplier<Service>() {
+        final Managed fanout = new GuavaServiceController(_replicationEnabled, () -> new AbstractService() {
+            Managed _fanout = null;
+
             @Override
-            public Service get() {
-                return _fanoutManager.newInboundReplicationFanout(dataCenter, replicationSource);
+            protected void doStart() {
+                _fanout = _fanoutManager.newInboundReplicationFanout(dataCenter, replicationSource);
+
+                try {
+                    _fanout.start();
+                } catch (Exception e) {
+                    throw Throwables.propagate(e);
+                }
+                notifyStarted();
+            }
+
+            @Override
+            protected void doStop() {
+                try {
+                    if (_fanout != null) {
+                        _fanout.stop();
+                        _fanout = null;
+                    }
+                } catch (Exception e) {
+                    throw Throwables.propagate(e);
+                }
+                notifyStopped();
             }
         });
 

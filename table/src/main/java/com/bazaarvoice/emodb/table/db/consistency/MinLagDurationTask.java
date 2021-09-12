@@ -7,8 +7,8 @@ import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
 import com.google.common.base.Suppliers;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -43,6 +43,6 @@ public class MinLagDurationTask extends ConsistencyControlTask<Duration> {
 
     @Override
     protected String toString(Duration duration) {
-        return super.toString(duration) + " (" + duration.getMillis() + "ms)";
+        return super.toString(duration) + " (" + duration.toMillis() + "ms)";
     }
 }

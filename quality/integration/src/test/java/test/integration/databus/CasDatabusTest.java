@@ -7,20 +7,20 @@ import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.health.CassandraHealthCheck;
 import com.bazaarvoice.emodb.common.cassandra.test.TestCassandraConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.databus.DatabusHostDiscovery;
 import com.bazaarvoice.emodb.databus.DatabusModule;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
+import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.auth.ConstantDatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.core.DatabusFactory;
@@ -32,13 +32,17 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreModule;
 import com.bazaarvoice.emodb.sor.DataStoreZooKeeper;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.SystemDataStore;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForScans;
 import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper;
+import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.ServiceRegistry;
@@ -54,23 +58,26 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
+import io.dropwizard.jackson.Jackson;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.server.SimpleServerFactory;
+import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Period;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import javax.validation.Validation;
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -109,13 +116,17 @@ public class CasDatabusTest {
                 bind(DatabusConfiguration.class).toInstance(new DatabusConfiguration()
                         .setCassandraConfiguration(cassandraConfiguration));
 
-                bind(DataStoreConfiguration.class).toInstance(new DataStoreConfiguration()
-                        .setSystemTablePlacement("app_global:sys")
+                DataStoreConfiguration dataStoreConfiguration = new DataStoreConfiguration()
                         .setValidTablePlacements(ImmutableSet.of("app_global:sys", "ugc_global:ugc", "app_remote:default"))
                         .setCassandraClusters(ImmutableMap.<String, CassandraConfiguration>of(
-                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta"),
-                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta")))
-                        .setHistoryTtl(Period.days(2)));
+                                "ugc_global", new TestCassandraConfiguration("ugc_global", "ugc_delta_v2"),
+                                "app_global", new TestCassandraConfiguration("app_global", "sys_delta_v2")))
+                        .setHistoryTtl(Duration.ofDays(2));
+
+                bind(DataStoreConfiguration.class).toInstance(dataStoreConfiguration);
+
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("app_global:sys");
+
                 bind(DataStore.class).annotatedWith(SystemDataStore.class).toInstance(mock(DataStore.class));
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
@@ -163,6 +174,13 @@ public class CasDatabusTest {
 
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
 
+                bind(String.class).annotatedWith(CompControlApiKey.class).toInstance("CompControlApiKey");
+                bind(CompactionControlSource.class).annotatedWith(LocalCompactionControl.class).toInstance(mock(CompactionControlSource.class));
+
+                bind(Environment.class).toInstance(new Environment("emodb", Jackson.newObjectMapper(),
+                        Validation.buildDefaultValidatorFactory().getValidator(),
+                        new MetricRegistry(), ClassLoader.getSystemClassLoader()));
+
                 EmoServiceMode serviceMode = EmoServiceMode.STANDARD_ALL;
                 install(new SelfHostAndPortModule());
                 install(new DataCenterModule(serviceMode));
@@ -184,7 +202,7 @@ public class CasDatabusTest {
     @Test
     public void testHealthCheck() throws Exception {
         ArgumentCaptor<HealthCheck> captor = ArgumentCaptor.forClass(HealthCheck.class);
-        verify(_healthChecks, atLeastOnce()).addHealthCheck(Matchers.anyString(), captor.capture());
+        verify(_healthChecks, atLeastOnce()).addHealthCheck(anyString(), captor.capture());
         List<HealthCheck> healthChecks = captor.getAllValues();
 
         int numCassandraHealthChecks = 0;

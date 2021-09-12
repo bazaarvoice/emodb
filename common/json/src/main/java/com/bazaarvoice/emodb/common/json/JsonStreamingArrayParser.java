@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.base.Throwables;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.PeekingIterator;
-import io.dropwizard.jackson.Jackson;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -30,7 +29,7 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
     private final Class<? extends T> _type;
 
     public JsonStreamingArrayParser(InputStream in, Class<? extends T> elementType) {
-        this(in, Jackson.newObjectMapper(), elementType);
+        this(in, CustomJsonObjectMapperFactory.build(), elementType);
     }
 
     public JsonStreamingArrayParser(InputStream in, ObjectMapper mapper, Class<? extends T> elementType) {
@@ -38,7 +37,7 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
     }
 
     public JsonStreamingArrayParser(InputStream in, TypeReference<? extends T> elementType) {
-        this(in, Jackson.newObjectMapper(), elementType.getType());
+        this(in, CustomJsonObjectMapperFactory.build(), elementType.getType());
     }
 
     public JsonStreamingArrayParser(InputStream in, ObjectMapper mapper, TypeReference<? extends T> elementType) {
@@ -50,8 +49,8 @@ public class JsonStreamingArrayParser<T> extends AbstractIterator<T> implements 
             JavaType javaType = mapper.constructType(elementType);
             //noinspection unchecked
             _type = (Class<? extends T>) javaType.getRawClass();
-            _jp = mapper.getFactory().createJsonParser(in);
-            _reader = mapper.reader(javaType);
+            _jp = mapper.getFactory().createParser(in);
+            _reader = mapper.readerFor(javaType);
 
             // Parse at least the first byte of the response to make sure the input stream is valid.
             if (_jp.nextToken() != JsonToken.START_ARRAY) {

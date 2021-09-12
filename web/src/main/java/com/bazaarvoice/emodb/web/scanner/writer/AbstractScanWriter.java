@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.common.stash.StashUtil;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
-import com.google.common.base.Objects;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import org.slf4j.Logger;
@@ -26,6 +25,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.util.Collection;
 import java.util.Date;
+import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -34,7 +34,7 @@ import static java.lang.String.format;
 
 /**
  * Useful base implementation for ScanWriter, including:
- *
+ * <p>
  * 1. Converting base files to URIs
  * 2. Configuring file compression
  * 3. Providing counter metrics for the number of bytes written
@@ -72,6 +72,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
                 MetricRegistry.name("bv.emodb.scan.ScanUploader.placement", placement, _type + "-bytes-uploaded"));
     }
 
+    @SuppressWarnings("squid:S2095")
     protected OutputStream open(File file, @Nullable Counter counter) throws IOException {
         OutputStream stream = new BufferedOutputStream(new FileOutputStream(file));
         if (counter != null) {
@@ -90,6 +91,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
         return stream;
     }
 
+    @SuppressWarnings("squid:S2095")
     protected InputStream getInputStream(File file)
             throws IOException {
         InputStream in = new FileInputStream(file);
@@ -143,7 +145,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
 
         if (complete) {
             // Cannot write a current file if the base URI is a root directory
-            String path = Objects.firstNonNull(_baseUri.getPath(), "/");
+            String path = Optional.ofNullable(_baseUri.getPath()).orElse("/");
             if (path.endsWith("/")) {
                 path = path.substring(0, path.length() - 1);
             }
@@ -171,6 +173,7 @@ abstract public class AbstractScanWriter implements ScanWriter {
 
     /**
      * Writes the contents to the "scan complete" file located at "fileUri" only if the file doesn't already exist.
+     *
      * @return true if the file was written, false if the file already existed
      */
     abstract protected boolean writeScanCompleteFile(URI fileUri, byte[] contents)

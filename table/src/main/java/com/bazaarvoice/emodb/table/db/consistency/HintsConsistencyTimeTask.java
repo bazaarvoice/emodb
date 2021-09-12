@@ -7,8 +7,8 @@ import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Map;
 
 /**
@@ -52,6 +52,6 @@ public class HintsConsistencyTimeTask extends ConsistencyControlTask<Long> {
 
     @Override
     protected String toString(Long value) {
-        return super.toString(value) + " (" + Duration.millis(System.currentTimeMillis() - value).toPeriod() + ")";
+        return super.toString(value) + " (" + Duration.ofMillis(System.currentTimeMillis() - value) + ")";
     }
 }

@@ -6,7 +6,10 @@ import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
+import com.bazaarvoice.emodb.sor.compactioncontrol.DelegateCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.web.scanner.ScannerZooKeeper;
 import com.bazaarvoice.emodb.web.scanner.notifications.ScanCountListener;
@@ -32,16 +35,16 @@ public class ScanUploadMonitor extends LeaderService {
     @Inject
     public ScanUploadMonitor(@ScannerZooKeeper CuratorFramework curator, @SelfHostAndPort HostAndPort selfHostAndPort,
                              final ScanWorkflow scanWorkflow, final ScanStatusDAO scanStatusDAO,
-                             final ScanTableSetManager scanTableSetManager, final ScanWriterGenerator scanWriterGenerator,
+                             final ScanWriterGenerator scanWriterGenerator,
                              final StashStateListener stashStateListener, final ScanCountListener scanCountListener,
                              final DataTools dataTools, LifeCycleRegistry lifecycle, LeaderServiceTask leaderServiceTask,
-                             MetricRegistry metricRegistry) {
+                             MetricRegistry metricRegistry, @DelegateCompactionControl CompactionControlSource compactionControlSource, DataCenters dataCenters) {
         super(curator, LEADER_DIR, selfHostAndPort.toString(), SERVICE_NAME, 1, TimeUnit.MINUTES,
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO, scanTableSetManager,
-                                scanWriterGenerator, stashStateListener, scanCountListener, dataTools);
+                        return new LocalScanUploadMonitor(scanWorkflow, scanStatusDAO,
+                                scanWriterGenerator, stashStateListener, scanCountListener, dataTools, compactionControlSource, dataCenters);
                     }
                 });
 

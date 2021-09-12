@@ -35,12 +35,12 @@ import io.dropwizard.configuration.ConfigurationFactory;
 import io.dropwizard.jackson.Jackson;
 import io.dropwizard.logging.LoggingFactory;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
 import java.io.File;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +119,7 @@ public class SorStressTest  {
         loop(new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                Iterator<Event> events = _databus.poll(SUBSCRIPTION, Duration.standardSeconds(30), 10).getEventIterator();
+                Iterator<Event> events = _databus.poll(SUBSCRIPTION, Duration.ofSeconds(30), 10).getEventIterator();
                 if (!events.hasNext()) {
                     _numIdle.incrementAndGet();
                     return false;  // idle
@@ -232,7 +232,7 @@ public class SorStressTest  {
             dataStore.createTable(TABLE, options, ImmutableMap.of("table", TABLE), new AuditBuilder().setLocalHost().build());
         }
 
-        databus.subscribe(SUBSCRIPTION, Conditions.alwaysTrue(), Duration.standardDays(7), Duration.standardDays(1));
+        databus.subscribe(SUBSCRIPTION, Conditions.alwaysTrue(), Duration.ofDays(7), Duration.ofDays(1));
 
         ThreadFactory writerFactory = new ThreadFactoryBuilder().setNameFormat("SoR Writer-%d").build();
         for (int i = 0; i < numWriterThreads; i++) {

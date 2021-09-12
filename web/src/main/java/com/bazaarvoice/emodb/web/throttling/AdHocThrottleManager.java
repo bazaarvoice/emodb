@@ -4,11 +4,11 @@ import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -68,11 +68,11 @@ public class AdHocThrottleManager {
         if (throttle == null) {
             // No throttle set, allow unlimited
             throttle = AdHocThrottle.unlimitedInstance();
-        } else if (throttle.getExpiration().isBeforeNow()) {
+        } else if (throttle.getExpiration().isBefore(Instant.now())) {
             // Throttle is expired; remove it and allow unlimited.  There is a slight chance for a race condition
             // here but since throttles are rarely put in place this is extremely unlikely.  To help avoid this
             // wait 24 hours before removing.
-            if (throttle.getExpiration().isBefore(DateTime.now().minus(Duration.standardDays(1)))) {
+            if (throttle.getExpiration().isBefore(Instant.now().minus(Duration.ofDays(1)))) {
                 try {
                     _throttleMap.remove(key);
                 } catch (Exception e) {
@@ -89,7 +89,7 @@ public class AdHocThrottleManager {
         for (Map.Entry<String, AdHocThrottle> entry : _throttleMap.getAll().entrySet()) {
             AdHocThrottle throttle = entry.getValue();
             // Filter out throttles which are not in effect
-            if (!throttle.isUnlimited() && throttle.getExpiration().isAfterNow()) {
+            if (!throttle.isUnlimited() && throttle.getExpiration().isAfter(Instant.now())) {
                 map.put(AdHocThrottleEndpoint.fromString(entry.getKey()), throttle);
             }
         }

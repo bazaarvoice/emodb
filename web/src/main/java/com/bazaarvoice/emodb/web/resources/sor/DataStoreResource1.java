@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.web.resources.sor;
 import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
+import com.bazaarvoice.emodb.web.jersey.Unbuffered;
 import com.bazaarvoice.emodb.common.json.JsonStreamingArrayParser;
 import com.bazaarvoice.emodb.common.json.LoggingIterator;
 import com.bazaarvoice.emodb.common.json.OrderedJson;
@@ -10,6 +11,7 @@ import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.datacenter.api.DataCenter;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.Coordinate;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.api.FacadeOptions;
@@ -17,6 +19,7 @@ import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.api.PurgeStatus;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
@@ -27,10 +30,13 @@ import com.bazaarvoice.emodb.sor.delta.MapDelta;
 import com.bazaarvoice.emodb.web.auth.Permissions;
 import com.bazaarvoice.emodb.web.auth.resource.CreateTableResource;
 import com.bazaarvoice.emodb.web.auth.resource.NamedResource;
+import com.bazaarvoice.emodb.web.jersey.FilteredJsonStreamingOutput;
+import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.jersey.params.SecondsParam;
 import com.bazaarvoice.emodb.web.jersey.params.TimeUUIDParam;
-import com.bazaarvoice.emodb.web.jersey.params.TimestampParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
+import com.bazaarvoice.emodb.web.resources.compactioncontrol.CompactionControlResource1;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottleConcurrentRequests;
 import com.codahale.metrics.annotation.Timed;
 import com.google.common.base.Function;
@@ -54,7 +60,6 @@ import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.shiro.authz.annotation.RequiresAuthentication;
 import org.apache.shiro.authz.annotation.RequiresPermissions;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,6 +83,8 @@ import javax.ws.rs.core.UriInfo;
 import java.io.InputStream;
 import java.io.Reader;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -85,12 +92,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Spliterator;
-import java.util.Spliterators;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.String.format;
@@ -109,29 +112,66 @@ public class DataStoreResource1 {
 
     private final DataStore _dataStore;
     private final DataStoreAsync _dataStoreAsync;
+    private final CompactionControlSource _compactionControlSource;
+    private final DataStoreUpdateThrottler _updateThrottle;
 
-    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync) {
+    public DataStoreResource1(DataStore dataStore, DataStoreAsync dataStoreAsync, CompactionControlSource compactionControlSource,
+                              DataStoreUpdateThrottler updateThrottle) {
         _dataStore = dataStore;
         _dataStoreAsync = dataStoreAsync;
+        _compactionControlSource = compactionControlSource;
+        _updateThrottle = updateThrottle;
+    }
+
+    @Path ("_compcontrol")
+    public CompactionControlResource1 getCompactionControlResource() {
+        return new CompactionControlResource1(_compactionControlSource);
     }
 
     @GET
     @Path ("_table")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.listTables", absolute = true)
+    @Unbuffered
     @ApiOperation (value = "Returns all the existing tables",
             notes = "Returns a Iterator of Table",
             response = Table.class
     )
-    public Iterator<Table> listTables(final @QueryParam("from") String fromKeyExclusive,
-                                      final @QueryParam("limit") @DefaultValue("10") LongParam limitParam,
-                                      final @Authenticated Subject subject) {
-        return streamingIterator(
-            StreamSupport.stream(Spliterators.spliteratorUnknownSize(_dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE), 0), false)
-                .filter(input -> subject.hasPermission(Permissions.readSorTable(new NamedResource(input.getName()))))
-                .limit(limitParam.get())
-                .iterator(),
-            null
-        );
+    public Object listTables(final @QueryParam ("from") String fromKeyExclusive,
+                             final @QueryParam ("limit") @DefaultValue ("10") LongParam limitParam,
+                             final @Authenticated Subject subject) {
+        Iterator<Table> allTables = _dataStore.listTables(Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE);
+        return new FilteredJsonStreamingOutput<Table>(allTables, limitParam.get()) {
+            @Override
+            public boolean include(Table table) {
+                return subject.hasPermission(Permissions.readSorTable(new NamedResource(table.getName())));
+            }
+        };
+    }
+
+    @GET
+    @Path ("_unpublishedevents")
+    @Timed (name = "bv.emodb.sor.DataStoreResource1.listUnpublishedDatabusEvents", absolute = true)
+    @Unbuffered
+    @ApiOperation (value = "Returns all the emo table events that are not published on the databus.",
+            notes = "Returns a Iterator of a Map.",
+            response = Table.class
+    )
+    public Object listUnpublishedDatabusEvents(final @QueryParam ("from") InstantParam fromInclusiveParam,
+                                            final @QueryParam ("to") InstantParam toExclusiveParam,
+                                            final @Authenticated Subject subject) {
+        // Default date range is past 30 days
+        Instant fromInclusive = fromInclusiveParam != null ? fromInclusiveParam.get() : Instant.now().minus(Duration.ofDays(29));
+        Instant toExclusive = toExclusiveParam != null ? toExclusiveParam.get() : Instant.now().plus(Duration.ofDays(1));
+        checkArgument(fromInclusive.compareTo(toExclusive) < 0, "from date must be before the to date.");
+
+        Iterator<UnpublishedDatabusEvent> allUnpublishedDatabusEvents =
+                _dataStore.listUnpublishedDatabusEvents(Date.from(fromInclusive), Date.from(toExclusive));
+        return new FilteredJsonStreamingOutput<UnpublishedDatabusEvent>(allUnpublishedDatabusEvents, Long.MAX_VALUE) {
+            @Override
+            public boolean include(UnpublishedDatabusEvent event) {
+                return subject.hasPermission(Permissions.readSorTable(new NamedResource(event.getTable())));
+            }
+        };
     }
 
     @PUT
@@ -173,6 +213,7 @@ public class DataStoreResource1 {
                                      @QueryParam ("audit") AuditParam auditParam,
                                      @Context UriInfo uriInfo) {
         Audit audit = getRequired(auditParam, "audit");
+
         _dataStore.dropTable(table, audit);
         return SuccessResponse.instance();
     }
@@ -210,6 +251,7 @@ public class DataStoreResource1 {
                                       @Context UriInfo uriInfo) {
         checkArgument(!Strings.isNullOrEmpty(placement), "Missing required placement.");
         Audit audit = getRequired(auditParam, "audit");
+
         _dataStore.dropFacade(table, placement, audit);
         return SuccessResponse.instance();
     }
@@ -226,6 +268,7 @@ public class DataStoreResource1 {
     public Map<String, Object> purgeTableAsync(@PathParam ("table") String table,
                                                @QueryParam ("audit") AuditParam auditParam) {
         Audit audit = getRequired(auditParam, "audit");
+
         String jobID = _dataStoreAsync.purgeTableAsync(table, audit);
         return ImmutableMap.<String, Object>of("id", jobID);
     }
@@ -234,7 +277,7 @@ public class DataStoreResource1 {
     @Path ("_table/{table}/purgestatus")
     @RequiresPermissions ("sor|purge|{table}")
     @Timed (name = "bv.emodb.sor.DataStoreResource1.purgeTable", absolute = true)
-    public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam("id") String jobID) {
+    public Map<String, Object> getPurgeStatus(@PathParam ("table") String table, @QueryParam ("id") String jobID) {
         System.out.println(jobID.toString());
         PurgeStatus purgeStatus = _dataStoreAsync.getPurgeStatus(table, jobID);
 
@@ -270,6 +313,7 @@ public class DataStoreResource1 {
                                             @QueryParam ("audit") AuditParam auditParam,
                                             @Context UriInfo uriInfo) {
         Audit audit = getRequired(auditParam, "audit");
+
         _dataStore.setTableTemplate(table, template, audit);
         return SuccessResponse.instance();
     }
@@ -369,6 +413,7 @@ public class DataStoreResource1 {
     @GET
     @Path ("{table}")
     @RequiresPermissions ("sor|read|{table}")
+    @Unbuffered
     @Timed (name = "bv.emodb.sor.DataStoreResource1.scan", absolute = true)
     @ApiOperation (value = "Retrieves a list of content items in a particular table.",
             notes = "Retrieves a list of content items in a particular table.  To retrieve <em>all</em> items in a table set the\n" +
@@ -377,14 +422,23 @@ public class DataStoreResource1 {
             response = Iterator.class
     )
     @ApiImplicitParams ({@ApiImplicitParam (name = "APIKey", required = true, dataType = "string", paramType = "query")})
-    public Iterator<Map<String, Object>> scan(@PathParam ("table") String table,
-                                              @QueryParam ("from") String fromKeyExclusive,
-                                              @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
-                                              @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                              @QueryParam ("debug") BooleanParam debug) {
-        return streamingIterator(
-                _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), limit.get(), consistency.get()),
-                debug);
+    public Object scan(@PathParam ("table") String table,
+                       @QueryParam ("from") String fromKeyExclusive,
+                       @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                       @QueryParam ("includeDeletes") @DefaultValue ("false") BooleanParam includeDeletes,
+                       @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                       @QueryParam ("debug") BooleanParam debug) {
+        // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
+        // create long pauses in results.
+        Iterator<Map<String, Object>> unfilteredContent;
+        if (includeDeletes.get()) {
+            unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), limit.get(), true, consistency.get());
+            return streamingIterator(unfilteredContent, debug);
+        } else {
+            // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+            unfilteredContent = _dataStore.scan(table, Strings.emptyToNull(fromKeyExclusive), Long.MAX_VALUE, true, consistency.get());
+            return deletedContentFilteringStream(unfilteredContent, limit.get());
+        }
     }
 
     /**
@@ -410,20 +464,30 @@ public class DataStoreResource1 {
     @Path ("_split/{table}/{split}")
     @RequiresPermissions ("sor|read|{table}")
     @ThrottleConcurrentRequests (maxRequests = 550)
+    @Unbuffered
     @Timed (name = "bv.emodb.sor.DataStoreResource1.getSplit", absolute = true)
     @ApiOperation (value = "Retrieves a list of content items in a particular table split.",
             notes = "Retrieves a list of content items in a particular table split.",
             response = Iterator.class
     )
-    public Iterator<Map<String, Object>> getSplit(@PathParam ("table") String table,
-                                                  @PathParam ("split") String split,
-                                                  @QueryParam ("from") String key,
-                                                  @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
-                                                  @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
-                                                  @QueryParam ("debug") BooleanParam debug) {
-        return streamingIterator(
-                _dataStore.getSplit(table, split, Strings.emptyToNull(key), limit.get(), consistency.get()),
-                debug);
+    public Object getSplit(@PathParam ("table") String table,
+                           @PathParam ("split") String split,
+                           @QueryParam ("from") String key,
+                           @QueryParam ("limit") @DefaultValue ("10") LongParam limit,
+                           @QueryParam ("includeDeletes") @DefaultValue ("false") BooleanParam includeDeletes,
+                           @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                           @QueryParam ("debug") BooleanParam debug) {
+        // Always get all content, including deletes, from the backend.  That way long streams of deleted content don't
+        // create long pauses in results.
+        Iterator<Map<String, Object>> unfilteredContent;
+        if (includeDeletes.get()) {
+            unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), limit.get(), true, consistency.get());
+            return streamingIterator(unfilteredContent, debug);
+        } else {
+            // Can't pass limit parameter to the back-end since we may exclude deleted content.  Get all records and self-limit.
+            unfilteredContent = _dataStore.getSplit(table, split, Strings.emptyToNull(key), Long.MAX_VALUE, true, consistency.get());
+            return deletedContentFilteringStream(unfilteredContent, limit.get());
+        }
     }
 
     /**
@@ -436,9 +500,9 @@ public class DataStoreResource1 {
             notes = "Retrieves a list of content items for the specified comma-delimited coordinates.",
             response = Iterator.class
     )
-    public Iterator<Map<String, Object>> multiGet(@QueryParam("id") List<String> coordinates,
-                                                  @QueryParam("consistency") @DefaultValue("STRONG") ReadConsistencyParam consistency,
-                                                  @QueryParam("debug") BooleanParam debug,
+    public Iterator<Map<String, Object>> multiGet(@QueryParam ("id") List<String> coordinates,
+                                                  @QueryParam ("consistency") @DefaultValue ("STRONG") ReadConsistencyParam consistency,
+                                                  @QueryParam ("debug") BooleanParam debug,
                                                   final @Authenticated Subject subject) {
         List<Coordinate> coordinateList = parseCoordinates(coordinates);
         for (Coordinate coordinate : coordinateList) {
@@ -643,7 +707,7 @@ public class DataStoreResource1 {
         UUID changeId = (changeIdParam != null) ? changeIdParam.get() : TimeUUIDs.newUUID();  // optional, defaults to new uuid
 
         // Perform the update
-        Iterable<Update> updates = asPermissionCheckingIterable(Collections.singletonList(new Update(table, key,
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(Collections.singletonList(new Update(table, key,
                 changeId, delta, audit, consistency.get())).iterator(), subject, facade);
         if (facade) {
             _dataStore.updateAllForFacade(updates, tags);
@@ -687,7 +751,7 @@ public class DataStoreResource1 {
                                      @QueryParam ("tag") List<String> tags,
                                      @Authenticated Subject subject) {
         Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
-        Iterable<Update> updates = asPermissionCheckingIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, false);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, false);
         _dataStore.updateAll(updates, tagsSet);
         return SuccessResponse.instance();
     }
@@ -708,7 +772,7 @@ public class DataStoreResource1 {
     public SuccessResponse updateAllForFacade(InputStream in, @QueryParam ("tag") List<String> tags,
                                               @Authenticated Subject subject) {
         Set<String> tagsSet = (tags == null) ? ImmutableSet.<String>of() : Sets.newHashSet(tags);
-        Iterable<Update> updates = asPermissionCheckingIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
+        Iterable<Update> updates = asSubjectSafeUpdateIterable(new JsonStreamingArrayParser<>(in, Update.class), subject, true);
         _dataStore.updateAllForFacade(updates, tagsSet);
         return SuccessResponse.instance();
     }
@@ -788,16 +852,21 @@ public class DataStoreResource1 {
         });
 
         if (facade != null && facade.get()) {
-            _dataStore.updateAllForFacade(asPermissionCheckingIterable(updates, subject, true));
+            _dataStore.updateAllForFacade(asSubjectSafeUpdateIterable(updates, subject, true));
         } else {
             // Parse and iterate through the deltas such that we never hold all the deltas in memory at once.
-            _dataStore.updateAll(asPermissionCheckingIterable(updates, subject, false));
+            _dataStore.updateAll(asSubjectSafeUpdateIterable(updates, subject, false));
         }
 
         return SuccessResponse.instance();
     }
 
-    private Iterable<Update> asPermissionCheckingIterable(Iterator<Update> updates, final Subject subject, final boolean isFacade) {
+    /**
+     * Takes an update stream from a subject and performs the following actions on it:
+     * 1. Checks that the subject has permission to update the record being updated
+     * 2. Applies any active rate limiting for updates by the subject
+     */
+    private Iterable<Update> asSubjectSafeUpdateIterable(Iterator<Update> updates, final Subject subject, final boolean isFacade) {
         return Iterables.filter(
                 OneTimeIterable.wrap(updates),
                 new Predicate<Update>() {
@@ -814,6 +883,13 @@ public class DataStoreResource1 {
                         if (!hasPermission) {
                             throw new UnauthorizedException("not authorized to update table " + update.getTable());
                         }
+
+                        // Facades are a unique case used internally for shoveling data across data centers, so don't rate
+                        // limit facade updates.
+                        if (!isFacade) {
+                            _updateThrottle.beforeUpdate(subject.getId());
+                        }
+
                         return true;
                     }
                 });
@@ -880,11 +956,11 @@ public class DataStoreResource1 {
         } else {
             // Timestamps have a granularity of a millisecond so adjust upper endpoints to be
             // the last valid time UUID for the millisecond.
-            Date date = new TimestampParam(string).get();
+            Instant date = new InstantParam(string).get();
             if (rangeUpperEnd) {
-                return TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(date.getTime() + 1));
+                return TimeUUIDs.getPrevious(TimeUUIDs.uuidForTimeMillis(date.toEpochMilli() + 1));
             } else {
-                return TimeUUIDs.uuidForTimestamp(date);
+                return TimeUUIDs.uuidForTimeMillis(date.toEpochMilli());
             }
         }
     }
@@ -966,5 +1042,14 @@ public class DataStoreResource1 {
             });
         }
         return iterator;
+    }
+
+    private static FilteredJsonStreamingOutput<Map<String, Object>> deletedContentFilteringStream(Iterator<Map<String, Object>> iterator, long limit) {
+        return new FilteredJsonStreamingOutput<Map<String, Object>>(iterator, limit) {
+            @Override
+            public boolean include(Map<String, Object> value) {
+                return !Intrinsic.isDeleted(value);
+            }
+        };
     }
 }

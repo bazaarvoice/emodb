@@ -26,6 +26,7 @@ import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
@@ -35,14 +36,16 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.PeekingIterator;
 import org.apache.commons.codec.binary.Base64;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +70,7 @@ public class DataStoreClient implements AuthDataStore {
 
     private static final MediaType APPLICATION_X_JSON_DELTA_TYPE = new MediaType("application", "x.json-delta");
 
-    private static final Duration UPDATE_ALL_REQUEST_DURATION = Duration.standardSeconds(1);
+    private static final Duration UPDATE_ALL_REQUEST_DURATION = Duration.ofSeconds(1);
 
     private final EmoClient _client;
     private final UriBuilder _dataStore;
@@ -90,6 +93,23 @@ public class DataStoreClient implements AuthDataStore {
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .get(new TypeReference<Iterator<Table>>(){});
+        } catch (EmoClientException e) {
+            throw convertException(e);
+        }
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(String apiKey, @Nullable Date fromInclusive, @Nullable Date toExclusive) {
+        try {
+            URI uri = _dataStore.clone()
+                    .segment("_unpublishedevents")
+                    .queryParam("from", optional(fromInclusive))
+                    .queryParam("to", optional(toExclusive))
+                    .build();
+            return _client.resource(uri)
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
+                    .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
+                    .get(new TypeReference<Iterator<UnpublishedDatabusEvent>>(){});
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -343,7 +363,7 @@ public class DataStoreClient implements AuthDataStore {
 
     @Override
     public Iterator<Map<String, Object>> scan(String apiKey, String table, @Nullable String fromKeyExclusive,
-                                              long limit, ReadConsistency consistency) {
+                                              long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkNotNull(table, "table");
         checkArgument(limit > 0, "Limit must be >0");
         checkNotNull(consistency, "consistency");
@@ -352,6 +372,7 @@ public class DataStoreClient implements AuthDataStore {
                     .segment(table)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
+                    .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
             return _client.resource(uri)
@@ -383,7 +404,7 @@ public class DataStoreClient implements AuthDataStore {
 
     @Override
     public Iterator<Map<String, Object>> getSplit(String apiKey, String table, String split, @Nullable String fromKeyExclusive,
-                                                  long limit, ReadConsistency consistency) {
+                                                  long limit, boolean includeDeletes, ReadConsistency consistency) {
         checkNotNull(table, "table");
         checkNotNull(split, "split");
         checkArgument(limit > 0, "Limit must be >0");
@@ -393,6 +414,7 @@ public class DataStoreClient implements AuthDataStore {
                     .segment("_split", table, split)
                     .queryParam("from", optional(fromKeyExclusive))
                     .queryParam("limit", limit)
+                    .queryParam("includeDeletes", includeDeletes)
                     .queryParam("consistency", consistency)
                     .build();
             return _client.resource(uri)

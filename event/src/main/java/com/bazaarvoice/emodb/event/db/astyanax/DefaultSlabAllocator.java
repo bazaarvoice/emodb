@@ -10,11 +10,14 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.cache.RemovalListener;
 import com.google.common.cache.RemovalNotification;
+import com.google.common.collect.PeekingIterator;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import com.netflix.astyanax.serializers.TimeUUIDSerializer;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 import io.dropwizard.util.Duration;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executors;
@@ -39,7 +42,7 @@ public class DefaultSlabAllocator implements SlabAllocator {
                 // chance writers are still writing, we could lose events.  So we only close slabs once (a) they're
                 // full or (b) they haven't been accessed in a while.  We don't close slabs at shutdown because it's
                 // hard to be completely sure all writers have quiesced.
-                .expireAfterAccess(Constants.OPEN_SLAB_MARKER_TTL.getMillis() / 2, TimeUnit.MILLISECONDS)
+                .expireAfterAccess(Constants.OPEN_SLAB_MARKER_TTL.toMillis() / 2, TimeUnit.MILLISECONDS)
                 .removalListener(new RemovalListener<String, ChannelAllocationState>() {
                     @Override
                     public void onRemoval(RemovalNotification<String, ChannelAllocationState> notification) {
@@ -71,8 +74,37 @@ public class DefaultSlabAllocator implements SlabAllocator {
         return executor;
     }
 
+    /** Compute how many slots in a slab will be used to do a default (new slab) allocation, and how many bytes it will consume
+     *
+     * @param slabSlotsUsed - number of available slots in a slab that have been used prior to this allocation
+     * @param slabBytesUsed - number of bytes in a slab that have been used prior to this allocation
+     * @param eventSizes - list of the size in bytes of all events that we want to insert into the slab
+     *
+     * @return a pair of integers, the left value is the number of slots that will be used by this allocation and the
+     *         right value is the numb er of bytes that will be used by this allocation
+     */
+    static Pair<Integer, Integer> defaultAllocationCount(int slabSlotsUsed, int slabBytesUsed, PeekingIterator<Integer> eventSizes) {
+        int slabTotalSlotCount = slabSlotsUsed;
+        int allocationSlotCount = 0;
+        int slabTotalBytesUsed = slabBytesUsed;
+        int allocationBytes = 0;
+        while (eventSizes.hasNext()) {
+            checkArgument(eventSizes.peek() <= Constants.MAX_EVENT_SIZE_IN_BYTES, "Event size (" + eventSizes.peek() + ") is greater than the maximum allowed (" + Constants.MAX_EVENT_SIZE_IN_BYTES + ") event size");
+            if (slabTotalSlotCount + 1 <= Constants.MAX_SLAB_SIZE && slabTotalBytesUsed + eventSizes.peek() <= Constants.MAX_SLAB_SIZE_IN_BYTES) {
+                slabTotalSlotCount++;
+                allocationSlotCount++;
+                int eventSize = eventSizes.next();
+                slabTotalBytesUsed += eventSize;
+                allocationBytes += eventSize;
+            } else {
+                break;
+            }
+        }
+        return new ImmutablePair<>(allocationSlotCount, allocationBytes);
+    }
+
     @Override
-    public SlabAllocation allocate(String channelName, int desiredCount) {
+    public SlabAllocation allocate(String channelName, int desiredCount, PeekingIterator<Integer> eventSizes) {
         checkNotNull(channelName, "channelName");
         checkArgument(desiredCount > 0, "desiredCount must be >0");
 
@@ -94,14 +126,14 @@ public class DefaultSlabAllocator implements SlabAllocator {
             // SlabPersister I/O operation around creating slabs.
 
             // Is there is an existing open slab we can allocate from?
-            SlabAllocation allocation = channelState.allocate(desiredCount);
+            SlabAllocation allocation = channelState.allocate(eventSizes);
             if (allocation != null) {
                 return allocation;
             }
 
             // No existing slab.  Create a new slab just for the caller and not shared with anyone else.
             SlabRef slab = createSlab(channelName);
-            return new DefaultSlabAllocation(slab, 0, Constants.MAX_SLAB_SIZE);
+            return new DefaultSlabAllocation(slab, 0, defaultAllocationCount(0, 0, eventSizes).getLeft());
 
         } else {
             // Regular case for callers writing a few events.  Allocate from an existing open slab if possible, and if
@@ -109,7 +141,7 @@ public class DefaultSlabAllocator implements SlabAllocator {
             // per channel at a time.
             synchronized (channelState.getSlabCreationLock()) {
                 // Can we satisfy the allocation without creating a new slab?
-                SlabAllocation allocation = channelState.allocate(desiredCount);
+                SlabAllocation allocation = channelState.allocate(eventSizes);
                 if (allocation != null) {
                     return allocation;
                 }
@@ -119,7 +151,7 @@ public class DefaultSlabAllocator implements SlabAllocator {
 
                 // We're still guaranteed that the channel is closed (!channel.isAttached()) because all calls to the
                 // channel.attach() method are protected by the SlabCreationLock which we held when checking isAttached.
-                return channelState.attachAndAllocate(slab, desiredCount);
+                return channelState.attachAndAllocate(slab, eventSizes);
             }
         }
     }

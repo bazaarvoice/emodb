@@ -8,6 +8,8 @@ import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.Table;
@@ -26,6 +28,7 @@ import com.google.common.hash.Hashing;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,16 @@ public class InMemoryTableDAO implements TableDAO {
     @Override
     public Iterator<Table> list(@Nullable String fromNameExclusive, final LimitCounter limit) {
         return _uuidToTable.values().iterator();
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute){
+        // no-op.
     }
 
     @Override

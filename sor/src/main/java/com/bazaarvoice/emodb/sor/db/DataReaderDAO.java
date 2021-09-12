@@ -6,9 +6,10 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableSet;
 import com.google.common.base.Optional;
-import org.joda.time.DateTime;
 
+import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -26,11 +27,11 @@ public interface DataReaderDAO {
     Iterator<Record> readAll(Collection<Key> keys, ReadConsistency consistency);
 
     /** Retrieves history for a single piece of content using the specified range restrictions. */
-    Iterator<Change> readTimeline(Key key, boolean includeContentData, boolean includeAuditInformation,
+    Iterator<Change> readTimeline(Key key, boolean includeContentData,
                                   UUID start, UUID end, boolean reversed, long limit, ReadConsistency consistency);
 
-    /** Retrieves history of audit records using the specified range restrictions. */
-    Iterator<Change> getExistingAudits(Key key, UUID start, UUID end, ReadConsistency consistency);
+    /** Retrieves history of deltas using the specified range restrictions. */
+    Iterator<Change> getExistingHistories(Key key, UUID start, UUID end, ReadConsistency consistency);
 
     /** Retrieves up to {@code limit} records from the specified table. */
     Iterator<Record> scan(Table table, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency);
@@ -39,13 +40,13 @@ public interface DataReaderDAO {
      * Returns a list of split identifiers that, when queried, will return all data in the table.  This method will
      * make a best effort to return splits smaller than or equal to the specified desired number of records per split.
      */
-    List<String> getSplits(Table table, int desiredRecordsPerSplit);
+    List<String> getSplits(Table table, int recordsPerSplit, int localResplits) throws TimeoutException;
 
     /** Retrieves up to {@code limit} records from the specified split in the specified table. */
     Iterator<Record> getSplit(Table table, String split, @Nullable String fromKeyExclusive, LimitCounter limit, ReadConsistency consistency);
 
     /**
-     * Like {@link #getSplits(com.bazaarvoice.emodb.table.db.Table, int)} for an entire placement.  Useful in conjunction
+     * Like {@link #getSplits(com.bazaarvoice.emodb.table.db.Table, int, int)} for an entire placement.  Useful in conjunction
      * with a multi-table scan for scanning subranges of a token range.  Returns a ScanRangeSplits which provides
      * splits by groups of hosts.  Querying each group's hosts sequentially should evenly distribute the load.
      * The optional "subrange" parameter limits the splits only to the matching token range.
@@ -61,5 +62,6 @@ public interface DataReaderDAO {
 
     /** Retrieves records all records across multiple tables in their natural key order (shard, table UUID, key). */
     Iterator<MultiTableScanResult> multiTableScan(MultiTableScanOptions query, TableSet tables, LimitCounter limit,
-                                                  ReadConsistency consistency, @Nullable DateTime cutoffTime);
+                                                  ReadConsistency consistency, @Nullable Instant cutoffTime);
+
 }

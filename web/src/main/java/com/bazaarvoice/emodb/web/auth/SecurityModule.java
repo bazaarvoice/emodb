@@ -29,12 +29,14 @@ import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ReplicationKey;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.sor.compactioncontrol.CompControlApiKey;
 import com.bazaarvoice.emodb.uac.api.AuthUserAccessControl;
 import com.bazaarvoice.emodb.uac.client.UserAccessControlClientFactory;
 import com.bazaarvoice.emodb.web.uac.LocalSubjectUserAccessControl;
@@ -98,6 +100,8 @@ import java.util.stream.Collectors;
  * <li> {@link DropwizardAuthConfigurator}
  * <li> @{@link ReplicationKey} String
  * <li> @{@link SystemIdentity} String
+ * <li> @{@link CompControlApiKey} String
+ * <li> @{@link SystemIdentity} String
  * <li> {@link PermissionResolver}
  * <li> {@link InternalAuthorizer}
  * <li> {@link SubjectUserAccessControl}
@@ -127,8 +131,7 @@ public class SecurityModule extends PrivateModule {
         bind(new TypeLiteral<Set<String>>() {})
                 .annotatedWith(ReservedRoles.class)
                 .toInstance(ImmutableSet.of(
-                        DefaultRoles.replication.toString(),
-                        DefaultRoles.anonymous.toString()));
+                        DefaultRoles.replication.toString()));
 
         bind(PermissionResolver.class).to(EmoPermissionResolver.class).asEagerSingleton();
         bind(SecurityManager.class).to(EmoSecurityManager.class);
@@ -140,6 +143,7 @@ public class SecurityModule extends PrivateModule {
 
         expose(DropwizardAuthConfigurator.class);
         expose(Key.get(String.class, ReplicationKey.class));
+        expose(Key.get(String.class, CompControlApiKey.class));
         expose(Key.get(String.class, SystemIdentity.class));
         expose(PermissionResolver.class);
         expose(InternalAuthorizer.class);
@@ -179,6 +183,13 @@ public class SecurityModule extends PrivateModule {
 
     @Provides
     @Singleton
+    @CompControlApiKey
+    String provideCompControlKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
+        return configurationKeyAsPlaintext(config.getCompControlApiKey(), encryption, "compaction-control");
+    }
+
+    @Provides
+    @Singleton
     @Exposed
     @Named("AdminKey")
     String provideAdminKey(AuthorizationConfiguration config, ApiKeyEncryption encryption) {
@@ -203,9 +214,16 @@ public class SecurityModule extends PrivateModule {
 
     @Provides
     @Singleton
+    @Named("AnonymousRoles")
+    Set<String> provideAnonymousRoles(AuthorizationConfiguration config) {
+        return config.getAnonymousRoles();
+    }
+
+    @Provides
+    @Singleton
     @Named("AnonymousKey")
-    Optional<String> provideAnonymousKey(AuthorizationConfiguration config) {
-        if (config.isAllowAnonymousAccess()) {
+    Optional<String> provideAnonymousKey(@Named("AnonymousRoles") Set<String> anonymousRoles) {
+        if (!anonymousRoles.isEmpty()) {
             return Optional.of(ANONYMOUS_KEY);
         }
         return Optional.absent();
@@ -213,7 +231,7 @@ public class SecurityModule extends PrivateModule {
 
     /**
      * Supplier for generating uniquey IDs for API keys.  Note that, critically, the values returned will never
-     * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, AuthIdentityManager)}
+     * collide with the reserved IDs from {@link #provideAuthIdentityManagerWithDefaults(String, String, Optional, Set, AuthIdentityManager)}
      */
     @Provides
     @Singleton
@@ -234,9 +252,9 @@ public class SecurityModule extends PrivateModule {
     @Named("dao")
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerDAO(
             AuthorizationConfiguration config, DataStore dataStore, @ApiKeyHashFunction HashFunction hash,
-            @IdentityIdSupplier Supplier<String> identityIdSupplier) {
+            @IdentityIdSupplier Supplier<String> identityIdSupplier, @SystemTablePlacement String tablePlacement) {
         return new TableAuthIdentityManagerDAO<>(ApiKey.class, dataStore, config.getIdentityTable(),
-                config.getIdIndexTable(), config.getTablePlacement(), identityIdSupplier, hash);
+                config.getIdIndexTable(), tablePlacement, identityIdSupplier, hash);
     }
 
     @Provides
@@ -245,6 +263,7 @@ public class SecurityModule extends PrivateModule {
     AuthIdentityManager<ApiKey> provideAuthIdentityManagerWithDefaults(
             @ReplicationKey String replicationKey,
             @Named("AdminKey") String adminKey, @Named("AnonymousKey") Optional<String> anonymousKey,
+            @Named("AnonymousRoles") Set<String> anonymousRoles,
             @Named("dao") AuthIdentityManager<ApiKey> daoManager) {
 
         ImmutableMap.Builder<String, ApiKey> reservedIdentities = ImmutableMap.builder();
@@ -255,7 +274,7 @@ public class SecurityModule extends PrivateModule {
 
         if (anonymousKey.isPresent()) {
             reservedIdentities.put(anonymousKey.get(),
-                    createReservedApiKey(ANONYMOUS_ID, "anonymous", ImmutableSet.of(DefaultRoles.anonymous.toString())));
+                    createReservedApiKey(ANONYMOUS_ID, "anonymous", anonymousRoles));
         }
 
         return new DeferringAuthIdentityManager<>(daoManager, reservedIdentities.build());
@@ -291,9 +310,10 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @Named("dao")
     PermissionManager providePermissionManagerDAO(
-            AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore) {
+            AuthorizationConfiguration config, PermissionResolver permissionResolver, DataStore dataStore,
+            @SystemTablePlacement String tablePlacement) {
         return new TablePermissionManagerDAO(
-                permissionResolver, dataStore, config.getPermissionsTable(), config.getTablePlacement());
+                permissionResolver, dataStore, config.getPermissionsTable(), tablePlacement);
     }
 
     @Provides
@@ -329,9 +349,9 @@ public class SecurityModule extends PrivateModule {
     @Singleton
     @Named("dao")
     RoleManager provideRoleManagerDAO(AuthorizationConfiguration config, DataStore dataStore,
-                                      PermissionManager permissionManager) {
+                                      PermissionManager permissionManager, @SystemTablePlacement String tablePlacement) {
         return new TableRoleManagerDAO(dataStore, config.getRoleTable(), config.getRoleGroupTable(),
-                config.getTablePlacement(), permissionManager);
+                tablePlacement, permissionManager);
     }
 
     @Provides

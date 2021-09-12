@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.db;
 import com.bazaarvoice.emodb.sor.api.Compaction;
 import com.bazaarvoice.emodb.sor.api.History;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.table.db.Table;
 
@@ -34,15 +35,16 @@ public interface DataWriterDAO {
 
     /** Deletes one or more deltas and replaces them with the specified update. */
     void compact(Table table, String key, UUID compactionKey, Compaction compaction, UUID changeId, Delta delta,
-                 Collection<UUID> changesToDelete, List<History> historyList, WriteConsistency consistency);
+                 Collection<DeltaClusteringKey> changesToDelete, List<History> historyList, WriteConsistency consistency);
 
-    /** Writes delta audits. */
-    void storeCompactedDeltas(Table tbl, String key, List<History> audits, WriteConsistency consistency);
+    /** Writes delta histories. */
+    void storeCompactedDeltas(Table tbl, String key, List<History> histories, WriteConsistency consistency);
 
     /** Makes a best effort to delete all data within the specified table.  Resets all version numbers to zero. */
     void purgeUnsafe(Table table);
 
     interface UpdateListener {
         void beforeWrite(Collection<RecordUpdate> updates);
+        void afterWrite(Collection<RecordUpdate> updates);
     }
 }

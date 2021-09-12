@@ -3,7 +3,7 @@ USE ${keyspace};
 -- A single wide row, one column for each subscription.  The subscription data is JSON metadata about the subscription.
 -- The app always loads all subscription data into memory at once, and a single row makes that fast & efficient.
 -- This isn't a high-traffic CF so it shouldn't be necessary to distribute the data around the Cassandra ring.
-CREATE TABLE subscription (
+CREATE TABLE IF NOT EXISTS subscription (
     rowkey blob,
     subscriptionid text,
     subscription text,
@@ -16,21 +16,21 @@ CREATE TABLE subscription (
 -- as events get processed and deleted from the slabs.
 -- Zero gc_grace_seconds to disable tombstones to improve read performance.  If a delete gets lost because of the lack
 -- of tombstones, the application will notice and simply delete the row again.
-CREATE TABLE manifest (
+CREATE TABLE IF NOT EXISTS manifest (
   subscription text,
   slabid timeuuid,
   open boolean,
   PRIMARY KEY (subscription, slabid)
 ) WITH COMPACT STORAGE
   AND gc_grace_seconds = 0
-  AND compaction={'sstable_size_in_mb': '160', 'class': 'LeveledCompactionStrategy'}
+  AND compaction={'sstable_size_in_mb': '40', 'tombstone_compaction_interval': '14400', 'class': 'org.apache.cassandra.db.compaction.LeveledCompactionStrategy'}
   AND compression = {'sstable_compression': ''};
 
 -- One row per slabId.  Each "slab" contains a list of events, one event per column.  The application imposes a maximum
 -- number of events per slab, typically 1000, to avoid getting wide rows with lots of tombstones that hurt read
 -- performance.  Low gc_grace_seconds to improve read performance, but not as low as with the 'manifest' CF.  If a
 -- delete gets lost, the Databus will issue a duplicate event which hurts the performance of Databus consumers.
-CREATE TABLE slab (
+CREATE TABLE IF NOT EXISTS slab (
   slabid timeuuid,
   eventidx int,
   event blob,
@@ -45,7 +45,7 @@ CREATE TABLE slab (
 
 -- One row per queue.  One column for each segment containing actual queue data.  The Java code recycles column uuids
 -- as segments are added and deleted so, in general, tombstones shouldn't accumulate and aren't a major concern.
-CREATE TABLE dedup_md (
+CREATE TABLE IF NOT EXISTS dedup_md (
   subscription text,
   segmentid timeuuid,
   state text,
@@ -58,7 +58,7 @@ CREATE TABLE dedup_md (
 -- live columns]" where the segment metadata maintains the minimum live column for each row, and all read queries start
 -- from that minimum, so even if deleted columns get resurrected they won't be looked at.  That means we can safely
 -- disable tombstones and let Cassandra aggressively reclaim disk space.
-CREATE TABLE dedup_data (
+CREATE TABLE IF NOT EXISTS dedup_data (
   dataid timeuuid,
   event blob,
   unused blob,

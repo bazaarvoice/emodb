@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSet;
 
 import java.util.Set;
 
+import static com.bazaarvoice.emodb.web.auth.Permissions.ALL;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_NON_PII_TABLE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_RESOURCE;
 import static com.bazaarvoice.emodb.web.auth.Permissions.NON_SYSTEM_TABLE;
@@ -133,10 +134,9 @@ public enum DefaultRoles {
             ImmutableSet.of(sor_read),
             Permissions.replicateDatabus()),
 
-    // Reserved role for anonymous access
-    anonymous (
-            // TODO:  Lock this down.  For now this will permit all standard client operations with excluding pii tables/placements in SOR.
-            ImmutableSet.of(sor_standard_without_pii, blob_standard, queue_standard, databus_standard));
+    // role for using compaction control API.
+    compaction_control (
+            Permissions.compactionControl());
 
     private Set<String> _permissions;
 

@@ -5,9 +5,9 @@ import com.bazaarvoice.emodb.queue.api.AuthDedupQueueService;
 import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.ostrich.partition.PartitionKey;
-import org.joda.time.Duration;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 

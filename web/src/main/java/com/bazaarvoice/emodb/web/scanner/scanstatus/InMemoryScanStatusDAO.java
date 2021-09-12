@@ -35,7 +35,7 @@ public class InMemoryScanStatusDAO implements ScanStatusDAO {
     public void updateScanStatus(ScanStatus status) {
         // Store a copy so subsequent changes to the passed in instance don't affect the persisted value
         ScanStatus mutableCopy = new ScanStatus(
-                status.getScanId(), status.getOptions(), status.isCanceled(), status.getStartTime(),
+                status.getScanId(), status.getOptions(), status.isTableSnapshotCreated(), status.isCanceled(), status.getStartTime(),
                 Lists.newArrayList(status.getPendingScanRanges()),
                 Lists.newArrayList(status.getActiveScanRanges()),
                 Lists.newArrayList(status.getCompleteScanRanges()),
@@ -53,7 +53,7 @@ public class InMemoryScanStatusDAO implements ScanStatusDAO {
 
         // Return an immutable copy
         return new ScanStatus(
-                status.getScanId(), status.getOptions(), status.isCanceled(), status.getStartTime(),
+                status.getScanId(), status.getOptions(), status.isTableSnapshotCreated(), status.isCanceled(), status.getStartTime(),
                 ImmutableList.copyOf(status.getPendingScanRanges()),
                 ImmutableList.copyOf(status.getActiveScanRanges()),
                 ImmutableList.copyOf(status.getCompleteScanRanges()),
@@ -154,14 +154,23 @@ public class InMemoryScanStatusDAO implements ScanStatusDAO {
     @Override
     public void setCompleteTime(String scanId, Date completeTime) {
         ScanStatus status = _scanStatuses.get(scanId);
-        _scanStatuses.put(scanId, new ScanStatus(scanId, status.getOptions(), status.isCanceled(), status.getStartTime(),
-                status.getPendingScanRanges(), status.getActiveScanRanges(), status.getCompleteScanRanges(), completeTime));
+        _scanStatuses.put(scanId, new ScanStatus(scanId, status.getOptions(), status.isTableSnapshotCreated(), status.isCanceled(),
+                status.getStartTime(), status.getPendingScanRanges(), status.getActiveScanRanges(), status.getCompleteScanRanges(),
+                completeTime));
     }
 
     @Override
     public void setCanceled(String scanId) {
         ScanStatus status = _scanStatuses.get(scanId);
-        _scanStatuses.put(scanId, new ScanStatus(scanId, status.getOptions(), true, status.getStartTime(),
+        _scanStatuses.put(scanId, new ScanStatus(scanId, status.getOptions(), status.isTableSnapshotCreated(), true, status.getStartTime(),
+                status.getPendingScanRanges(), status.getActiveScanRanges(), status.getCompleteScanRanges(),
+                status.getCompleteTime()));
+    }
+
+    @Override
+    public void setTableSnapshotCreated(String scanId) {
+        ScanStatus status = _scanStatuses.get(scanId);
+        _scanStatuses.put(scanId, new ScanStatus(scanId, status.getOptions(), true, status.isCanceled(), status.getStartTime(),
                 status.getPendingScanRanges(), status.getActiveScanRanges(), status.getCompleteScanRanges(),
                 status.getCompleteTime()));
     }

@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.control;
 
+import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.plugin.stash.StashStateListener;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DataTools;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.bazaarvoice.emodb.sor.db.ScanRangeSplits;
@@ -27,12 +29,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Date;
@@ -67,32 +69,34 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class LocalScanUploadMonitor extends AbstractService {
 
     // No scan can run for more than 1 day
-    private static final Duration OVERRUN_SCAN_TIME = Duration.standardDays(1);
+    private static final Duration OVERRUN_SCAN_TIME = Duration.ofDays(1);
 
     private final Logger _log = LoggerFactory.getLogger(LocalScanUploadMonitor.class);
 
     private final ScanWorkflow _scanWorkflow;
     private final ScanStatusDAO _scanStatusDAO;
-    private final ScanTableSetManager _scanTableSetManager;
     private final ScanWriterGenerator _scanWriterGenerator;
     private final StashStateListener _stashStateListener;
     private final ScanCountListener _scanCountListener;
     private final DataTools _dataTools;
+    private final CompactionControlSource _compactionControlSource;
+    private final DataCenters _dataCenters;
     private final Set<String> _activeScans = Sets.newHashSet();
 
     private ScheduledExecutorService _service;
 
     public LocalScanUploadMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
-                                  ScanTableSetManager scanTableSetManager, ScanWriterGenerator scanWriterGenerator,
+                                  ScanWriterGenerator scanWriterGenerator,
                                   StashStateListener stashStateListener, ScanCountListener scanCountListener,
-                                  DataTools dataTools) {
+                                  DataTools dataTools, CompactionControlSource compactionControlSource, DataCenters dataCenters) {
         _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _scanTableSetManager = checkNotNull(scanTableSetManager, "scanTableSetManager");
         _scanWriterGenerator = checkNotNull(scanWriterGenerator, "scanWriterGenerator");
         _stashStateListener = checkNotNull(stashStateListener, "stashStateListener");
         _scanCountListener = checkNotNull(scanCountListener, "scanCountListener");
         _dataTools = checkNotNull(dataTools, "dataTools");
+        _compactionControlSource = checkNotNull(compactionControlSource, "compactionControlSource");
+        _dataCenters = checkNotNull(dataCenters, "dataCenters");
     }
 
     @VisibleForTesting
@@ -122,17 +126,7 @@ public class LocalScanUploadMonitor extends AbstractService {
 
                     // Start the loop for processing complete range scans
                     _service.schedule(_processCompleteRangeScansExecution, 1, TimeUnit.SECONDS);
-
-                    // Run a daily check to clean up orphaned scans
-                    _service.scheduleAtFixedRate(
-                            new Runnable() {
-                                @Override
-                                public void run() {
-                                    cleanupOrphanedScans();
-                                }
-                            },
-                            1, TimeUnit.DAYS.toMinutes(1), TimeUnit.MINUTES);
-
+                    
                     notifyStarted();
                 } catch (Exception e) {
                     _log.error("Failed to start local scan upload monitor", e);
@@ -172,7 +166,7 @@ public class LocalScanUploadMonitor extends AbstractService {
             try {
                 processCompleteRangeScans();
             } catch (Exception e) {
-                // This should never happen; all exceptions should already be caught in processCompleteRangeScans()
+                // This should never happen; all exceptions should already be caught in processCompleteRangeMigrations()
                 _log.error("Unexpected exception caught processing complete range scans", e);
             }
 
@@ -189,7 +183,7 @@ public class LocalScanUploadMonitor extends AbstractService {
 
         try {
             completeRangeScansByScanId = Multimaps.index(
-                    _scanWorkflow.claimCompleteScanRanges(Duration.standardMinutes(5)),
+                    _scanWorkflow.claimCompleteScanRanges(Duration.ofMinutes(5)),
                     new Function<ScanRangeComplete, String>() {
                             @Override
                             public String apply(ScanRangeComplete completion) {
@@ -238,6 +232,15 @@ public class LocalScanUploadMonitor extends AbstractService {
             notifyActiveScanCountChanged();
             // Schedule a callback to cancel the scan if it goes overrun
             scheduleOverrunCheck(status);
+        }
+
+        // Before going any further ensure the stash table snapshot has been created and, if not, do so now.
+        // This should only happen if both
+        // 1. it is prior to the first scan range being processed.
+        // 2. the scan being processed is configured to only scan live table ranges
+        if (!status.isTableSnapshotCreated() && status.getOptions().isOnlyScanLiveRanges()) {
+            _dataTools.createStashTokenRangeSnapshot(id, status.getOptions().getPlacements());
+            _scanStatusDAO.setTableSnapshotCreated(id);
         }
 
         // Before evaluating available tasks check whether any completed tasks didn't scan their entire ranges
@@ -335,12 +338,17 @@ public class LocalScanUploadMonitor extends AbstractService {
     private List<ScanRange> resplit(String placement, ScanRange resplitRange, int splitSize) {
         // Cassandra didn't do a good job splitting the first time.  Re-split the remaining range; the issue that causes
         // the poor split is rare and it should do a better job this time.
-        ScanRangeSplits splits = _dataTools.getScanRangeSplits(placement, splitSize, Optional.of(resplitRange));
         ImmutableList.Builder<ScanRange> builder = ImmutableList.builder();
-        for (ScanRangeSplits.SplitGroup splitGroup : splits.getSplitGroups()) {
-            for (ScanRangeSplits.TokenRange tokenRange : splitGroup.getTokenRanges()) {
-                builder.addAll(tokenRange.getScanRanges());
+        try {
+            ScanRangeSplits splits = _dataTools.getScanRangeSplits(placement, splitSize, Optional.of(resplitRange));
+            for (ScanRangeSplits.SplitGroup splitGroup : splits.getSplitGroups()) {
+                for (ScanRangeSplits.TokenRange tokenRange : splitGroup.getTokenRanges()) {
+                    builder.addAll(tokenRange.getScanRanges());
+                }
             }
+        } catch (Exception e) {
+            _log.warn("Generating splits for resplit failed, falling back to using entire resplit: placement={}, range={}", placement, resplitRange, e);
+            builder.add(resplitRange);
         }
         return builder.build();
     }
@@ -396,7 +404,7 @@ public class LocalScanUploadMonitor extends AbstractService {
     private void scanCanceled(ScanStatus status) {
         // Send notification that the scan has been canceled
         _stashStateListener.stashCanceled(status.asPluginStashMetadata(), new Date());
-        cleanupScan(status.getScanId());
+        cleanupScan(status.getScanId(), status.getOptions().isOnlyScanLiveRanges());
     }
 
     private void completeScan(ScanStatus status)
@@ -408,12 +416,11 @@ public class LocalScanUploadMonitor extends AbstractService {
         }
 
         _log.info("Scan complete: {}", id);
+        // Mark the scan is complete
+        Set<ScanDestination> destinations = status.getOptions().getDestinations();
+        // Use -1 as the task ID since writing that the scan is complete is not associated with any scan range task.
 
-        try {
-            // Mark the scan is complete
-            Set<ScanDestination> destinations = status.getOptions().getDestinations();
-            // Use -1 as the task ID since writing that the scan is complete is not associated with any scan range task.
-            ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(-1, destinations);
+        try (ScanWriter scanWriter = _scanWriterGenerator.createScanWriter(-1, destinations)) {
             scanWriter.writeScanComplete(id, _scanStatusDAO.getScanStatus(id).getStartTime());
 
             // Store the time the scan completed
@@ -424,48 +431,30 @@ public class LocalScanUploadMonitor extends AbstractService {
             status.setCompleteTime(completeTime);
             _stashStateListener.stashCompleted(status.asPluginStashMetadata(), status.getCompleteTime());
         } finally {
-            cleanupScan(id);
+            cleanupScan(id, status.getOptions().isOnlyScanLiveRanges());
         }
     }
 
-    private void cleanupScan(String id) {
+    private void cleanupScan(String id, boolean isOnlyLiveRanges) {
         // Remove this scan from the active set
         if (_activeScans.remove(id)) {
             notifyActiveScanCountChanged();
         }
 
-        try {
-            // Remove the distributed table set for this scan
-            _scanTableSetManager.cleanupTableSetForScan(id);
-        } catch (Exception e) {
-            _log.error("Failed to clean up table set for scan {}", id, e);
-        }
-    }
-
-    @VisibleForTesting
-    public void cleanupOrphanedScans() {
-        try {
-            for (final String id : _scanTableSetManager.getAvailableTableSets()) {
-                final ScanStatus scanStatus = _scanStatusDAO.getScanStatus(id);
-
-                if (scanStatus == null || scanStatus.isDone()) {
-                    // Schedule each cleanup separately
-                    _service.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (scanStatus == null) {
-                                _log.warn("Cleaning table set from unknown scan: {}", id);
-                            } else {
-                                _log.info("Cleaning orphaned table set for scan: {}", id);
-                            }
-
-                            cleanupScan(id);
-                        }
-                    });
-                }
+        if (isOnlyLiveRanges) {
+            try {
+                // Remove the table snapshots set for this scan
+                _dataTools.clearStashTokenRangeSnapshot(id);
+            } catch (Exception e) {
+                _log.error("Failed to clean up table set for scan {}", id, e);
             }
+        }
+
+        try {
+            // Delete the entry of the scan start time in Zookeeper.
+            _compactionControlSource.deleteStashTime(id, _dataCenters.getSelf().getName());
         } catch (Exception e) {
-            _log.error("Failed to clean up orphaned table sets", e);
+            _log.error("Failed to delete the stash time for scan {}", id, e);
         }
     }
 
@@ -491,12 +480,18 @@ public class LocalScanUploadMonitor extends AbstractService {
     private void scheduleOverrunCheck(ScanStatus status) {
         final String scanId = status.getScanId();
 
-        DateTime now = DateTime.now();
-        DateTime overrunTime = new DateTime(status.getStartTime()).plus(OVERRUN_SCAN_TIME);
+        // If temporal stash is disabled, this is likely not a daily stash run, and it may take longer than 24 hours.
+        // In this case, don't interrupt it if it is taking a while.
+        if (!status.getOptions().isTemporalEnabled()) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        Instant overrunTime = status.getStartTime().toInstant().plus(OVERRUN_SCAN_TIME);
 
         long delay = 0;
         if (now.isBefore(overrunTime)) {
-            delay = new Duration(now, overrunTime).getMillis();
+            delay = Duration.between(now, overrunTime).toMillis();
         }
 
         _service.schedule(

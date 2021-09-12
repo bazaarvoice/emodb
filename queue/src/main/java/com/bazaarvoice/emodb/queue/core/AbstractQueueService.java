@@ -27,10 +27,10 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
-import org.joda.time.Duration;
 
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
@@ -46,6 +46,8 @@ abstract class AbstractQueueService implements BaseQueueService {
     private final JobService _jobService;
     private final JobType<MoveQueueRequest, MoveQueueResult> _moveQueueJobType;
     private final LoadingCache<SizeCacheKey, Map.Entry<Long, Long>> _queueSizeCache;
+
+    public static final int MAX_MESSAGE_SIZE_IN_BYTES = 30 * 1024;
 
     protected AbstractQueueService(BaseEventStore eventStore, JobService jobService,
                                    JobHandlerRegistry jobHandlerRegistry,
@@ -118,7 +120,10 @@ abstract class AbstractQueueService implements BaseQueueService {
 
             List<ByteBuffer> events = Lists.newArrayListWithCapacity(messages.size());
             for (Object message : messages) {
-                events.add(MessageSerializer.toByteBuffer(JsonValidator.checkValid(message)));
+                ByteBuffer messageByteBuffer = MessageSerializer.toByteBuffer(JsonValidator.checkValid(message));
+                checkArgument(messageByteBuffer.limit() <= MAX_MESSAGE_SIZE_IN_BYTES, "Message size (" + messageByteBuffer.limit() + ") is greater than the maximum allowed (" + MAX_MESSAGE_SIZE_IN_BYTES + ") message size");
+
+                events.add(messageByteBuffer);
             }
             builder.putAll(queue, events);
         }
@@ -171,7 +176,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     @Override
     public List<Message> poll(String queue, Duration claimTtl, int limit) {
         checkLegalQueueName(queue);
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
 
         return toMessages(_eventStore.poll(queue, claimTtl, limit));
@@ -181,7 +186,7 @@ abstract class AbstractQueueService implements BaseQueueService {
     public void renew(String queue, Collection<String> messageIds, Duration claimTtl) {
         checkLegalQueueName(queue);
         checkNotNull(messageIds, "messageIds");
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.toMillis() >= 0, "ClaimTtl must be >=0");
 
         _eventStore.renew(queue, messageIds, claimTtl, true);
     }

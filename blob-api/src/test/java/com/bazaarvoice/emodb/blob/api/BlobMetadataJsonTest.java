@@ -1,11 +1,14 @@
 package com.bazaarvoice.emodb.blob.api;
 
 import com.bazaarvoice.emodb.common.json.JsonHelper;
+import com.fasterxml.jackson.databind.util.StdDateFormat;
 import com.google.common.collect.ImmutableMap;
-import org.joda.time.format.ISODateTimeFormat;
 import org.testng.annotations.Test;
 
+import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 import static org.testng.Assert.assertEquals;
 
@@ -14,9 +17,10 @@ public class BlobMetadataJsonTest {
     @Test
     public void testRoundTrip() {
         Date timestamp = new Date();
-        String timestampString = ISODateTimeFormat.dateTime().withZoneUTC().print(timestamp.getTime()).replaceFirst("Z$", "+0000");
+        String timestampString = StdDateFormat.getISO8601Format(TimeZone.getTimeZone(ZoneOffset.UTC), Locale.ENGLISH).format(timestamp).replaceFirst("Z$", "+0000");
 
-        BlobMetadata expected = new DefaultBlobMetadata("id", timestamp, 1234, "1e00d0c82221522ce2cf80365dc1fbfc",
+        BlobMetadata expected = new DefaultBlobMetadata("id", timestamp,
+                1234, "1e00d0c82221522ce2cf80365dc1fbfc",
                 "6c4ebe94eb98c9c790ed89e48e581428d1b65b0f", ImmutableMap.of("contentType", "image/jpeg"));
         String string = JsonHelper.asJson(expected);
 

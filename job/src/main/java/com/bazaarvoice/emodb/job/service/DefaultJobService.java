@@ -26,13 +26,13 @@ import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.locks.InterProcessMutex;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-import org.joda.time.format.PeriodFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Queue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -51,7 +51,7 @@ import static java.lang.String.format;
 
 public class DefaultJobService implements JobService, Managed {
 
-    private final static Callable<DateTime> EPOCH = Callables.returning(new DateTime(0));
+    private final static Callable<Instant> EPOCH = Callables.returning(Instant.EPOCH);
 
     private final Logger _log = LoggerFactory.getLogger(DefaultJobService.class);
 
@@ -67,7 +67,7 @@ public class DefaultJobService implements JobService, Managed {
     private boolean _stopped = false;
     private final AtomicBoolean _paused = new AtomicBoolean(false);
 
-    private final Cache<String, DateTime> _recentNotOwnerDelays;
+    private final Cache<String, Instant> _recentNotOwnerDelays;
 
     @Inject
     public DefaultJobService(LifeCycleRegistry lifeCycleRegistry,
@@ -92,7 +92,7 @@ public class DefaultJobService implements JobService, Managed {
         checkNotNull(lifeCycleRegistry, "lifecycleRegistry");
 
         _recentNotOwnerDelays = CacheBuilder.newBuilder()
-                .expireAfterWrite(notOwnerRetryDelay.getMillis(), TimeUnit.MILLISECONDS)
+                .expireAfterWrite(notOwnerRetryDelay.toMillis(), TimeUnit.MILLISECONDS)
                 .build();
 
         Supplier<Queue<Message>> sourceMessageSupplier = new Supplier<Queue<Message>>() {
@@ -103,11 +103,11 @@ public class DefaultJobService implements JobService, Managed {
         };
 
         checkNotNull(queueRefreshTime, "queueRefreshTime");
-        if (queueRefreshTime.getMillis() == 0) {
+        if (queueRefreshTime.isZero()) {
             _messageSupplier = sourceMessageSupplier;
         } else {
             _messageSupplier = Suppliers.memoizeWithExpiration(
-                    sourceMessageSupplier, queueRefreshTime.getMillis(), TimeUnit.MILLISECONDS);
+                    sourceMessageSupplier, queueRefreshTime.toMillis(), TimeUnit.MILLISECONDS);
         }
 
         lifeCycleRegistry.manage(this);
@@ -204,12 +204,11 @@ public class DefaultJobService implements JobService, Managed {
                 String jobIdString = (String) message.getPayload();
 
                 // If this job has recently reported that it cannot run on this server then skip it.
-                DateTime now = new DateTime();
-                DateTime delayUntilTime = _recentNotOwnerDelays.get(jobIdString, EPOCH);
+                Instant now = Instant.now();
+                Instant delayUntilTime = _recentNotOwnerDelays.get(jobIdString, EPOCH);
                 if (now.isBefore(delayUntilTime)) {
                     _log.debug("Waiting {} for next attempt to run job locally: {}",
-                            PeriodFormat.getDefault().print(new Interval(now, delayUntilTime).toPeriod()),
-                            jobIdString);
+                            Duration.between(now, delayUntilTime), jobIdString);
                     continue;
                 }
 
@@ -233,7 +232,7 @@ public class DefaultJobService implements JobService, Managed {
                     } else {
                         // The job self-reported it could not be run locally.  Cache that knowledge and wait before
                         // attempting this job again.
-                        _recentNotOwnerDelays.put(jobIdString, new DateTime().plus(_notOwnerRetryDelay));
+                        _recentNotOwnerDelays.put(jobIdString, Instant.now().plus(_notOwnerRetryDelay));
                         _recentNotOwnerDelays.cleanUp();
                         _log.info("Executing job {}... not local", jobIdString);
                     }

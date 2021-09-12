@@ -5,8 +5,8 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.BackgroundCallback;
 import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -29,7 +29,7 @@ public class Sync {
             }).forPath(curator.getNamespace().isEmpty() ? "/" : "");
 
             // Wait for sync to complete.
-            return latch.await(timeout.getMillis(), TimeUnit.MILLISECONDS);
+            return latch.await(timeout.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             return false;
         } catch (Exception e) {

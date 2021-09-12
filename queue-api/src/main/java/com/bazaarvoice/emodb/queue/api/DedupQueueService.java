@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.queue.api;
 
-import org.joda.time.Duration;
-
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

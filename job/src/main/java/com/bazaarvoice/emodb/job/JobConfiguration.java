@@ -1,21 +1,16 @@
 package com.bazaarvoice.emodb.job;
 
-import org.joda.time.Duration;
-
-import javax.validation.constraints.NotNull;
+import java.time.Duration;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
 public class JobConfiguration {
 
     private final static int DEFAULT_CONCURRENCY_LEVEL = 2;
-    private final static Duration DEFAULT_QUEUE_REFRESH_TIME = Duration.standardSeconds(10);
+    private final static Duration DEFAULT_QUEUE_REFRESH_TIME = Duration.ofSeconds(10);
     private final static int DEFAULT_QUEUE_PEEK_LIMIT = 100;
-    private final static Duration DEFAULT_NOT_OWNER_RETRY_DELAY = Duration.standardMinutes(5);
+    private final static Duration DEFAULT_NOT_OWNER_RETRY_DELAY = Duration.ofMinutes(5);
 
-    // The placement holds the table with job statuses and results
-    @NotNull
-    private String _tablePlacement;
     // Number of jobs that can be run concurrently (job thread pool size)
     private int _concurrencyLevel = DEFAULT_CONCURRENCY_LEVEL;
     // How long the head of the queue should be cached locally before refreshing
@@ -24,15 +19,6 @@ public class JobConfiguration {
     private int _queuePeekLimit = DEFAULT_QUEUE_PEEK_LIMIT;
     // Minimum amount of time to wait before retrying a job locally which had returned "notOwner" on the last run
     private Duration _notOwnerRetryDelay = DEFAULT_NOT_OWNER_RETRY_DELAY;
-
-    public String getTablePlacement() {
-        return _tablePlacement;
-    }
-
-    public JobConfiguration setTablePlacement(String tablePlacement) {
-        _tablePlacement = tablePlacement;
-        return this;
-    }
 
     public int getConcurrencyLevel() {
         return _concurrencyLevel;

@@ -1,13 +1,17 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.amazonaws.regions.Regions;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3BucketConfiguration;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.KeyspaceConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -22,7 +26,9 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.cache.Cache;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.net.HostAndPort;
@@ -39,8 +45,8 @@ import org.testng.annotations.Test;
 
 import java.time.Clock;
 
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -100,14 +106,19 @@ public class BlobStoreModuleTest {
 
                 // construct the minimum necessary elements to allow a BlobStore module to be created.
                 bind(BlobStoreConfiguration.class).toInstance(new BlobStoreConfiguration()
-                        .setSystemTablePlacement("ugc_global:sys")
                         .setValidTablePlacements(ImmutableSet.of("media_global:ugc"))
                         .setCassandraClusters(ImmutableMap.of("media_global", new CassandraConfiguration()
                                 .setCluster("Test Cluster")
                                 .setSeeds("127.0.0.1")
                                 .setPartitioner("bop")
                                 .setKeyspaces(ImmutableMap.of(
-                                        "media_global", new KeyspaceConfiguration())))));
+                                        "media_global", new KeyspaceConfiguration())))
+                        )
+                        .setS3Configuration(new S3Configuration()
+                                .setS3BucketConfigurations(ImmutableList.of(new S3BucketConfiguration("local-emodb--media-global-ugc", Regions.DEFAULT_REGION.getName(), null, null, false, 1, 1, 1, null))))
+                );
+
+                bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance("ugc_global:sys");
 
                 bind(DataCenterConfiguration.class).toInstance(new DataCenterConfiguration()
                         .setSystemDataCenter("datacenter1")
@@ -131,6 +142,7 @@ public class BlobStoreModuleTest {
                 bind(MetricRegistry.class).toInstance(metricRegistry);
 
                 bind(Clock.class).toInstance(Clock.systemDefaultZone());
+                bind(ObjectMapper.class).toInstance(mock(ObjectMapper.class));
 
                 install(new BlobStoreModule(serviceMode, "bv.emodb.blob", metricRegistry));
             }

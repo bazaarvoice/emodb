@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.event.core;
 
-import org.joda.time.Duration;
+import java.time.Duration;
 
 public abstract class Limits {
     /** Cap the total # claims per channel so badly behaved pollers (poll but never ack) can't overload the system. */
@@ -13,5 +13,5 @@ public abstract class Limits {
     public static final int MAX_POLL_LIMIT = 1000;
 
     /** Cap the amount of time a claim can be held. */
-    public static final Duration MAX_CLAIM_TTL = Duration.standardHours(1);
+    public static final Duration MAX_CLAIM_TTL = Duration.ofHours(1);
 }

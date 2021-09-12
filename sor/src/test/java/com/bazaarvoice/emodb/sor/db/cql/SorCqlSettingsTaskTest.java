@@ -2,10 +2,6 @@ package com.bazaarvoice.emodb.sor.db.cql;
 
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
-import com.bazaarvoice.emodb.sor.db.DataReaderDAO;
-import com.bazaarvoice.emodb.sor.db.astyanax.CqlDataReaderDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
-import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMultimap;
 import org.testng.annotations.Test;

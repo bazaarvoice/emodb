@@ -1,31 +1,27 @@
 package com.bazaarvoice.emodb.sor;
 
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
+import com.bazaarvoice.emodb.sor.audit.AuditWriterConfiguration;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
-import io.dropwizard.validation.ValidationMethod;
-import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 public class DataStoreConfiguration {
-    /**
-     * Where does the SoR store system information such as table definitions?
-     */
-    @Valid
-    @NotNull
-    private String _systemTablePlacement;
 
     @Valid
     @NotNull
     @JsonProperty("historyTtl")
-    private Period _historyTtl;
+    private Duration _historyTtl;
 
     @Valid
     @NotNull
@@ -62,13 +58,34 @@ public class DataStoreConfiguration {
     @JsonProperty("stashRoot")
     private Optional<String> _stashRoot = Optional.absent();
 
-    public String getSystemTablePlacement() {
-        return _systemTablePlacement;
+    @Valid
+    @NotNull
+    @JsonProperty("deltaBlockSizeInKb")
+    private int _deltaBlockSizeInKb = 16;
+
+    @Valid
+    @JsonProperty("cellTombstoneCompactionEnabled")
+    private boolean _cellTombstoneCompactionEnabled = true;
+
+    @Valid
+    @JsonProperty("cellTombstoneBlockLimit")
+    private int _cellTombstoneBlockLimit = 2;
+
+    @Valid
+    @NotNull
+    @JsonProperty("stashBlackListTableCondition")
+    private Optional<String> _stashBlackListTableCondition = Optional.absent();
+
+    @Valid
+    @JsonProperty("auditWriter")
+    private AuditWriterConfiguration _auditWriterConfiguration;
+
+    public Optional<String> getStashBlackListTableCondition() {
+        return _stashBlackListTableCondition;
     }
 
-    public DataStoreConfiguration setSystemTablePlacement(String systemTablePlacement) {
-        _systemTablePlacement = systemTablePlacement;
-        return this;
+    public void setStashBlackListTableCondition(Optional<String> stashBlackListTableCondition) {
+        _stashBlackListTableCondition = stashBlackListTableCondition;
     }
 
     public Set<String> getValidTablePlacements() {
@@ -78,6 +95,10 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setValidTablePlacements(Set<String> validTablePlacements) {
         _validTablePlacements = validTablePlacements;
         return this;
+    }
+
+    public void setAuditWriterConfiguration(AuditWriterConfiguration auditWriterConfiguration) {
+        _auditWriterConfiguration = auditWriterConfiguration;
     }
 
     public int getMinimumSplitsPerTable() {
@@ -106,17 +127,6 @@ public class DataStoreConfiguration {
         return this;
     }
 
-    @ValidationMethod(message = ".systemTablePlacement references a keyspace not defined in 'cassandraKeyspaces'")
-    public boolean isValidSystemTablePlacement() {
-        String systemKeyspace = _systemTablePlacement.substring(0, _systemTablePlacement.indexOf(':'));
-        for (CassandraConfiguration cassandraConfig : _cassandraClusters.values()) {
-            if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public SlowQueryLogConfiguration getSlowQueryLogConfiguration() {
         return _slowQueryLogConfiguration;
     }
@@ -129,11 +139,11 @@ public class DataStoreConfiguration {
     /**
      * How long should we retain historical deltas?
      */
-    public Period getHistoryTtl() {
+    public Duration getHistoryTtl() {
         return _historyTtl;
     }
 
-    public DataStoreConfiguration setHistoryTtl(Period historyTtl) {
+    public DataStoreConfiguration setHistoryTtl(Duration historyTtl) {
         _historyTtl = historyTtl;
         return this;
     }
@@ -154,5 +164,26 @@ public class DataStoreConfiguration {
     public DataStoreConfiguration setDeltaEncodingVersion(int deltaEncodingVersion) {
         _deltaEncodingVersion = deltaEncodingVersion;
         return this;
+    }
+
+    /**
+     * This temporarily locked to a static 16 kilobytes because it is unsafe for this to be configurable during the migration
+     * period
+     */
+    public int getDeltaBlockSizeInKb() {
+        checkArgument(_deltaBlockSizeInKb == 16);
+        return _deltaBlockSizeInKb;
+    }
+
+    public boolean isCellTombstoneCompactionEnabled() {
+        return _cellTombstoneCompactionEnabled;
+    }
+
+    public int getCellTombstoneBlockLimit() {
+        return _cellTombstoneBlockLimit;
+    }
+
+    public AuditWriterConfiguration getAuditWriterConfiguration() {
+        return _auditWriterConfiguration;
     }
 }

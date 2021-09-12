@@ -3,6 +3,7 @@ package com.bazaarvoice.emodb.sor.core;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.Compaction;
+import com.bazaarvoice.emodb.sor.db.test.DeltaClusteringKey;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
@@ -48,30 +49,30 @@ public abstract class AbstractCompactor {
         _discardedDeltaHistory = metricRegistry.meter(MetricRegistry.name("bv.emodb.sor", "DefaultCompactor", "discarded_delta_history"));
     }
 
-    protected Map.Entry<UUID, Compaction> findEffectiveCompaction(Iterator<Map.Entry<UUID, Compaction>> compactionIter,
-                                                                Collection<UUID> otherCompactionIds, long compactionConsistencyTimeStamp) {
+    protected Map.Entry<DeltaClusteringKey, Compaction> findEffectiveCompaction(Iterator<Map.Entry<DeltaClusteringKey, Compaction>> compactionIter,
+                                                                Collection<DeltaClusteringKey> otherCompactionIds, long compactionConsistencyTimeStamp) {
         Compaction best = null;
-        UUID bestId = null;
-        Map.Entry<UUID, Compaction> bestEntry = null;
+        DeltaClusteringKey bestClusteringKey = null;
+        Map.Entry<DeltaClusteringKey, Compaction> bestEntry = null;
         while (compactionIter.hasNext()) {
-            Map.Entry<UUID, Compaction> entry = compactionIter.next();
-            UUID changeId = entry.getKey();
+            Map.Entry<DeltaClusteringKey, Compaction> entry = compactionIter.next();
+            DeltaClusteringKey clusteringKey = entry.getKey();
             Compaction compaction = entry.getValue();
             // The most recent compaction that covers the most "old deltas" wins
-            if (compaction.getCount() > 0 && (best == null || isLessThan(bestId, best, changeId, compaction))) {
+            if (compaction.getCount() > 0 && (best == null || isLessThan(bestClusteringKey.getChangeId(), best, clusteringKey.getChangeId(), compaction))) {
                 if (best != null) {
-                    otherCompactionIds.add(bestId);
+                    otherCompactionIds.add(bestClusteringKey);
                 }
                 best = compaction;
-                bestId = changeId;
+                bestClusteringKey = clusteringKey;
                 bestEntry = entry;
             } else {
-                otherCompactionIds.add(changeId);
+                otherCompactionIds.add(clusteringKey);
             }
         }
 
         // Check if bestEntry is behind FCT. If so, we can get rid of others.
-        if (bestEntry != null && TimeUUIDs.getTimeMillis(bestEntry.getKey()) >= compactionConsistencyTimeStamp) {
+        if (bestEntry != null && TimeUUIDs.getTimeMillis(bestEntry.getKey().getChangeId()) >= compactionConsistencyTimeStamp) {
             // Since the bestEntry is ahead of FCT, we keep all the other compactions and defer their deletion
             otherCompactionIds.clear();
         }
@@ -113,7 +114,7 @@ public abstract class AbstractCompactor {
             protected DataAudit computeNext() {
                 if (auditIterator.hasNext()) {
                     final Map.Entry<UUID, Delta> entry = auditIterator.next();
-                    resolver.update(entry.getKey(), entry.getValue(), ImmutableSet.<String>of());
+                    resolver.update(entry.getKey(), entry.getValue(), ImmutableSet.of());
                     return new DataAudit() {
                         @Override
                         public UUID getChangeId() {
@@ -136,13 +137,13 @@ public abstract class AbstractCompactor {
         };
     }
 
-    protected Iterator<Map.Entry<UUID, DeltaTagPair>> deltaIterator(final Iterator<Map.Entry<UUID, Change>> changeIter,
-                                                           final Map.Entry<UUID, Compaction> effectiveCompaction) {
-        return new AbstractIterator<Map.Entry<UUID, DeltaTagPair>>() {
+    protected Iterator<Map.Entry<DeltaClusteringKey, DeltaTagPair>> deltaIterator(final Iterator<Map.Entry<DeltaClusteringKey, Change>> changeIter,
+                                                           final Map.Entry<DeltaClusteringKey, Compaction> effectiveCompaction) {
+        return new AbstractIterator<Map.Entry<DeltaClusteringKey, DeltaTagPair>>() {
             @Override
-            protected Map.Entry<UUID, DeltaTagPair> computeNext() {
+            protected Map.Entry<DeltaClusteringKey, DeltaTagPair> computeNext() {
                 while (changeIter.hasNext()) {
-                    Map.Entry<UUID, Change> entry = changeIter.next();
+                    Map.Entry<DeltaClusteringKey, Change> entry = changeIter.next();
                     Change change = entry.getValue();
                     if (change.getDelta() != null) {
                         return Maps.immutableEntry(entry.getKey(), new DeltaTagPair(change.getDelta(), change.getTags()));
@@ -154,7 +155,7 @@ public abstract class AbstractCompactor {
                     if (change.getCompaction() != null) {
                         if (effectiveCompaction == null ||
                                 isLessThan(
-                                        effectiveCompaction.getKey(), effectiveCompaction.getValue(),
+                                        effectiveCompaction.getKey().getChangeId(), effectiveCompaction.getValue(),
                                         change.getId(), change.getCompaction())) {
                             throw new RestartException();
                         }

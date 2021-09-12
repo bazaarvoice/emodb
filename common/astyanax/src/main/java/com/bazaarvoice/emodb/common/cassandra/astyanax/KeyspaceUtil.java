@@ -9,7 +9,6 @@ import com.netflix.astyanax.shallows.EmptyKeyspaceTracerFactory;
 import com.netflix.astyanax.thrift.ThriftKeyspaceImpl;
 import org.apache.cassandra.thrift.Cassandra;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
@@ -39,7 +38,7 @@ public final class KeyspaceUtil {
         public Keyspace toHost(String hostName) throws ConnectionException {
             Host host = _keyspace.getConnectionPool().getPools().stream()
                     .map(HostConnectionPool::getHost)
-                    .filter(poolHost -> hostName.equals(poolHost.getHostName()))
+                    .filter(poolHost -> hostName.equals(poolHost.getHostName()) || hostName.equals(poolHost.getIpAddress()))
                     .findFirst().orElseThrow(() -> new NoAvailableHostsException("No hosts pools found"));
 
             return pinToVerifiedHost(host);

@@ -8,8 +8,8 @@ import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
 import com.bazaarvoice.emodb.common.zookeeper.store.GuavaServiceController;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
@@ -28,7 +28,7 @@ public class MaintenanceSchedulerManager {
     @Inject
     public MaintenanceSchedulerManager(LifeCycleRegistry lifeCycle,
                                        final MaintenanceDAO tableDao,
-                                       final Optional<Mutex> metadataMutex,
+                                       final Optional<TableMutexManager> tableMutexManager,
                                        @CurrentDataCenter final String selfDataCenter,
                                        @CachingTableDAORegistry final CacheRegistry cacheRegistry,
                                        @Maintenance final CuratorFramework curator,
@@ -41,7 +41,7 @@ public class MaintenanceSchedulerManager {
         final Supplier<Service> maintenanceServiceFactory = new Supplier<Service>() {
             @Override
             public Service get() {
-                return new MaintenanceScheduler(tableDao, metadataMutex, selfDataCenter, cacheRegistry, moveTableTask);
+                return new MaintenanceScheduler(tableDao, tableMutexManager, selfDataCenter, cacheRegistry, moveTableTask);
             }
         };
 

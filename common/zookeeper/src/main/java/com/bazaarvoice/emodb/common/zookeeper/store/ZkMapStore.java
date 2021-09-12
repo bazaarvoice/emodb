@@ -172,11 +172,6 @@ public class ZkMapStore<T> implements MapStore<T>, Managed {
         return builder.build();
     }
 
-    @Override
-    public String getZkPath() {
-        return _zkPath;
-    }
-
     @Nullable
     @Override
     public T get(String key) {

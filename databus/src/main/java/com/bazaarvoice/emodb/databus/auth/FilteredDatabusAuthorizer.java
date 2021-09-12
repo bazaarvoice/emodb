@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.databus.auth;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
@@ -30,7 +29,7 @@ public class FilteredDatabusAuthorizer implements DatabusAuthorizer {
         //        replaced with the commented-out version once enough time has passed for all grandfathered-in
         //        subscriptions to have been renewed and therefore have an owner attached.
         //
-        // return Objects.firstNonNull(_ownerOverrides.get(ownerId), _authorizer).owner(ownerId);
+        // return Optional.ofNullable(_ownerOverrides.get(ownerId)).orElse(_authorizer).owner(ownerId);
 
         DatabusAuthorizer authorizer = null;
         if (ownerId != null) {

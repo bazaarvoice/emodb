@@ -12,8 +12,10 @@ import com.bazaarvoice.emodb.event.db.EventSink;
 import com.codahale.metrics.Meter;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Objects;
 import com.google.common.base.Throwables;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -39,19 +41,20 @@ import com.netflix.astyanax.util.RangeBuilder;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
 import io.dropwizard.util.Duration;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.time.format.DateTimeFormatter;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -61,7 +64,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 
 public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxEventReaderDAO.class);
-    private static final DateTimeFormatter ISO_FORMATTER = ISODateTimeFormat.dateTime().withZoneUTC();
+    private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
     private static final int NUM_CLEANUP_THREADS = 2;
     private static final int MAX_CLEANUP_QUEUE_LENGTH = 100;
@@ -72,6 +75,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private final ExecutorService _cleanupExecutor;
     private final LoadingCache<ChannelSlab, SlabCursor> _openSlabCursors;
     private final LoadingCache<ChannelSlab, SlabCursor> _closedSlabCursors;
+    private final Cache<String, ByteBuffer> _oldestSlab;
     private final Meter _staleSlabMeter;
 
     @Inject
@@ -110,6 +114,10 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                 maximumSize(100000).  // 100k - bigger than the open slab cache since it's more important for performance.
                 recordStats().
                 build(slabCursorFactory);
+        _oldestSlab = CacheBuilder.newBuilder().
+                expireAfterWrite(10, TimeUnit.SECONDS).
+                maximumSize(10000).   // 10k - as with open slabs, misses are inconvenient but tolerable
+                build();
         InstrumentedCache.instrument(_openSlabCursors, metricRegistry, metricsGroup, "openSlabCursors", false);
         InstrumentedCache.instrument(_closedSlabCursors, metricRegistry, metricsGroup, "closedSlabCursors", false);
 
@@ -164,13 +172,14 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         // Note: unlike the read methods, the count method does not delete empty slabs (!open && count==0) since
         // we can't trust results w/ConsistencyLevel.CL_ONE.
 
-        Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
+        Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
                         .getKey(channel)
                         .withColumnRange(new RangeBuilder().setLimit(100).build())
                         .autoPaginate(true));
 
-        for (Column<ByteBuffer> manifestColumn : manifestColumns) {
+        while (manifestColumns.hasNext()) {
+            Column<ByteBuffer> manifestColumn = manifestColumns.next();
             ByteBuffer slabId = manifestColumn.getName();
 
             if (total <= limit) {
@@ -199,7 +208,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
     @Override
     public boolean moveIfFast(String fromChannel, String toChannel) {
-        Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
+        Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
                 _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_QUORUM)
                         .getKey(fromChannel)
                         .withColumnRange(new RangeBuilder().setLimit(50).build())
@@ -207,7 +216,8 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         List<ByteBuffer> closedSlabs = Lists.newArrayList();
         boolean movedAll = true;
-        for (Column<ByteBuffer> manifestColumn : manifestColumns) {
+        while (manifestColumns.hasNext()) {
+            Column<ByteBuffer> manifestColumn = manifestColumns.next();
             ByteBuffer slabId = manifestColumn.getName();
             boolean open = manifestColumn.getBooleanValue();
             if (open) {
@@ -230,17 +240,13 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
     @ParameterizedTimed(type = "AstyanaxEventReaderDAO")
     @Override
-    public void readAll(String channel, EventSink sink, Date since) {
-        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink, ConsistencyLevel.CL_LOCAL_QUORUM);
+    public void readAll(String channel, EventSink sink, Date since, boolean weak) {
+        readAll(channel, since != null ? getSlabFilterSince(since, channel) : null, sink, weak);
     }
 
-    void readAll(String channel, SlabFilter filter, EventSink sink, ConsistencyLevel consistency) {
+    void readAll(String channel, SlabFilter filter, EventSink sink, boolean weak) {
         // PeekingIterator is needed so that we can look ahead and see the next slab Id
-        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
-                        .getKey(channel)
-                        .withColumnRange(new RangeBuilder().setLimit(50).build())
-                        .autoPaginate(true)).iterator());
+        PeekingIterator<Column<ByteBuffer>> manifestColumns = Iterators.peekingIterator(readManifestForChannel(channel, weak));
 
         while (manifestColumns.hasNext()) {
             Column<ByteBuffer> manifestColumn = manifestColumns.next();
@@ -283,16 +289,21 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
         //    benefit from using a cursor to start the read part-way through the slab.  So the open slab cursor cache
         //    has a very short TTL (250ms) to reduce memory requirements and minimize the latency between the time
         //    data is written and first read.
+        //
+        // Additionally a third cache is used to track the oldest known slab in channel's manifest.  If the events
+        // are written and acknowledged quickly and frequently then the head of the manifest row for the channel may
+        // accrue tombstones as older slabs are fully read and deleted.  By caching the oldest slab in the manifest
+        // reading the older tombstones can be minimized.  Since slabs can be written out-of-order across the cluster
+        // we still occasionally (10 seconds) re-reads all slabs to pick up any of these newer-older slabs we may
+        // have missed.
 
-        Iterable<Column<ByteBuffer>> manifestColumns = executePaginated(
-                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, ConsistencyLevel.CL_LOCAL_ONE)
-                        .getKey(channel)
-                        .withColumnRange(new RangeBuilder().setLimit(50).build())
-                        .autoPaginate(true));
+        Iterator<Column<ByteBuffer>> manifestColumns = readManifestForChannel(channel, true);
 
-        for (Column<ByteBuffer> manifestColumn : manifestColumns) {
+        while (manifestColumns.hasNext()) {
+            Column<ByteBuffer> manifestColumn = manifestColumns.next();
             ByteBuffer slabId = manifestColumn.getName();
             boolean open = manifestColumn.getBooleanValue();
+
             ChannelSlab channelSlab = new ChannelSlab(channel, slabId);
             SlabCursor cursor = (open ? _openSlabCursors : _closedSlabCursors).getUnchecked(channelSlab);
 
@@ -312,6 +323,67 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                     break;
                 }
             }
+        }
+    }
+
+    /**
+     * Reads the ordered manifest for a channel.  The read can either be weak or strong.  A weak read will use CL1
+     * and may use the cached oldest slab from a previous strong call to improve performance.  A strong read will use
+     * CL local_quorum and will always read the entire manifest row.  This makes a weak read significantly faster than a
+     * strong read but also means the call is not guaranteed to return the entire manifest.  Because of this at least
+     * every 10 seconds a weak read for a channel is automatically promoted to a strong read.
+     *
+     * The vast majority of calls to this method are performed during a "peek" or "poll" operation.  Since these are
+     * typically called repeatedly a weak call provides improved performance while guaranteeing that at least every
+     * 10 seconds the manifest is strongly read so no slabs are missed over time.  Calls which must guarantee
+     * the full manifest should explicitly request strong consistency.
+     */
+    private Iterator<Column<ByteBuffer>> readManifestForChannel(final String channel, final boolean weak) {
+        final ByteBuffer oldestSlab = weak ? _oldestSlab.getIfPresent(channel) : null;
+        final ConsistencyLevel consistency;
+
+        RangeBuilder range = new RangeBuilder().setLimit(50);
+        if (oldestSlab != null) {
+            range.setStart(oldestSlab);
+            consistency = ConsistencyLevel.CL_LOCAL_ONE;
+        } else {
+            consistency = ConsistencyLevel.CL_LOCAL_QUORUM;
+        }
+
+        final Iterator<Column<ByteBuffer>> manifestColumns = executePaginated(
+                _keyspace.prepareQuery(ColumnFamilies.MANIFEST, consistency)
+                        .getKey(channel)
+                        .withColumnRange(range.build())
+                        .autoPaginate(true));
+
+        if (oldestSlab != null) {
+            // Query was executed weakly using the cached oldest slab, so don't update the cache with an unreliable oldest value
+            return manifestColumns;
+        } else {
+            PeekingIterator<Column<ByteBuffer>> peekingManifestColumns = Iterators.peekingIterator(manifestColumns);
+            if (peekingManifestColumns.hasNext()) {
+                // Cache the first slab returned from querying the full manifest column family since it is the oldest.
+                cacheOldestSlabForChannel(channel, TimeUUIDSerializer.get().fromByteBuffer(peekingManifestColumns.peek().getName()));
+                return peekingManifestColumns;
+            } else {
+                // Channel was completely empty.  Cache a TimeUUID for the current time.  This will cause future calls
+                // to read at most 1 minute of tombstones until the cache expires 10 seconds later.
+                cacheOldestSlabForChannel(channel, TimeUUIDs.newUUID());
+                return Collections.emptyIterator();
+            }
+        }
+    }
+
+    private void cacheOldestSlabForChannel(String channel, UUID slabId) {
+        // Functionally the same as ConcurrentMap.computeIfAbsent(...)
+        try {
+            // Subtract 1 minute from the slab ID to allow for a reasonable window of out-of-order writes while
+            // constraining the number of tombstones read to 1 minute's worth of rows.
+            _oldestSlab.get(channel, () ->
+                    TimeUUIDSerializer.get().toByteBuffer(
+                            TimeUUIDs.uuidForTimeMillis(TimeUUIDs.getTimeMillis(slabId) - TimeUnit.MINUTES.toMillis(1))));
+        } catch (ExecutionException e) {
+            // Won't happen, the "execution" just returns a constant.
         }
     }
 
@@ -403,7 +475,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     private boolean isRecent(ByteBuffer slabId) {
         UUID uuid = TimeUUIDSerializer.get().fromByteBuffer(slabId.duplicate());
         long age = System.currentTimeMillis() - TimeUUIDs.getTimeMillis(uuid);
-        return age <= Constants.OPEN_SLAB_MARKER_TTL.getMillis();
+        return age <= Constants.OPEN_SLAB_MARKER_TTL.toMillis();
     }
 
     private void closeStaleSlabAsync(final String channel, final ByteBuffer slabId) {
@@ -425,17 +497,17 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     }
 
     /** Executes a {@code RowQuery} with {@code autoPaginate(true)} repeatedly as necessary to fetch all pages. */
-    private <K, C> Iterable<Column<C>> executePaginated(final RowQuery<K, C> query) {
-        return OneTimeIterable.wrap(Iterators.concat(new AbstractIterator<Iterator<Column<C>>>() {
+    private <K, C> Iterator<Column<C>> executePaginated(final RowQuery<K, C> query) {
+        return Iterators.concat(new AbstractIterator<Iterator<Column<C>>>() {
             @Override
             protected Iterator<Column<C>> computeNext() {
                 ColumnList<C> page = execute(query);
                 return !page.isEmpty() ? page.iterator() : endOfData();
             }
-        }));
+        });
     }
 
-    private <R> R execute(Execution<R> execution) {
+     private <R> R execute(Execution<R> execution) {
         OperationResult<R> operationResult;
         try {
             operationResult = execution.execute();
@@ -496,7 +568,9 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
     protected SlabFilter getSlabFilterSince(final Date since, final String channel) {
         return new SlabFilter() {
             boolean foundStartingSlab = false;
-            final UUID sinceUUID = TimeUUIDs.uuidForTimestamp(since);
+            final UUID sinceUUID = TimeUUIDs.uuidForTimestamp(Date.from(since.toInstant()
+                    .minus(Constants.SLAB_ROTATE_TTL)
+                    .minus(Constants.REPLAY_PADDING_TIME)));
             @Override
             public boolean accept(ByteBuffer slabId, boolean open, ByteBuffer nextSlabId) {
                 UUID nextSlabUUID = !foundStartingSlab && nextSlabId != null ?
@@ -510,7 +584,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
                     // Log the slab that we start reading from
                     foundStartingSlab = true;
                     _log.info("Starting to replay {} from slabid {}, for since timestamp of {}", channel,
-                            UUIDSerializer.get().fromByteBuffer(slabId),  ISO_FORMATTER.print(since.getTime()));
+                            UUIDSerializer.get().fromByteBuffer(slabId),  ISO_FORMATTER.format(since.toInstant()));
                 }
                 return true;
             }
@@ -552,7 +626,7 @@ public class AstyanaxEventReaderDAO implements EventReaderDAO {
 
         @Override
         public String toString() {
-            return Objects.toStringHelper(this)
+            return MoreObjects.toStringHelper(this)
                     .add("channel", _channel)
                     .add("slabId", ByteBufferUtil.bytesToHex(_slabId.asReadOnlyBuffer()))
                     .toString();

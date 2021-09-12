@@ -7,11 +7,13 @@ import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.databus.DatabusConfiguration;
 import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.job.JobConfiguration;
+import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.queue.QueueConfiguration;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.scanner.config.ScannerConfiguration;
+import com.bazaarvoice.megabus.MegabusConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +33,11 @@ public class EmoConfiguration extends Configuration {
     @NotNull
     @JsonProperty("cluster")
     private String _cluster;
+
+    @Valid
+    @NotNull
+    @JsonProperty("_systemTablePlacement")
+    private String _systemTablePlacement;
 
     @Valid
     @NotNull
@@ -89,6 +96,16 @@ public class EmoConfiguration extends Configuration {
 
     @Valid
     @NotNull
+    @JsonProperty("kafka")
+    private Optional<KafkaConfiguration> _kafkaConfiguration = Optional.absent();
+
+    @Valid
+    @NotNull
+    @JsonProperty("megabus")
+    private Optional<MegabusConfiguration> _megabusConfiguration = Optional.absent();
+
+    @Valid
+    @NotNull
     @JsonProperty ("serverStartedListeners")
     private List<PluginConfiguration> _serverStartedListenerPluginConfigurations = ImmutableList.of();
 
@@ -108,6 +125,15 @@ public class EmoConfiguration extends Configuration {
 
     public EmoConfiguration setCluster(String cluster) {
         _cluster = cluster;
+        return this;
+    }
+
+    public String getSystemTablePlacement() {
+        return _systemTablePlacement;
+    }
+
+    public EmoConfiguration setSystemTablePlacement(String systemTablePlacement) {
+        _systemTablePlacement = systemTablePlacement;
         return this;
     }
 
@@ -205,8 +231,27 @@ public class EmoConfiguration extends Configuration {
         return _scanner;
     }
 
+    public Optional<KafkaConfiguration> getKafkaConfiguration() {
+        return _kafkaConfiguration;
+    }
+
+    public Optional<MegabusConfiguration> getMegabusConfiguration() {
+        return _megabusConfiguration;
+    }
+
+
     public EmoConfiguration setScanner(Optional<ScannerConfiguration> scanner) {
         _scanner = scanner;
+        return this;
+    }
+
+    public EmoConfiguration setMegabusConfiguration(Optional<MegabusConfiguration> megabusConfiguration) {
+        _megabusConfiguration = megabusConfiguration;
+        return this;
+    }
+
+    public EmoConfiguration setKafkaConfiguration(Optional<KafkaConfiguration> kafkaConfiguration) {
+        _kafkaConfiguration = kafkaConfiguration;
         return this;
     }
 

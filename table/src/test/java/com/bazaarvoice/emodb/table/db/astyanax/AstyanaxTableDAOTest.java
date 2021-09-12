@@ -11,20 +11,21 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Function;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.time.Clock;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -91,7 +92,7 @@ public class AstyanaxTableDAOTest {
         when(placementFactory.getDataCenters(_subsetPlacement)).thenReturn(ImmutableList.of(dc2, dc3));
         when(placementFactory.getDataCenters(_remotePlacement)).thenReturn(ImmutableList.of(dc4));
 
-        for (String placement : new String[] {_ugcPlacement, _catPlacement, _subsetPlacement, _remotePlacement}) {
+        for (String placement : new String[]{_ugcPlacement, _catPlacement, _subsetPlacement, _remotePlacement}) {
             for (DataCenter memberDataCenter : placementFactory.getDataCenters(placement)) {
                 if (dataCenter.equals(memberDataCenter.getName())) {
                     when(placementFactory.isAvailablePlacement(placement)).thenReturn(true);
@@ -106,15 +107,17 @@ public class AstyanaxTableDAOTest {
         String systemTableNamespace = "systemNamespace";
         String systemTablePlacement = "systemTablePlacement";
         String systemTable = systemTableNamespace + ":table";
+        String systemTableMetadataChanges = systemTableNamespace + ":table_unpublished_databus_events";
+        String systemTableEventRegistry = systemTableNamespace + ":table_event_registry";
         String systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
         AstyanaxTableDAO tableDAO = new AstyanaxTableDAO(mock(LifeCycleRegistry.class),
                 systemTableNamespace, systemTablePlacement, 16,
-                ImmutableMap.<String, Long>of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L),
+                ImmutableMap.of(systemTable, 123L, systemTableUuid, 345L, systemDataCenterTable, 567L, systemTableMetadataChanges, 980L, systemTableEventRegistry, 246L),
                 newPlacementFactory(dataCenter), mock(PlacementCache.class), dataCenter,
                 mock(RateLimiterCache.class), mock(DataCopyDAO.class), mock(DataPurgeDAO.class),
                 mock(FullConsistencyTimeProvider.class), mock(ValueStore.class), mock(CacheRegistry.class),
-                ImmutableMap.<String, String>of());
+                ImmutableMap.of(), new ObjectMapper(), mock(Clock.class));
 
         TableBackingStore tableBackingStore = mock(TableBackingStore.class);
         Map<String, Object> tableMap = JsonHelper.fromJson(_tableMetaData, new TypeReference<Map<String, Object>>() {});
@@ -145,16 +148,12 @@ public class AstyanaxTableDAOTest {
         assertTrue(table.isFacade(), "The facade should be returned");
 
 
-        Set<String> dataCenters = Sets.newHashSet(Lists.transform(ImmutableList.copyOf(table.getDataCenters()), new Function<DataCenter, String>() {
-            public String apply(DataCenter dc) {
-                return dc.getName();
-            }
-        }));
+        Set<String> dataCenters = ImmutableList.copyOf(table.getDataCenters()).stream().map(DataCenter::getName).collect(Collectors.toSet());
         assertEquals(dataCenters, Sets.newHashSet(_dc2Name, _dc3Name), "dc2, and dc3 should be the only data centers returned for this facade");
 
         table = _sysDcTableDAO.tableFromJson(hm);
 
-        assertTrue(!table.isFacade(), "The actual table should be returned");
+        assertFalse(table.isFacade(), "The actual table should be returned");
     }
 
     @Test
@@ -166,7 +165,7 @@ public class AstyanaxTableDAOTest {
                 "Facade should not be created");
     }
 
-    @Test (expectedExceptions = FacadeExistsException.class)
+    @Test(expectedExceptions = FacadeExistsException.class)
     public void facadeNotAllowedInOverlappingDataCenter()
             throws Exception {
         // Should not allow a facade in dc3 since a facade is created in catalog_global keyspace

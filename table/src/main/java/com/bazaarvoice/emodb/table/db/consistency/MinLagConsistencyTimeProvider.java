@@ -2,12 +2,13 @@ package com.bazaarvoice.emodb.table.db.consistency;
 
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
-import org.joda.time.Duration;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -19,7 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * to perform updates with a slightly old TimeUUID to allow for latency and retries w/in the client application.
  */
 public class MinLagConsistencyTimeProvider implements FullConsistencyTimeProvider {
-    public static final Duration DEFAULT_LAG = Duration.standardMinutes(5);
+    public static final Duration DEFAULT_LAG = Duration.ofMinutes(5);
 
     private final Map<String, ValueStore<Duration>> _durationCache;
 
@@ -31,11 +32,11 @@ public class MinLagConsistencyTimeProvider implements FullConsistencyTimeProvide
     @Override
     public long getMaxTimeStamp(String cluster) {
         // Convert the consistency lag duration to a millis timestamp.
-        return System.currentTimeMillis() - getConsistencyLag(cluster).getMillis();
+        return Instant.now().minus(getConsistencyLag(cluster)).toEpochMilli();
     }
 
     private Duration getConsistencyLag(String cluster) {
         Supplier<Duration> holder = _durationCache.get(cluster);
-        return Objects.firstNonNull(holder != null ? holder.get() : null, DEFAULT_LAG);
+        return Optional.ofNullable(holder != null ? holder.get() : null).orElse(DEFAULT_LAG);
     }
 }

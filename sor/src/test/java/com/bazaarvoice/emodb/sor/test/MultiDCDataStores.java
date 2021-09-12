@@ -2,19 +2,24 @@ package com.bazaarvoice.emodb.sor.test;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
+import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
+import com.bazaarvoice.emodb.sor.core.HistoryStore;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
-import com.bazaarvoice.emodb.sor.core.test.InMemoryAuditStore;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryHistoryStore;
+import com.bazaarvoice.emodb.sor.core.test.InMemoryMapStore;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.log.NullSlowQueryLog;
 import com.bazaarvoice.emodb.table.db.TableDAO;
 import com.bazaarvoice.emodb.table.db.test.InMemoryTableDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Optional;
-import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.net.URI;
+import java.time.Clock;
 
 /**
  * Wrapper around a set of {@link DataStore} instances that replicate to each other,
@@ -25,9 +30,9 @@ import java.net.URI;
 public class MultiDCDataStores {
 
     private final DataStore[] _stores;
-    private final InMemoryDataDAO[] _inMemoryDaos;
+    private final InMemoryDataReaderDAO[] _inMemoryDaos;
     private final ReplicatingDataWriterDAO[] _replDaos;
-    private final AuditStore[] _auditStores;
+    private final HistoryStore[] _historyStores;
     private final InMemoryTableDAO _tableDao;
 
     public MultiDCDataStores(int numDCs, MetricRegistry metricRegistry) {
@@ -38,10 +43,10 @@ public class MultiDCDataStores {
         _tableDao = new InMemoryTableDAO();
 
         // create multiple data stores, one per data center
-        _inMemoryDaos = new InMemoryDataDAO[numDCs];
+        _inMemoryDaos = new InMemoryDataReaderDAO[numDCs];
         _replDaos = new ReplicatingDataWriterDAO[numDCs];
         for (int i = 0; i < numDCs; i++) {
-            _inMemoryDaos[i] = new InMemoryDataDAO();
+            _inMemoryDaos[i] = new InMemoryDataReaderDAO();
             _replDaos[i] = new ReplicatingDataWriterDAO(_inMemoryDaos[i]);
         }
         // connect each data store to every other data store
@@ -52,24 +57,25 @@ public class MultiDCDataStores {
                 }
             }
         }
-        _auditStores = new AuditStore[numDCs];
+        _historyStores = new HistoryStore[numDCs];
         _stores = new DataStore[numDCs];
         for (int i = 0; i < numDCs; i++) {
-            _auditStores[i] = new InMemoryAuditStore();
+            _historyStores[i] = new InMemoryHistoryStore();
             if (asyncCompacter) {
-                _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new EventBus(), _tableDao,
-                        _inMemoryDaos[i].setAuditStore(_auditStores[i]), _replDaos[i], new NullSlowQueryLog(), _auditStores[i],
-                        Optional.<URI>absent());
+                _stores[i] = new DefaultDataStore(new SimpleLifeCycleRegistry(), metricRegistry, new DatabusEventWriterRegistry(), _tableDao,
+                        _inMemoryDaos[i].setHistoryStore(_historyStores[i]), _replDaos[i], new NullSlowQueryLog(), _historyStores[i],
+                        Optional.<URI>absent(),  new InMemoryCompactionControlSource(), Conditions.alwaysFalse(), new DiscardingAuditWriter(), new InMemoryMapStore<>(), Clock.systemUTC());
             } else {
-                _stores[i] = new DefaultDataStore(new EventBus(), _tableDao, _inMemoryDaos[i].setAuditStore(_auditStores[i]),
-                        _replDaos[i], new NullSlowQueryLog(), MoreExecutors.sameThreadExecutor(), _auditStores[i],
-                        Optional.<URI>absent(), metricRegistry);
+                _stores[i] = new DefaultDataStore(new DatabusEventWriterRegistry(), _tableDao, _inMemoryDaos[i].setHistoryStore(_historyStores[i]),
+                        _replDaos[i], new NullSlowQueryLog(), MoreExecutors.newDirectExecutorService(), _historyStores[i],
+                        Optional.<URI>absent(), new InMemoryCompactionControlSource(), Conditions.alwaysFalse(),
+                        new DiscardingAuditWriter(), new InMemoryMapStore<>(), metricRegistry, Clock.systemUTC());
             }
         }
     }
 
-    public AuditStore auditStore(int index) {
-        return _auditStores[index];
+    public HistoryStore historyStore(int index) {
+        return _historyStores[index];
     }
 
     public TableDAO tableDao() {
@@ -80,7 +86,7 @@ public class MultiDCDataStores {
         return _stores[index];
     }
 
-    public InMemoryDataDAO dao(int index) {
+    public InMemoryDataReaderDAO dao(int index) {
         return _inMemoryDaos[index];
     }
 
@@ -109,14 +115,14 @@ public class MultiDCDataStores {
     }
 
     public MultiDCDataStores setFullConsistencyDelayMillis(int fullConsistencyDelayMillis) {
-        for (InMemoryDataDAO dao : _inMemoryDaos) {
+        for (InMemoryDataReaderDAO dao : _inMemoryDaos) {
             dao.setFullConsistencyDelayMillis(fullConsistencyDelayMillis);
         }
         return this;
     }
 
     public MultiDCDataStores setFullConsistencyTimestamp(long fullConsistencyTimestamp) {
-        for (InMemoryDataDAO dao : _inMemoryDaos) {
+        for (InMemoryDataReaderDAO dao : _inMemoryDaos) {
             dao.setFullConsistencyTimestamp(fullConsistencyTimestamp);
         }
         return this;

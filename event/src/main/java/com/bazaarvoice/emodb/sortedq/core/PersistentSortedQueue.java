@@ -21,10 +21,10 @@ import com.google.common.collect.Sets;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 import org.apache.cassandra.utils.ByteBufferUtil;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -277,12 +277,12 @@ public class PersistentSortedQueue implements SortedQueue {
         checkNotNull(consumer, "consumer");
         checkArgument(limit > 0, "Limit must be >0");
 
-        long timeoutAt = (timeout != null) ? System.currentTimeMillis() + timeout.getMillis() : Long.MAX_VALUE;
+        long timeoutAt = (timeout != null) ? System.currentTimeMillis() + timeout.toMillis() : Long.MAX_VALUE;
 
         try {
             if (timeout == null) {
                 _writeLock.lock();
-            } else if (!_writeLock.tryLock(timeout.getMillis(), TimeUnit.MILLISECONDS)) {
+            } else if (!_writeLock.tryLock(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
                 _drainToTimeout.mark();
                 return;
             }

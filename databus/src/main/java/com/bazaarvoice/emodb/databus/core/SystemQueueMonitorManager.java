@@ -6,7 +6,9 @@ import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ManagedGuavaService;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.databus.DataCenterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.DatabusZooKeeper;
+import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
 import com.bazaarvoice.emodb.table.db.consistency.DatabusClusterInfo;
@@ -29,6 +31,8 @@ public class SystemQueueMonitorManager {
                               @DatabusClusterInfo final Collection<ClusterInfo> clusterInfo,
                               @DatabusZooKeeper CuratorFramework curator,
                               @SelfHostAndPort HostAndPort self,
+                              @MasterFanoutPartitions int masterFanoutPartitions,
+                              @DataCenterFanoutPartitions int dataCenterFanoutPartitions,
                               LeaderServiceTask dropwizardTask,
                               final MetricRegistry metricRegistry) {
         LeaderService leaderService = new LeaderService(
@@ -36,7 +40,7 @@ public class SystemQueueMonitorManager {
                 new Supplier<Service>() {
                     @Override
                     public Service get() {
-                        return new SystemQueueMonitor(eventStore, dataCenters, clusterInfo, metricRegistry);
+                        return new SystemQueueMonitor(eventStore, dataCenters, clusterInfo, masterFanoutPartitions, dataCenterFanoutPartitions, metricRegistry);
                     }
                 });
         ServiceFailureListener.listenTo(leaderService, metricRegistry);

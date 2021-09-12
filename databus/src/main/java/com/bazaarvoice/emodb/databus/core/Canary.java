@@ -1,6 +1,8 @@
 package com.bazaarvoice.emodb.databus.core;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.ServiceFailureListener;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.MetricsGroup;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.api.Databus;
@@ -13,11 +15,11 @@ import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.AbstractScheduledService;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
@@ -35,8 +37,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class Canary extends AbstractScheduledService {
     private static final Logger _log = LoggerFactory.getLogger(Canary.class);
 
-    private static final Duration POLL_INTERVAL = Duration.standardSeconds(1);
-    private static final Duration CLAIM_TTL = Duration.standardSeconds(30);
+    private static final Duration POLL_INTERVAL = Duration.ofSeconds(1);
+    private static final Duration CLAIM_TTL = Duration.ofSeconds(30);
     private static final int EVENTS_LIMIT = 50;
 
     private final RateLimitedLog _rateLimitedLog;
@@ -76,12 +78,12 @@ public class Canary extends AbstractScheduledService {
         // the subscription at startup.  The subscription should last basically forever.
         // Note: make sure that we don't ignore any events
         _databus.subscribe(_subscriptionName, _subscriptionCondition,
-                Duration.standardDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
+                Duration.ofDays(3650), DatabusChannelConfiguration.CANARY_TTL, false);
     }
 
     @Override
     protected Scheduler scheduler() {
-        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.getMillis(), TimeUnit.MILLISECONDS);
+        return Scheduler.newFixedDelaySchedule(0, POLL_INTERVAL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -104,7 +106,7 @@ public class Canary extends AbstractScheduledService {
             }
         } catch (Throwable t) {
             _rateLimitedLog.error(t, "Unexpected canary exception: {}", t);
-            stop();  // Give up leadership temporarily.  Maybe another server will have more success.
+            stopAsync().awaitTerminated();  // Give up leadership temporarily.  Maybe another server will have more success.
         }
     }
 

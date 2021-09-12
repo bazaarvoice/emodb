@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -170,7 +171,8 @@ abstract public class TableConditionPart extends EmoMatchingPart {
 
             switch (condition.getName()) {
                 case Intrinsic.TABLE:
-                    // Table name doesn't require metadata; check the contained condition
+                case Intrinsic.ID:
+                    // Table name and document ID don't require metadata; check the contained condition
                     requiresMetadata = condition.getCondition().visit(this, null);
                     break;
 
@@ -225,6 +227,12 @@ abstract public class TableConditionPart extends EmoMatchingPart {
                 }
             }
             return requiresMetadata;
+        }
+
+        @Nullable
+        @Override
+        public Boolean visit(PartitionCondition condition, @Nullable Void context) {
+            return condition.getCondition().visit(this, null);
         }
 
         // All remaining conditions are verifiable from the immediate context and do not require table metadata.

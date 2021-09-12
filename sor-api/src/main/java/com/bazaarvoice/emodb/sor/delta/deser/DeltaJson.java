@@ -32,8 +32,8 @@ public abstract class DeltaJson {
 
     public static void write(Writer writer, String string) throws IOException {
         // For a simple string, bypass the ObjectMapper use the lower level JsonGenerator API (should be a bit faster)
-        JsonGenerator gen = FACTORY.createJsonGenerator(writer);
-        gen.writeString(string);
-        gen.close();
+        try (JsonGenerator gen = FACTORY.createGenerator(writer)) {
+            gen.writeString(string);
+        }
     }
 }

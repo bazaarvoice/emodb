@@ -13,8 +13,10 @@ import com.google.common.collect.Sets;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -24,6 +26,7 @@ public class ScanStatus {
 
     private final String _scanId;
     private final ScanOptions _options;
+    private final boolean _tableSnapshotCreated;
     private final boolean _canceled;
     private final List<ScanRangeStatus> _pendingScanRanges;
     private final List<ScanRangeStatus> _activeScanRanges;
@@ -31,30 +34,35 @@ public class ScanStatus {
     private final Date _startTime;
     private Date _completeTime;
 
-    public ScanStatus(String scanId, ScanOptions options, boolean canceled,
+    @JsonProperty("compactionControlBufferTimeInMillis")
+    private long _compactionControlBufferTimeInMillis = Duration.ofMinutes(1).toMillis();
+
+    public ScanStatus(String scanId, ScanOptions options, boolean tableSnapshotCreated, boolean canceled,
                       Date startTime,
                       List<ScanRangeStatus> pendingScanRanges,
                       List<ScanRangeStatus> activeScanRanges,
                       List<ScanRangeStatus> completeScanRanges) {
-        this(scanId, options, canceled, startTime, pendingScanRanges, activeScanRanges, completeScanRanges, null);
+        this(scanId, options, tableSnapshotCreated, canceled, startTime, pendingScanRanges, activeScanRanges, completeScanRanges, null);
     }
 
     @JsonCreator
-    public ScanStatus(@JsonProperty ("scanId") String scanId,
-                      @JsonProperty ("options") ScanOptions options,
-                      @JsonProperty ("canceled") boolean canceled,
-                      @JsonProperty ("startTime") Date startTime,
-                      @JsonProperty ("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
-                      @JsonProperty ("activeScanRanges") List<ScanRangeStatus> activeScanRanges,
-                      @JsonProperty ("completeScanRanges") List<ScanRangeStatus> completeScanRanges,
-                      @JsonProperty ("completeTime") @Nullable Date completeTime) {
+    public ScanStatus(@JsonProperty("scanId") String scanId,
+                      @JsonProperty("options") ScanOptions options,
+                      @JsonProperty("tableSnapshotCreated") boolean tableSnapshotCreated,
+                      @JsonProperty("canceled") boolean canceled,
+                      @JsonProperty("startTime") Date startTime,
+                      @JsonProperty("pendingScanRanges") List<ScanRangeStatus> pendingScanRanges,
+                      @JsonProperty("activeScanRanges") List<ScanRangeStatus> activeScanRanges,
+                      @JsonProperty("completeScanRanges") List<ScanRangeStatus> completeScanRanges,
+                      @JsonProperty("completeTime") @Nullable Date completeTime) {
         _scanId = scanId;
         _options = options;
+        _tableSnapshotCreated = tableSnapshotCreated;
         _canceled = canceled;
         _startTime = startTime;
-        _pendingScanRanges = Objects.firstNonNull(pendingScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _activeScanRanges = Objects.firstNonNull(activeScanRanges, ImmutableList.<ScanRangeStatus>of());
-        _completeScanRanges = Objects.firstNonNull(completeScanRanges, ImmutableList.<ScanRangeStatus>of());
+        _pendingScanRanges = Optional.ofNullable(pendingScanRanges).orElse(ImmutableList.of());
+        _activeScanRanges = Optional.ofNullable(activeScanRanges).orElse(ImmutableList.of());
+        _completeScanRanges = Optional.ofNullable(completeScanRanges).orElse(ImmutableList.of());
         _completeTime = completeTime;
     }
 
@@ -64,6 +72,10 @@ public class ScanStatus {
 
     public ScanOptions getOptions() {
         return _options;
+    }
+
+    public boolean isTableSnapshotCreated() {
+        return _tableSnapshotCreated;
     }
 
     public boolean isCanceled() {
@@ -98,6 +110,20 @@ public class ScanStatus {
 
     public void setCompleteTime(Date completeTime) {
         _completeTime = completeTime;
+    }
+
+    public long getCompactionControlBufferTimeInMillis() {
+        return _compactionControlBufferTimeInMillis;
+    }
+
+    public void setCompactionControlBufferTimeInMillis(long compactionControlBufferTimeInMillis) {
+        _compactionControlBufferTimeInMillis = compactionControlBufferTimeInMillis;
+    }
+
+    @JsonIgnore
+    public Date getCompactionControlTime() {
+        // Adding compactionControlBuffer time to the start time to give us the compaction control time. (setting the time in the future takes care of the issue of there being any in-flight compactions)
+        return new Date(_startTime.getTime() + getCompactionControlBufferTimeInMillis());
     }
 
     @JsonIgnore

@@ -11,6 +11,7 @@ import com.bazaarvoice.emodb.sor.condition.impl.LikeConditionImpl;
 import com.bazaarvoice.emodb.sor.condition.impl.MapConditionBuilderImpl;
 import com.bazaarvoice.emodb.sor.condition.impl.NotConditionImpl;
 import com.bazaarvoice.emodb.sor.condition.impl.OrConditionBuilderImpl;
+import com.bazaarvoice.emodb.sor.condition.impl.PartitionConditionImpl;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaParser;
 import com.bazaarvoice.emodb.sor.delta.impl.ContainsConditionImpl;
 import com.google.common.collect.Sets;
@@ -201,5 +202,17 @@ public abstract class Conditions {
 
     public static MapConditionBuilder mapBuilder() {
         return new MapConditionBuilderImpl();
+    }
+
+    public static Condition partition(int numPartitions, int partition) {
+        return partition(numPartitions, equal(partition));
+    }
+
+    public static Condition partition(int numPartitions, Integer... partitions) {
+        return partition(numPartitions, in(Arrays.asList(partitions)));
+    }
+
+    public static Condition partition(int numPartitions, Condition condition) {
+        return new PartitionConditionImpl(numPartitions, condition);
     }
 }

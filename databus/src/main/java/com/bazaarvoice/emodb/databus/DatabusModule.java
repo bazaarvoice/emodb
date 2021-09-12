@@ -21,11 +21,15 @@ import com.bazaarvoice.emodb.databus.core.DatabusFactory;
 import com.bazaarvoice.emodb.databus.core.DedupMigrationTask;
 import com.bazaarvoice.emodb.databus.core.DefaultDatabus;
 import com.bazaarvoice.emodb.databus.core.DefaultFanoutManager;
-import com.bazaarvoice.emodb.databus.core.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.databus.core.DrainFanoutPartitionTask;
+import com.bazaarvoice.emodb.databus.core.FanoutLagMonitor;
 import com.bazaarvoice.emodb.databus.core.FanoutManager;
+import com.bazaarvoice.emodb.databus.core.HashingPartitionSelector;
 import com.bazaarvoice.emodb.databus.core.MasterFanout;
 import com.bazaarvoice.emodb.databus.core.OwnerAwareDatabus;
-import com.bazaarvoice.emodb.databus.core.RateLimitedLogFactory;
+import com.bazaarvoice.emodb.databus.core.PartitionSelector;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.databus.core.SubscriptionEvaluator;
 import com.bazaarvoice.emodb.databus.core.SystemQueueMonitorManager;
 import com.bazaarvoice.emodb.databus.db.SubscriptionDAO;
@@ -44,19 +48,22 @@ import com.bazaarvoice.emodb.event.EventStoreModule;
 import com.bazaarvoice.emodb.event.EventStoreZooKeeper;
 import com.bazaarvoice.emodb.event.api.ChannelConfiguration;
 import com.bazaarvoice.emodb.event.api.DedupEventStoreChannels;
+import com.bazaarvoice.emodb.event.owner.OstrichOwnerGroupFactory;
 import com.bazaarvoice.emodb.job.api.JobHandlerRegistry;
 import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.DataStoreConfiguration;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
-import com.google.common.eventbus.EventBus;
+import com.google.common.collect.Range;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
 import com.google.inject.Provides;
@@ -95,7 +102,7 @@ import static com.google.common.base.Preconditions.checkArgument;
  * <li> @{@link ReplicationKey} String
  * <li> @{@link SystemIdentity} String
  * <li> DataStore {@link DataProvider}
- * <li> DataStore {@link EventBus}
+ * <li> DataStore {@link DatabusEventWriterRegistry}
  * <li> DataStore {@link DataStoreConfiguration}
  * <li> {@link com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer}
  * <li> @{@link DefaultJoinFilter} Supplier&lt;{@link Condition}&gt;
@@ -145,6 +152,8 @@ public class DatabusModule extends PrivateModule {
             bind(DefaultReplicationManager.class).asEagerSingleton();
             bind(ReplicationEnabledTask.class).asEagerSingleton();
             bind(SystemQueueMonitorManager.class).asEagerSingleton();
+            bind(FanoutLagMonitor.class).asEagerSingleton();
+            bind(DrainFanoutPartitionTask.class).asEagerSingleton();
         }
 
         // Databus
@@ -152,7 +161,7 @@ public class DatabusModule extends PrivateModule {
         bind(SubscriptionEvaluator.class).asEagerSingleton();
         bind(DedupMigrationTask.class).asEagerSingleton();
 
-        // Expose the event store directly for use by debugging APIs
+        // Expose the event store directly for use by the megabus and debugging APIs
         bind(DatabusEventStore.class).asEagerSingleton();
         expose(DatabusEventStore.class);
 
@@ -164,6 +173,12 @@ public class DatabusModule extends PrivateModule {
         // Bind the cross-data center outbound replication end point
         bind(ReplicationSource.class).to(DefaultReplicationSource.class).asEagerSingleton();
         expose(ReplicationSource.class);
+    }
+
+    @Provides @Singleton @Exposed
+    @DatabusOstrichOwnerGroupFactory
+    OstrichOwnerGroupFactory provideDatabusOstrichOwnerGroupFactory(OstrichOwnerGroupFactory ostrichOwnerGroupFactory) {
+        return ostrichOwnerGroupFactory;
     }
 
     @Provides @Singleton
@@ -212,4 +227,35 @@ public class DatabusModule extends PrivateModule {
         lifeCycleRegistry.manage(new ExecutorServiceManager(queueDrainService, Duration.seconds(1), "drainQueue-cache"));
         return queueDrainService;
     }
+
+    @Provides @Singleton @MasterFanoutPartitions
+    Integer provideMasterFanoutPartitions(DatabusConfiguration configuration) {
+        checkArgument(Range.closed(1, 16).contains(configuration.getMasterFanoutPartitions()),
+                "Master fanout partitions must be between 1 and 16");
+        return configuration.getMasterFanoutPartitions();
+    }
+
+    @Provides @Singleton @MasterFanoutPartitions
+    PartitionSelector provideMasterFanoutPartitionSelector(@MasterFanoutPartitions int numPartitions) {
+        if (numPartitions == 1) {
+            return PartitionSelector.SINGLE_PARTITION_SELECTOR;
+        }
+        return new HashingPartitionSelector(numPartitions);
+    }
+
+    @Provides @Singleton @DataCenterFanoutPartitions
+    Integer provideDataCenterFanoutPartitions(DatabusConfiguration configuration) {
+        checkArgument(Range.closed(1, 16).contains(configuration.getDataCenterFanoutPartitions()),
+                "Data center fanout partitions must be between 1 and 16");
+        return configuration.getDataCenterFanoutPartitions();
+    }
+
+    @Provides @Singleton @DataCenterFanoutPartitions
+    PartitionSelector provideDataCenterFanoutPartitionSelector(@DataCenterFanoutPartitions int numPartitions) {
+        if (numPartitions == 1) {
+            return PartitionSelector.SINGLE_PARTITION_SELECTOR;
+        }
+        return new HashingPartitionSelector(numPartitions);
+    }
+
 }

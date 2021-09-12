@@ -18,7 +18,6 @@ import com.bazaarvoice.emodb.client.EmoResource;
 import com.bazaarvoice.emodb.client.EmoResponse;
 import com.bazaarvoice.emodb.client.uri.EmoUriBuilder;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
-import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.json.RisonHelper;
 import com.bazaarvoice.emodb.sor.api.Audit;
@@ -30,12 +29,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
-import com.google.common.io.InputSupplier;
 import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -43,9 +40,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -54,6 +51,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -68,16 +66,22 @@ import static com.google.common.base.Preconditions.checkState;
  */
 public class BlobStoreClient implements AuthBlobStore {
 
-    /** Must match the service name in the EmoService class. */
+    /**
+     * Must match the service name in the EmoService class.
+     */
     /*package*/ static final String BASE_SERVICE_NAME = "emodb-blob-1";
 
-    /** Must match the @Path annotation on the BlobStoreResource class. */
+    /**
+     * Must match the @Path annotation on the BlobStoreResource class.
+     */
     public static final String SERVICE_PATH = "/blob/1";
 
     private static final String X_BV_PREFIX = "X-BV-";    // HTTP header prefix for BlobMetadata other than attributes
     private static final String X_BVA_PREFIX = "X-BVA-";  // HTTP header prefix for BlobMetadata attributes
 
-    /** Regex for parsing the HTTP Content-Range header. */
+    /**
+     * Regex for parsing the HTTP Content-Range header.
+     */
     private static final Pattern CONTENT_RANGE_PATTERN = Pattern.compile("^bytes (\\d+)-(\\d+)/\\d+$");
 
     private static final int HTTP_PARTIAL_CONTENT = 206;
@@ -86,7 +90,7 @@ public class BlobStoreClient implements AuthBlobStore {
      * Delay after which streaming connections are automatically closed if the caller doesn't begin reading the stream.
      * The caller can still read the contents after this time elapses but will incur a new round-trip request/response.
      */
-    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.standardSeconds(2);
+    private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(2);
 
     private final EmoClient _client;
     private final UriBuilder _blobStore;
@@ -363,7 +367,7 @@ public class BlobStoreClient implements AuthBlobStore {
                         }
                     }
                 },
-                BLOB_CONNECTION_CLOSED_TIMEOUT.getMillis(), TimeUnit.MILLISECONDS);
+                BLOB_CONNECTION_CLOSED_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         return new DefaultBlob(response.getMetadata(), response.getRange(), streamSupplier(request, response));
     }
 
@@ -421,7 +425,9 @@ public class BlobStoreClient implements AuthBlobStore {
         }
     }
 
-    /** Parses an HTTP "Content-Range" header in an HTTP 206 Partial Content response. */
+    /**
+     * Parses an HTTP "Content-Range" header in an HTTP 206 Partial Content response.
+     */
     private Range parseContentRange(String contentRange) {
         Matcher matcher = CONTENT_RANGE_PATTERN.matcher(contentRange);
         checkState(matcher.matches(), "Unexpected Content-Range header: %s", contentRange);
@@ -430,7 +436,9 @@ public class BlobStoreClient implements AuthBlobStore {
         return new Range(start, end - start + 1);
     }
 
-    /** Parses HTTP headers into a {@link BlobMetadata} object. */
+    /**
+     * Parses HTTP headers into a {@link BlobMetadata} object.
+     */
     private BlobMetadata parseMetadataHeaders(String blobId, EmoResponse response) {
         // The server always sets X-BV-Length.  It's similar to Content-Length but proxies etc. shouldn't mess with it.
         String lengthString = response.getFirstHeader(X_BV_PREFIX + "Length");
@@ -453,20 +461,17 @@ public class BlobStoreClient implements AuthBlobStore {
     }
 
     private StreamSupplier streamSupplier(final BlobRequest request, final BlobResponse response) {
-        return new StreamSupplier() {
-            @Override
-            public void writeTo(OutputStream out) throws IOException {
-                InputStream in = response.getInputStream();
-                if (in == null) {
-                    // The original stream has already been consumed.  Re-open a new stream from the server.
-                    in = get(request).getInputStream();
-                }
+        return out -> {
+            InputStream in = response.getInputStream();
+            if (in == null) {
+                // The original stream has already been consumed.  Re-open a new stream from the server.
+                in = get(request).getInputStream();
+            }
 
-                try {
-                    ByteStreams.copy(in, out);
-                } finally {
-                    Closeables.close(in, true);
-                }
+            try {
+                ByteStreams.copy(in, out);
+            } finally {
+                Closeables.close(in, true);
             }
         };
     }
@@ -480,8 +485,8 @@ public class BlobStoreClient implements AuthBlobStore {
     }
 
     @Override
-    public void put(String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in,
-                    Map<String, String> attributes, @Nullable Duration ttl)
+    public void put(String apiKey, String table, String blobId, Supplier<? extends InputStream> in,
+                    Map<String, String> attributes)
             throws IOException {
         checkNotNull(table, "table");
         checkNotNull(blobId, "blobId");
@@ -489,10 +494,8 @@ public class BlobStoreClient implements AuthBlobStore {
         checkNotNull(attributes, "attributes");
         try {
             // Encode the ttl as a URL query parameter
-            Integer ttlSeconds = Ttls.toSeconds(ttl, 0, null);
             URI uri = _blobStore.clone()
                     .segment(table, blobId)
-                    .queryParam("ttl", (ttlSeconds != null) ? new Object[]{ttlSeconds} : new Object[0])
                     .build();
             // Encode the rest of the attributes as request headers
             EmoResource request = _client.resource(uri);
@@ -502,7 +505,7 @@ public class BlobStoreClient implements AuthBlobStore {
             // Upload the object
             request.type(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(in.getInput());
+                    .put(in.get());
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -540,7 +543,7 @@ public class BlobStoreClient implements AuthBlobStore {
         return _blobStore.clone().segment(table, blobId).build();
     }
 
-    @SuppressWarnings ("ThrowableResultOfMethodCallIgnored")
+    @SuppressWarnings("ThrowableResultOfMethodCallIgnored")
     private RuntimeException convertException(EmoClientException e) {
         EmoResponse response = e.getResponse();
         String exceptionType = response.getFirstHeader("X-BV-Exception");
@@ -611,8 +614,10 @@ public class BlobStoreClient implements AuthBlobStore {
         return e;
     }
 
-    /** Helper object to encapsulate the parameters for a read blob request. */
-    private class BlobRequest {
+    /**
+     * Helper object to encapsulate the parameters for a read blob request.
+     */
+    private static class BlobRequest {
         final String _apiKey;
         final String _table;
         final String _blobId;
@@ -648,7 +653,7 @@ public class BlobStoreClient implements AuthBlobStore {
      * Helper object to encapsulate the response for a read blob request and provide guaranteed closure for the
      * underlying resources.
      */
-    private class BlobResponse {
+    private static class BlobResponse {
         final private BlobMetadata _metadata;
         final private Range _range;
         final private boolean _rangeApplied;

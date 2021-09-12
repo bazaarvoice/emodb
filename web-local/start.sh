@@ -2,6 +2,7 @@
 
 CONFIG_FILE="config-local.yaml"
 DDL_FILE="config-ddl-local.yaml"
+PERMISSIONS_FILE=""
 
 function print_usage_and_exit {
     cat <<EOF
@@ -26,8 +27,9 @@ function print_usage_and_exit {
 
      Options:
 
-        --ddl-file       Which ddl file to use [Default: emodb/web-local/${DDL_FILE}]
-        --config-file    Which config file to use [Default: emodb/web-local/${CONFIG_FILE}]
+        --ddl-file         Which ddl file to use [Default: emodb/web-local/${DDL_FILE}]
+        --config-file      Which config file to use [Default: emodb/web-local/${CONFIG_FILE}]
+        --permissions-file While permissions file to use [Default: none]
 
      Examples:
 
@@ -57,6 +59,10 @@ if [[ $# -gt 0 ]]; then
                 CONFIG_FILE="${2}"
                 shift 2
                 ;;
+            --permissions-file)
+                PERMISSIONS_FILE="${2}"
+                shift 2
+                ;;
             *)
                 error "Unknown option ${1}"
                 ;;
@@ -65,4 +71,4 @@ if [[ $# -gt 0 ]]; then
 fi
 
 
-mvn verify -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}"
+mvn verify -P init-cassandra,start-emodb -Dconfig.file="${CONFIG_FILE}" -Dddl.file="${DDL_FILE}" -Dpermissions.file="${PERMISSIONS_FILE}"

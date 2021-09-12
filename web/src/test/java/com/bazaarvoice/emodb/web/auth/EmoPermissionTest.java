@@ -411,7 +411,7 @@ public class EmoPermissionTest {
 
     @Test (expectedExceptions = InvalidPermissionStringException.class)
     public void testInvalidTableCondition() {
-        _resolver.resolvePermission("sor|*|if(intrinsic(\"~id\":~))");
+        _resolver.resolvePermission("sor|*|if(intrinsic(\"~version\":~))");
     }
 
     @Test

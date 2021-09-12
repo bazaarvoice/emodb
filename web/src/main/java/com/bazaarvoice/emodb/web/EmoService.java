@@ -5,13 +5,10 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.jersey.ServerErrorResponseMetricsFilter;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamFilter;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
-import com.bazaarvoice.emodb.common.json.CustomJsonObjectMapperFactory;
-import com.bazaarvoice.emodb.common.json.ISO8601DateFormat;
-import com.bazaarvoice.emodb.common.json.deferred.LazyJsonModule;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
 import com.bazaarvoice.emodb.databus.core.DatabusEventStore;
 import com.bazaarvoice.emodb.databus.repl.ReplicationSource;
@@ -20,19 +17,19 @@ import com.bazaarvoice.emodb.queue.api.DedupQueueService;
 import com.bazaarvoice.emodb.queue.api.QueueService;
 import com.bazaarvoice.emodb.queue.client.DedupQueueServiceAuthenticator;
 import com.bazaarvoice.emodb.queue.client.QueueServiceAuthenticator;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
+import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
-import com.bazaarvoice.emodb.web.cli.AllTablesReportCommand;
-import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
-import com.bazaarvoice.emodb.web.cli.RegisterCassandraCommand;
-import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
+import com.bazaarvoice.emodb.web.jersey.ServerErrorResponseMetricsFilter;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamResourceFilterFactory;
+import com.bazaarvoice.emodb.web.megabus.resource.MegabusResource1;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
-import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
 import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
@@ -42,21 +39,24 @@ import com.bazaarvoice.emodb.web.resources.databus.ReplicationResource1;
 import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.queue.DedupQueueResource1;
 import com.bazaarvoice.emodb.web.resources.queue.QueueResource1;
-import com.bazaarvoice.emodb.web.resources.report.ReportResource1;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.resources.uac.ApiKeyResource1;
 import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlRequestMessageBodyReader;
 import com.bazaarvoice.emodb.web.resources.uac.UserAccessControlResource1;
 import com.bazaarvoice.emodb.web.scanner.ScanUploader;
-import com.bazaarvoice.emodb.web.scanner.resource.ScanUploadResource1;
+import com.bazaarvoice.emodb.web.scanner.resource.StashResource1;
+import com.bazaarvoice.emodb.web.scanner.scheduling.StashRequestManager;
 import com.bazaarvoice.emodb.web.throttling.AdHocConcurrentRequestRegulatorSupplier;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListedIpFilter;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ThrottlingFilterFactory;
 import com.bazaarvoice.emodb.web.uac.SubjectUserAccessControl;
+import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
+import com.bazaarvoice.megabus.MegabusSource;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.servlets.PingServlet;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -98,9 +98,10 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.uac;
@@ -127,7 +128,8 @@ public class EmoService extends Application<EmoConfiguration> {
         parser.addArgument("config-ddl").required(true).help("config-ddl.yaml");
 
         // Get the path to config-ddl
-        Namespace result = parser.parseArgs(args);
+        String[] first3Args = (String[]) ArrayUtils.subarray(args, 0, Math.min(args.length, 3));
+        Namespace result = parser.parseArgs(first3Args);
 
         // Remove config-ddl arg
         new EmoService(result.getString("config-ddl"), new File(result.getString("emo-config")))
@@ -142,15 +144,9 @@ public class EmoService extends Application<EmoConfiguration> {
     @Override
     public void initialize(Bootstrap<EmoConfiguration> bootstrap) {
         bootstrap.addCommand(new CreateKeyspacesCommand());
-        bootstrap.addCommand(new RegisterCassandraCommand());
-        bootstrap.addCommand(new ListCassandraCommand());
-        bootstrap.addCommand(new UnregisterCassandraCommand());
         bootstrap.addCommand(new PurgeDatabusEventsCommand());
-        bootstrap.addCommand(new AllTablesReportCommand());
         bootstrap.addCommand(new EncryptConfigurationApiKeyCommand());
-        // Write Date objects using ISO8601 strings instead of numeric milliseconds-since-1970.
-        bootstrap.getObjectMapper().setDateFormat(new ISO8601DateFormat());
-        bootstrap.getObjectMapper().registerModule(new LazyJsonModule());
+        EmoServiceObjectMapperFactory.configure(bootstrap.getObjectMapper());
 
         bootstrap.getMetricRegistry().register("jvm.gc.totals", new EmoGarbageCollectorMetricSet());
     }
@@ -188,6 +184,11 @@ public class EmoService extends Application<EmoConfiguration> {
             environment.jersey().register(mapperType);
         }
 
+        // Configure support for streaming JSON responses without long delays due to buffering
+        //noinspection unchecked
+        environment.jersey().getResourceConfig().getResourceFilterFactories().add(new UnbufferedStreamResourceFilterFactory());
+        environment.getApplicationContext().addFilter(new FilterHolder(new UnbufferedStreamFilter()), "/*", EnumSet.of(DispatcherType.REQUEST));
+
         // Create all the major EmoDB components using Guice.  Note: This code is organized such that almost all
         // initialization is complete before we register with Ostrich so we don't start receiving inbound requests
         // before the server is ready and listening.
@@ -200,9 +201,10 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateDatabus();
         evaluateQueue();
         evaluateBlackList();
-        evaluateReporting();
         evaluateThrottling();
+        evaluateSecurity();
         evaluateScanner();
+        evaluateMegabus();
         evaluateServiceStartedListeners();
         evaluateSwagger();
         evaluateUAC();
@@ -242,8 +244,11 @@ public class EmoService extends Application<EmoConfiguration> {
         DataStore dataStore = _injector.getInstance(DataStore.class);
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
+        CompactionControlSource compactionControlSource = _injector.getInstance(Key.get(CompactionControlSource.class, LocalCompactionControl.class));
+        DataStoreUpdateThrottler updateThrottle = _injector.getInstance(DataStoreUpdateThrottler.class);
+        
         // Start the System Of Record service
-        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync));
+        resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource, updateThrottle));
     }
 
     private void evaluateBlobStore()
@@ -257,7 +262,7 @@ public class EmoService extends Application<EmoConfiguration> {
                 Key.get(new TypeLiteral<Set<String>>(){}, ApprovedBlobContentTypes.class));
         // Start the Blob service
         ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
-        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, approvedContentTypes));
+        resources.addResource(_cluster, "emodb-blob-1", new BlobStoreResource1(blobStore, approvedContentTypes, _environment.metrics()));
     }
 
     private void evaluateDatabus()
@@ -310,10 +315,24 @@ public class EmoService extends Application<EmoConfiguration> {
             return;
         }
 
+        ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
         ScanUploader scanUploader = _injector.getInstance(ScanUploader.class);
-        _environment.jersey().register(new ScanUploadResource1(scanUploader));
+        StashRequestManager stashRequestManager = _injector.getInstance(StashRequestManager.class);
+
+        resources.addResource(_cluster, "emodb-stash-1", new StashResource1(scanUploader, stashRequestManager));
         // No admin tasks are registered automatically in SCANNER ServiceMode
         _environment.admin().addTask(_injector.getInstance(LeaderServiceTask.class));
+    }
+
+    private void evaluateMegabus()
+            throws Exception {
+        if (!runPerServiceMode(megabus)) {
+            return;
+        }
+
+        ResourceRegistry resources = _injector.getInstance(ResourceRegistry.class);
+        MegabusSource megabusSource = _injector.getInstance(MegabusSource.class);
+        resources.addResource(_cluster, "emodb-megabus-1", new MegabusResource1(megabusSource));
     }
 
     private void evaluateBlackList()
@@ -330,16 +349,6 @@ public class EmoService extends Application<EmoConfiguration> {
         _environment.getApplicationContext().addFilter(new FilterHolder(new BlackListedIpFilter(blackListIpValueStore)), "/*", EnumSet.of(DispatcherType.REQUEST));
     }
 
-    private void evaluateReporting()
-            throws Exception {
-        if (!runPerServiceMode(report)) {
-            return;
-        }
-
-        // Add the reporting endpoint.  This is for internal use and is therefore not discoverable.
-        _environment.jersey().register(new ReportResource1(_injector.getInstance(ReportLoader.class)));
-    }
-
     private void evaluateThrottling()
             throws Exception {
         if (!runPerServiceMode(throttle)) {
@@ -347,8 +356,6 @@ public class EmoService extends Application<EmoConfiguration> {
         }
 
         AdHocThrottleManager adHocThrottleManager = _injector.getInstance(AdHocThrottleManager.class);
-
-        DropwizardAuthConfigurator authConfigurator = _injector.getInstance(DropwizardAuthConfigurator.class);
 
         // Add filter to allow ad-hoc throttling of API calls
         ConcurrentRequestsThrottlingFilter adHocThrottleFilter =
@@ -362,6 +369,14 @@ public class EmoService extends Application<EmoConfiguration> {
         _environment.jersey().getResourceConfig().getContainerRequestFilters().add(adHocThrottleFilter);
         //noinspection unchecked
         _environment.jersey().getResourceConfig().getContainerResponseFilters().add(adHocThrottleFilter);
+    }
+
+    private void evaluateSecurity() {
+        if (!runPerServiceMode(security)) {
+            return;
+        }
+
+        DropwizardAuthConfigurator authConfigurator = _injector.getInstance(DropwizardAuthConfigurator.class);
         // Add API Key authentication and authorization
         authConfigurator.configure(_environment);
     }
@@ -432,7 +447,7 @@ public class EmoService extends Application<EmoConfiguration> {
     private EmoConfiguration loadConfigFile(File configFile)
             throws IOException, ConfigurationException {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        ObjectMapper mapper = CustomJsonObjectMapperFactory.build(new YAMLFactory());
+        ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
         ConfigurationFactory<EmoConfiguration> configurationFactory = new ConfigurationFactory(EmoConfiguration.class, validator, mapper, "dw");
         return configurationFactory.build(configFile);
     }

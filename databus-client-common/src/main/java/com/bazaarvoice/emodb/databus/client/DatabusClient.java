@@ -22,7 +22,6 @@ import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.ostrich.partition.PartitionKey;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
@@ -30,6 +29,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -38,7 +38,6 @@ import java.util.TimeZone;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.joda.time.DateTimeConstants.SECONDS_PER_DAY;
 
 /**
  * Databus client implementation that routes API calls to the EmoDB service.  The actual HTTP communication
@@ -105,8 +104,8 @@ public class DatabusClient implements AuthDatabus {
         try {
             URI uri = _databus.clone()
                     .segment(subscription)
-                    .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, SECONDS_PER_DAY * 30))
-                    .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, SECONDS_PER_DAY * 30))
+                    .queryParam("ttl", Ttls.toSeconds(subscriptionTtl, 0, (int) Duration.ofDays(30).getSeconds()))
+                    .queryParam("eventTtl", Ttls.toSeconds(eventTtl, 0, (int) Duration.ofDays(30).getSeconds()))
                     .queryParam("includeDefaultJoinFilter", Boolean.toString(includeDefaultJoinFilter))
                     .build();
             _client.resource(uri)

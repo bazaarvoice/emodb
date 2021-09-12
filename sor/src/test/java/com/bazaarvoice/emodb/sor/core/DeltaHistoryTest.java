@@ -9,7 +9,7 @@ import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.db.Key;
-import com.bazaarvoice.emodb.sor.db.test.InMemoryDataDAO;
+import com.bazaarvoice.emodb.sor.db.test.InMemoryDataReaderDAO;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.test.MultiDCDataStores;
 import com.bazaarvoice.emodb.sor.test.SystemClock;
@@ -18,12 +18,10 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.testng.annotations.Test;
 
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,13 +42,13 @@ public class DeltaHistoryTest {
     private static final String KEY2 = "key2";
 
     @Test
-    public void testDeltaAudits() {
+    public void testDeltaHistories() {
         MetricRegistry metricRegistry = new MetricRegistry();
 
         // Just use one datacenter for this test
         MultiDCDataStores allDCs = new MultiDCDataStores(1, metricRegistry);
         DataStore dc1 = allDCs.dc(0);
-        InMemoryDataDAO dao1 = allDCs.dao(0);
+        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
 
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
@@ -87,9 +85,9 @@ public class DeltaHistoryTest {
         // Version 5
         dc1.update(TABLE, KEY, TimeUUIDs.newUUID(), Deltas.fromString("{..,\"newcode\":\"s\"}"), newAudit("moderate"), WriteConsistency.STRONG);
 
-        // Compare the above with the delta audits and make sure they display the correct story
+        // Compare the above with the delta histories and make sure they display the correct story
 
-        Iterator<Change> deltaHistory = allDCs.auditStore(0).getDeltaAudits(TABLE, KEY);
+        Iterator<Change> deltaHistory = allDCs.historyStore(0).getDeltaHistories(TABLE, KEY);
 
         final Iterator<Change> liveChanges = dc1.getTimeline(TABLE, KEY, true, false, null, null, false, 100, ReadConsistency.STRONG);
         Iterator<Change> allChangesEver = getChangeIterator(deltaHistory, liveChanges);
@@ -97,12 +95,12 @@ public class DeltaHistoryTest {
         Resolver resolver = new DefaultResolver(intrinsics);
 
         Map<UUID, Change> map = Maps.newLinkedHashMap();
-        int countOfAuditedDeltas = 0;
+        int countOfHistoryDeltas = 0;
         int version = 0;
         while (allChangesEver.hasNext()) {
             Change change = allChangesEver.next();
             if (change.getHistory() != null) {
-                countOfAuditedDeltas++;
+                countOfHistoryDeltas++;
                 assertEquals(++version, Long.parseLong(change.getHistory().getContent().get("~version").toString()),
                 "Version continuity failed");
             }
@@ -118,8 +116,8 @@ public class DeltaHistoryTest {
             resolver.update(entry.getKey(), entry.getValue().getDelta(), entry.getValue().getTags());
         }
 
-        // Verify we have 4 audited deltas
-        assertEquals(countOfAuditedDeltas, 4, "There should be 4 deltas stored in audits that got compacted away.");
+        // Verify we have 4 history deltas
+        assertEquals(countOfHistoryDeltas, 4, "There should be 4 deltas stored in audits that got compacted away.");
 
         // Verify we have a total of 5 distinct changes.
         assertEquals(5, map.size(), "We should have 5 distinct changes");
@@ -157,10 +155,10 @@ public class DeltaHistoryTest {
         dc1.compact(TABLE, KEY, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
 
         // Verify that we have the same number of historical deltas as before
-        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.auditStore(0).getDeltaAudits(TABLE, KEY),
+        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.historyStore(0).getDeltaHistories(TABLE, KEY),
                 Integer.MAX_VALUE);
 
-        assertEquals(countOfAuditedDeltas, countOfDeltasAfterHugeDelta,
+        assertEquals(countOfHistoryDeltas, countOfDeltasAfterHugeDelta,
                 "The number of audited deltas should always stay the same once a huge delta is added");
 
         // Make sure that the archived delta size goes back to 0
@@ -183,7 +181,7 @@ public class DeltaHistoryTest {
         MetricRegistry metricRegistry = new MetricRegistry();
         MultiDCDataStores allDCs = new MultiDCDataStores(1, metricRegistry);
         DataStore dc1 = allDCs.dc(0);
-        InMemoryDataDAO dao1 = allDCs.dao(0);
+        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
         // Reset the archivedDeltaSize static counter to zero - This may have accrued some value due to our use of
         // DiscardingExecutorService in other tests.
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
@@ -210,7 +208,7 @@ public class DeltaHistoryTest {
         // Now make sure that there are no audited deltas since the overall content would be 10MB or more
         // Compaction will occur, but due to transport size limit, it should not save the history
         dc1.compact(TABLE, KEY2, null, ReadConsistency.STRONG, WriteConsistency.STRONG);
-        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.auditStore(0).getDeltaAudits(TABLE, KEY2), Integer.MAX_VALUE);
+        int countOfDeltasAfterHugeDelta = Iterators.advance(allDCs.historyStore(0).getDeltaHistories(TABLE, KEY2), Integer.MAX_VALUE);
 
         // Since we know that our first delta was 1 MB, the next 10 deltas each will have the content size of at least 1 MB
         // for a total of 10 MB. This is because we keep a "snapshot" of row with each delta archive.
@@ -236,7 +234,7 @@ public class DeltaHistoryTest {
         final DataStore dc1 = allDCs.dc(0);
         TableOptions options = new TableOptionsBuilder().setPlacement("default").build();
         dc1.createTable(TABLE, options, Collections.<String, Object>emptyMap(), newAudit("create table"));
-        InMemoryDataDAO dao1 = allDCs.dao(0);
+        InMemoryDataReaderDAO dao1 = allDCs.dao(0);
         int numberOfConcurrentGets = 1000;
         for (int i = 0; i < numberOfConcurrentGets ; i++) {
             createCompactibleRecord(dc1, dao1, "key" + i);
@@ -292,7 +290,7 @@ public class DeltaHistoryTest {
         return false;
     }
 
-    private void createCompactibleRecord(DataStore dc1, InMemoryDataDAO dao1, String key) {
+    private void createCompactibleRecord(DataStore dc1, InMemoryDataReaderDAO dao1, String key) {
         // Write an initial update
         // Version 1
         dc1.update(TABLE, key, TimeUUIDs.newUUID(), Deltas.fromString("{\"name\":\"Bob\"}"), newAudit("submit"), WriteConsistency.STRONG);
@@ -312,7 +310,7 @@ public class DeltaHistoryTest {
             protected Change computeNext() {
                 while (liveChanges.hasNext()) {
                     Change change = liveChanges.next();
-                    if (change.getDelta() != null) {
+                    if (change.getHistory() == null && change.getCompaction() == null) {
                         return change;
                     }
                 }

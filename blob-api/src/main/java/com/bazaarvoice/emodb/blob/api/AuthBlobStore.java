@@ -5,8 +5,6 @@ import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
-import com.google.common.io.InputSupplier;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -14,10 +12,12 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Authenticating interface to {@link BlobStore}.  This method should exactly mirror BlobStore except with added
  * credentials in each call.
+ *
  * @see BlobStore
  */
 public interface AuthBlobStore {
@@ -41,7 +41,9 @@ public interface AuthBlobStore {
     void createTable(@Credential String apiKey, String table, TableOptions options, Map<String, String> attributes, Audit audit)
             throws TableExistsException;
 
-    /** Drops the specified table and all data associated with it. */
+    /**
+     * Drops the specified table and all data associated with it.
+     */
     void dropTable(@Credential String apiKey, String table, Audit audit)
             throws UnknownTableException;
 
@@ -53,24 +55,36 @@ public interface AuthBlobStore {
     void purgeTableUnsafe(@Credential String apiKey, String table, Audit audit)
             throws UnknownTableException;
 
-    /** Returns true if the specified table exists. */
+    /**
+     * Returns true if the specified table exists.
+     */
     boolean getTableExists(@Credential String apiKey, String table);
 
-    /** Returns true if the specified table is available to the current data center. */
+    /**
+     * Returns true if the specified table is available to the current data center.
+     */
     boolean isTableAvailable(@Credential String apiKey, String table);
 
-    /** Returns the table metadata. */
+    /**
+     * Returns the table metadata.
+     */
     Table getTableMetadata(@Credential String apiKey, String table);
 
-    /** Returns the attributes associated with a table. */
+    /**
+     * Returns the attributes associated with a table.
+     */
     Map<String, String> getTableAttributes(@Credential String apiKey, String table)
             throws UnknownTableException;
 
-    /** Replaces the attributes for an existing table. */
+    /**
+     * Replaces the attributes for an existing table.
+     */
     void setTableAttributes(@Credential String apiKey, String table, Map<String, String> attributes, Audit audit)
             throws UnknownTableException;
 
-    /** Returns the storage options associated with a table. */
+    /**
+     * Returns the storage options associated with a table.
+     */
     TableOptions getTableOptions(@Credential String apiKey, String table)
             throws UnknownTableException;
 
@@ -102,7 +116,7 @@ public interface AuthBlobStore {
     Blob get(@Credential String apiKey, String table, String blobId, @Nullable RangeSpecification rangeSpec)
             throws BlobNotFoundException, RangeNotSatisfiableException;
 
-    void put(@Credential String apiKey, String table, String blobId, InputSupplier<? extends InputStream> in, Map<String, String> attributes, @Nullable Duration ttl)
+    void put(@Credential String apiKey, String table, String blobId, Supplier<? extends InputStream> in, Map<String, String> attributes)
             throws IOException;
 
     void delete(@Credential String apiKey, String table, String blobId);

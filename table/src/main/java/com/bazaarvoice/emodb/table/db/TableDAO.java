@@ -8,10 +8,13 @@ import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
 import com.google.common.base.Optional;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -58,4 +61,14 @@ public interface TableDAO {
     Collection<String> getTablePlacements(boolean includeInternal, boolean localOnly);
 
     TableSet createTableSet();
+
+    /**
+     * Writes the unpublished databus event information to a special system table.
+     */
+    void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute);
+
+    /**
+     * Gets an exclusive list of emo tables having changes that are not published on the databus.
+     */
+    Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive);
 }

@@ -21,13 +21,13 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
-import org.joda.time.Duration;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
@@ -36,10 +36,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyListOf;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -84,7 +84,7 @@ public class TestJobOwnership {
                         invocationOnMock.getArguments()[1]));
                 return null;
             }
-        }).when(_queueService).send(eq("testqueue"), anyObject());
+        }).when(_queueService).send(eq("testqueue"), any());
 
         doAnswer(new Answer() {
             @Override
@@ -99,7 +99,7 @@ public class TestJobOwnership {
                 }
                 return null;
             }
-        }).when(_queueService).acknowledge(eq("testqueue"), anyListOf(String.class));
+        }).when(_queueService).acknowledge(eq("testqueue"), anyList());
 
         _jobStatusDAO = new InMemoryJobStatusDAO();
         _testingServer = new TestingServer();
@@ -114,11 +114,11 @@ public class TestJobOwnership {
         _jobHandlerRegistry2 = new DefaultJobHandlerRegistry();
         _service1 = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry1, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
 
         _service2 = new DefaultJobService(
                 lifeCycleRegistry, _queueService, "testqueue", _jobHandlerRegistry2, _jobStatusDAO, _curator,
-                1, Duration.ZERO, 100, Duration.standardHours(1));
+                1, Duration.ZERO, 100, Duration.ofHours(1));
     }
 
     @AfterMethod
@@ -163,7 +163,7 @@ public class TestJobOwnership {
 
         // Run all 10 jobs one at a time, alternating between service1 and service2
         for (int i=0; i < 10; i++) {
-           boolean jobRan = i % 2 == 0 ? _service1.runNextJob() : _service2.runNextJob();
+            boolean jobRan = i % 2 == 0 ? _service1.runNextJob() : _service2.runNextJob();
             assertTrue(jobRan);
         }
 

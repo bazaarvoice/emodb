@@ -6,9 +6,12 @@ import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.log.DefaultRateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -23,17 +26,17 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.DataCenters;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.admin.RowKeyTask;
+import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.core.AuditStore;
-import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.DataStoreProviderProxy;
-import com.bazaarvoice.emodb.sor.core.DataTools;
-import com.bazaarvoice.emodb.sor.core.DefaultAuditStore;
-import com.bazaarvoice.emodb.sor.core.DefaultDataStore;
-import com.bazaarvoice.emodb.sor.core.DeltaHistoryTtl;
-import com.bazaarvoice.emodb.sor.core.LocalDataStore;
-import com.bazaarvoice.emodb.sor.core.StashRoot;
-import com.bazaarvoice.emodb.sor.core.SystemDataStore;
+import com.bazaarvoice.emodb.sor.audit.AuditFlusher;
+import com.bazaarvoice.emodb.sor.audit.AuditStore;
+import com.bazaarvoice.emodb.sor.audit.AuditWriter;
+import com.bazaarvoice.emodb.sor.audit.DiscardingAuditWriter;
+import com.bazaarvoice.emodb.sor.audit.s3.AthenaAuditWriter;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.Conditions;
+import com.bazaarvoice.emodb.sor.core.*;
+import com.bazaarvoice.emodb.sor.core.DefaultHistoryStore;
 import com.bazaarvoice.emodb.sor.db.astyanax.DAOModule;
 import com.bazaarvoice.emodb.sor.db.astyanax.DeltaPlacementFactory;
 import com.bazaarvoice.emodb.sor.db.cql.CqlForMultiGets;
@@ -43,32 +46,14 @@ import com.bazaarvoice.emodb.sor.log.LogbackSlowQueryLogProvider;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLog;
 import com.bazaarvoice.emodb.sor.log.SlowQueryLogConfiguration;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.Placements;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
+import com.bazaarvoice.emodb.table.db.StashBlackListTableCondition;
+import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxKeyspaceDiscovery;
-import com.bazaarvoice.emodb.table.db.astyanax.AstyanaxTableDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.BootstrapTables;
-import com.bazaarvoice.emodb.table.db.astyanax.CQLSessionForHintsPollerMap;
-import com.bazaarvoice.emodb.table.db.astyanax.CurrentDataCenter;
-import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
-import com.bazaarvoice.emodb.table.db.astyanax.KeyspaceMap;
-import com.bazaarvoice.emodb.table.db.astyanax.Maintenance;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceDAO;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceRateLimitTask;
-import com.bazaarvoice.emodb.table.db.astyanax.MaintenanceSchedulerManager;
-import com.bazaarvoice.emodb.table.db.astyanax.MoveTableTask;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementCache;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
-import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
-import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
-import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
-import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
+import com.bazaarvoice.emodb.table.db.astyanax.*;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;
 import com.bazaarvoice.emodb.table.db.consistency.ClusterHintsPoller;
 import com.bazaarvoice.emodb.table.db.consistency.CompositeConsistencyTimeProvider;
@@ -81,19 +66,21 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsPollerManager;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
-import com.bazaarvoice.emodb.table.db.curator.CuratorMutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventTools;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAODelegate;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.MutexTableDAODelegate;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.eventbus.EventBus;
 import com.google.inject.Exposed;
 import com.google.inject.Key;
 import com.google.inject.PrivateModule;
@@ -105,11 +92,10 @@ import com.google.inject.name.Names;
 import com.sun.jersey.api.client.Client;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.Duration;
-import org.joda.time.Period;
 
 import java.net.URI;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -137,6 +123,7 @@ import static com.google.common.base.Preconditions.checkState;
  * <li> @{@link CqlForScans} Supplier&lt;Boolean&gt;
  * <li> {@link CqlDriverConfiguration}
  * <li> {@link Clock}
+ * <li> {@link CompactionControlSource}
  * </ul>
  * Exports the following:
  * <ul>
@@ -154,6 +141,9 @@ public class DataStoreModule extends PrivateModule {
 
     @Override
     protected void configure() {
+
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
+
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
@@ -178,6 +168,10 @@ public class DataStoreModule extends PrivateModule {
             bind(ClusterHintsPoller.class).asEagerSingleton();
         }
 
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.dataStore_web)) {
+            bind(MinSplitSizeCleanupMonitor.class).asEagerSingleton();
+        }
+
         // The web servers are responsible for performing background table background_table_maintenance.
         // Enable background table background_table_maintenance if specified.
         if (_serviceMode.specifies(EmoServiceMode.Aspect.background_table_maintenance)) {
@@ -191,31 +185,55 @@ public class DataStoreModule extends PrivateModule {
             bind(MoveTableTask.class).asEagerSingleton();
         }
 
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
+            bind(TableEventTools.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            bind(TableEventRegistry.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            expose(TableEventTools.class);
+            expose(TableEventRegistry.class);
+        }
+
+        // Stash requires an additional DAO for storing Stash artifacts and provides a custom interface for access.
+        if (_serviceMode.specifies(EmoServiceMode.Aspect.scanner) || _serviceMode.specifies(EmoServiceMode.Aspect.megabus)) {
+            bind(CQLStashTableDAO.class).asEagerSingleton();
+            bind(StashTableDAO.class).to(AstyanaxTableDAO.class).asEagerSingleton();
+            expose(StashTableDAO.class);
+        }
+
         // The system of record requires two bootstrap tables in which it stores its metadata about tables.
         // The 64-bit UUID values were chosen at random.
         bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class).toInstance(ImmutableMap.of(
                 "__system_sor:table", 0x09d7f33f08984b67L,
                 "__system_sor:table_uuid", 0xab33556547b99d25L,
-                "__system_sor:data_center", 0x33f1f082cffc2c2fL));
+                "__system_sor:data_center", 0x33f1f082cffc2c2fL,
+                "__system_sor:table_unpublished_databus_events", 0x44ab556547b99dffL,
+                "__system_sor:table_event_registry", 0xb0b2716384a93cc4L));
 
         // Bind all DAOs from the DAO module
         install(new DAOModule());
 
-        bind(AuditStore.class).to(DefaultAuditStore.class).asEagerSingleton();
-        
+        bind(HistoryStore.class).to(DefaultHistoryStore.class).asEagerSingleton();
+
+        bind(RateLimitedLogFactory.class).to(DefaultRateLimitedLogFactory.class).asEagerSingleton();
+
+        bind(AuditWriter.class).to(AuditStore.class);
+        bind(AuditFlusher.class).to(AuditStore.class);
+
         // The LocalDataStore annotation binds to the default implementation
         // The unannotated version of DataStore provided below is what the rest of the application will consume
         bind(DefaultDataStore.class).asEagerSingleton();
-        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(DefaultDataStore.class);
+        bind(WriteCloseableDataStore.class).asEagerSingleton();
+        bind(DataStore.class).annotatedWith(ManagedDataStoreDelegate.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).annotatedWith(ManagedTableBackingStoreDelegate.class).to(DefaultDataStore.class);
+        bind(DataStore.class).annotatedWith(LocalDataStore.class).to(WriteCloseableDataStore.class);
         expose(DataStore.class);
 
         // The AstyanaxTableDAO class uses the DataStore (recursively) to store table metadata
-        bind(TableBackingStore.class).to(DefaultDataStore.class);
+        bind(TableBackingStore.class).to(WriteCloseableDataStore.class);
         expose(TableBackingStore.class);
 
         // Publish events to listeners like the Databus via an instance of EventBus
-        bind(EventBus.class).asEagerSingleton();
-        expose(EventBus.class);
+        bind(DatabusEventWriterRegistry.class).asEagerSingleton();
+        expose(DatabusEventWriterRegistry.class);
         // The Databus uses a back-door API to the DataStore.
         bind(DataProvider.class).to(DefaultDataStore.class);
         expose(DataProvider.class);
@@ -237,13 +255,27 @@ public class DataStoreModule extends PrivateModule {
         // Data tools used to generate reports
         bind(DataTools.class).to(DefaultDataStore.class);
         expose(DataTools.class);
+
+        bind(DataWriteCloser.class).to(WriteCloseableDataStore.class);
+        bind(GracefulShutdownManager.class).asEagerSingleton();
     }
 
     @Provides @Singleton
-    Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @DataStoreZooKeeper CuratorFramework curator) {
+    AuditStore provideAuditStore(DataStoreConfiguration dataStoreConfiguration, ObjectMapper objectMapper, Clock clock,
+                                 RateLimitedLogFactory rateLimitedLogFactory, MetricRegistry metricRegistry) {
+        if (dataStoreConfiguration.getAuditWriterConfiguration() != null) {
+            return new AthenaAuditWriter(dataStoreConfiguration.getAuditWriterConfiguration(), objectMapper, clock,
+                    rateLimitedLogFactory, metricRegistry);
+        }
+
+        return new DiscardingAuditWriter();
+    }
+
+    @Provides @Singleton
+    Optional<TableMutexManager> provideTableMutexManager(DataCenterConfiguration dataCenterConfiguration, @DataStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables"));
+            return Optional.of(new TableMutexManager(curator, "/lock/table-partitions"));
         }
         return Optional.absent();
     }
@@ -262,14 +294,8 @@ public class DataStoreModule extends PrivateModule {
         }
     }
 
-    @Provides @Singleton @SystemTablePlacement
-    String provideSystemTablePlacement(DataStoreConfiguration configuration) {
-
-        return configuration.getSystemTablePlacement();
-    }
-
     @Provides @Singleton @DeltaHistoryTtl
-    Period provideDeltaHistoryTtl(DataStoreConfiguration configuration) {
+    Duration provideDeltaHistoryTtl(DataStoreConfiguration configuration) {
         return configuration.getHistoryTtl();
     }
 
@@ -401,12 +427,25 @@ public class DataStoreModule extends PrivateModule {
         return new RateLimiterCache(rateLimits, 1000);
     }
 
+    @Provides @Singleton @MinSplitSizeMap
+    MapStore<DataStoreMinSplitSize> provideMinSplitSizeMap(@DataStoreZooKeeper CuratorFramework curator,
+                                                LifeCycleRegistry lifeCycle) {
+        return lifeCycle.manage(new ZkMapStore<>(curator, "min-split-size", new ZKDataStoreMinSplitSizeSerializer()));
+    }
+
     @Provides @Singleton @StashRoot
     Optional<URI> provideStashRootDirectory(DataStoreConfiguration configuration) {
         if (configuration.getStashRoot().isPresent()) {
             return Optional.of(URI.create(configuration.getStashRoot().get()));
         }
         return Optional.absent();
+    }
+
+    @Provides @Singleton @StashBlackListTableCondition
+    protected Condition provideStashBlackListTableCondition(DataStoreConfiguration configuration) {
+        return configuration.getStashBlackListTableCondition()
+                .transform(Conditions::fromString)
+                .or(Conditions.alwaysFalse());
     }
 
     private Collection<ClusterInfo> getClusterInfos(DataStoreConfiguration configuration) {

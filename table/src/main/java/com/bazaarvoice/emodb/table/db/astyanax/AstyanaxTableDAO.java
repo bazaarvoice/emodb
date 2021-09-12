@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationScope;
 import com.bazaarvoice.emodb.common.api.impl.LimitCounter;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
@@ -23,22 +24,38 @@ import com.bazaarvoice.emodb.sor.api.TableOptionsBuilder;
 import com.bazaarvoice.emodb.sor.api.UnknownFacadeException;
 import com.bazaarvoice.emodb.sor.api.UnknownPlacementException;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEventType;
+import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
+import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.bazaarvoice.emodb.sor.condition.eval.ConditionEvaluator;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.table.db.DroppedTableException;
 import com.bazaarvoice.emodb.table.db.MoveType;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
+import com.bazaarvoice.emodb.table.db.StashTableDAO;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
+import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.bazaarvoice.emodb.table.db.TableSet;
+import com.bazaarvoice.emodb.table.db.eventregistry.StorageReaderDAO;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEvent;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventDatacenter;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistrant;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventRegistry;
+import com.bazaarvoice.emodb.table.db.eventregistry.TableEventTools;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
+import com.bazaarvoice.emodb.table.db.stash.StashTokenRange;
 import com.bazaarvoice.emodb.table.db.tableset.BlockFileTableSet;
 import com.bazaarvoice.emodb.table.db.tableset.TableSerializer;
 import com.codahale.metrics.annotation.Timed;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Charsets;
@@ -57,16 +74,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import com.google.common.io.CharStreams;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,13 +96,32 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoField;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
+import java.util.Spliterators;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.DROPPED;
@@ -102,35 +138,50 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 
-public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
+public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, StashTableDAO, TableEventRegistry, TableEventTools, Managed {
     private static final Logger _log = LoggerFactory.getLogger(AstyanaxTableDAO.class);
 
     private static final Ordering<Comparable> NULLS_LAST = Ordering.natural().nullsLast();
     private static final Random RANDOM = new SecureRandom();
 
-    /** Wait at least 10 seconds between maintenance operations to allow for clock skew between servers. */
-    static final Duration MIN_DELAY = Duration.standardSeconds(10);
+    /**
+     * Wait at least 10 seconds between maintenance operations to allow for clock skew between servers.
+     */
+    static final Duration MIN_DELAY = Duration.ofSeconds(10);
 
-    /** The server updates its consistency timestamp value at most every 5 minutes. */
-    static final Duration MIN_CONSISTENCY_DELAY = Duration.standardMinutes(5);
+    /**
+     * The server updates its consistency timestamp value at most every 5 minutes.
+     */
+    static final Duration MIN_CONSISTENCY_DELAY = Duration.ofMinutes(5);
 
-    /** Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid. */
-    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.standardDays(1);
+    /**
+     * Time to wait for all readers to discover promote has occurred, time to support getSplit() calls w/old uuid.
+     */
+    static final Duration MOVE_DEMOTE_TO_EXPIRE = Duration.ofDays(1);
 
-    /** Delay between dropping a table and initial purge of all the data in the table, may miss late writes. */
-    static final Duration DROP_TO_PURGE_1 = Duration.standardDays(1);
+    /**
+     * Delay between dropping a table and initial purge of all the data in the table, may miss late writes.
+     */
+    static final Duration DROP_TO_PURGE_1 = Duration.ofDays(1);
 
-    /** Maximum time to wait for full consistency.  By this time, purge will find everything. */
-    static final Duration DROP_TO_PURGE_2 = Duration.standardDays(10);
+    /**
+     * Maximum time to wait for full consistency.  By this time, purge will find everything.
+     */
+    static final Duration DROP_TO_PURGE_2 = Duration.ofDays(10);
 
-    /** Reserved key used by {@link #createTableSet()} to identify bootstrap tables. */
+    /**
+     * Reserved key used by {@link #createTableSet()} to identify bootstrap tables.
+     */
     static final String TABLE_SET_BOOTSTRAP_KEY = "~bootstrap";
 
     private TableBackingStore _backingStore;
     private final String _systemTablePlacement;
     private final String _systemTable;
     private final String _systemTableUuid;
+    private final String _systemTableUnPublishedDatabusEvents;
+    private final String _systemTableEventRegistry;
     private final String _selfDataCenter;
     private final int _defaultShardsLog2;
     private final BiMap<String, Long> _bootstrapTables;
@@ -140,10 +191,14 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     private final RateLimiterCache _rateLimiterCache;
     private final DataCopyDAO _dataCopyDAO;
     private final DataPurgeDAO _dataPurgeDAO;
+    private StorageReaderDAO _storageReaderDAO;
     private final FullConsistencyTimeProvider _fullConsistencyTimeProvider;
     private final ValueStore<Boolean> _tableChangesEnabled;
     private final CacheHandle _tableCacheHandle;
     private final Map<String, String> _placementsUnderMove;
+    private final ObjectMapper _objectMapper;
+    private CQLStashTableDAO _stashTableDao;
+    private Clock _clock;
 
     @Inject
     public AstyanaxTableDAO(LifeCycleRegistry lifeCycle,
@@ -160,7 +215,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                             FullConsistencyTimeProvider fullConsistencyTimeProvider,
                             @TableChangesEnabled ValueStore<Boolean> tableChangesEnabled,
                             @CachingTableDAORegistry CacheRegistry cacheRegistry,
-                            @PlacementsUnderMove Map<String, String> placementsUnderMove) {
+                            @PlacementsUnderMove Map<String, String> placementsUnderMove,
+                            ObjectMapper objectMapper,
+                            @Nullable Clock clock) {
         _systemTablePlacement = checkNotNull(systemTablePlacement, "systemTablePlacement");
         _bootstrapTables = HashBiMap.create(checkNotNull(bootstrapTables, "bootstrapTables"));
         _reservedUuids = _bootstrapTables.inverse().keySet();
@@ -175,17 +232,21 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         _tableChangesEnabled = checkNotNull(tableChangesEnabled, "tableChangesEnabled");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         _placementsUnderMove = checkNotNull(placementsUnderMove, "placementsUnderMove");
+        _objectMapper = requireNonNull(objectMapper);
+        _clock = clock != null ? clock : Clock.systemUTC();
 
         // There are two tables used to store metadata about all the other tables.
         checkNotNull(systemTableNamespace, "systemTableNamespace");
         _systemTable = systemTableNamespace + ":table";
         _systemTableUuid = systemTableNamespace + ":table_uuid";
         String systemDataCenterTable = systemTableNamespace + ":data_center";
+        _systemTableUnPublishedDatabusEvents = systemTableNamespace + ":table_unpublished_databus_events";
+        _systemTableEventRegistry = systemTableNamespace + ":table_event_registry";
 
         // If this table DAO uses itself to store its table metadata (ie. it requires bootstrap tables) then make sure
         // the right bootstrap tables are specified.  This happens when "_dataStore" uses "this" for table metadata.
         if (!_bootstrapTables.isEmpty()) {
-            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable);
+            Set<String> expectedTables = ImmutableSet.of(_systemTable, _systemTableUuid, systemDataCenterTable, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry);
             Set<String> diff = Sets.symmetricDifference(expectedTables, bootstrapTables.keySet());
             checkState(diff.isEmpty(), "Bootstrap tables map is missing tables or has extra tables: %s", diff);
         }
@@ -198,10 +259,28 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         _backingStore = backingStore;
     }
 
+    /**
+     * Optional binding, required only if running in stash mode.
+     */
+    @Inject (optional = true)
+    public void setCQLStashTableDAO(CQLStashTableDAO stashTableDao) {
+        _stashTableDao = stashTableDao;
+    }
+
+    /**
+     * Optional binding, required only if this tableDAO is for SoR and not Blob.
+     */
+    @Inject (optional = true)
+    public void setStorageReaderDAO(StorageReaderDAO storageReaderDAO) {
+        _storageReaderDAO = storageReaderDAO;
+    }
+
+
     @Override
-    public void start() throws Exception {
+    public void start()
+            throws Exception {
         // Ensure the basic system tables exist.  For the DataStore these will be bootstrap tables.
-        for (String table : new String[] {_systemTable, _systemTableUuid}) {
+        for (String table : new String[] {_systemTable, _systemTableUuid, _systemTableUnPublishedDatabusEvents, _systemTableEventRegistry}) {
             TableOptions options = new TableOptionsBuilder().setPlacement(_systemTablePlacement).build();
             Audit audit = new AuditBuilder().setComment("initial startup").setLocalHost().build();
             _backingStore.createTable(table, options, ImmutableMap.<String, Object>of(), audit);
@@ -209,7 +288,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     }
 
     @Override
-    public void stop() throws Exception {
+    public void stop()
+            throws Exception {
         // Do nothing
     }
 
@@ -218,12 +298,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     public Iterator<Map.Entry<String, MaintenanceOp>> listMaintenanceOps() {
         final Iterator<Map<String, Object>> tableIter =
                 _backingStore.scan(_systemTable, null, LimitCounter.max(), ReadConsistency.STRONG);
+        final Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier = Suppliers.memoize(this::getTableEventDatacenters);
         return new AbstractIterator<Map.Entry<String, MaintenanceOp>>() {
             @Override
             protected Map.Entry<String, MaintenanceOp> computeNext() {
                 while (tableIter.hasNext()) {
                     TableJson json = new TableJson(tableIter.next());
-                    MaintenanceOp op = getNextMaintenanceOp(json, false/*don't expose task outside this class*/);
+                    MaintenanceOp op = getNextMaintenanceOp(json, false/*don't expose task outside this class*/, tableEventDatacenterSupplier);
                     if (op != null) {
                         return Maps.immutableEntry(json.getTable(), op);
                     }
@@ -238,15 +319,22 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     @Override
     public MaintenanceOp getNextMaintenanceOp(String table) {
         TableJson json = readTableJson(table, false);
-        return getNextMaintenanceOp(json, false/*don't expose task outside this class*/);
+        return getNextMaintenanceOp(json, false/*don't expose task outside this class*/, Suppliers.memoize(this::getTableEventDatacenters));
+    }
+
+    private void checkNoExistingMaintenance(String table) {
+        if (!isInternalTable(table) && getNextMaintenanceOp(table) != null) {
+            throw new IllegalArgumentException(String.format("This table name is currently undergoing maintenance and therefore cannot be modified: %s", table));
+        }
     }
 
     // MaintenanceDAO
     @Override
     public void performMetadataMaintenance(String table) {
         TableJson json = readTableJson(table, false);
-        MaintenanceOp op = getNextMaintenanceOp(json, true);
-        if (op == null || op.getWhen().isAfterNow() || op.getType() != MaintenanceType.METADATA) {
+
+        MaintenanceOp op = getNextMaintenanceOp(json, true, Suppliers.memoize(this::getTableEventDatacenters));
+        if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.METADATA) {
             return;  // Nothing to do
         }
 
@@ -258,8 +346,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     @Override
     public void performDataMaintenance(String table, Runnable progress) {
         TableJson json = readTableJson(table, false);
-        MaintenanceOp op = getNextMaintenanceOp(json, true);
-        if (op == null || op.getWhen().isAfterNow() || op.getType() != MaintenanceType.DATA ||
+        MaintenanceOp op = getNextMaintenanceOp(json, true, Suppliers.memoize(this::getTableEventDatacenters));
+        if (op == null || op.getWhen().isAfter(_clock.instant()) || op.getType() != MaintenanceType.DATA ||
                 !_selfDataCenter.equals(op.getDataCenter())) {
             return;  // Nothing to do
         }
@@ -268,9 +356,11 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         op.getTask().run(progress);
     }
 
-    /** Returns the next maintenance operation that should be performed on the specified table. */
+    /**
+     * Returns the next maintenance operation that should be performed on the specified table.
+     */
     @Nullable
-    private MaintenanceOp getNextMaintenanceOp(final TableJson json, boolean includeTask) {
+    private MaintenanceOp getNextMaintenanceOp(final TableJson json, boolean includeTask, Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier) {
         if (json.isDeleted() || json.getStorages().isEmpty()) {
             return null;
         }
@@ -279,7 +369,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         MaintenanceOp op = NULLS_LAST.min(Iterables.transform(json.getStorages(), new Function<Storage, MaintenanceOp>() {
             @Override
             public MaintenanceOp apply(Storage storage) {
-                return getNextMaintenanceOp(json, storage);
+                return getNextMaintenanceOp(json, storage, tableEventDatacenterSupplier);
             }
         }));
         // Don't expose the MaintenanceOp Runnable to most callers.  It may only be run from the right data center
@@ -290,17 +380,44 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         return op;
     }
 
-    /** Helper returns the next maintenance operation that should be performed on the specified table uuid/storage. */
+    /**
+     * Helper returns the next maintenance operation that should be performed on the specified table uuid/storage.
+     */
     @Nullable
-    private MaintenanceOp getNextMaintenanceOp(final TableJson json, final Storage storage) {
+    private MaintenanceOp getNextMaintenanceOp(final TableJson json, final Storage storage, Supplier<List<TableEventDatacenter>> tableEventDatacenterSupplier) {
         final StorageState from = storage.getState();
         switch (from) {
-            case PRIMARY:
-                return null;  // Nothing to do.  This is the common case.
+            case PRIMARY: {
+                List<TableEvent> tableEvents = getTableEvents(json.getTable(), storage.getUuidString(), tableEventDatacenterSupplier.get(), TableEvent.Action.PROMOTE);
 
+                // Nothing to do.  This is the common case.
+                if (tableEvents.isEmpty()) {
+                    return null;
+                }
+
+                Instant maxTimestamp = tableEvents.stream()
+                        .map(TableEvent::getEventTime)
+                        .map(TimeUUIDs::getTimeMillis)
+                        .max(Long::compare)
+                        .map(Instant::ofEpochMilli)
+                        .get();
+
+                Instant when = maxTimestamp.plus(MIN_CONSISTENCY_DELAY);
+
+                return MaintenanceOp.forMetadata("TableEvent:mark-ready", when, new MaintenanceTask() {
+                    @Override
+                    public void run(Runnable progress) {
+
+                        checkPlacementConsistent(_systemTablePlacement, maxTimestamp);
+                        checkPlacementConsistent(storage.getPlacement(), maxTimestamp);
+
+                        updateAnyNonCompleteTableEventToReady(json.getTable(), storage.getUuidString(), TableEvent.Action.PROMOTE);
+                    }
+                });
+            }
             case MIRROR_CREATED: {  // Initial mirror create/activate failed, retry the operation.
                 from.getTransitionedAt(storage);
-                DateTime when = new DateTime();  // Retry immediately.
+                Instant when = _clock.instant();  // Retry immediately.
                 return MaintenanceOp.forMetadata("Move:create-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -317,8 +434,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
             }
 
             case MIRROR_ACTIVATED: {
-                final DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                final Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement(), storage.getPrimary().getPlacement());
                 return MaintenanceOp.forData("Move:copy-data", when, dataCenter, new MaintenanceTask() {
                     @Override
@@ -335,8 +452,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
             }
 
             case MIRROR_COPIED: {
-                final DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                final Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement(), storage.getPrimary().getPlacement());
                 return MaintenanceOp.forData("Move:data-consistent", when, dataCenter, new MaintenanceTask() {
                     @Override
@@ -352,8 +469,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
 
             case MIRROR_CONSISTENT:
             case PROMOTED: {  // If PROMOTED then previous promote was attempted but failed, retry the operation.
-                DateTime transitionedAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
-                DateTime when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : new DateTime();
+                Instant transitionedAt = storage.getTransitionedTimestamp(MIRROR_CONSISTENT);
+                Instant when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:promote-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -368,8 +485,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
             }
 
             case MIRROR_DEMOTED: {
-                DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : new DateTime();
+                Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt != null ? transitionedAt.plus(MIN_DELAY) : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:set-expiration", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -377,7 +494,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                         // has been demoted to a mirror, and by separating the steps we round trip through Cassandra and verify that
                         // the promotion worked as expected.
 
-                        DateTime expiresAt = new DateTime().plus(MOVE_DEMOTE_TO_EXPIRE);
+                        Instant expiresAt = _clock.instant().plus(MOVE_DEMOTE_TO_EXPIRE);
 
                         // The next step occurs in the same data center so no need to write/flush globally.
                         stateTransition(json, storage, from, MIRROR_EXPIRING, expiresAt, InvalidationScope.DATA_CENTER);
@@ -387,8 +504,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
 
             case MIRROR_EXPIRING:
             case MIRROR_EXPIRED: {  // If MIRROR_EXPIRED then previous expire was attempted but failed, retry the operation.
-                DateTime mirrorExpiresAt = storage.getMirrorExpiresAt();
-                DateTime when = mirrorExpiresAt != null ? mirrorExpiresAt : new DateTime();
+                Instant mirrorExpiresAt = storage.getMirrorExpiresAt();
+                Instant when = mirrorExpiresAt != null ? mirrorExpiresAt : _clock.instant();
                 return MaintenanceOp.forMetadata("Move:expire-mirror", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable ignored) {
@@ -408,18 +525,19 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                 // Skip PURGE_1 and go straight to PURGE_2 if enough time has elapsed,
                 // or if we are moving the entire placement, skip the PURGED_1 step to move as quickly as possible
                 // and not
-                final DateTime droppedAt = storage.getTransitionedTimestamp(DROPPED);
-                DateTime when1 = droppedAt.plus(DROP_TO_PURGE_1);
-                DateTime when2 = droppedAt.plus(DROP_TO_PURGE_2);
-                final int iteration = !storage.isPlacementMove() && (from == DROPPED && when2.isAfterNow()) ? 1 : 2;
+                final Instant droppedAt = storage.getTransitionedTimestamp(DROPPED);
+                Instant when1 = droppedAt.plus(DROP_TO_PURGE_1);
+                Instant when2 = droppedAt.plus(DROP_TO_PURGE_2);
+                final int iteration = !storage.isPlacementMove() && (from == DROPPED && when2.isAfter(_clock.instant())) ? 1 : 2;
                 String dataCenter = selectDataCenterForPlacements(storage.getPlacement());
                 return MaintenanceOp.forData("Drop:purge-" + iteration, iteration == 1 ? when1 : when2, dataCenter, new MaintenanceTask() {
                     @Override
                     public void run(Runnable progress) {
-                        // Delay the final purge until we're confident we'll catch everything.
-                        if (iteration == 2) {
-                            checkPlacementConsistent(storage.getPlacement(), droppedAt);
-                        }
+
+                        // Delay the purge until we're confident we'll catch everything.
+                        checkPlacementConsistent(storage.getPlacement(), droppedAt);
+
+                        updateAnyNonCompleteTableEventToReady(json.getTable(), storage.getUuidString(), TableEvent.Action.DROP);
 
                         purgeData(json, storage, iteration, progress);
 
@@ -433,8 +551,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
             }
 
             case PURGED_2: {
-                DateTime transitionedAt = storage.getTransitionedTimestamp(from);
-                DateTime when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
+                Instant transitionedAt = storage.getTransitionedTimestamp(from);
+                Instant when = transitionedAt.plus(MIN_CONSISTENCY_DELAY);
                 return MaintenanceOp.forMetadata("Drop:delete", when, new MaintenanceTask() {
                     @Override
                     public void run(Runnable progress) {
@@ -450,16 +568,16 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
 
     private void stateTransition(TableJson json, Storage storage, StorageState from, StorageState to,
                                  InvalidationScope scope) {
-        stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, new DateTime(), scope);
+        stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, _clock.instant(), scope);
     }
 
     private void stateTransition(TableJson json, Storage storage, StorageState from, StorageState to,
-                                 DateTime markerValue, InvalidationScope scope) {
+                                 Instant markerValue, InvalidationScope scope) {
         stateTransition(json, storage.getUuidString(), storage.getPlacement(), from, to, markerValue, scope);
     }
 
     private void stateTransition(TableJson json, String storageUuid, String storagePlacement,
-                                 StorageState from, StorageState to, DateTime markerValue,
+                                 StorageState from, StorageState to, Instant markerValue,
                                  InvalidationScope scope) {
         _log.info("State transition for table '{}' and storage '{}' from={} to={}.",
                 json.getTable(), storageUuid, from, to);
@@ -479,7 +597,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                 CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, to.name()));
     }
 
-    /** Write the delta to the system table and invalidate caches in the specified scope. */
+    /**
+     * Write the delta to the system table and invalidate caches in the specified scope.
+     */
     private void updateTableMetadata(String table, Delta delta, Audit audit, @Nullable InvalidationScope scope) {
         _backingStore.update(_systemTable, table, TimeUUIDs.newUUID(), delta, audit,
                 scope == InvalidationScope.GLOBAL ? WriteConsistency.GLOBAL : WriteConsistency.STRONG);
@@ -490,7 +610,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         }
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.create", absolute = true)
+    /* Write the delta to the unpublished databus events system table which stores all the drop, purge, attribute changes, placement moves etc information of the tables.
+     */
+    private void writEventToSystemTable(String key, Delta delta, Audit audit) {
+        _backingStore.update(_systemTableUnPublishedDatabusEvents, key, TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+    }
+
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.create", absolute = true)
     @Override
     public void create(String name, TableOptions options, Map<String, ?> attributes, Audit audit)
             throws TableExistsException {
@@ -503,6 +629,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
             throw new TableExistsException(format("May not modify system tables: %s", name), name);
         }
         checkTableChangesAllowed(name);
+
+        // Because there the megabus may still be processing table events downstream, we may not recreate a table until
+        // all maintenance is complete
+        checkNoExistingMaintenance(name);
 
         // If placement move is in progress, create the new table in its new placement
         options = replacePlacementIfMoveInProgress(options);
@@ -534,7 +664,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(name, delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.createFacade", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.createFacade", absolute = true)
     @Override
     public void createFacade(String name, FacadeOptions facadeOptions, Audit audit)
             throws FacadeExistsException {
@@ -543,6 +673,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         checkNotNull(audit, "audit");
 
         checkTableChangesAllowed(name);
+        checkNoExistingMaintenance(name);
 
         // If placement move is in progress, create the new facade in its new placement
         facadeOptions = replacePlacementIfMoveInProgress(facadeOptions);
@@ -574,7 +705,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
      * Returns false if there is already a facade at the specified placement, so facade creation would be idempotent.
      */
     @Override
-    public boolean checkFacadeAllowed(String table, FacadeOptions options) throws FacadeExistsException {
+    public boolean checkFacadeAllowed(String table, FacadeOptions options)
+            throws FacadeExistsException {
         return checkFacadeAllowed(readTableJson(table, true), options.getPlacement(), null);
     }
 
@@ -608,13 +740,15 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         return true;
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.drop", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.drop", absolute = true)
     @Override
-    public void drop(String name, Audit audit) throws UnknownTableException {
+    public void drop(String name, Audit audit)
+            throws UnknownTableException {
         checkNotNull(name, "table");
         checkNotNull(audit, "audit");
 
         checkTableChangesAllowed(name);
+        checkNoExistingMaintenance(name);
 
         // Dropping a table progresses through the following steps:
         // 1. [SYSTEM DATA CENTER] Mark the uuid as dropped.
@@ -629,6 +763,13 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         // directly instead of using get()/getInternal() to avoid validation checks so we can drop an invalid table.
         TableJson json = readTableJson(name, true);
 
+        // write about the drop operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_TABLE);
+
+        // write events to the table events registry so that listeners (like the megabus) can process them
+        addDroppedTableEvent(json);
+
+        // now, update the Table Metadata
         Delta delta = json.newDropTable();
 
         Audit augmentedAudit = AuditBuilder.from(audit)
@@ -646,13 +787,20 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         checkPlacement(placement);
 
         checkTableChangesAllowed(name);
+        checkNoExistingMaintenance(name);
 
         // Read the table metadata from the DataStore (this is often a recursive call into the DataStore).  Do this
         // directly instead of using get()/getInternal() to avoid validation checks so we can drop an invalid table.
         TableJson json = readTableJson(name, true);
 
+        // write about the drop operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.DROP_FACADE);
+
         // Find the facade for the specified placement.
         Storage facadeStorage = json.getFacadeForPlacement(placement);
+
+        // write events to the table events registry so that listeners (like the megabus) can process them
+        addDroppedFacadeEvent(json, facadeStorage);
 
         Delta delta = json.newDropFacade(facadeStorage);
 
@@ -663,7 +811,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    /** Purge a dropped table or facade.  Eexecuted twice, once for fast cleanup and again much later for stragglers. */
+    /**
+     * Purge a dropped table or facade.  Executed twice, once for fast cleanup and again much later for stragglers.
+     */
     private void purgeData(TableJson json, Storage storage, int iteration, Runnable progress) {
         _log.info("Purging data for table '{}' and table uuid '{}' (facade={}, iteration={}).",
                 json.getTable(), storage.getUuidString(), storage.isFacade(), iteration);
@@ -679,7 +829,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         _dataPurgeDAO.purge(newAstyanaxStorage(storage, json.getTable()), rateLimitedProgress);
     }
 
-    /** Last step in dropping a table or facade. */
+    /**
+     * Last step in dropping a table or facade.
+     */
     private void deleteFinal(TableJson json, Storage storage) {
         // Remove the uuid and storage--we no longer need it.  Leave the uuid in _systemTableUuid so it isn't reused.
         Delta delta = json.newDeleteStorage(storage);
@@ -699,6 +851,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         checkNotNull(audit, "audit");
 
         checkTableChangesAllowed(table);
+        checkNoExistingMaintenance(table);
 
         // Read the existing metadata for the table.
         TableJson json = readTableJson(table, true);
@@ -716,6 +869,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         checkNotNull(audit, "audit");
 
         checkTableChangesAllowed(table);
+        checkNoExistingMaintenance(table);
 
         // Read the existing metadata for the table/facade.
         TableJson json = readTableJson(table, true);
@@ -735,7 +889,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     private TableOptions replacePlacementIfMoveInProgress(TableOptions options) {
         String placement = options.getPlacement();
         if (_placementsUnderMove.containsKey(placement)) {
-           return new TableOptionsBuilder().setFacades(options.getFacades())
+            return new TableOptionsBuilder().setFacades(options.getFacades())
                     .setPlacement(_placementsUnderMove.get(placement)).build();
         }
         return options;
@@ -785,6 +939,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         // Operations that manipulate the table metadata json in a non-trivial way are confined to the system data
         // center so they can grab system-wide locks and ensure there are no race conditions with drop table, etc.
 
+        checkArgument(!isInternalTable(table));
+
         int shardsLog2 = numShards.isPresent() ? RowKeyUtils.computeShardsLog2(numShards.get(), "<move>") : _defaultShardsLog2;
 
         Storage existingMove = srcStorage.getMoveTo();
@@ -824,12 +980,15 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         // Pick a unique table uuid that will be the target of the move.
         String destUuid = newTableUuidString(table, audit);
 
+        // Add appropriate events to the event registry so that listeners such as the megabus will be notified
+        addMoveTableEvent(json, srcStorage, destUuid, destPlacement);
+
         // Update the table metadata for step 1.
         moveStart(json, srcStorage, destUuid, destPlacement, shardsLog2, op, Optional.of(audit), moveType);
 
         // No exceptions?  That means every data center knows about the new mirror.
 
-        stateTransition(json, destUuid, destPlacement, MIRROR_CREATED, MIRROR_ACTIVATED, new DateTime(), InvalidationScope.GLOBAL);
+        stateTransition(json, destUuid, destPlacement, MIRROR_CREATED, MIRROR_ACTIVATED, _clock.instant(), InvalidationScope.GLOBAL);
     }
 
     private boolean matches(Storage storage, String placement, int shardsLog2) {
@@ -854,7 +1013,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    /** Cancel a move before mirror promotion has taken place. */
+    /**
+     * Cancel a move before mirror promotion has taken place.
+     */
     private void moveCancel(TableJson json, Storage src, Storage dest) {
         Delta delta = json.newMoveCancel(src);
         Audit audit = new AuditBuilder()
@@ -867,7 +1028,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(json.getTable(), delta, audit, InvalidationScope.GLOBAL);
     }
 
-    /** Restart a move with an existing mirror that may or may not have once been primary. */
+    /**
+     * Restart a move with an existing mirror that may or may not have once been primary.
+     */
     private void moveRestart(TableJson json, Storage src, Storage dest) {
         Delta delta = json.newMoveRestart(src, dest);
         Audit audit = new AuditBuilder()
@@ -896,6 +1059,9 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     }
 
     private void movePromote(TableJson json, Storage mirror) {
+        // write about the move operation (metadata changed info) to another system table.
+        writeUnpublishedDatabusEvent(json.getTable(), UnpublishedDatabusEventType.MOVE_PLACEMENT);
+
         // Mark the mirror as promoted so servers will pick it as the new primary.
         Delta delta = json.newMovePromoteMirror(mirror);
         Audit audit = new AuditBuilder()
@@ -907,14 +1073,21 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     }
 
     @Override
-    public void setAttributes(String name, Map<String, ?> attributes, Audit audit) throws UnknownTableException {
+    public void setAttributes(String name, Map<String, ?> attributes, Audit audit)
+            throws UnknownTableException {
         checkNotNull(name, "table");
         checkNotNull(attributes, "attributes");
 
         checkTableChangesAllowed(name);
+        checkNoExistingMaintenance(name);
 
         // Throw an exception if the table doesn't exist
         TableJson json = readTableJson(name, true);
+
+        // write about the update attributes operation (metadata changed info) to a special system table.
+        writeUnpublishedDatabusEvent(name, UnpublishedDatabusEventType.UPDATE_ATTRIBUTES);
+
+        addTableTemplateEvent(json);
 
         // Write the new table attributes to Cassandra
         Delta delta = json.newSetAttributes(attributes);
@@ -925,7 +1098,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(json.getTable(), delta, augmentedAudit, InvalidationScope.GLOBAL);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.audit", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.audit", absolute = true)
     @Override
     public void audit(String name, String op, Audit audit) {
         checkNotNull(name, "table");
@@ -939,7 +1112,7 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         updateTableMetadata(name, Deltas.noop(), augmentedAudit, null);
     }
 
-    @Timed(name = "bv.emodb.table.AstyanaxTableDAO.list", absolute = true)
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.list", absolute = true)
     @Override
     public Iterator<Table> list(@Nullable String fromNameExclusive, LimitCounter limit) {
         checkArgument(limit.remaining() > 0, "Limit must be >0");
@@ -973,7 +1146,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     }
 
     @Override
-    public Table get(String name) throws UnknownTableException {
+    public Table get(String name)
+            throws UnknownTableException {
         Table table = getInternal(name);
         if (table == null) {
             throw new UnknownTableException(format("Unknown table: %s", name), name);
@@ -982,7 +1156,8 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
     }
 
     @Override
-    public Table getByUuid(long uuid) throws UnknownTableException, DroppedTableException {
+    public Table getByUuid(long uuid)
+            throws UnknownTableException, DroppedTableException {
         String bootstrapTable = _bootstrapTables.inverse().get(uuid);
         if (bootstrapTable != null) {
             return loadBootstrapTable(bootstrapTable);
@@ -1243,10 +1418,10 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
         return placement;
     }
 
-    private void checkPlacementConsistent(String placement, DateTime since) {
+    private void checkPlacementConsistent(String placement, Instant since) {
         CassandraKeyspace keyspace = _placementCache.get(placement).getKeyspace();
         long lastConsistentAt = _fullConsistencyTimeProvider.getMaxTimeStamp(keyspace.getClusterName());
-        if (lastConsistentAt <= since.getMillis()) {
+        if (lastConsistentAt <= since.toEpochMilli()) {
             throw new FullConsistencyException(placement);
         }
     }
@@ -1335,5 +1510,361 @@ public class AstyanaxTableDAO implements TableDAO, MaintenanceDAO, Managed {
                 delegate.run();
             }
         };
+    }
+
+    @Override
+    public void createStashTokenRangeSnapshot(String stashId, Set<String> placements, Condition blackListTableCondition) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+
+        // Since we need to snapshot the TableJson call the backing store directly.
+        final Iterator<Map<String, Object>> tableIter =
+                _backingStore.scan(_systemTable, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        while (tableIter.hasNext()) {
+            TableJson tableJson = new TableJson(tableIter.next());
+            Table table = tableFromJson(tableJson);
+            if (table != null && table.getAvailability() != null) {
+                AstyanaxStorage readStorage = ((AstyanaxTable) table).getReadStorage();
+                String placementName = readStorage.getPlacement().getName();
+                if (placements.contains(placementName)) {
+                    // don't add the token ranges for the table mentioned in the blackList condition.
+                    if (!isTableBlacklisted(table, blackListTableCondition)) {
+                        _stashTableDao.addTokenRangesForTable(stashId, readStorage, tableJson);
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public Iterator<StashTokenRange> getStashTokenRangesFromSnapshot(String stashId, String placement, ByteBuffer fromInclusive, ByteBuffer toExclusive) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+
+        Iterator<CQLStashTableDAO.ProtoStashTokenRange> protoRanges = _stashTableDao.getTokenRangesBetween(stashId, placement, fromInclusive, toExclusive);
+
+        // Convert the TableJson from the stash table DAO into Tables.
+        return Iterators.transform(protoRanges, protoRange ->
+                new StashTokenRange(protoRange.getFrom(), protoRange.getTo(), tableFromJson(protoRange.getTableJson())));
+    }
+
+    @Override
+    public void clearStashTokenRangeSnapshot(String stashId) {
+        checkState(_stashTableDao != null, "Call only valid in Stash mode");
+        _stashTableDao.clearTokenRanges(stashId);
+    }
+
+    @Timed (name = "bv.emodb.table.AstyanaxTableDAO.listUnpublishedDatabusEvents", absolute = true)
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
+        checkArgument(fromInclusive != null, "fromInclusive date cannot be null");
+        checkArgument(toExclusive != null, "toExclusive date cannot be null");
+
+        ZonedDateTime fromInclusiveUTC = fromInclusive.toInstant().atZone(ZoneOffset.UTC).with(ChronoField.MILLI_OF_DAY, 0);
+        ZonedDateTime toInclusiveDateUTC = toExclusive.toInstant().atZone(ZoneOffset.UTC).with(ChronoField.MILLI_OF_DAY, 0);
+        if (toExclusive.toInstant().equals(toInclusiveDateUTC.toInstant())) {
+            toInclusiveDateUTC = toInclusiveDateUTC.minusDays(1);
+        }
+
+        // adding 1 to the days to make it inclusive.
+        final int inclusiveNumberOfDays = (int) Duration.between(fromInclusiveUTC, toInclusiveDateUTC).toDays() + 1;
+        if (inclusiveNumberOfDays > 31) {
+            throw new IllegalArgumentException("Specified from and to date range is greater than 30 days which is not supported. Specify a smaller range.");
+        }
+        List<LocalDate> dates = Stream.iterate(fromInclusiveUTC.toLocalDate(), d -> d.plusDays(1))
+                .limit(inclusiveNumberOfDays)
+                .collect(Collectors.toList());
+
+        List<UnpublishedDatabusEvent> allUnpublishedDatabusEvents = Lists.newArrayList();
+        // using closedOpen which is [a..b) i.e. {x | a <= x < b}
+        final Range<Long> requestedRange = Range.closedOpen(fromInclusive.getTime(), toExclusive.getTime());
+        for (LocalDate date : dates) {
+            String dateKey = date.toString();
+            Map<String, Object> recordMap = _backingStore.get(_systemTableUnPublishedDatabusEvents, dateKey, ReadConsistency.STRONG);
+            if (recordMap != null) {
+                Object tableInfo = recordMap.get("tables");
+                if (tableInfo != null) {
+                    List<UnpublishedDatabusEvent> unpublishedDatabusEvents = JsonHelper.convert(tableInfo, new TypeReference<List<UnpublishedDatabusEvent>>() {});
+                    // filter events whose time is outside the requestedRange.
+                    unpublishedDatabusEvents.stream()
+                            .filter(unpublishedDatabusEvent -> requestedRange.contains(unpublishedDatabusEvent.getDate().getTime()))
+                            .forEach(allUnpublishedDatabusEvents::add);
+                }
+            }
+        }
+
+        return allUnpublishedDatabusEvents.iterator();
+    }
+
+    @Override
+    public void writeUnpublishedDatabusEvent(String name, UnpublishedDatabusEventType attribute) {
+        checkNotNull(name, "table");
+
+        ZonedDateTime dateTime = ZonedDateTime.ofInstant(_clock.instant(), ZoneOffset.UTC);
+        String date = dateTime.toLocalDate().toString();
+
+        // Forcing millisecond precision for the Zoned date time value,
+        // as zero milli second or second case omission will lead to parsing errors when deserializing the UnpublishedDatabusEvents POJO.
+        Delta delta = newUnpublishedDatabusEventUpdate(name, attribute.toString(), getMillisecondPrecisionZonedDateTime(dateTime).toString());
+        Audit augmentedAudit = new AuditBuilder()
+                .set("_unpublished-databus-event-update", attribute.toString())
+                .build();
+
+        writEventToSystemTable(date, delta, augmentedAudit);
+    }
+
+    // Delta for storing the unpublished databus events.
+    Delta newUnpublishedDatabusEventUpdate(String tableName, String updateType, String datetime) {
+        return Deltas.mapBuilder()
+                .update("tables", Deltas.setBuilder().add(ImmutableMap.of("table", tableName, "date", datetime, "event", updateType)).build())
+                .build();
+    }
+
+    @VisibleForTesting
+    static boolean isTableBlacklisted(Table table, Condition blackListTableCondition) {
+        Map<String, Object> tableAttributes = table.getAttributes();
+        return ConditionEvaluator.eval(blackListTableCondition, tableAttributes, new TableFilterIntrinsics(table));
+    }
+
+    /*
+       The output of toString From ZonedDateTime will be one of the following ISO-8601 formats:
+       uuuu-MM-dd'T'HH:mm
+       uuuu-MM-dd'T'HH:mm:ss
+       uuuu-MM-dd'T'HH:mm:ss.SSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSS
+       uuuu-MM-dd'T'HH:mm:ss.SSSSSSSSS
+       Note that the format used will be the shortest that outputs the full value of the time where the omitted parts are implied to be zero.
+
+       This helper method will force the Seconds and Milliseconds precision when serializing ZonedDateTime.
+       for example:
+       2017-01-01T07:01Z will always be serialized as 2017-01-01T07:01:00.000Z
+       2017-01-01T07:01:01Z will always be serialized as 2017-01-01T07:01:01.000Z
+     */
+    @VisibleForTesting
+    protected static String getMillisecondPrecisionZonedDateTime(ZonedDateTime dateTime) {
+        return DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX")
+                .withZone(ZoneId.of("UTC"))
+                .format(dateTime);
+    }
+
+    @Override
+    public void registerTableListener(String registrationId, Instant newExpirationTime) {
+        Instant now = _clock.instant();
+
+        Delta registrationDelta = TableEventDatacenter.newRegistrant(registrationId, now, newExpirationTime);
+
+        Audit audit = new AuditBuilder()
+                .setComment(String.format("Registering %s", registrationId))
+                .setProgram(registrationId)
+                .setLocalHost()
+                .build();
+
+        _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(), registrationDelta, audit, WriteConsistency.GLOBAL);
+    }
+
+    @Override
+    public Map.Entry<String, TableEvent> getNextReadyTableEvent(String registrationId) {
+        TableEventDatacenter datacenter = _objectMapper.convertValue(
+                        _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
+                        TableEventDatacenter.class
+                );
+
+        TableEventRegistrant registrant = datacenter.getRegistrants().get(registrationId);
+
+        checkState(registrant != null);
+
+        return registrant
+                .getTasks()
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().isReady())
+                .findAny()
+                .orElse(null);
+    }
+
+    @Override
+    public Stream<String> getIdsForStorage(String table, String uuid) {
+
+        checkNotNull(_storageReaderDAO);
+
+        Storage uuidStorage = readTableJson(table, false).getStorages().stream()
+                .filter(storage -> storage.getUuidString().equals(uuid))
+                .findFirst()
+                .get();
+
+        return _storageReaderDAO.getKeysForStorage(newAstyanaxStorage(uuidStorage, table));
+    }
+
+    private static boolean isInternalTable(String name) {
+        return name.startsWith("__");
+    }
+
+    private void addDroppedTableEvent(TableJson json) {
+        addTableEvent(json.getTable(), getLiveStoragesForTable(json), TableEvent.Action.DROP);
+    }
+
+    private void addDroppedFacadeEvent(TableJson json, Storage facade) {
+        addTableEvent(json.getTable(), Collections.singleton(facade), TableEvent.Action.DROP);
+    }
+
+    private void addTableTemplateEvent(TableJson json) {
+        addTableEvent(json.getTable(), getLiveStoragesForTable(json), TableEvent.Action.PROMOTE);
+    }
+
+    private void addTableEvent(String table, Set<Storage> storages, TableEvent.Action action) {
+
+        // databus, megabus, and therefore table events are not available for internal tables
+        if (isInternalTable(table)) {
+            return;
+        }
+
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        List<Update> updates = new ArrayList<>();
+
+        tableEventDatacenterIterator.forEachRemaining(tableEventDatacenterMap -> {
+            TableEventDatacenter tableEventDatacenter = _objectMapper.convertValue(tableEventDatacenterMap, TableEventDatacenter.class);
+            storages.stream()
+                    .filter(storage -> _placementFactory.getDataCenters(storage.getPlacement())
+                            .stream()
+                            .map(DataCenter::getName)
+                            .anyMatch(dataCenter -> dataCenter.equals(tableEventDatacenter.getDataCenter())))
+                    .map(storage ->
+                            tableEventDatacenter.newTableEvent(table, new TableEvent(action, storage.getUuidString()), _clock.instant())
+                    )
+                    .map(delta -> {
+                        Audit audit = new AuditBuilder()
+                                .setComment(String.format("Adding events for table %s", table))
+                                .setLocalHost()
+                                .build();
+                        return new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+                    })
+                    .forEach(updates::add);
+        });
+
+        _backingStore.updateAll(updates);
+    }
+
+    private void addMoveTableEvent(TableJson json, Storage srcStorage, String destUuid, String destPlacement) {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        Collection<DataCenter> srcDatacenters = _placementFactory.getDataCenters(srcStorage.getPlacement());
+
+        Collection<DataCenter> destDatacenters = _placementFactory.getDataCenters(destPlacement);
+
+        Collection<String> dropDatacenters = srcDatacenters
+                .stream()
+                .filter(datacenter -> !destDatacenters.contains(datacenter))
+                .map(DataCenter::getName)
+                .collect(Collectors.toList());
+
+        Collection<String> promoteDatacenters = destDatacenters
+                .stream()
+                .filter(datacenter -> !srcDatacenters.contains(datacenter))
+                .map(DataCenter::getName)
+                .collect(Collectors.toList());
+
+        List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+                .map(datacenter -> _objectMapper.convertValue(datacenter, TableEventDatacenter.class))
+                .flatMap(tableEventDatacenter -> {
+
+                    Delta delta = null;
+
+                    if (dropDatacenters.contains(tableEventDatacenter.getDataCenter())) {
+                        delta = tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.DROP, srcStorage.getUuidString()), _clock.instant());
+                    } else if (promoteDatacenters.contains(tableEventDatacenter.getDataCenter())) {
+                        delta = tableEventDatacenter.newTableEvent(json.getTable(), new TableEvent(TableEvent.Action.PROMOTE, destUuid), _clock.instant());
+                    } else {
+                        return Stream.empty();
+                    }
+
+                    Audit audit = new AuditBuilder()
+                            .setComment(String.format("Adding events for table %s", json.getTable()))
+                            .setLocalHost()
+                            .build();
+
+                    return Stream.of(new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL));
+                })
+                .collect(Collectors.toList());
+
+       _backingStore.updateAll(updates);
+    }
+
+    @Override
+    public void markTableEventAsComplete(String registrationId, String table, String uuid) {
+
+        TableEventDatacenter datacenter = _objectMapper.convertValue(
+                _backingStore.get(_systemTableEventRegistry, _selfDataCenter, ReadConsistency.STRONG),
+                TableEventDatacenter.class
+        );
+
+        Audit audit = new AuditBuilder()
+                .setComment(String.format("Marking event as complete for table %s and uuid %s", table, uuid))
+                .setLocalHost()
+                .build();
+
+        Delta delta = datacenter.markTableEventAsComplete(registrationId, table, uuid);
+
+        _backingStore.update(_systemTableEventRegistry, _selfDataCenter, TimeUUIDs.newUUID(),
+                delta, audit, WriteConsistency.GLOBAL);
+
+    }
+
+    private static Set<Storage> getLiveStoragesForTable(TableJson json) {
+        return json.getStorages().stream()
+                .filter(storage -> !storage.isDropped())
+                .filter(storage -> storage.equals(json.getMasterStorage()) || storage.isFacade())
+                .collect(Collectors.toSet());
+    }
+
+    private List<TableEvent> getTableEvents(String table, String uuid, List<TableEventDatacenter> tableEventDatacenters, TableEvent.Action action) {
+        return getTableEvents(table, uuid, tableEventDatacenters)
+                .map(Map.Entry::getValue)
+                .filter(tableEvent -> tableEvent.getAction().equals(action))
+                .collect(Collectors.toList());
+    }
+
+    @VisibleForTesting
+    protected Stream<Map.Entry<String, TableEvent>> getTableEvents(String table, String uuid, List<TableEventDatacenter> tableEventDatacenters) {
+        return tableEventDatacenters.stream()
+                .flatMap(tableEventDatacenter -> tableEventDatacenter.getTableEventsForTableAndStorage(table, uuid)
+                        .stream()
+                        .map(event -> new AbstractMap.SimpleEntry<>(tableEventDatacenter.getDataCenter(), event))
+                        .filter(entry -> entry.getValue() != null));
+    }
+
+    @VisibleForTesting
+    protected List<TableEventDatacenter> getTableEventDatacenters() {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        return StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+                .map(json -> _objectMapper.convertValue(json, TableEventDatacenter.class))
+                .collect(Collectors.toList());
+    }
+
+    private void updateAnyNonCompleteTableEventToReady(String table, String uuid, TableEvent.Action action) {
+        Iterator<Map<String, Object>> tableEventDatacenterIterator = _backingStore.scan(_systemTableEventRegistry, null, LimitCounter.max(), ReadConsistency.STRONG);
+
+        List<Update> updates = StreamSupport.stream(Spliterators.spliteratorUnknownSize(tableEventDatacenterIterator, 0), false)
+                .map(json -> _objectMapper.convertValue(json, TableEventDatacenter.class))
+                .map(tableEventDatacenter -> {
+                    Delta delta = tableEventDatacenter.markTableEventAsReady(table, uuid, action);
+                    if (delta != null) {
+                        Audit audit = new AuditBuilder()
+                                .setComment(String.format("Marking event ready for table %s", table))
+                                .setLocalHost()
+                                .build();
+                        return new Update(_systemTableEventRegistry, tableEventDatacenter.getDataCenter(), TimeUUIDs.newUUID(), delta, audit, WriteConsistency.GLOBAL);
+                    }
+
+                    return null;
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+
+        if (!updates.isEmpty()) {
+            _backingStore.updateAll(updates);
+            throw new PendingTableEventsException(uuid);
+        }
     }
 }

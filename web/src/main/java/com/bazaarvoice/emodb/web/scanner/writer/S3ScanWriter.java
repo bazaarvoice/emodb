@@ -11,7 +11,9 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.util.BinaryUtils;
 import com.bazaarvoice.emodb.web.scanner.ScanUploadService;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
@@ -21,7 +23,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +32,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -38,13 +40,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 /**
  * ScanWriter implementation which uploads files to S3.
  */
 public class S3ScanWriter extends TemporaryFileScanWriter {
-    private static final Duration DEFAULT_RETRY_DELAY = Duration.standardSeconds(5);
+    private static final Duration DEFAULT_RETRY_DELAY = Duration.ofSeconds(5);
     private static final int MAX_RETRIES = 3;
 
     private static final Logger _log = LoggerFactory.getLogger(S3ScanWriter.class);
@@ -56,11 +59,14 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
 
     @Inject
     public S3ScanWriter(@Assisted int taskId, @Assisted URI baseUri, @Assisted Optional<Integer> maxOpenShards,
-                        MetricRegistry metricRegistry, AmazonS3 amazonS3,
-                        @ScanUploadService ScheduledExecutorService uploadService) {
-        super("s3", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards);
+                        MetricRegistry metricRegistry, AmazonS3Provider amazonS3Provider,
+                        @ScanUploadService ScheduledExecutorService uploadService, ObjectMapper objectMapper) {
+        super("s3", taskId, baseUri, Compression.GZIP, metricRegistry, maxOpenShards, objectMapper);
 
-        _amazonS3 = checkNotNull(amazonS3, "amazonS3 is required");
+        checkNotNull(amazonS3Provider, "amazonS3Provider is required");
+        String bucket = baseUri.getHost();
+        checkArgument(!Strings.isNullOrEmpty(bucket), "bucket is required");
+        _amazonS3 = amazonS3Provider.getS3ClientForBucket(bucket);
         _uploadService = checkNotNull(uploadService, "uploadService is required");
     }
 
@@ -227,7 +233,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
             if (!_closed) {
                 if (_activeUpload.getAttempts() < MAX_RETRIES) {
                     try {
-                        _uploadService.schedule(this, _retryDelay.getMillis(), TimeUnit.MILLISECONDS);
+                        _uploadService.schedule(this, _retryDelay.toMillis(), TimeUnit.MILLISECONDS);
                         _log.debug("Transferring file failed, will retry: id={}, file={}, uri={}...",
                                 _taskId, _activeUpload.getFile(), _activeUpload.getUri(), t);
                         return;
@@ -314,7 +320,7 @@ public class S3ScanWriter extends TemporaryFileScanWriter {
                     throw new IOException(e);
                 }
                 try {
-                    Thread.sleep(_retryDelay.getMillis());
+                    Thread.sleep(_retryDelay.toMillis());
                 } catch (InterruptedException e2) {
                     // Stop retrying and propagate the original exception
                     throw new IOException(e);

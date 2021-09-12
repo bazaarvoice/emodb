@@ -22,9 +22,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import org.joda.time.Duration;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.testng.annotations.Test;
 
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -132,18 +133,18 @@ public class DataStoreTest {
         assertTrue((Intrinsic.getLastUpdateAt(content2Deleted)).compareTo(Intrinsic.getLastUpdateAt(content2)) >= 0);
 
         // try to compact key1 with a long "full-consistency" ttl.  this should have no effect because no deltas are old enough to compact.
-        store.compact(TABLE, KEY1, Duration.standardDays(365), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ofDays(365), ReadConsistency.STRONG, WriteConsistency.STRONG);
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 3);
 
         // try again to compact key1, this time assuming full consistency has been achieved.  verify compaction doesn't change the content.
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         // This will result in compaction, but no deltas will be deleted since compaction itself is not within FCT.
         // Note that this is the first time it will compact, the compaction is not going to delete the compacted deltas, just create a new compaction
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 3);
         assertEquals(getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
         // Now compact the record one more time assuming full consistency - this time no new compactions will be created, but the deltas will be deleted
         SystemClock.tick();
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         // This will result in no deltas, just one compaction record that includes the resolved content
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
         // Verify that we have one compaction with compacted delta
@@ -151,7 +152,7 @@ public class DataStoreTest {
         assertEquals(store.get(TABLE, KEY1, ReadConsistency.STRONG), content1Expected);
 
         // try to compact key2 (which was deleted) with a long "full-consistency" ttl.  this should have no effect because no deltas are old enough to compact.
-        store.compact(TABLE, KEY2, Duration.standardDays(365), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY2, Duration.ofDays(365), ReadConsistency.STRONG, WriteConsistency.STRONG);
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY2, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 2);
         assertEquals(store.get(TABLE, KEY2, ReadConsistency.STRONG), content2DeletedExpected);
 
@@ -163,17 +164,6 @@ public class DataStoreTest {
         Set<String> expectedTablesPlacements = Sets.newHashSet("app_global:default", "ugc_global:ugc", "app_global:sys", "catalog_global:cat");
         assertTrue(store.getTablePlacements().containsAll(expectedTablesPlacements));
         assertTrue(expectedTablesPlacements.containsAll(store.getTablePlacements()));
-
-        // verify the timeline for key1
-        List<Audit> timeline = getAudits(
-                store.getTimeline(TABLE, KEY1, true, true, null, null, false, 100, ReadConsistency.STRONG));
-        assertEquals(timeline.size(), 3);
-        assertEquals(timeline.get(0).getComment(), "submit");
-        assertEquals(timeline.get(0).getTags(), ImmutableList.of());
-        assertEquals(timeline.get(1).getComment(), "begin moderation");
-        assertEquals(timeline.get(1).getTags(), ImmutableList.of());
-        assertEquals(timeline.get(2).getComment(), "finish moderation");
-        assertEquals(timeline.get(2).getTags(), ImmutableList.of("tag1", "tag2"));
     }
 
     @Test
@@ -226,9 +216,9 @@ public class DataStoreTest {
         verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastMutateDate, lastUpdateDate);
 
         // Compact the record twice; once to create the compaction record and once again to delete deltas
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         SystemClock.tick();
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         // Verify that we have no deltas and one compaction with compacted delta
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
         assertEquals(getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
@@ -241,9 +231,9 @@ public class DataStoreTest {
         now = new Date(now.getTime() + 1000);
         changeId = com.bazaarvoice.emodb.common.uuid.TimeUUIDs.uuidForTimestamp(now);
         store.update(TABLE, KEY1, changeId, Deltas.noop(), audit, WriteConsistency.STRONG);
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         SystemClock.tick();
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         // Verify that we have no deltas and one compaction with compacted delta
         assertEquals(getDeltas(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 0);
         assertEquals(getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG)).size(), 1);
@@ -326,7 +316,7 @@ public class DataStoreTest {
         verifyContentAndTimestamps(record, "value1", firstUpdateDate, lastContentMutateDate, lastUpdateDate);
 
         // Perform a compaction
-        store.compact(TABLE, KEY1, Duration.millis(0), ReadConsistency.STRONG, WriteConsistency.STRONG);
+        store.compact(TABLE, KEY1, Duration.ZERO, ReadConsistency.STRONG, WriteConsistency.STRONG);
         // Get the compaction
         List<Compaction> compactions = getCompactions(store.getTimeline(TABLE, KEY1, true, false, null, null, false, 100, ReadConsistency.STRONG));
         assertEquals(compactions.size(), 1);
@@ -375,7 +365,7 @@ public class DataStoreTest {
         List<Delta> deltas = Lists.newArrayList();
         while (changeIter.hasNext()) {
             Change change = changeIter.next();
-            if (change.getDelta() != null) {
+            if (change.getDelta() != null && change.getHistory() == null) {
                 deltas.add(change.getDelta());
             }
         }
@@ -391,17 +381,6 @@ public class DataStoreTest {
             }
         }
         return compactions;
-    }
-
-    private List<Audit> getAudits(Iterator<Change> changeIter) {
-        List<Audit> audits = Lists.newArrayList();
-        while (changeIter.hasNext()) {
-            Change change = changeIter.next();
-            if (change.getAudit() != null) {
-                audits.add(change.getAudit());
-            }
-        }
-        return audits;
     }
 
 }

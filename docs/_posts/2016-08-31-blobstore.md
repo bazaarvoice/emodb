@@ -423,7 +423,7 @@ HTTP:
 Java:
 
 ```java
-void put(String table, String blobId, InputStream in, Map<String, String> attributes, @Nullable Duration ttl);
+void put(String table, String blobId, InputStream in, Map<String, String> attributes);
 ```
 
 ### Get

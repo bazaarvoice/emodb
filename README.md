@@ -20,8 +20,6 @@ persistence and cross-data center replication.
 Documentation
 -------------
 
-[Release Notes](markdowns/ReleaseNotes.md)
-
 [System of Record API](https://bazaarvoice.github.io/emodb/sor/)
 
 [System of Record Deltas](https://bazaarvoice.github.io/emodb/deltas/)
@@ -34,8 +32,6 @@ Documentation
 
 [Stash API](https://bazaarvoice.github.io/emodb/stash/)
 
-[Hadoop and Hive Support](https://bazaarvoice.github.io/emodb/mapreduce/)
-
 [Operations](markdowns/Operations.md)
 
 [EmoDB SDK](https://bazaarvoice.github.io/emodb/maven/)
@@ -46,7 +42,7 @@ Documentation
 
 [Security](https://bazaarvoice.github.io/emodb/securityadmin/)
 
-[Legacy Java Client Support](markdowns/LegacyJavaClients.md)
+[Java Client Support](markdowns/JavaClients.md)
 
 Quick Start
 -----------

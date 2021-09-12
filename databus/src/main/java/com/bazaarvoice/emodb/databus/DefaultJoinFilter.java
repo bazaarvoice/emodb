@@ -15,7 +15,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * default.  A subscriber may choose to decline adding the assisted filter to his subscription by enabling
  * <code>includeDefaultJoinFilter</code> upon subscription.
  *
- * @see com.bazaarvoice.emodb.databus.api.Databus#subscribe(String, com.bazaarvoice.emodb.sor.condition.Condition, org.joda.time.Duration, org.joda.time.Duration, boolean)
+ * @see com.bazaarvoice.emodb.databus.api.Databus#subscribe(String, com.bazaarvoice.emodb.sor.condition.Condition, java.time.Duration, java.time.Duration, boolean)
  */
 @BindingAnnotation
 @Target({ FIELD, PARAMETER, METHOD }) @Retention(RUNTIME)

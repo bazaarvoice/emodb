@@ -2,7 +2,6 @@ package com.bazaarvoice.emodb.web.scanner.control;
 
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.sor.db.ScanRange;
-import com.bazaarvoice.emodb.table.db.TableSet;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploader;
 import com.bazaarvoice.emodb.web.scanner.rangescan.RangeScanUploaderResult;
 import com.bazaarvoice.emodb.web.scanner.scanstatus.ScanRangeStatus;
@@ -17,10 +16,10 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ConcurrentMap;
@@ -42,16 +41,15 @@ public class DistributedScanRangeMonitor implements Managed {
     private final Logger _log = LoggerFactory.getLogger(DistributedScanRangeMonitor.class);
 
     // TTL for the initially claiming items off the workflow queue
-    private static final Duration QUEUE_CLAIM_TTL = Duration.standardMinutes(2);
+    private static final Duration QUEUE_CLAIM_TTL = Duration.ofMinutes(2);
     // TTL for renewing workflow queue items once they have started
-    private static final Duration QUEUE_RENEW_TTL = Duration.standardMinutes(4);
+    private static final Duration QUEUE_RENEW_TTL = Duration.ofMinutes(4);
     // Time after which a claimed task should be unclaimed if it has not started
-    private static final Duration CLAIM_START_TIMEOUT = QUEUE_CLAIM_TTL.minus(Duration.standardSeconds(15));
+    private static final Duration CLAIM_START_TIMEOUT = QUEUE_CLAIM_TTL.minus(Duration.ofSeconds(15));
 
     private final ScanWorkflow _scanWorkflow;
     private final ScanStatusDAO _scanStatusDAO;
     private final RangeScanUploader _rangeScanUploader;
-    private final ScanTableSetManager _scanTableSetManager;
     private final int _maxConcurrentScans;
     // No ConcurrentSet in Java, so use a ConcurrentMap instead.
     private final ConcurrentMap<Integer, ClaimedTask> _claimedTasks = Maps.newConcurrentMap();
@@ -60,12 +58,11 @@ public class DistributedScanRangeMonitor implements Managed {
 
     @Inject
     public DistributedScanRangeMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
-                                       RangeScanUploader rangeScanUploader, ScanTableSetManager scanTableSetManager,
+                                       RangeScanUploader rangeScanUploader,
                                        @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
         _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
         _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
         _rangeScanUploader = checkNotNull(rangeScanUploader, "rangeScanUploader");
-        _scanTableSetManager = checkNotNull(scanTableSetManager, "scanTableSetManager");
         checkArgument(maxConcurrentScans > 0, "maxConcurrentScans <= 0");
         _maxConcurrentScans = maxConcurrentScans;
 
@@ -196,7 +193,7 @@ public class DistributedScanRangeMonitor implements Managed {
                                     validateClaimedTaskHasStarted(claimedTask);
                                 }
                             },
-                            CLAIM_START_TIMEOUT.getMillis(), TimeUnit.MILLISECONDS);
+                            CLAIM_START_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
                 }
             }
 
@@ -334,10 +331,8 @@ public class DistributedScanRangeMonitor implements Managed {
 
             _scanStatusDAO.setScanRangeTaskActive(scanId, taskId, new Date());
 
-            // Get the distributed table set for this scan
-            TableSet tableSet = _scanTableSetManager.getTableSetForScan(scanId);
             // Perform the range scan
-            result = _rangeScanUploader.scanAndUpload(taskId, status.getOptions(), placement, range, tableSet);
+            result = _rangeScanUploader.scanAndUpload(scanId, taskId, status.getOptions(), placement, range, status.getCompactionControlTime());
 
             _log.info("Completed scan range task: {}", task);
         } catch (Throwable t) {

@@ -3,7 +3,6 @@ package com.bazaarvoice.emodb.sor.db.astyanax;
 import com.bazaarvoice.emodb.common.cassandra.nio.BufferUtils;
 import com.bazaarvoice.emodb.common.json.JsonHelper;
 import com.bazaarvoice.emodb.common.json.deferred.LazyJsonMap;
-import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.Change;
 import com.bazaarvoice.emodb.sor.api.ChangeBuilder;
 import com.bazaarvoice.emodb.sor.api.Compaction;
@@ -32,7 +31,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
         D2,  // delta (version 2 encoding includes tags)
         D3,  // delta (version 3 encoding, adds change flags to D2
         C1,  // compaction (version 1 encoding)
-        A1,  // audit (version 1 encoding)
         H1,  // historical deltas (version 1 encoding)
     }
 
@@ -54,12 +52,13 @@ class DefaultChangeEncoder implements ChangeEncoder {
     }
 
     @Override
-    public String encodeDelta(String deltaString, @Nullable EnumSet<ChangeFlag> changeFlags, @Nonnull Set<String> tags) {
+    public StringBuilder encodeDelta(String deltaString, @Nullable EnumSet<ChangeFlag> changeFlags, @Nonnull Set<String> tags, StringBuilder changeBody) {
         // Encoding will be either the legacy D2 or the current D3
         // Spec for D2 is <tags>:<delta>
         // Spec for D3 is <tags>:<change flags>:<Delta>
 
-        StringBuilder changeBody = new StringBuilder()
+        changeBody.append(_deltaEncoding)
+                .append(":")
                 .append(tags.isEmpty() ? "[]" : JsonHelper.asJson(tags));
 
         if (_deltaEncoding == Encoding.D3) {
@@ -74,26 +73,22 @@ class DefaultChangeEncoder implements ChangeEncoder {
         changeBody.append(":")
                 .append(deltaString);
 
-        return encodeChange(_deltaEncoding, changeBody.toString());
+
+        return changeBody;
     }
 
     @Override
-    public String encodeAudit(Audit audit) {
-        return encodeChange(Encoding.A1, JsonHelper.asJson(audit));
-    }
-
-    @Override
-    public String encodeCompaction(Compaction compaction) {
-        return encodeChange(Encoding.C1, JsonHelper.asJson(compaction));
+    public StringBuilder encodeCompaction(Compaction compaction, StringBuilder prefix) {
+        return encodeChange(Encoding.C1, JsonHelper.asJson(compaction), prefix);
     }
 
     @Override
     public String encodeHistory(History history) {
-        return encodeChange(Encoding.H1, JsonHelper.asJson(history));
+        return encodeChange(Encoding.H1, JsonHelper.asJson(history), new StringBuilder()).toString();
     }
 
-    private String encodeChange(Encoding encoding, String bodyString) {
-        return encoding + ":" + bodyString;
+    private StringBuilder encodeChange(Encoding encoding, String bodyString, StringBuilder prefix) {
+        return prefix.append(encoding).append(":").append(bodyString);
     }
 
     /**
@@ -159,9 +154,6 @@ class DefaultChangeEncoder implements ChangeEncoder {
             case C1:
                 builder.with(JsonHelper.fromJson(body, Compaction.class));
                 break;
-            case A1:
-                builder.with(JsonHelper.fromJson(body, Audit.class));
-                break;
             case H1:
                 builder.with(JsonHelper.fromJson(body, History.class));
                 break;
@@ -192,8 +184,10 @@ class DefaultChangeEncoder implements ChangeEncoder {
 
     private Encoding getEncoding(ByteBuffer buf, int sep) {
         // This method gets called frequently enough that it's worth avoiding string building & memory allocation.
+        int position = buf.position();
+
         if (sep == 2) {
-            switch (buf.get(0) | (buf.get(1) << 8)) {
+            switch (buf.get(position) | (buf.get(position + 1) << 8)) {
                 case 'D' | ('1' << 8):
                     return Encoding.D1;
                 case 'D' | ('2' << 8):
@@ -202,13 +196,11 @@ class DefaultChangeEncoder implements ChangeEncoder {
                     return Encoding.D3;
                 case 'C' | ('1' << 8):
                     return Encoding.C1;
-                case 'A' | ('1' << 8):
-                    return Encoding.A1;
                 case 'H' | ('1' << 8):
                     return Encoding.H1;
             }
         }
-        throw new IllegalArgumentException("Unknown encoding: " + BufferUtils.getString(buf, 0, sep, Charsets.US_ASCII));
+        throw new IllegalArgumentException("Unknown encoding: " + BufferUtils.getString(buf, position, sep, Charsets.US_ASCII));
     }
 
     private String getBody(ByteBuffer buf, int sep) {

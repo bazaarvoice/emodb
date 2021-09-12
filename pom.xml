@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>5.5.6-SNAPSHOT</version>
+        <version>6.4.11-SNAPSHOT</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
@@ -31,6 +31,7 @@
         <module>common/zookeeper</module>
         <module>common/stash</module>
         <module>common/client</module>
+        <module>common/jersey-client</module>
         <module>common/dropwizard-client</module>
         <module>auth/auth-client</module>
         <module>auth/auth-core</module>
@@ -60,14 +61,14 @@
         <module>blob-client</module>
         <module>blob</module>
         <module>uac-client</module>
-        <module>shaded-clients</module>
         <module>plugins</module>
         <module>web</module>
         <module>web-local</module>
         <module>sdk</module>
         <module>quality</module>
         <module>yum</module>
-        <module>mapreduce</module>
+        <module>megabus</module>
+        <module>kafka</module>
     </modules>
 
 </project>

@@ -14,9 +14,6 @@ import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -25,13 +22,17 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,7 +45,7 @@ import static org.testng.Assert.assertNull;
 @SuppressWarnings("unchecked")
 public class CachingSubscriptionDAOTest {
 
-    private DateTime _now;
+    private Instant _now;
     private Clock _clock;
     private ListeningExecutorService _service;
     private SubscriptionDAO _delegate;
@@ -55,13 +56,13 @@ public class CachingSubscriptionDAOTest {
 
     @BeforeMethod
     public void setUp() {
-        _now = new DateTime(2016, 1, 1, 0, 0, DateTimeZone.UTC);
+        _now = LocalDateTime.of(2016, 1, 1, 0, 0).atZone(ZoneOffset.UTC).toInstant();
 
         _clock = mock(Clock.class);
         when(_clock.millis()).thenAnswer(new Answer<Long>() {
             @Override
             public Long answer(InvocationOnMock invocationOnMock) throws Throwable {
-                return _now.getMillis();
+                return _now.toEpochMilli();
             }
         });
 
@@ -70,7 +71,7 @@ public class CachingSubscriptionDAOTest {
 
         // Insert some test data into the delegate
         for (int i=0; i < 3; i++) {
-            _delegate.insertSubscription("owner", "sub" + i, Conditions.alwaysTrue(), Duration.standardDays(1), Duration.standardMinutes(5));
+            _delegate.insertSubscription("owner", "sub" + i, Conditions.alwaysTrue(), Duration.ofDays(1), Duration.ofMinutes(5));
         }
     }
 
@@ -125,7 +126,7 @@ public class CachingSubscriptionDAOTest {
 
         // Update sub2 with a new condition on the delegate
         Condition sub2Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate2"));
-        _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.standardDays(1), Duration.standardMinutes(5));
+        _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.ofDays(1), Duration.ofMinutes(5));
 
         // Invalidate sub2 and all subscriptions
         _cache.invalidate("sub2");
@@ -156,10 +157,10 @@ public class CachingSubscriptionDAOTest {
 
         // Update sub0 with a new condition on the delegate
         Condition newCondition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate2"));
-        _delegate.insertSubscription("owner", "sub0", newCondition, Duration.standardDays(1), Duration.standardMinutes(5));
+        _delegate.insertSubscription("owner", "sub0", newCondition, Duration.ofDays(1), Duration.ofMinutes(5));
 
         // Move time forward exactly 10 minutes
-        _now = _now.plusMinutes(10);
+        _now = _now.plus(Duration.ofMinutes(10));
 
         // Cached subscription should still be returned
         subscriptions = ImmutableList.copyOf(cachingSubscriptionDAO.getAllSubscriptions());
@@ -228,7 +229,7 @@ public class CachingSubscriptionDAOTest {
         // Cause all subscriptions to be cached
         cachingSubscriptionDAO.getAllSubscriptions();
         // Move time forward one hour
-        _now = _now.plusHours(1);
+        _now = _now.plus(Duration.ofHours(1));
         // Remove sub0 from the delegate
         _delegate.deleteSubscription("sub0");
 
@@ -250,7 +251,7 @@ public class CachingSubscriptionDAOTest {
 
     @Test
     public void testInvalidateOnInsert() throws Exception {
-        createDAO().insertSubscription("owner", "sub4", Conditions.alwaysTrue(), Duration.standardDays(1), Duration.standardMinutes(5));
+        createDAO().insertSubscription("owner", "sub4", Conditions.alwaysTrue(), Duration.ofDays(1), Duration.ofMinutes(5));
         verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub4");
     }
 
@@ -267,7 +268,7 @@ public class CachingSubscriptionDAOTest {
         // Cache sub0 then update sub0 using the caching DAO
         cachingSubscriptionDAO.getSubscription("sub0");
         Condition sub0Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate0"));
-        cachingSubscriptionDAO.insertSubscription("owner", "sub0", sub0Condition, Duration.standardDays(1), Duration.standardMinutes(5));
+        cachingSubscriptionDAO.insertSubscription("owner", "sub0", sub0Condition, Duration.ofDays(1), Duration.ofMinutes(5));
 
         // Verify invalidation sent to the cache handle
         verify(_cacheHandle).invalidate(InvalidationScope.DATA_CENTER, "sub0");
@@ -278,7 +279,7 @@ public class CachingSubscriptionDAOTest {
         // from the legacy cache.  Legacy caching mode should be listening for legacy cache invalidations.
         cachingSubscriptionDAO.getSubscription("sub1");
         Condition sub1Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate1"));
-        _delegate.insertSubscription("owner", "sub1", sub1Condition, Duration.standardDays(1), Duration.standardMinutes(5));
+        _delegate.insertSubscription("owner", "sub1", sub1Condition, Duration.ofDays(1), Duration.ofMinutes(5));
         _legacyCache.invalidate("subscriptions");
 
         // Verify the subscription has been updated in the caching DAO
@@ -288,7 +289,7 @@ public class CachingSubscriptionDAOTest {
         // should be listening for normal cache invalidations.
         cachingSubscriptionDAO.getSubscription("sub2");
         Condition sub2Condition = Conditions.intrinsic(Intrinsic.TABLE, Conditions.equal("invalidate2"));
-        _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.standardDays(1), Duration.standardMinutes(5));
+        _delegate.insertSubscription("owner", "sub2", sub2Condition, Duration.ofDays(1), Duration.ofMinutes(5));
         _cache.invalidate("sub2");
 
         // Verify the subscription has been updated in the caching DAO

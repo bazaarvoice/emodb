@@ -5,13 +5,13 @@
     <parent>
         <groupId>com.bazaarvoice.commons</groupId>
         <artifactId>bv-opensource-super-pom</artifactId>
-        <version>1.4</version>
+        <version>1.11</version>
         <relativePath />
     </parent>
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>5.5.6-SNAPSHOT</version>
+    <version>6.4.11-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -20,37 +20,57 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
-        <astyanax.version>3.8.0-bv8</astyanax.version>
-        <dropwizard-metrics-datadog.version>1.1.1</dropwizard-metrics-datadog.version>
-        <cassandra.version>2.2.4</cassandra.version>
-        <curator.version>2.4.0</curator.version>
-        <curator-extensions.version>1.4.1</curator-extensions.version>
+        <astyanax.version>3.8.0-bv12</astyanax.version>
+        <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
+        <cassandra-server.version>2.2.19</cassandra-server.version>
+        <cassandra-client.version>3.0.25</cassandra-client.version>
+        <curator.version>2.4.2</curator.version>
+        <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>16.0.1</guava.version>
+        <guava.version>18.0</guava.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.4.5</jackson.version>
-        <metrics.version>3.0.2</metrics.version>
-        <ostrich.version>1.9.2</ostrich.version>
-        <rison.version>2.1.1</rison.version>
-        <slf4j.version>1.7.4</slf4j.version>
-        <commons-io.version>2.1</commons-io.version>
-        <aws-sdk.version>1.9.34</aws-sdk.version>
+        <jackson.version>2.6.7.2</jackson.version>
+        <jna.version>4.1.0</jna.version>
+        <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
+        <metrics.version>3.1.2</metrics.version>
+        <ostrich.version>1.9.3</ostrich.version>
+        <rison.version>2.6.3</rison.version>
+        <slf4j.version>1.7.29</slf4j.version>
+        <commons-io.version>2.7</commons-io.version>
+        <commons-compress.version>1.21</commons-compress.version>
+        <aws-sdk.version>1.11.551</aws-sdk.version>
         <jodatime-version>2.8.2</jodatime-version>
         <jersey.version>1.18.1</jersey.version>
-        <jacoco.version>0.7.2.201409121644</jacoco.version>
-        <cassandra.driver.version>3.1.1</cassandra.driver.version>
-        <dependency-check-maven.version>1.4.2</dependency-check-maven.version>
-        <skipCC>true</skipCC>
+        <shiro.version>1.7.0</shiro.version>
+        <cassandra.driver.version>3.1.4</cassandra.driver.version>
+        <kafka.version>2.8.0</kafka.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
         <!-- note: the *bucket* is the root of the repo -->
         <yumrepo.s3RepositoryPath>s3://bv-emodb-artifacts/emodb/yum-repo</yumrepo.s3RepositoryPath>
         <!-- maven properties recognized by the bv-super-pom -->
         <java.minimum.version>1.8</java.minimum.version>
+
+        <!-- For yum-deploy profile in emodb-rpms. This way we can deploy snapshots to yum repo-->
+        <!-- If the 'yum*' variables are changed, please change the options in emodb-deploy-snapshot jenkins build-->
+        <yumArtifactName>emodb-web-${project.version}</yumArtifactName>
+        <yumArtifactId>emodb-web</yumArtifactId>
+
+        <jacoco.version>0.8.6</jacoco.version>
+        <skipCC>true</skipCC>
+
+        <sonar.version>3.8.0.2131</sonar.version>
+        <sonar.sources>src/main</sonar.sources>
+        <sonar.test.sources>src/test</sonar.test.sources>
+
+        <mockito.version>3.7.0</mockito.version>
+        <testng.version>7.3.0</testng.version>
+        <junit.version>4.13.1</junit.version>
+        <logback.version>1.1.3</logback.version>
     </properties>
 
     <dependencyManagement>
@@ -67,19 +87,9 @@
                 <version>${curator-extensions.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.bazaarvoice.curator</groupId>
-                <artifactId>test</artifactId>
-                <version>${curator-extensions.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>com.bazaarvoice.jackson</groupId>
                 <artifactId>rison</artifactId>
                 <version>${rison.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.coursera</groupId>
-                <artifactId>dropwizard-metrics-datadog</artifactId>
-                <version>${dropwizard-metrics-datadog.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.ostrich</groupId>
@@ -104,9 +114,40 @@
 
             <!-- 3rd-party dependencies -->
             <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-core</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-servlets</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-jvm</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard.metrics</groupId>
+                <artifactId>metrics-logback</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>3.4.14</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
                 <groupId>com.clearspring.analytics</groupId>
                 <artifactId>stream</artifactId>
-                <version>2.5.2</version>
+                <version>2.9.8</version>
             </dependency>
             <dependency>
                 <groupId>com.github.stephenc.eaio-uuid</groupId>
@@ -116,7 +157,12 @@
             <dependency>
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
-                <version>1.3.9</version>
+                <version>3.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.javassist</groupId>
+                <artifactId>javassist</artifactId>
+                <version>3.19.0-GA</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -146,6 +192,16 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-core-asl</artifactId>
+                <version>${org.codehaus.jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.codehaus.jackson</groupId>
+                <artifactId>jackson-mapper-asl</artifactId>
+                <version>${org.codehaus.jackson.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-client</artifactId>
                 <version>${dropwizard.version}</version>
@@ -172,9 +228,38 @@
                 <version>${dropwizard.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.codahale.metrics</groupId>
-                <artifactId>metrics-core</artifactId>
-                <version>${metrics.version}</version>
+                <groupId>org.coursera</groupId>
+                <artifactId>dropwizard-metrics-datadog</artifactId>
+                <version>${dropwizard-metrics-datadog.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.dropwizard</groupId>
+                        <artifactId>dropwizard-metrics</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-client</artifactId>
+                <version>${curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -184,6 +269,10 @@
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -195,12 +284,28 @@
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.3.6</version>
+                <version>4.5.13</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>4.4.9</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
                 <artifactId>commons-codec</artifactId>
-                <version>1.6</version>
+                <version>1.10</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.8.1</version>
             </dependency>
             <dependency>
                 <groupId>javax.validation</groupId>
@@ -213,9 +318,14 @@
                 <version>${jodatime-version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.thrift</groupId>
+                <artifactId>libthrift</artifactId>
+                <version>0.12.0</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
-                <version>${cassandra.version}</version>
+                <version>${cassandra-client.version}</version>
                 <exclusions>
                     <!-- ignore stuff that conflicts with Dropwizard -->
                     <exclusion>
@@ -223,49 +333,31 @@
                         <artifactId>commons-logging</artifactId>
                     </exclusion>
                     <exclusion>
-                        <groupId>javax.servlet</groupId>
-                        <artifactId>servlet-api</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>junit</groupId>
-                        <artifactId>junit</artifactId>
-                    </exclusion>
-                    <exclusion>
                         <groupId>log4j</groupId>
                         <artifactId>log4j</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.mortbay.jetty</groupId>
-                        <artifactId>jetty</artifactId>
                     </exclusion>
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
-                    <exclusion>
-                        <groupId>com.yammer.metrics</groupId>
-                        <artifactId>metrics-core</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>io.dropwizard.metrics</groupId>
-                        <artifactId>metrics-core</artifactId>
-                    </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-annotations</artifactId>
-                <version>${jackson.version}</version>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-core</artifactId>
+                <version>${logback.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-core</artifactId>
-                <version>${jackson.version}</version>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.fasterxml.jackson.core</groupId>
-                <artifactId>jackson-databind</artifactId>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
                 <version>${jackson.version}</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
             <dependency>
                 <groupId>org.slf4j</groupId>
@@ -290,12 +382,7 @@
             <dependency>
                 <groupId>org.xerial.snappy</groupId>
                 <artifactId>snappy-java</artifactId>
-                <version>1.0.5</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-math3</artifactId>
-                <version>3.2</version>
+                <version>1.1.7.3</version>
             </dependency>
             <dependency>
                 <groupId>commons-io</groupId>
@@ -303,14 +390,55 @@
                 <version>${commons-io.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${commons-compress.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk</artifactId>
+                <artifactId>aws-java-sdk-core</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-cloudwatch</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-ec2</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-s3</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sns</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sqs</artifactId>
+                <version>${aws-sdk.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.amazonaws</groupId>
+                <artifactId>aws-java-sdk-sts</artifactId>
                 <version>${aws-sdk.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.datastax.cassandra</groupId>
                 <artifactId>cassandra-driver-core</artifactId>
                 <version>${cassandra.driver.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.datastax.cassandra</groupId>
@@ -318,9 +446,31 @@
                 <version>${cassandra.driver.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.ow2.asm</groupId>
+                <artifactId>asm</artifactId>
+                <version>5.0.4</version>
+            </dependency>
+            <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
-                <version>1.11</version>
+                <version>1.21</version>
+            </dependency>
+            <dependency>
+                <groupId>net.java.dev.jna</groupId>
+                <artifactId>jna</artifactId>
+                <version>${jna.version}</version>
+            </dependency>
+
+            <!-- Megabus dependencies -->
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-clients</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka-streams</artifactId>
+                <version>${kafka.version}</version>
             </dependency>
 
             <!-- Test dependencies -->
@@ -331,15 +481,62 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.objenesis</groupId>
+                <artifactId>objenesis</artifactId>
+                <version>3.1</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
                 <groupId>org.mockito</groupId>
-                <artifactId>mockito-all</artifactId>
-                <version>1.9.5</version>
+                <artifactId>mockito-core</artifactId>
+                <version>${mockito.version}</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.testng</groupId>
                 <artifactId>testng</artifactId>
-                <version>6.8.5</version>
+                <version>${testng.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>com.google.inject</groupId>
+                        <artifactId>guice</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.bazaarvoice.curator</groupId>
+                <artifactId>test</artifactId>
+                <version>${curator-extensions.version}</version>
+                <scope>test</scope>
+                <exclusions>
+                    <!-- Exclude dependencies that cause slf4j warnings due to overlap with emodb-web shaded jar. -->
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
+                <version>${curator.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
+                    </exclusion>
+                </exclusions>
                 <scope>test</scope>
             </dependency>
         </dependencies>
@@ -351,7 +548,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra.version}-4</version>
+                    <version>${cassandra-server.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
@@ -359,9 +556,36 @@
                     <version>${jacoco.version}</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar.version}</version>
+                    <executions>
+                        <execution>
+                            <phase>verify</phase>
+                            <goals>
+                                <goal>sonar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
-                    <version>${dependency-check-maven.version}</version>
+                    <configuration>
+                        <!--
+                            Default configuration skips dependency checks to reduce build time.  A build should be performed
+                            with dependency checks enabled after any dependencies are added or updated to get a list
+                            of known vulnerabilities that may have been introduced with the change.
+                        -->
+                        <skip>${skipDependencyChecks}</skip>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -429,13 +653,57 @@
             <plugin>
                 <groupId>org.sonatype.plugins</groupId>
                 <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.2</version>
+                <version>1.6.8</version>
                 <extensions>true</extensions>
                 <configuration>
                     <serverId>sonatype-nexus-staging</serverId>
                     <nexusUrl>https://oss.sonatype.org/</nexusUrl>
                     <autoReleaseAfterClose>${nexus.autoReleaseAfterClose}</autoReleaseAfterClose>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>analyze</id>
+                        <goals>
+                            <goal>analyze-only</goal>
+                        </goals>
+                        <configuration>
+                            <failOnWarning>false</failOnWarning>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce</id>
+                        <configuration>
+                            <rules>
+                                <requireMavenVersion>
+                                    <!--Any 3.6 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[3.6,)</version>
+                                    <message>requires maven 3.6.x</message>
+                                </requireMavenVersion>
+                                <requireJavaVersion>
+                                    <!--Any 1.8 version - See http://maven.apache.org/enforcer/enforcer-rules/versionRanges.html for an explanation of version ranges-->
+                                    <version>[1.8,)</version>
+                                    <message>requires Java 1.8</message>
+                                </requireJavaVersion>
+                                <dependencyConvergence />
+                                <requireUpperBoundDeps />
+                                <banDuplicatePomDependencyVersions />
+                            </rules>
+                        </configuration>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
@@ -460,6 +728,20 @@
                         <configuration>
                             <additionalparam>-Xdoclint:none</additionalparam>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>sonar</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.sonarsource.scanner.maven</groupId>
+                        <artifactId>sonar-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>

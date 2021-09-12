@@ -13,23 +13,20 @@ import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
+import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
-import com.bazaarvoice.emodb.common.dropwizard.discovery.DropwizardResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ServiceNames;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfAdminHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
-import com.bazaarvoice.emodb.common.dropwizard.healthcheck.DropwizardHealthCheckRegistry;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.DropwizardLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
-import com.bazaarvoice.emodb.common.dropwizard.task.DropwizardTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.IgnoreAllTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -51,6 +48,8 @@ import com.bazaarvoice.emodb.datacenter.DataCenterModule;
 import com.bazaarvoice.emodb.job.JobConfiguration;
 import com.bazaarvoice.emodb.job.JobModule;
 import com.bazaarvoice.emodb.job.JobZooKeeper;
+import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
+import com.bazaarvoice.emodb.kafka.KafkaModule;
 import com.bazaarvoice.emodb.plugin.PluginConfiguration;
 import com.bazaarvoice.emodb.plugin.PluginServerMetadata;
 import com.bazaarvoice.emodb.plugin.lifecycle.ServerStartedListener;
@@ -85,10 +84,16 @@ import com.bazaarvoice.emodb.table.db.consistency.GlobalFullConsistencyZooKeeper
 import com.bazaarvoice.emodb.web.auth.AuthorizationConfiguration;
 import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
+import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
+import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
+import com.bazaarvoice.emodb.web.discovery.DropwizardResourceRegistry;
+import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
+import com.bazaarvoice.emodb.web.healthcheck.DropwizardHealthCheckRegistry;
+import com.bazaarvoice.emodb.web.lifecycle.DropwizardLifeCycleRegistry;
+import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
-import com.bazaarvoice.emodb.web.report.ReportsModule;
 import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
@@ -103,14 +108,25 @@ import com.bazaarvoice.emodb.web.settings.Setting;
 import com.bazaarvoice.emodb.web.settings.SettingsModule;
 import com.bazaarvoice.emodb.web.settings.SettingsRegistry;
 import com.bazaarvoice.emodb.web.settings.SorCqlDriverTask;
+import com.bazaarvoice.emodb.web.task.DropwizardTaskRegistry;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottle;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleControlTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottle;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleControlTask;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleMapStore;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
+import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
 import com.bazaarvoice.emodb.web.util.ZKNamespaces;
+import com.bazaarvoice.megabus.MegabusApplicationId;
+import com.bazaarvoice.megabus.MegabusConfiguration;
+import com.bazaarvoice.megabus.MegabusModule;
+import com.bazaarvoice.megabus.guice.MegabusZookeeper;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.MultiThreadedServiceFactory;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
@@ -125,6 +141,7 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.registry.zookeeper.ZooKeeperServiceRegistry;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
@@ -132,6 +149,7 @@ import com.google.common.net.HostAndPort;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import com.google.inject.Provides;
+import com.google.inject.ProvisionException;
 import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
@@ -141,6 +159,7 @@ import io.dropwizard.client.JerseyClientConfiguration;
 import io.dropwizard.server.ServerFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -154,15 +173,18 @@ import java.util.concurrent.TimeUnit;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blackList;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.blobStore_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.cache;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.compaction_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.compaction_control_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataBus_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataCenter;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_module;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
@@ -199,17 +221,36 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(report, new ReportSetup());
-        evaluate(job, new JobSetup());
+        evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
         evaluate(dataStore_web, new DataStoreAsyncSetup());
+        evaluate(compaction_control, new CompactionControlSetup());
+        evaluate(compaction_control_web, new CompactionControlWebSetup());
+        evaluate(kafka, new KafkaSetup());
+        evaluate(megabus, new MegabusSetup());
     }
 
     private class CommonModuleSetup extends AbstractModule {
 
+        private CommonModuleSetup() {
+            checkValidSystemTablePlacement();
+        }
+
+        private void checkValidSystemTablePlacement() {
+            String systemTablePlacement = _configuration.getSystemTablePlacement();
+            String systemKeyspace = systemTablePlacement.substring(0, systemTablePlacement.indexOf(':'));
+            for (CassandraConfiguration cassandraConfig : _configuration.getDataStoreConfiguration().getCassandraClusters().values()) {
+                if (cassandraConfig.getKeyspaces().containsKey(systemKeyspace)) {
+                    return;
+                }
+            }
+            throw new ProvisionException("System Table Placement references a keyspace not defined in 'cassandraKeyspaces");
+        }
+
         @Override
         protected void configure() {
+            bind(String.class).annotatedWith(SystemTablePlacement.class).toInstance(_configuration.getSystemTablePlacement());
             install(new SettingsModule());
             bind(Environment.class).toInstance(_environment);
             bind(HealthCheckRegistry.class).to(DropwizardHealthCheckRegistry.class).asEagerSingleton();
@@ -287,6 +328,7 @@ public class EmoModule extends AbstractModule {
     }
 
     private class DataStoreSetup extends AbstractModule  {
+
         @Override
         protected void configure() {
             bind(DataStoreConfiguration.class).toInstance(_configuration.getDataStoreConfiguration());
@@ -295,6 +337,7 @@ public class EmoModule extends AbstractModule {
             bind(new TypeLiteral<Supplier<Boolean>>(){}).annotatedWith(CqlForScans.class)
                     .to(Key.get(new TypeLiteral<Setting<Boolean>>(){}, CqlForScans.class));
             bind(SorCqlDriverTask.class).asEagerSingleton();
+            bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
 
             install(new DataStoreModule(_serviceMode));
         }
@@ -557,10 +600,17 @@ public class EmoModule extends AbstractModule {
         }
     }
 
-    private class ReportSetup extends AbstractModule  {
+    private class CompactionControlSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ReportsModule());
+            install(new CompactionControlModule());
+        }
+    }
+
+    private class CompactionControlWebSetup extends AbstractModule  {
+        @Override
+        protected void configure() {
+            bind(CompactionControlMonitorManager.class).asEagerSingleton();
         }
     }
 
@@ -625,13 +675,47 @@ public class EmoModule extends AbstractModule {
     private class ScannerSetup extends AbstractModule  {
         @Override
         protected void configure() {
-            install(new ScanUploadModule(_configuration));
+            install(new ScanUploadModule(_configuration.getScanner().get()));
         }
 
         /** Provide ZooKeeper namespaced to scanner data. */
         @Provides @Singleton @ScannerZooKeeper
         CuratorFramework provideScannerZooKeeperConnection(@Global CuratorFramework curator) {
             return withComponentNamespace(curator, "scanner");
+        }
+    }
+
+    private class KafkaSetup extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(KafkaConfiguration.class).toInstance(_configuration.getKafkaConfiguration().get());
+
+            install(new KafkaModule());
+        }
+    }
+
+    private class MegabusSetup extends AbstractModule {
+
+        @Override
+        protected void configure() {
+            bind(MegabusConfiguration.class).toInstance(_configuration.getMegabusConfiguration().get());
+            bind(ObjectMapper.class).toInstance(_environment.getObjectMapper());
+
+            install(new MegabusStashModule(_configuration.getMegabusConfiguration().get().getBootConfiguration()));
+            install(new MegabusModule());
+        }
+
+        /** Provide ZooKeeper namespaced to megabus data. */
+        @Provides @Singleton @MegabusZookeeper
+        CuratorFramework provideMegabusZooKeeperConnection(@Global CuratorFramework curator,
+                                                           @MegabusApplicationId String applicationId) {
+            return withComponentNamespace(curator, ZKPaths.makePath("megabus", applicationId));
+        }
+
+        @Provides @Singleton @MegabusApplicationId
+        String provideMegabusApplicationId(MegabusConfiguration megabusConfiguration) {
+            return megabusConfiguration.getApplicationId();
         }
     }
 
@@ -648,6 +732,16 @@ public class EmoModule extends AbstractModule {
             bind(IpBlacklistControlTask.class).asEagerSingleton();
             bind(AdHocThrottleControlTask.class).asEagerSingleton();
             bind(AdHocThrottleManager.class).asEagerSingleton();
+            bind(DataStoreUpdateThrottleManager.class).asEagerSingleton();
+            bind(DataStoreUpdateThrottler.class).to(DataStoreUpdateThrottleManager.class);
+            bind(DataStoreUpdateThrottleControlTask.class).asEagerSingleton();
+        }
+
+        /** Provides a ZooKeeper-based set of API Key DataStore update throttles. */
+        @Provides @Singleton @DataStoreUpdateThrottleMapStore
+        MapStore<DataStoreUpdateThrottle> provideDataStoreUpdateRateLimitMapStore(@Global CuratorFramework curator, LifeCycleRegistry lifeCycle) {
+            CuratorFramework webCurator = withComponentNamespace(curator, "web");
+            return lifeCycle.manage(new ZkMapStore<>(webCurator, "/sor-update-throttles", new ZkDataStoreUpdateThrottleSerializer()));
         }
     }
 

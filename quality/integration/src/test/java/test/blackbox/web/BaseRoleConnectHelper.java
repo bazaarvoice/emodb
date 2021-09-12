@@ -21,6 +21,7 @@ import com.bazaarvoice.emodb.sor.client.DataStoreClient;
 import com.bazaarvoice.emodb.sor.client.DataStoreClientFactory;
 import com.bazaarvoice.emodb.sor.client.DataStoreFixedHostDiscoverySource;
 import com.bazaarvoice.emodb.web.EmoConfiguration;
+import com.bazaarvoice.emodb.web.util.EmoServiceObjectMapperFactory;
 import com.bazaarvoice.ostrich.HostDiscovery;
 import com.bazaarvoice.ostrich.ServiceEndPointBuilder;
 import com.bazaarvoice.ostrich.discovery.FixedHostDiscovery;
@@ -97,7 +98,7 @@ public abstract class BaseRoleConnectHelper implements Closeable {
         Preconditions.checkNotNull(url, _configFileResource);
         File file = new File (url.toURI());
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-        ObjectMapper mapper = CustomJsonObjectMapperFactory.build(new YAMLFactory());
+        ObjectMapper mapper = EmoServiceObjectMapperFactory.build(new YAMLFactory());
 
         ConfigurationFactory<EmoConfiguration> configFactory = new ConfigurationFactory<>(EmoConfiguration.class, validator, mapper, "dw");
         return configFactory.build(file);

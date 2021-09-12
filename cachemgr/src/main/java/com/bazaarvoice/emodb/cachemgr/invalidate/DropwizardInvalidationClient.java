@@ -10,12 +10,12 @@ import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.api.representation.Form;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import java.time.Duration;
 
 /**
  * Simple HTTP client that invokes the {@link DropwizardInvalidationTask} in other JVMs.
@@ -24,7 +24,7 @@ public class DropwizardInvalidationClient implements RemoteInvalidationClient {
     private static final Logger _log = LoggerFactory.getLogger(DropwizardInvalidationClient.class);
 
     private static final int NUM_ATTEMPTS = 10;
-    private static final Duration SLEEP_BETWEEN_RETRY = Duration.standardSeconds(1);
+    private static final Duration SLEEP_BETWEEN_RETRY = Duration.ofSeconds(1);
 
     private final Client _client;
 
@@ -63,7 +63,7 @@ public class DropwizardInvalidationClient implements RemoteInvalidationClient {
                 }
             }
             try {
-                Thread.sleep(SLEEP_BETWEEN_RETRY.getMillis());
+                Thread.sleep(SLEEP_BETWEEN_RETRY.toMillis());
             } catch (InterruptedException e) {
                 throw Throwables.propagate(e);
             }

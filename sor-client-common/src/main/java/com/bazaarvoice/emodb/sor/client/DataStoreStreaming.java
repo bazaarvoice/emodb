@@ -9,9 +9,9 @@ import com.bazaarvoice.emodb.sor.api.ReadConsistency;
 import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.google.common.collect.ImmutableSet;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +39,9 @@ public abstract class DataStoreStreaming {
      */
     public static Iterable<Map<String, Object>> scan(DataStore dataStore,
                                                      String table,
+                                                     boolean includeDeletes,
                                                      ReadConsistency consistency) {
-        return scan(dataStore, table, null, Long.MAX_VALUE, consistency);
+        return scan(dataStore, table, null, Long.MAX_VALUE, includeDeletes, consistency);
     }
 
     /**
@@ -49,8 +50,9 @@ public abstract class DataStoreStreaming {
     public static Iterable<Map<String, Object>> getSplit(DataStore dataStore,
                                                          String table,
                                                          String split,
+                                                         boolean includeDeletes,
                                                          ReadConsistency consistency) {
-        return getSplit(dataStore, table, split, null, Long.MAX_VALUE, consistency);
+        return getSplit(dataStore, table, split, null, Long.MAX_VALUE, includeDeletes, consistency);
     }
 
     /**
@@ -84,12 +86,13 @@ public abstract class DataStoreStreaming {
                                                      final String table,
                                                      final @Nullable String fromKeyExclusive,
                                                      final long limit,
+                                                     final boolean includeDeletes,
                                                      final ReadConsistency consistency) {
         return RestartingStreamingIterator.stream(fromKeyExclusive, limit,
                 new StreamingIteratorSupplier<Map<String, Object>, String>() {
                     @Override
                     public Iterator<Map<String, Object>> get(String fromToken, long limit) {
-                        return dataStore.scan(table, fromToken, limit, consistency);
+                        return dataStore.scan(table, fromToken, limit, includeDeletes, consistency);
                     }
 
                     @Override
@@ -110,12 +113,13 @@ public abstract class DataStoreStreaming {
                                                          final String split,
                                                          final @Nullable String fromKeyExclusive,
                                                          final long limit,
+                                                         final boolean includeDeletes,
                                                          final ReadConsistency consistency) {
         return RestartingStreamingIterator.stream(fromKeyExclusive, limit,
                 new StreamingIteratorSupplier<Map<String, Object>, String>() {
                     @Override
                     public Iterator<Map<String, Object>> get(String fromToken, long limit) {
-                        return dataStore.getSplit(table, split, fromToken, limit, consistency);
+                        return dataStore.getSplit(table, split, fromToken, limit, includeDeletes, consistency);
                     }
 
                     @Override
@@ -157,7 +161,7 @@ public abstract class DataStoreStreaming {
         // unnecessary, but the TimeLimitedIterator is still relevant for clients that don't use DataStoreStreaming.
         // For now, hard-code initial/min/max/goal values.
         Iterator<List<Update>> batchIter =
-                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.millis(500L));
+                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.ofMillis(500L));
         while (batchIter.hasNext()) {
             // Ostrich will retry each batch as necessary
             dataStore.updateAll(batchIter.next(), tags);
@@ -187,7 +191,7 @@ public abstract class DataStoreStreaming {
         // unnecessary, but the TimeLimitedIterator is still relevant for clients that don't use DataStoreStreaming.
         // For now, hard-code initial/min/max/goal values.
         Iterator<List<Update>> batchIter =
-                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.millis(500L));
+                new TimePartitioningIterator<>(updateIter, 50, 1, 2500, Duration.ofMillis(500L));
         while (batchIter.hasNext()) {
             // Ostrich will retry each batch as necessary
             dataStore.updateAllForFacade(batchIter.next(), tags);

@@ -1,8 +1,10 @@
 package com.bazaarvoice.emodb.blob;
 
+import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.netflix.astyanax.model.ConsistencyLevel;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
@@ -11,12 +13,6 @@ import java.util.Map;
 import java.util.Set;
 
 public class BlobStoreConfiguration {
-    /**
-     * Where does the SoR store system information such as table definitions?
-     */
-    @Valid
-    @NotNull
-    private String _systemTablePlacement;
 
     @Valid
     @NotNull
@@ -34,6 +30,12 @@ public class BlobStoreConfiguration {
     private Map<String, CassandraConfiguration> _cassandraClusters;
 
     @Valid
+//    TODO migrate to @NotNull in EMO-7107
+    @Nullable
+    @JsonProperty("s3")
+    private S3Configuration _s3Configuration;
+
+    @Valid
     @Nullable
     @JsonProperty("placementsUnderMove")
     private Map<String, String> _placementsUnderMove;
@@ -43,14 +45,10 @@ public class BlobStoreConfiguration {
     @JsonProperty("approvedContentTypes")
     private Set<String> _approvedContentTypes = ImmutableSet.of();
 
-    public String getSystemTablePlacement() {
-        return _systemTablePlacement;
-    }
-
-    public BlobStoreConfiguration setSystemTablePlacement(String systemTablePlacement) {
-        _systemTablePlacement = systemTablePlacement;
-        return this;
-    }
+    @Valid
+    @NotNull
+    @JsonProperty("readConsistency")
+    private ConsistencyLevel _readConsistency = ConsistencyLevel.CL_LOCAL_QUORUM;
 
     public Set<String> getValidTablePlacements() {
         return _validTablePlacements;
@@ -78,6 +76,15 @@ public class BlobStoreConfiguration {
         return this;
     }
 
+    public S3Configuration getS3Configuration() {
+        return _s3Configuration;
+    }
+
+    public BlobStoreConfiguration setS3Configuration(S3Configuration s3Configuration) {
+        _s3Configuration = s3Configuration;
+        return this;
+    }
+
     public Map<String, String> getPlacementsUnderMove() {
         return _placementsUnderMove;
     }
@@ -93,6 +100,15 @@ public class BlobStoreConfiguration {
 
     public BlobStoreConfiguration setApprovedContentTypes(Set<String> approvedContentTypes) {
         _approvedContentTypes = approvedContentTypes;
+        return this;
+    }
+
+    public ConsistencyLevel getReadConsistency() {
+        return _readConsistency;
+    }
+
+    public BlobStoreConfiguration setReadConsistency(ConsistencyLevel readConsistency) {
+        _readConsistency = readConsistency;
         return this;
     }
 }

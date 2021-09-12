@@ -15,17 +15,17 @@ import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AbstractIdleService;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -42,8 +42,8 @@ import static com.google.common.base.Preconditions.checkState;
 public class DedupQueue extends AbstractIdleService {
     private static final Logger _log = LoggerFactory.getLogger(DedupQueue.class);
 
-    private static final Duration LAZY_FILL_DELAY = Duration.standardSeconds(1);
-    private static final Duration SORTED_QUEUE_TIMEOUT = Duration.millis(100);
+    private static final Duration LAZY_FILL_DELAY = Duration.ofSeconds(1);
+    private static final Duration SORTED_QUEUE_TIMEOUT = Duration.ofMillis(100);
     private static final ByteBufferOrdering ORDERING = ByteBufferOrdering.INSTANCE;
 
     private final String _name;
@@ -181,7 +181,7 @@ public class DedupQueue extends AbstractIdleService {
         // case, so rely on the DefaultEventStore "empty channel" cache to rate limit actual reads to one-per-second.
         boolean moreRead = peekOrPollReadChannel(claimTtl, sink);
         if (sink.isDone()) {
-            return moreRead;
+            return moreRead || !getQueue().isEmpty() || !isWriteChannelEmpty();
         }
 
         // Do NOT dedup events in-memory between the read channel and the other sources.  Once an event makes it to
@@ -275,7 +275,7 @@ public class DedupQueue extends AbstractIdleService {
         // Move records from the sorted queue to the read channel.
         SortedQueue queue = getQueue();
         int padding = 0;
-        long stopAt = System.currentTimeMillis() + SORTED_QUEUE_TIMEOUT.getMillis();  // Don't loop forever
+        long stopAt = System.currentTimeMillis() + SORTED_QUEUE_TIMEOUT.toMillis();  // Don't loop forever
         long remainingTime;
         // As events are drained from the sorted queue to the read channel keep track of whether there were more events
         // than were accepted by the sink.
@@ -289,7 +289,7 @@ public class DedupQueue extends AbstractIdleService {
                     boolean more = addAndPeekOrPollReadChannel(filterDuplicates(records, unique), claimTtl, sink);
                     moreEventsInReadChannel.set(more);
                 }
-            }, sink.remaining() + padding, Duration.millis(remainingTime));
+            }, sink.remaining() + padding, Duration.ofMillis(remainingTime));
             // Increase the padding each time in case the sink finds lots of events it can consolidate.
             padding = Math.min(padding + 10, 1000);
         }
@@ -304,7 +304,7 @@ public class DedupQueue extends AbstractIdleService {
         // Because we're trying to move records from the write channel to the read channel, use "poll" with the
         // write channel even if we're trying to "peek" the dedup queue.
         SimpleEventSink simpleSink = new SimpleEventSink(limit);
-        boolean more = _eventStore.poll(_writeChannel, Duration.standardSeconds(30), simpleSink);
+        boolean more = _eventStore.poll(_writeChannel, Duration.ofSeconds(30), simpleSink);
         List<EventData> events = simpleSink.getEvents();
         if (events.isEmpty()) {
             return Drained.NONE;
@@ -313,6 +313,25 @@ public class DedupQueue extends AbstractIdleService {
         // Once the records are in the read channel we are safe to remove them from the write channel.
         _eventStore.delete(_writeChannel, getEventIds(events), true);
         return more ? Drained.SOME : Drained.ALL;
+    }
+
+    private boolean isWriteChannelEmpty() {
+        EventSink sink = new EventSink() {
+            @Override
+            public int remaining() {
+                return 1;
+            }
+
+            @Override
+            public Status accept(EventData event) {
+                // We're not interested in claiming any events, just need to know if any exist.  Therefore
+                // immediately reject any events.
+                return Status.REJECTED_STOP;
+            }
+        };
+
+        boolean more = _eventStore.poll(_writeChannel, Duration.ofMillis(100), sink);
+        return !more;
     }
 
     private List<ByteBuffer> filterDuplicates(Collection<ByteBuffer> records, Set<ByteBuffer> unique) {
@@ -351,7 +370,7 @@ public class DedupQueue extends AbstractIdleService {
     @Override
     public String toString() {
         SortedQueue queue = _queue;
-        Objects.ToStringHelper helper = Objects.toStringHelper(this);
+        MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
         helper.add("name", _name);
         helper.add("#write", _eventStore.getSizeEstimate(_writeChannel, 1000));
         helper.add("#write-claims", _eventStore.getClaimCount(_writeChannel));
@@ -394,7 +413,7 @@ public class DedupQueue extends AbstractIdleService {
             }
             // Schedule the new future.
             if (_fillFuture == null && delay != null) {
-                _fillFuture = _executor.schedule(this, delay.getMillis(), TimeUnit.MILLISECONDS);
+                _fillFuture = _executor.schedule(this, delay.toMillis(), TimeUnit.MILLISECONDS);
             }
         }
 

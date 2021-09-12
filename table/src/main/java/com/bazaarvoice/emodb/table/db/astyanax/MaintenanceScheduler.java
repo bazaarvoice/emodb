@@ -4,18 +4,20 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheHandle;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationEvent;
 import com.bazaarvoice.emodb.cachemgr.api.InvalidationListener;
-import com.bazaarvoice.emodb.table.db.Mutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -37,30 +39,30 @@ import static com.google.common.base.Preconditions.checkState;
 public class MaintenanceScheduler extends AbstractIdleService implements InvalidationListener {
     private static final Logger _log = LoggerFactory.getLogger(MaintenanceScheduler.class);
 
-    private static final Duration ACQUIRE_TIMEOUT = Duration.standardMinutes(5);
+    private static final Duration ACQUIRE_TIMEOUT = Duration.ofMinutes(5);
 
     /**
      * When maintenance fails, wait an hour before trying again.  We're generally not in a big hurry for maintenance
      * to complete and an hour is long enough that the underlying failure cause may have cleared up (eg. high load,
      * data center partition) and it's slow enough that we shouldn't spam the logs with zillions of exceptions.
      */
-    private static final Duration RETRY_DELAY = Duration.standardHours(1);
+    private static final Duration RETRY_DELAY = Duration.ofHours(1);
 
     private static final ThreadFactory _threadFactory =
             new ThreadFactoryBuilder().setNameFormat("TableMaintenance-%d").build();
 
     private final MaintenanceDAO _maintDao;
-    private final Optional<Mutex> _metadataMutex;
+    private final Optional<TableMutexManager> _tableMutexManager;
     private final String _selfDataCenter;
     private final ScheduledExecutorService _executor = Executors.newSingleThreadScheduledExecutor(_threadFactory);
     private final CacheHandle _tableCacheHandle;
     private final Map<String, Task> _scheduledTasks = Maps.newHashMap();  // By table name
     private Task _runningTask;
 
-    public MaintenanceScheduler(MaintenanceDAO maintenanceDao, Optional<Mutex> metadataMutex, String selfDataCenter,
+    public MaintenanceScheduler(MaintenanceDAO maintenanceDao, Optional<TableMutexManager> tableMutexManager, String selfDataCenter,
                                 CacheRegistry cacheRegistry, MoveTableTask task) {
         _maintDao = checkNotNull(maintenanceDao, "maintenanceDao");
-        _metadataMutex = checkNotNull(metadataMutex, "metadataMutex");
+        _tableMutexManager = checkNotNull(tableMutexManager, "tableMutexManager");
         _selfDataCenter = checkNotNull(selfDataCenter, "selfDataCenter");
         _tableCacheHandle = cacheRegistry.lookup("tables", true);
         cacheRegistry.addListener(this);
@@ -138,7 +140,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
                     finishTask();
                 }
             }
-        }, Math.max(0, op.getWhen().getMillis() - System.currentTimeMillis()), TimeUnit.MILLISECONDS);
+        }, Math.max(0, Instant.now().until(op.getWhen(), ChronoUnit.MILLIS)), TimeUnit.MILLISECONDS);
         _scheduledTasks.put(table, task);
     }
 
@@ -172,7 +174,7 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
     private boolean mayPerformMaintenance(MaintenanceOp op) {
         switch (op.getType()) {
             case METADATA:
-                return _metadataMutex.isPresent();
+                return _tableMutexManager.isPresent();
             case DATA:
                 return _selfDataCenter.equals(op.getDataCenter());
             default:
@@ -203,23 +205,26 @@ public class MaintenanceScheduler extends AbstractIdleService implements Invalid
             //  curl -s -XPOST 'localhost:8081/tasks/compaction-lag?all=PT0.001S'
             _log.info("Waiting for full consistency before proceeding with '{}' maintenance on table: {}, {}",
                     op.getName(), table, t.getMessage());
+        } catch (PendingTableEventsException t) {
+            _log.info("Waiting for pending table events to complete before proceeding with {} on table {}, {}",
+                    op.getName(), table, t.getMessage());
         } catch (Throwable t) {
             _log.error("Unexpected exception performing '{}' maintenance on table: {}", op.getName(), table, t);
         } finally {
             thread.setName(oldThreadName);
         }
         if (reschedule) {
-            scheduleTask(table, MaintenanceOp.reschedule(op, new DateTime().plus(RETRY_DELAY)));
+            scheduleTask(table, MaintenanceOp.reschedule(op, Instant.now().plus(RETRY_DELAY)));
         }
     }
 
     private void performMetadataMaintenance(final String table) {
-        _metadataMutex.get().runWithLock(new Runnable() {
+        _tableMutexManager.get().runWithLockForTable(new Runnable() {
             @Override
             public void run() {
                 _maintDao.performMetadataMaintenance(table);
             }
-        }, ACQUIRE_TIMEOUT);
+        }, ACQUIRE_TIMEOUT, table);
     }
 
     private void performDataMaintenance(final String table) {

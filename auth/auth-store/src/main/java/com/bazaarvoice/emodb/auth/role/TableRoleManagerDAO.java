@@ -129,7 +129,7 @@ public class TableRoleManagerDAO implements RoleManager {
     public Iterator<Role> getAll() {
         validateTables();
 
-        Iterator<Map<String, Object>> records = _dataStore.scan(_roleTableName, null, Integer.MAX_VALUE, ReadConsistency.STRONG);
+        Iterator<Map<String, Object>> records = _dataStore.scan(_roleTableName, null, Integer.MAX_VALUE, false, ReadConsistency.STRONG);
 
         return StreamSupport.stream(Spliterators.spliteratorUnknownSize(records, 0), false)
                 .map(this::convertRecordToRole)

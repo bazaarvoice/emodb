@@ -1,10 +1,10 @@
 package com.bazaarvoice.emodb.event.owner;
 
 import com.google.common.util.concurrent.Service;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.time.Duration;
 import java.util.Map;
 
 /**

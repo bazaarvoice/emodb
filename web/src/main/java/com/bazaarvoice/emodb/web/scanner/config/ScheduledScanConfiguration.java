@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableList;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -22,7 +23,8 @@ public class ScheduledScanConfiguration {
     @JsonProperty ("dailyScanTime")
     private Optional<String> _dailyScanTime = Optional.absent();
 
-    // SimpleDateFormat string which defines each daily scan's ID.  Required iff dailyScanTime is set.
+    // SimpleDateFormat string which is used to generate a unique identifier for each instance of the scan's execution.
+    // Required iff dailyScanTime is set.
     @Valid
     @NotNull
     @JsonProperty ("scanId")
@@ -53,6 +55,26 @@ public class ScheduledScanConfiguration {
     @NotNull
     @JsonProperty ("scanByAZ")
     private Optional<Boolean> _scanByAZ = Optional.of(true);
+
+    // Flag to indicate whether the scan only runs by request.  When true if there have been no requests then the scan
+    // will not run for that day.  Default is false.
+    @Valid
+    @NotNull
+    @JsonProperty ("requestRequired")
+    private boolean _requestRequired = false;
+
+    // Flag to indicate the maximum number of rows to scan in a single range scan task.
+    @Valid
+    @NotNull
+    @JsonProperty ("rangeScanSplitSize")
+    private int _rangeScanSplitSize = 1000000;
+
+    // Flag to indicate the maximum time a range scan can run before it is automatically stopped and remaining work
+    // split to a new task
+    @Valid
+    @NotNull
+    @JsonProperty ("maxRangeScanTime")
+    private Duration _maxRangeScanTime = Duration.ofMinutes(10);
 
     public Optional<String> getDailyScanTime() {
         return _dailyScanTime;
@@ -105,6 +127,33 @@ public class ScheduledScanConfiguration {
 
     public ScheduledScanConfiguration setScanByAZ(Optional<Boolean> scanByAZ) {
         _scanByAZ = scanByAZ;
+        return this;
+    }
+
+    public boolean isRequestRequired() {
+        return _requestRequired;
+    }
+
+    public ScheduledScanConfiguration setRequestRequired(boolean requestRequired) {
+        _requestRequired = requestRequired;
+        return this;
+    }
+
+    public int getRangeScanSplitSize() {
+        return _rangeScanSplitSize;
+    }
+
+    public ScheduledScanConfiguration setRangeScanSplitSize(int rangeScanSplitSize) {
+        _rangeScanSplitSize = rangeScanSplitSize;
+        return this;
+    }
+
+    public Duration getMaxRangeScanTime() {
+        return _maxRangeScanTime;
+    }
+
+    public ScheduledScanConfiguration setMaxRangeScanTime(Duration maxRangeScanTime) {
+        _maxRangeScanTime = maxRangeScanTime;
         return this;
     }
 }

@@ -22,24 +22,24 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import static junit.framework.Assert.fail;
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link DedupQueueClient} are
@@ -280,25 +280,25 @@ public class DedupQueueJerseyTest extends ResourceTest {
     @Test
     public void testPollPartitionContext() {
         _pcxtv.expect(PartitionContextBuilder.of("queue-name"))
-                .poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123);
+                .poll(APIKEY_QUEUE, "queue-name", Duration.ofSeconds(15), 123);
     }
 
     @Test
     public void testPoll() {
         List<Message> expected = ImmutableList.of(new Message("id-1", "payload-1"), new Message("id-2", "payload-2"));
-        when(_proxy.poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123)).thenReturn(expected);
+        when(_proxy.poll(APIKEY_QUEUE, "queue-name", Duration.ofSeconds(15), 123)).thenReturn(expected);
 
-        List<Message> actual = queueClient().poll("queue-name", Duration.standardSeconds(15), 123);
+        List<Message> actual = queueClient().poll("queue-name", Duration.ofSeconds(15), 123);
 
         assertEquals(actual, expected);
-        verify(_proxy).poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123);
+        verify(_proxy).poll(APIKEY_QUEUE, "queue-name", Duration.ofSeconds(15), 123);
         verifyNoMoreInteractions(_proxy);
     }
 
     @Test
     public void testPollUnauthorized() {
         try {
-            unauthorizedQueueClient(false).poll("queue-name", Duration.standardSeconds(15), 123);
+            unauthorizedQueueClient(false).poll("queue-name", Duration.ofSeconds(15), 123);
             fail();
         } catch (Exception e) {
             assertTrue(e instanceof UnauthorizedException);
@@ -310,19 +310,19 @@ public class DedupQueueJerseyTest extends ResourceTest {
     @Test
     public void testPollPartitioned() {
         List<Message> expected = ImmutableList.of(new Message("id-1", "payload-1"), new Message("id-2", "payload-2"));
-        when(_server.poll("queue-name", Duration.standardSeconds(15), 123)).thenReturn(expected);
+        when(_server.poll("queue-name", Duration.ofSeconds(15), 123)).thenReturn(expected);
 
-        List<Message> actual = queueClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
+        List<Message> actual = queueClient(true).poll("queue-name", Duration.ofSeconds(15), 123);
 
         assertEquals(actual, expected);
-        verify(_server).poll("queue-name", Duration.standardSeconds(15), 123);
+        verify(_server).poll("queue-name", Duration.ofSeconds(15), 123);
         verifyNoMoreInteractions(_server);
     }
 
     @Test
     public void testPollUnauthorizedPartitioned() {
         try {
-            unauthorizedQueueClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
+            unauthorizedQueueClient(true).poll("queue-name", Duration.ofSeconds(15), 123);
             fail();
         } catch (Exception e) {
             assertTrue(e instanceof UnauthorizedException);
@@ -333,38 +333,38 @@ public class DedupQueueJerseyTest extends ResourceTest {
 
     @Test
     public void testPollPartitionTimeout() {
-        when(_proxy.poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123))
+        when(_proxy.poll(APIKEY_QUEUE, "queue-name", Duration.ofSeconds(15), 123))
                 .thenThrow(new PartitionForwardingException(new ConnectTimeoutException()));
 
         try {
-            queueClient().poll("queue-name", Duration.standardSeconds(15), 123);
+            queueClient().poll("queue-name", Duration.ofSeconds(15), 123);
         } catch (ServiceUnavailableException e) {
             // Ok
         }
 
-        verify(_proxy).poll(APIKEY_QUEUE, "queue-name", Duration.standardSeconds(15), 123);
+        verify(_proxy).poll(APIKEY_QUEUE, "queue-name", Duration.ofSeconds(15), 123);
         verifyNoMoreInteractions(_proxy);
     }
 
     @Test
     public void testRenewPartitionContext() {
         _pcxtv.expect(PartitionContextBuilder.of("queue-name"))
-                .renew(APIKEY_QUEUE, "queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+                .renew(APIKEY_QUEUE, "queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
     }
 
     @Test
     public void testRenew() {
-        queueClient().renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        queueClient().renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
 
-        verify(_proxy).renew(APIKEY_QUEUE, "queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        verify(_proxy).renew(APIKEY_QUEUE, "queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
         verifyNoMoreInteractions(_proxy);
     }
 
     @Test
     public void testRenewPartitioned() {
-        queueClient(true).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        queueClient(true).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
 
-        verify(_server).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        verify(_server).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
         verifyNoMoreInteractions(_server);
     }
 

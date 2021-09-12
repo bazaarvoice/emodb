@@ -1,11 +1,12 @@
 package com.bazaarvoice.emodb.sor.api;
 
 import com.bazaarvoice.emodb.sor.delta.Delta;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +36,11 @@ public interface DataStore {
     Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit);
 
     /**
+     * Retrieves the list of table events that are not published on the databus.
+     */
+    Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive);
+
+    /**
      * Creates a logical table in the data store.
      *
      * @throws TableExistsException if the table exists already with different options or a different template.
@@ -50,7 +56,7 @@ public interface DataStore {
 
     /**
      * Makes a best effort to permanently delete all data from the specified table.  This method is not safe for use
-     * with the databus--it does not generate databus events and resets the version number of all content to zero.
+     * with the databus or megabus--it does not generate events and resets the version number of all content to zero.
      * Useful for debugging/testing, but not intended for use in production.
      */
     void purgeTableUnsafe(String table, Audit audit)
@@ -126,7 +132,7 @@ public interface DataStore {
      * {@code com.bazaarvoice.emodb.sor.client.DataStoreStreaming} class which will restart the iterator in the
      * event that the connection to the EmoDB server is lost while streaming results.
      */
-    Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+    Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency);
 
     /**
      * Returns a list of split identifiers that can be used to scan all records in the specified table in parallel using
@@ -145,7 +151,7 @@ public interface DataStore {
      * {@code com.bazaarvoice.emodb.sor.client.DataStoreStreaming} class which will restart the iterator in the
      * event that the connection to the EmoDB server is lost while streaming results.
      */
-    Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency);
+    Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency);
 
     /**
      * Retrieves records from the specified list of coordinates. The records will *not* be returned in the order it was

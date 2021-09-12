@@ -1,5 +1,8 @@
 package com.bazaarvoice.emodb.databus.core;
 
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLog;
+import com.bazaarvoice.emodb.common.dropwizard.log.RateLimitedLogFactory;
+import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.auth.DatabusAuthorizer;
 import com.bazaarvoice.emodb.databus.model.OwnedSubscription;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
@@ -9,13 +12,17 @@ import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.table.db.Table;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Maps;
+import com.bazaarvoice.emodb.table.db.TableFilterIntrinsics;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -40,15 +47,16 @@ public class SubscriptionEvaluator {
                 .filter(subscription -> matches(subscription, eventData));
     }
 
-    public boolean matches(OwnedSubscription subscription, ByteBuffer eventData) {
+    public boolean matches(OwnedSubscription subscription, ByteBuffer eventData, Date since) {
         MatchEventData matchEventData;
         try {
             matchEventData = getMatchEventData(eventData);
-        } catch (UnknownTableException e) {
+        } catch (OrphanedEventException e) {
             return false;
         }
 
-        return matches(subscription, matchEventData);
+        return matches(subscription, matchEventData)
+                && (since == null || !matchEventData.getEventTime().before(since));
     }
 
     public boolean matches(OwnedSubscription subscription, MatchEventData eventData) {
@@ -61,7 +69,7 @@ public class SubscriptionEvaluator {
                 json = Maps.newHashMap(table.getAttributes());
                 json.put(UpdateRef.TAGS_NAME, eventData.getTags());
             }
-            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new TableFilterIntrinsics(table)) &&
+            return ConditionEvaluator.eval(subscription.getTableFilter(), json, new SubscriptionIntrinsics(table, eventData.getKey())) &&
                     subscriberHasPermission(subscription, table);
         } catch (Exception e) {
             _rateLimitedLog.error(e, "Unable to evaluate condition for subscription " + subscription.getName() +
@@ -70,9 +78,13 @@ public class SubscriptionEvaluator {
         }
     }
 
-    public MatchEventData getMatchEventData(ByteBuffer eventData) throws UnknownTableException {
+    public MatchEventData getMatchEventData(ByteBuffer eventData) throws OrphanedEventException {
         UpdateRef ref = UpdateRefSerializer.fromByteBuffer(eventData.duplicate());
-        return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getTags());
+        try {
+            return new MatchEventData(_dataProvider.getTable(ref.getTable()), ref.getKey(), ref.getTags(), ref.getChangeId());
+        } catch (UnknownTableException e) {
+            throw new OrphanedEventException(ref.getTable(), Instant.ofEpochMilli(TimeUUIDs.getTimeMillis(ref.getChangeId())));
+        }
     }
 
     private boolean subscriberHasPermission(OwnedSubscription subscription, Table table) {
@@ -81,19 +93,31 @@ public class SubscriptionEvaluator {
 
     protected class MatchEventData {
         private final Table _table;
+        private final String _key;
         private final Set<String> _tags;
+        private final UUID _changeId;
 
-        public MatchEventData(Table table, Set<String> tags) {
+        public MatchEventData(Table table, String key, Set<String> tags, UUID changeId) {
             _table = checkNotNull(table, "table");
+            _key = key;
             _tags = tags;
+            _changeId = changeId;
         }
 
         public Table getTable() {
             return _table;
         }
 
+        public String getKey() {
+            return _key;
+        }
+
         public Set<String> getTags() {
             return _tags;
+        }
+
+        public Date getEventTime() {
+            return TimeUUIDs.getDate(_changeId);
         }
     }
 }

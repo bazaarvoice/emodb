@@ -3,10 +3,7 @@ package com.bazaarvoice.emodb.common.json;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonParseException;
-import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
 import org.apache.http.MalformedChunkCodingException;
 import org.apache.http.TruncatedChunkException;
 import org.testng.annotations.Test;
@@ -14,7 +11,10 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.SequenceInputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -65,21 +65,21 @@ public class JsonStreamingArrayParserTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testMalformedChunkException() throws Exception {
-        InputSupplier<InputStream> input = ByteStreams.join(
-                ByteStreams.newInputStreamSupplier("[5,6".getBytes(Charsets.UTF_8)),
-                exceptionStreamSupplier(new MalformedChunkCodingException("Bad chunk header")));
-        assertThrowsEOFException(input.getInput(), Integer.class);
+        Supplier<InputStream> input = () -> new SequenceInputStream(
+                stream("[5,6"),
+                exceptionStream(new MalformedChunkCodingException("Bad chunk header"))
+        );
+        assertThrowsEOFException(input.get(), Integer.class);
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void testTruncatedChunkException() throws Exception {
-        InputSupplier<InputStream> input = ByteStreams.join(
-                ByteStreams.newInputStreamSupplier("[5,6".getBytes(Charsets.UTF_8)),
-                exceptionStreamSupplier(new TruncatedChunkException("Truncated chunk ( expected size: 3996; actual size: 1760)")));
-        assertThrowsEOFException(input.getInput(), Integer.class);
+        Supplier<InputStream> input = () -> new SequenceInputStream(
+                stream("[5,6"),
+                exceptionStream(new TruncatedChunkException("Truncated chunk ( expected size: 3996; actual size: 1760)"))
+        );
+        assertThrowsEOFException(input.get(), Integer.class);
     }
 
     @Test
@@ -94,7 +94,7 @@ public class JsonStreamingArrayParserTest {
 
     public static class UncreatableObject {
         @JsonCreator
-        public UncreatableObject(@JsonProperty ("foo") String foo) {
+        public UncreatableObject(@JsonProperty("foo") String foo) {
             throw new IllegalArgumentException("always fails to create");
         }
     }
@@ -122,24 +122,15 @@ public class JsonStreamingArrayParserTest {
         }
     }
 
-    private <T> Iterator<T> newParser(InputStream in, Class<T> type) {
+    private static <T> Iterator<T> newParser(InputStream in, Class<T> type) {
         return new JsonStreamingArrayParser<>(in, type);
     }
 
-    private InputStream stream(String json) {
-        return new ByteArrayInputStream(json.getBytes(Charsets.UTF_8));
+    private static InputStream stream(String json) {
+        return new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8));
     }
 
-    private InputSupplier<InputStream> exceptionStreamSupplier(final Throwable t) {
-        return new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                return exceptionStream(t);
-            }
-        };
-    }
-
-    private InputStream exceptionStream(final Throwable t) {
+    private static InputStream exceptionStream(final Throwable t) {
         return new InputStream() {
             @Override
             public int read() throws IOException {

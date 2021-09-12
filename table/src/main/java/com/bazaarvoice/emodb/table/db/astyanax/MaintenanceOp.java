@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
 import com.google.common.base.Objects;
-import org.joda.time.DateTime;
+
+import java.time.Instant;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -10,24 +12,24 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 class MaintenanceOp implements Comparable<MaintenanceOp> {
     private final String _name;
-    private final DateTime _when;
+    private final Instant _when;
     private final MaintenanceType _type;
     private final String _dataCenter;
     private MaintenanceTask _task;
 
-    static MaintenanceOp forMetadata(String name, DateTime when, MaintenanceTask task) {
+    static MaintenanceOp forMetadata(String name, Instant when, MaintenanceTask task) {
         return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", checkNotNull(task, "task"));
     }
 
-    static MaintenanceOp forData(String name, DateTime when, String dataCenter, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.DATA, Objects.firstNonNull(dataCenter, "<n/a>"), checkNotNull(task, "task"));
+    static MaintenanceOp forData(String name, Instant when, String dataCenter, MaintenanceTask task) {
+        return new MaintenanceOp(name, when, MaintenanceType.DATA, Optional.ofNullable(dataCenter).orElse("<n/a>"), checkNotNull(task, "task"));
     }
 
-    static MaintenanceOp reschedule(MaintenanceOp op, DateTime when) {
+    static MaintenanceOp reschedule(MaintenanceOp op, Instant when) {
         return new MaintenanceOp(op.getName(), when, op.getType(), op.getDataCenter(), op.getTask());
     }
 
-    private MaintenanceOp(String name, DateTime when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
+    private MaintenanceOp(String name, Instant when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
         _name = checkNotNull(name, "name");
         _when = checkNotNull(when, "when");
         _type = checkNotNull(type, "type");
@@ -39,17 +41,23 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
         return _name;
     }
 
-    /** Returns the earliest time this maintenance should occur. */
-    DateTime getWhen() {
+    /**
+     * Returns the earliest time this maintenance should occur.
+     */
+    Instant getWhen() {
         return _when;
     }
 
-    /** Returns whether this maintenance is on the table metadata or on the table data.  It may not be both. */
+    /**
+     * Returns whether this maintenance is on the table metadata or on the table data.  It may not be both.
+     */
     MaintenanceType getType() {
         return _type;
     }
 
-    /** Returns the data center the maintenance should be performed in, if this maintenance is on table data. */
+    /**
+     * Returns the data center the maintenance should be performed in, if this maintenance is on table data.
+     */
     String getDataCenter() {
         return _dataCenter;
     }

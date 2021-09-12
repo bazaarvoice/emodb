@@ -1,6 +1,9 @@
 package com.bazaarvoice.emodb.web.auth;
 
+import com.google.common.collect.ImmutableSet;
+
 import javax.validation.constraints.NotNull;
+import java.util.Set;
 
 /**
  * Configuration for the API keys of internal EmoDB users.
@@ -28,17 +31,19 @@ public class AuthorizationConfiguration {
     // Table for storing mappings of role groups to roles
     @NotNull
     private String _roleGroupTable = DEFAULT_ROLE_GROUP_TABLE;
-    // Placement for preceding tables
-    @NotNull
-    private String _tablePlacement;
     // EmoDB administrator
     @NotNull
     private String _adminApiKey;
     // Replication key used for replicating across data centers
     @NotNull
     private String _replicationApiKey;
-    // If true allow anonymous access, otherwise all restricted resources will require authentication
-    private boolean _allowAnonymousAccess;
+
+    // Set of roles assigned for anonymous user.  If the set is empty anonymous access is disabled.
+    private Set<String> _anonymousRoles = ImmutableSet.of();
+
+    // Compaction control key
+    @NotNull
+    private String _compControlApiKey;
 
     public String getIdentityTable() {
         return _identityTable;
@@ -85,15 +90,6 @@ public class AuthorizationConfiguration {
         return this;
     }
 
-    public String getTablePlacement() {
-        return _tablePlacement;
-    }
-
-    public AuthorizationConfiguration setTablePlacement(String tablePlacement) {
-        _tablePlacement = tablePlacement;
-        return this;
-    }
-
     public String getAdminApiKey() {
         return _adminApiKey;
     }
@@ -112,12 +108,21 @@ public class AuthorizationConfiguration {
         return this;
     }
 
-    public boolean isAllowAnonymousAccess() {
-        return _allowAnonymousAccess;
+    public Set<String> getAnonymousRoles() {
+        return _anonymousRoles;
     }
 
-    public AuthorizationConfiguration setAllowAnonymousAccess(boolean allowAnonymousAccess) {
-        _allowAnonymousAccess = allowAnonymousAccess;
+    public AuthorizationConfiguration setAnonymousRoles(Set<String> anonymousRoles) {
+        _anonymousRoles = anonymousRoles;
+        return this;
+    }
+
+    public String getCompControlApiKey() {
+        return _compControlApiKey;
+    }
+
+    public AuthorizationConfiguration setCompControlApiKey(String compControlApiKey) {
+        _compControlApiKey = compControlApiKey;
         return this;
     }
 }

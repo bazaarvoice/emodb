@@ -2,30 +2,32 @@ package com.bazaarvoice.emodb.common.json;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
-import com.fasterxml.jackson.datatype.joda.JodaModule;
-import com.fasterxml.jackson.module.afterburner.AfterburnerModule;
-import io.dropwizard.jackson.AnnotationSensitivePropertyNamingStrategy;
-import io.dropwizard.jackson.DiscoverableSubtypeResolver;
-import io.dropwizard.jackson.FuzzyEnumModule;
-import io.dropwizard.jackson.GuavaExtrasModule;
-import io.dropwizard.jackson.LogbackModule;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
+import javax.annotation.Nullable;
 
 public class CustomJsonObjectMapperFactory {
 
     // todo: replace this with Jackson.newObjectMapper(JsonFactory jsonFactory) once we upgrade to Dropwizard v8
-    public static ObjectMapper build(JsonFactory jsonFactory) {
-        ObjectMapper mapper = new ObjectMapper(jsonFactory);
+    public static ObjectMapper build() {
+        return build(null);
+    }
 
-        mapper.registerModule(new GuavaModule());
-        mapper.registerModule(new LogbackModule());
-        mapper.registerModule(new GuavaExtrasModule());
-        mapper.registerModule(new JodaModule());
-        mapper.registerModule(new AfterburnerModule());
-        mapper.registerModule(new FuzzyEnumModule());
-        mapper.setPropertyNamingStrategy(new AnnotationSensitivePropertyNamingStrategy());
-        mapper.setSubtypeResolver(new DiscoverableSubtypeResolver());
+    public static ObjectMapper build(@Nullable JsonFactory jsonFactory) {
+        return configure(new ObjectMapper(jsonFactory));
+    }
 
-        return mapper;
+    public static ObjectMapper configure(ObjectMapper mapper) {
+        return mapper
+                .registerModule(new Jdk8Module())
+                .registerModule(new JavaTimeModule())
+                .configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
+                // The following module present to maintain compatibility in the API clients caused by importing DropWizard.
+                // Eventually all API clients should have minimal dependencies. At that time Guava will be removed and the
+                // JSON support for Guava objects will also be removed.
+                .registerModule(new GuavaModule());
     }
 }

@@ -28,10 +28,10 @@ public abstract class AbstractEmoMojo extends AbstractMojo {
     @Parameter(property = "session.repositorySession", required = true, readonly = true)
     protected RepositorySystemSession repositorySystemSession;
 
-    @Component
+    @Parameter( defaultValue = "${project}", required = true, readonly = true )
     protected MavenProject project;
 
-    @Component
+    @Parameter( defaultValue = "${session}", required = true, readonly = true )
     protected MavenSession session;
 
     @Component

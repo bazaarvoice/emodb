@@ -48,14 +48,10 @@ import com.sun.jersey.api.client.GenericType;
 import com.sun.jersey.spi.inject.SingletonTypeInjectableProvider;
 import io.dropwizard.testing.junit.ResourceTestRule;
 import org.apache.http.conn.ConnectTimeoutException;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -69,6 +65,8 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -77,14 +75,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isNull;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -93,6 +87,11 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotSame;
+import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.fail;
 
 /**
  * Tests the api calls made via the Jersey HTTP client {@link DatabusClient} are
@@ -139,17 +138,16 @@ public class DatabusJerseyTest extends ResourceTest {
                 .usingCredentials(APIKEY_UNAUTHORIZED);
     }
 
-    private Matcher<Subject> matchesSubject(final String apiKey, final String id) {
-        return new BaseMatcher<Subject>() {
+    private ArgumentMatcher<Subject> matchesSubject(final String apiKey, final String id) {
+        return new ArgumentMatcher<Subject>() {
             @Override
-            public boolean matches(Object o) {
-                Subject subject = (Subject) o;
+            public boolean matches(Subject subject) {
                 return subject != null && subject.getAuthenticationId().equals(apiKey) && subject.getId().equals(id);
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("API key ").appendText(apiKey);
+            public String toString() {
+                return "API key " + apiKey;
             }
         };
     }
@@ -177,12 +175,12 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.<Subscription>emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
         assertFalse(actual.hasNext());
-        verify(_local).listSubscriptions(isSubject(), isNull(String.class), eq(Long.MAX_VALUE));
+        verify(_local).listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE));
         verifyNoMoreInteractions(_local);
     }
 
@@ -190,8 +188,8 @@ public class DatabusJerseyTest extends ResourceTest {
     public void testListSubscriptions2() {
         Date now = new Date();
         List<Subscription> expected = ImmutableList.<Subscription>of(
-                new DefaultSubscription("queue-name1", Conditions.alwaysTrue(), now, Duration.standardHours(48)),
-                new DefaultSubscription("queue-name2", Conditions.intrinsic(Intrinsic.TABLE, "test"), now, Duration.standardDays(7)));
+                new DefaultSubscription("queue-name1", Conditions.alwaysTrue(), now, Duration.ofHours(48)),
+                new DefaultSubscription("queue-name2", Conditions.intrinsic(Intrinsic.TABLE, "test"), now, Duration.ofDays(7)));
         when(_local.listSubscriptions(isSubject(), eq("queue-name"), eq(123L))).thenReturn(expected.iterator());
 
         List<Subscription> actual = ImmutableList.copyOf(
@@ -208,8 +206,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testSubscribePartitionContext() {
         Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.standardDays(15);
-        Duration eventTtl = Duration.standardDays(2);
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(2);
 
         // By default we ignore any events tagged with "re-etl"
         Condition expectedCondition = Conditions.and(condition,
@@ -222,8 +220,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testSubscribePartitionContextWithoutIgnoringAnyEvents() {
         Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.standardDays(15);
-        Duration eventTtl = Duration.standardDays(2);
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(2);
 
         _pcxtv.expect(PartitionContextBuilder.empty())
                 .subscribe(createSubject(), "queue-name", condition, subscriptionTtl, eventTtl, false);
@@ -232,8 +230,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testSubscribe() {
         Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.standardDays(15);
-        Duration eventTtl = Duration.standardDays(2);
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(2);
 
         databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
 
@@ -244,8 +242,8 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testSubscribeWithoutIgnoringAnyEvents() {
         Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.standardDays(15);
-        Duration eventTtl = Duration.standardDays(2);
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(2);
 
         databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl, false);
 
@@ -256,11 +254,11 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testSubscribeNotOwner() {
         Condition condition = Conditions.intrinsic(Intrinsic.TABLE, "test");
-        Duration subscriptionTtl = Duration.standardDays(15);
-        Duration eventTtl = Duration.standardDays(2);
+        Duration subscriptionTtl = Duration.ofDays(15);
+        Duration eventTtl = Duration.ofDays(2);
 
         doThrow(new UnauthorizedSubscriptionException("Not owner", "queue-name")).
-            when(_local).subscribe(isSubject(), eq("queue-name"), eq(condition), eq(subscriptionTtl), eq(eventTtl), eq(true));
+                when(_local).subscribe(isSubject(), eq("queue-name"), eq(condition), eq(subscriptionTtl), eq(eventTtl), eq(true));
 
         try {
             databusClient().subscribe("queue-name", condition, subscriptionTtl, eventTtl);
@@ -304,7 +302,7 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testGetSubscription() {
         Date now = new Date();
-        Subscription expected = new DefaultSubscription("queue-name", Conditions.alwaysTrue(), now, Duration.standardHours(48));
+        Subscription expected = new DefaultSubscription("queue-name", Conditions.alwaysTrue(), now, Duration.ofHours(48));
         when(_local.getSubscription(isSubject(), eq("queue-name"))).thenReturn(expected);
 
         Subscription actual = databusClient().getSubscription("queue-name");
@@ -473,7 +471,7 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testPollPartitionContext() {
         _pcxtv.expect(PartitionContextBuilder.of("queue-name"))
-                .poll(createSubject(), "queue-name", Duration.standardSeconds(15), 123);
+                .poll(createSubject(), "queue-name", Duration.ofSeconds(15), 123);
     }
 
     @Test
@@ -490,7 +488,7 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> pollResults = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
-        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(pollResults.iterator(), 2, false));
 
         List<Event> expected;
@@ -498,15 +496,15 @@ public class DatabusJerseyTest extends ResourceTest {
 
         if (includeTags) {
             // This is the default poll behavior
-            PollResult pollResult = databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
+            PollResult pollResult = databusClient().poll("queue-name", Duration.ofSeconds(15), 123);
             assertFalse(pollResult.hasMoreEvents());
             actual = ImmutableList.copyOf(pollResult.getEventIterator());
             expected = pollResults;
         } else {
             // Tags won't be returned
-             expected = ImmutableList.of(
-                new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
-                new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
+            expected = ImmutableList.of(
+                    new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
+                    new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
 
             // Must make API call directly since only older databus clients don't automatically include tags
             // and the current databus client always does.
@@ -519,7 +517,7 @@ public class DatabusJerseyTest extends ResourceTest {
         }
 
         assertEquals(actual, expected);
-        verify(_client).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
+        verify(_client).poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123));
         verifyNoMoreInteractions(_local, _client);
     }
 
@@ -549,8 +547,8 @@ public class DatabusJerseyTest extends ResourceTest {
                     new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-1"))),
                     new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
             //noinspection unchecked
-            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenReturn(new PollResult(pollResults.iterator(), 2, true));
 
             List<Event> expected;
@@ -574,9 +572,9 @@ public class DatabusJerseyTest extends ResourceTest {
             HttpServletRequest request = setupLongPollingTest(out, complete);
 
             PeekOrPollResponseHelper helper = new PeekOrPollResponseHelper(view);
-            poller.poll(createSubject(), databus, "queue-name", Duration.standardSeconds(10), 100, request, false, helper);
+            poller.poll(createSubject(), databus, "queue-name", Duration.ofSeconds(10), 100, request, false, helper);
 
-            long failTime = System.currentTimeMillis() + Duration.standardSeconds(10).getMillis();
+            long failTime = System.currentTimeMillis() + Duration.ofSeconds(10).toMillis();
 
             while (!complete.get() && System.currentTimeMillis() < failTime) {
                 Thread.sleep(100);
@@ -586,7 +584,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             List<Event> actual = JsonHelper.convert(
                     JsonHelper.fromJson(out.toString(), List.class), new TypeReference<List<Event>>() {
-            });
+                    });
 
             assertEquals(actual, expected);
             verify(request).startAsync();
@@ -611,7 +609,7 @@ public class DatabusJerseyTest extends ResourceTest {
                     Optional.of(new LongPollingExecutorServices(pollService, keepAliveService)), new MetricRegistry());
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
-            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
+            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();
@@ -621,7 +619,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             try {
                 PeekOrPollResponseHelper helper = new PeekOrPollResponseHelper(EventViews.WithTags.class);
-                poller.poll(createSubject(), databus, "queue-name", Duration.standardSeconds(10), 100, request, false, helper);
+                poller.poll(createSubject(), databus, "queue-name", Duration.ofSeconds(10), 100, request, false, helper);
                 fail("RuntimeException not thrown");
             } catch (RuntimeException e) {
                 assertEquals(e.getMessage(), "Simulated read failure from Cassandra");
@@ -648,8 +646,8 @@ public class DatabusJerseyTest extends ResourceTest {
                     Optional.of(new LongPollingExecutorServices(pollService, keepAliveService)), new MetricRegistry());
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
-            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+            when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();
@@ -658,9 +656,9 @@ public class DatabusJerseyTest extends ResourceTest {
             HttpServletRequest request = setupLongPollingTest(out, complete);
 
             PeekOrPollResponseHelper helper = new PeekOrPollResponseHelper(EventViews.WithTags.class);
-            poller.poll(createSubject(), databus, "queue-name", Duration.standardSeconds(10), 100, request, false, helper);
+            poller.poll(createSubject(), databus, "queue-name", Duration.ofSeconds(10), 100, request, false, helper);
 
-            long failTime = System.currentTimeMillis() + Duration.standardSeconds(10).getMillis();
+            long failTime = System.currentTimeMillis() + Duration.ofSeconds(10).toMillis();
 
             while (!complete.get() && System.currentTimeMillis() < failTime) {
                 Thread.sleep(100);
@@ -715,7 +713,7 @@ public class DatabusJerseyTest extends ResourceTest {
     @Test
     public void testPollUnauthorized() {
         try {
-            unauthorizedDatabusClient(false).poll("queue-name", Duration.standardSeconds(15), 123);
+            unauthorizedDatabusClient(false).poll("queue-name", Duration.ofSeconds(15), 123);
             fail();
         } catch (Exception e) {
             assertTrue(e instanceof UnauthorizedException);
@@ -726,7 +724,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testPollNotOwner() {
-        Duration ttl = Duration.standardSeconds(15);
+        Duration ttl = Duration.ofSeconds(15);
         int limit = 123;
 
         when(_client.poll(isSubject(), eq("queue-name"), eq(ttl), eq(limit)))
@@ -748,21 +746,21 @@ public class DatabusJerseyTest extends ResourceTest {
         List<Event> expected = ImmutableList.of(
                 new Event("id-1", ImmutableMap.of("key-1", "value-1"), ImmutableList.<List<String>>of()),
                 new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of()));
-        when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+        when(_local.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenReturn(new PollResult(expected.iterator(), 2, true));
 
-        PollResult actual = databusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
+        PollResult actual = databusClient(true).poll("queue-name", Duration.ofSeconds(15), 123);
 
         assertEquals(ImmutableList.copyOf(actual.getEventIterator()), expected);
         assertTrue(actual.hasMoreEvents());
-        verify(_local).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
+        verify(_local).poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123));
         verifyNoMoreInteractions(_local);
     }
 
     @Test
     public void testPollUnauthorizedPartitioned() {
         try {
-            unauthorizedDatabusClient(true).poll("queue-name", Duration.standardSeconds(15), 123);
+            unauthorizedDatabusClient(true).poll("queue-name", Duration.ofSeconds(15), 123);
             fail();
         } catch (Exception e) {
             assertTrue(e instanceof UnauthorizedException);
@@ -773,38 +771,38 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testPollPartitionTimeout() {
-        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123)))
+        when(_client.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123)))
                 .thenThrow(new PartitionForwardingException(new ConnectTimeoutException()));
 
         try {
-            databusClient().poll("queue-name", Duration.standardSeconds(15), 123);
+            databusClient().poll("queue-name", Duration.ofSeconds(15), 123);
         } catch (ServiceUnavailableException e) {
             // Ok
         }
 
-        verify(_client).poll(isSubject(), eq("queue-name"), eq(Duration.standardSeconds(15)), eq(123));
+        verify(_client).poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(15)), eq(123));
         verifyNoMoreInteractions(_client);
     }
 
     @Test
     public void testRenewPartitionContext() {
         _pcxtv.expect(PartitionContextBuilder.of("queue-name"))
-                .renew(createSubject(), "queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+                .renew(createSubject(), "queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
     }
 
     @Test
     public void testRenew() {
-        databusClient().renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        databusClient().renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
 
-        verify(_client).renew(isSubject(), eq("queue-name"), eq(ImmutableList.of("id-1", "id-2")), eq(Duration.standardSeconds(15)));
+        verify(_client).renew(isSubject(), eq("queue-name"), eq(ImmutableList.of("id-1", "id-2")), eq(Duration.ofSeconds(15)));
         verifyNoMoreInteractions(_local, _client);
     }
 
     @Test
     public void testRenewPartitioned() {
-        databusClient(true).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.standardSeconds(15));
+        databusClient(true).renew("queue-name", ImmutableList.of("id-1", "id-2"), Duration.ofSeconds(15));
 
-        verify(_local).renew(isSubject(), eq("queue-name"), eq(ImmutableList.of("id-1", "id-2")), eq(Duration.standardSeconds(15)));
+        verify(_local).renew(isSubject(), eq("queue-name"), eq(ImmutableList.of("id-1", "id-2")), eq(Duration.ofSeconds(15)));
         verifyNoMoreInteractions(_local);
     }
 
@@ -832,29 +830,28 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testReplay() {
-        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class))).thenReturn("replayId1");
+        when(_local.replayAsyncSince(isSubject(), eq("queue-name"), isNull())).thenReturn("replayId1");
         String replayId = databusClient().replayAsync("queue-name");
 
-        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull(Date.class));
+        verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), isNull());
         verifyNoMoreInteractions(_local);
-        assertEquals(replayId, "replayId1");
+        assertEquals("replayId1", replayId);
     }
 
     @Test
     public void testReplaySince() {
-        Date now = DateTime.now().toDate();
+        Date now = Date.from(Instant.now());
         when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(now))).thenReturn("replayId1");
         String replayId = databusClient().replayAsyncSince("queue-name", now);
 
         verify(_local).replayAsyncSince(isSubject(), eq("queue-name"), eq(now));
         verifyNoMoreInteractions(_local);
-        assertEquals(replayId, "replayId1");
+        assertEquals("replayId1", replayId);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testReplaySinceWithSinceTooFarBackInTime() {
-        Date since = DateTime.now()
-                .minus(DatabusChannelConfiguration.REPLAY_TTL).toDate();
+        Date since = Date.from(Instant.now().minus(DatabusChannelConfiguration.REPLAY_TTL));
         when(_local.replayAsyncSince(isSubject(), eq("queue-name"), eq(since))).thenReturn("replayId1");
         databusClient().replayAsyncSince("queue-name", since);
     }
@@ -868,8 +865,8 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getReplayStatus(isSubject(), eq("replayId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals(status.getSubscription(), "queue-name");
-        assertEquals(status.getStatus(), ReplaySubscriptionStatus.Status.IN_PROGRESS);
+        assertEquals("queue-name", status.getSubscription());
+        assertEquals(ReplaySubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
     }
 
     @Test
@@ -880,7 +877,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).moveAsync(isSubject(), eq("queue-src"), eq("queue-dest"));
         verifyNoMoreInteractions(_local);
-        assertEquals(moveId, "moveId1");
+        assertEquals("moveId1", moveId);
     }
 
     @Test
@@ -892,9 +889,9 @@ public class DatabusJerseyTest extends ResourceTest {
 
         verify(_local).getMoveStatus(isSubject(), eq("moveId1"));
         verifyNoMoreInteractions(_local);
-        assertEquals(status.getFrom(), "queue-src");
-        assertEquals(status.getTo(), "queue-dest");
-        assertEquals(status.getStatus(), MoveSubscriptionStatus.Status.IN_PROGRESS);
+        assertEquals("queue-src", status.getFrom());
+        assertEquals("queue-dest", status.getTo());
+        assertEquals(MoveSubscriptionStatus.Status.IN_PROGRESS, status.getStatus());
     }
 
     @Test

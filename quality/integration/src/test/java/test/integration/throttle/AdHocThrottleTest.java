@@ -14,6 +14,7 @@ import com.bazaarvoice.emodb.job.api.JobService;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.client.DataStoreAuthenticator;
 import com.bazaarvoice.emodb.sor.client.DataStoreClient;
+import com.bazaarvoice.emodb.sor.compactioncontrol.InMemoryCompactionControlSource;
 import com.bazaarvoice.emodb.sor.core.DefaultDataStoreAsync;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
@@ -25,6 +26,7 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestRegulator;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestRegulatorSupplier;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
+import com.bazaarvoice.emodb.web.throttling.UnlimitedDataStoreUpdateThrottler;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Charsets;
@@ -45,7 +47,6 @@ import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.utils.ZKPaths;
 import org.eclipse.jetty.http.HttpStatus;
-import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -53,23 +54,23 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.internal.util.Primitives;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
@@ -88,12 +89,11 @@ public class AdHocThrottleTest extends ResourceTest {
     private static CuratorFramework _rootCurator;
 
     private final DataStore _dataStore = mock(DataStore.class);
-    private ConcurrentRequestRegulatorSupplier _deferringRegulatorSupplier = mock(ConcurrentRequestRegulatorSupplier.class);
+    private final ConcurrentRequestRegulatorSupplier _deferringRegulatorSupplier = mock(ConcurrentRequestRegulatorSupplier.class);
     private CuratorFramework _curator;
     private ZkMapStore<AdHocThrottle> _mapStore;
     private AdHocThrottleManager _adHocThrottleManager;
     private ListeningExecutorService _service;
-    private String _zkNamespace;
     private int _nextBaseIndex = 0;
 
     @Rule
@@ -109,8 +109,10 @@ public class AdHocThrottleTest extends ResourceTest {
         createRole(roleManager, null, "all-sor-role", ImmutableSet.of("sor|*|*"));
 
         return setupResourceTestRule(
-                Collections.<Object>singletonList(new DataStoreResource1(_dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)))),
-                Collections.<Object>singletonList(new ConcurrentRequestsThrottlingFilter(_deferringRegulatorSupplier)),
+                Collections.singletonList(new DataStoreResource1(
+                        _dataStore, new DefaultDataStoreAsync(_dataStore, mock(JobService.class), mock(JobHandlerRegistry.class)),
+                        new InMemoryCompactionControlSource(), new UnlimitedDataStoreUpdateThrottler())),
+                Collections.singletonList(new ConcurrentRequestsThrottlingFilter(_deferringRegulatorSupplier)),
                 authIdentityManager, permissionManager);
     }
 
@@ -134,8 +136,8 @@ public class AdHocThrottleTest extends ResourceTest {
     @Before
     public void setUp() throws Exception {
         // Create a unique base path for each test so each tests ZooKeeper data is independent.
-        _zkNamespace = "emodb/test" + (_nextBaseIndex++);
-        _curator = _rootCurator.usingNamespace(_zkNamespace);
+        String zkNamespace = "emodb/test" + (_nextBaseIndex++);
+        _curator = _rootCurator.usingNamespace(zkNamespace);
 
         _mapStore = new ZkMapStore<>(_curator, "adhoc-throttle", new ZkAdHocThrottleSerializer());
         _mapStore.start();
@@ -146,12 +148,9 @@ public class AdHocThrottleTest extends ResourceTest {
         final AdHocConcurrentRequestRegulatorSupplier regulatorSupplier =
                 new AdHocConcurrentRequestRegulatorSupplier(_adHocThrottleManager, new MetricRegistry());
         when(_deferringRegulatorSupplier.forRequest(any(ContainerRequest.class))).thenAnswer(
-                new Answer<ConcurrentRequestRegulator>() {
-                    @Override
-                    public ConcurrentRequestRegulator answer(InvocationOnMock invocation) throws Throwable {
-                        ContainerRequest request = (ContainerRequest) invocation.getArguments()[0];
-                        return regulatorSupplier.forRequest(request);
-                    }
+                (Answer<ConcurrentRequestRegulator>) invocation -> {
+                    ContainerRequest request = (ContainerRequest) invocation.getArguments()[0];
+                    return regulatorSupplier.forRequest(request);
                 });
     }
 
@@ -173,25 +172,22 @@ public class AdHocThrottleTest extends ResourceTest {
         final CountDownLatch finishSize = new CountDownLatch(1);
 
         when(_dataStore.getTableApproximateSize("table1")).thenAnswer(
-                new Answer<Long>() {
-                    @Override
-                    public Long answer(InvocationOnMock invocation) throws Throwable {
-                        // Signal that a caller has entered the size request for table1
-                        sizeInProgress.countDown();
-                        // Wait for the main thread to signal our return
-                        finishSize.await();
-                        return 1L;
-                    }
+                (Answer<Long>) invocation -> {
+                    // Signal that a caller has entered the size request for table1
+                    sizeInProgress.countDown();
+                    // Wait for the main thread to signal our return
+                    finishSize.await();
+                    return 1L;
                 });
         when(_dataStore.getTableApproximateSize("table2")).thenReturn(2L);
 
         // Throttle requests to table1's size to 1 concurrent request, but leave table2 unlimited.
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", "/sor/1/_table/table1/size"),
-                AdHocThrottle.create(1, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(1, Instant.now().plus(Duration.ofDays(1))));
 
         // Wait until we've verified that the map store has been updated
-        for (int i=0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             if (_mapStore.get("GET_sor~1~_table~table1~size") != null) {
                 break;
             }
@@ -201,12 +197,7 @@ public class AdHocThrottleTest extends ResourceTest {
 
         // Create a thread to lock and hold a size call on table one
         _service = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
-        Future<Long> future1 = _service.submit(new Callable<Long>() {
-            @Override
-            public Long call() throws Exception {
-                return client.getTableApproximateSize("table1");
-            }
-        });
+        Future<Long> future1 = _service.submit(() -> client.getTableApproximateSize("table1"));
 
         // Block until the thread has entered
         assertTrue(sizeInProgress.await(10, TimeUnit.SECONDS), "Size operation on table1 failed to start after 10 seconds");
@@ -228,15 +219,12 @@ public class AdHocThrottleTest extends ResourceTest {
         // For the first four calls to get the table's size perform a controlled block so all 4 run concurrently
         final CountDownLatch unthrottledSizeInProgress = new CountDownLatch(4);
         final CountDownLatch unthrottledFinishSize = new CountDownLatch(1);
-        Answer<Long> unthrottledAnswer = new Answer<Long>() {
-            @Override
-            public Long answer(InvocationOnMock invocation) throws Throwable {
-                // Signal that a caller has entered the size request for table-name
-                unthrottledSizeInProgress.countDown();
-                // Wait for the main thread to signal our return
-                unthrottledFinishSize.await();
-                return 1L;
-            }
+        Answer<Long> unthrottledAnswer = invocation -> {
+            // Signal that a caller has entered the size request for table-name
+            unthrottledSizeInProgress.countDown();
+            // Wait for the main thread to signal our return
+            unthrottledFinishSize.await();
+            return 1L;
         };
 
         // The next three calls should each block until they are independently released
@@ -244,18 +232,15 @@ public class AdHocThrottleTest extends ResourceTest {
         final List<CountDownLatch> throttledFinishSizes = Lists.newArrayListWithCapacity(3);
         List<Answer<Long>> throttledAnswers = Lists.newArrayListWithCapacity(3);
 
-        for (int i=0; i < 3; i++) {
+        for (int i = 0; i < 3; i++) {
             final CountDownLatch throttledFinishSize = new CountDownLatch(1);
 
-            Answer<Long> throttledAnswer = new Answer<Long>() {
-                @Override
-                public Long answer(InvocationOnMock invocation) throws Throwable {
-                    // Signal that a caller has entered the size request for table-name
-                    throttledSizeInProgress.countDown();
-                    // Wait for the main thread to signal our return
-                    throttledFinishSize.await();
-                    return 1L;
-                }
+            Answer<Long> throttledAnswer = invocation -> {
+                // Signal that a caller has entered the size request for table-name
+                throttledSizeInProgress.countDown();
+                // Wait for the main thread to signal our return
+                throttledFinishSize.await();
+                return 1L;
             };
 
             throttledFinishSizes.add(throttledFinishSize);
@@ -280,13 +265,8 @@ public class AdHocThrottleTest extends ResourceTest {
         _service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(5));
         List<ListenableFuture<Long>> futures = Lists.newArrayListWithCapacity(4);
 
-        for (int i=0; i < 4; i++) {
-            futures.add(_service.submit(new Callable<Long>() {
-                @Override
-                public Long call() throws Exception {
-                    return client.getTableApproximateSize("table-name");
-                }
-            }));
+        for (int i = 0; i < 4; i++) {
+            futures.add(_service.submit(() -> client.getTableApproximateSize("table-name")));
         }
 
         // Block until all four threads have entered
@@ -302,10 +282,10 @@ public class AdHocThrottleTest extends ResourceTest {
         // Now set the throttle to only 3 concurrent requests
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", "/sor/1/_table/table-name/size"),
-                AdHocThrottle.create(3, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(3, Instant.now().plus(Duration.ofDays(1))));
 
         // Wait until we've verified that the map store has been updated
-        for (int i=0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             if (_mapStore.get("GET_sor~1~_table~table-name~size") != null) {
                 break;
             }
@@ -317,23 +297,13 @@ public class AdHocThrottleTest extends ResourceTest {
         futures.clear();
         final BlockingQueue<Future<Long>> completeThrottledFutures = Queues.newArrayBlockingQueue(3);
 
-        for (int i=0;i < 3; i++) {
-            final ListenableFuture<Long> future = _service.submit(new Callable<Long>() {
-                @Override
-                public Long call() throws Exception {
-                    return client.getTableApproximateSize("table-name");
-                }
-            });
+        for (int i = 0; i < 3; i++) {
+            final ListenableFuture<Long> future = _service.submit(() -> client.getTableApproximateSize("table-name"));
             // After the call completes let the main test thread know that the Future is complete.  This is simpler
             // than polling each future independently later on.
             future.addListener(
-                    new Runnable() {
-                        @Override
-                        public void run() {
-                            completeThrottledFutures.add(future);
-                        }
-                    },
-                    MoreExecutors.sameThreadExecutor());
+                    () -> completeThrottledFutures.add(future),
+                    MoreExecutors.newDirectExecutorService());
         }
 
         // Wait until all three threads are blocked getting the table size
@@ -373,7 +343,7 @@ public class AdHocThrottleTest extends ResourceTest {
                         "0,1955-11-05T22:04:00.000-07:00".getBytes(Charsets.UTF_8));
 
         // Wait until we've verified that the map store has been updated
-        for (int i=0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             if (_mapStore.get("GET_sor~1~_table~expired-test~size") != null) {
                 break;
             }
@@ -395,11 +365,11 @@ public class AdHocThrottleTest extends ResourceTest {
         // Throttle the endpoint to accept no connections
         _adHocThrottleManager.addThrottle(
                 new AdHocThrottleEndpoint("GET", path),
-                AdHocThrottle.create(0, DateTime.now().plusDays(1)));
+                AdHocThrottle.create(0, Instant.now().plus(Duration.ofDays(1))));
 
 
         // Wait until we've verified that the map store has been updated
-        for (int i=0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
             if (_mapStore.get("GET_sor~1~test:table~chars \t!%$@\u0080.\u0099") != null) {
                 break;
             }
@@ -416,7 +386,7 @@ public class AdHocThrottleTest extends ResourceTest {
     }
 
     private DataStore verifyThrottled(final DataStore dataStore) {
-        return (DataStore) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] { DataStore.class },
+        return (DataStore) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{DataStore.class},
                 new AbstractInvocationHandler() {
                     @Override
                     protected Object handleInvocation(Object proxy, Method method, Object[] args) throws Throwable {
@@ -431,7 +401,7 @@ public class AdHocThrottleTest extends ResourceTest {
                         }
                         // This should be unreachable; the caller doesn't care what the result is
                         if (method.getReturnType().isPrimitive()) {
-                            return Primitives.defaultValueForPrimitiveOrWrapper(method.getReturnType());
+                            return Primitives.defaultValue(method.getReturnType());
                         }
                         return null;
                     }

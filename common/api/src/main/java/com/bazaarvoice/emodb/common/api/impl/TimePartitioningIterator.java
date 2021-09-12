@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.common.api.impl;
 
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 
@@ -47,12 +47,12 @@ public class TimePartitioningIterator<T> extends AbstractIterator<List<T>> {
      * work done between each call to {@link #hasNext()} is linear with respect to the size of the partition.
      */
     public TimePartitioningIterator(Iterator<T> iterator, int initialSize, int minSize, int maxSize, Duration iterationGoal) {
-        checkArgument(iterationGoal.isLongerThan(Duration.ZERO));
+        checkArgument(iterationGoal.compareTo(Duration.ZERO) > 0);
         _iterator = checkNotNull(iterator);
         checkArgument(minSize > 0 && minSize <= maxSize);
         _minSize = minSize;
         _maxSize = maxSize;
-        _goalMillis = iterationGoal.getMillis();
+        _goalMillis = iterationGoal.toMillis();
         _batchSize = initialSize;
     }
 

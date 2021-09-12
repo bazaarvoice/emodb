@@ -16,39 +16,41 @@ import static com.google.common.base.Preconditions.checkNotNull;
 class DeltaPlacement implements Placement {
     private final String _name;
     private final CassandraKeyspace _keyspace;
-    private final ColumnFamily<ByteBuffer, UUID> _deltaColumnFamily;
-    private final ColumnFamily<ByteBuffer, UUID> _auditColumnFamily;
+    private final ColumnFamily<ByteBuffer, DeltaKey> _blockedDeltaColumnFamily;
     private final ColumnFamily<ByteBuffer, UUID> _deltaHistoryColumnFamily;
-    private final TableDDL _deltaTableDDL;
-    private final TableDDL _auditTableDDL;
+    private final BlockedDeltaTableDDL _blockedDeltaTableDDL;
     private final TableDDL _deltaHistoryTableDDL;
 
     DeltaPlacement(String name,
                    CassandraKeyspace keyspace,
-                   ColumnFamily<ByteBuffer, UUID> deltaColumnFamily,
-                   ColumnFamily<ByteBuffer, UUID> auditColumnFamily,
+                   ColumnFamily<ByteBuffer, DeltaKey> blockedDeltaColumnFamily,
                    ColumnFamily<ByteBuffer, UUID> deltaHistoryColumnFamily) {
         _name = checkNotNull(name, "name");
         _keyspace = checkNotNull(keyspace, "keyspace");
-        _deltaColumnFamily = checkNotNull(deltaColumnFamily, "deltaColumnFamily");
-        _auditColumnFamily = checkNotNull(auditColumnFamily, "auditColumnFamily");
+        _blockedDeltaColumnFamily = checkNotNull(blockedDeltaColumnFamily, "blockedDeltaColumnFamily");
         _deltaHistoryColumnFamily = checkNotNull(deltaHistoryColumnFamily, "deltaHistoryColumnFamily");
 
-        _deltaTableDDL = createTableDDL(_deltaColumnFamily.getName());
-        _auditTableDDL = createTableDDL(_auditColumnFamily.getName());
-        _deltaHistoryTableDDL = createTableDDL(_deltaHistoryColumnFamily.getName());
+        _blockedDeltaTableDDL = createBlockedDeltaTableDDL(blockedDeltaColumnFamily.getName());
+        _deltaHistoryTableDDL = creatHistoryTableDDL(_deltaHistoryColumnFamily.getName());
     }
 
-    /**
-     * All three placement tables -- delta, audit, and delta history -- follow the same DDL.
-     */
-    private TableDDL createTableDDL(String tableName) {
+    private TableDDL creatHistoryTableDDL(String tableName) {
         TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
         String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
         String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
         String valueColumnName = tableMetadata.getColumns().get(2).getName();
 
         return new TableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName);
+    }
+
+    private BlockedDeltaTableDDL createBlockedDeltaTableDDL(String tableName) {
+        TableMetadata tableMetadata = _keyspace.getKeyspaceMetadata().getTable(tableName);
+        String rowKeyColumnName = tableMetadata.getPrimaryKey().get(0).getName();
+        String timeSeriesColumnName = tableMetadata.getPrimaryKey().get(1).getName();
+        String blockColumnName = tableMetadata.getPrimaryKey().get(2).getName();
+        String valueColumnName = tableMetadata.getColumns().get(3).getName();
+
+        return new BlockedDeltaTableDDL(tableMetadata, rowKeyColumnName, timeSeriesColumnName, valueColumnName, blockColumnName);
     }
 
     @Override
@@ -61,28 +63,20 @@ class DeltaPlacement implements Placement {
         return _keyspace;
     }
 
-    ColumnFamily<ByteBuffer, UUID> getDeltaColumnFamily() {
-        return _deltaColumnFamily;
-    }
-
-    ColumnFamily<ByteBuffer, UUID> getAuditColumnFamily() {
-        return _auditColumnFamily;
-    }
-
     ColumnFamily<ByteBuffer, UUID> getDeltaHistoryColumnFamily() {
         return _deltaHistoryColumnFamily;
     }
 
-    TableDDL getDeltaTableDDL() {
-        return _deltaTableDDL;
-    }
-
-    TableDDL getAuditTableDDL() {
-        return _auditTableDDL;
+    ColumnFamily<ByteBuffer, DeltaKey> getBlockedDeltaColumnFamily() {
+        return _blockedDeltaColumnFamily;
     }
 
     TableDDL getDeltaHistoryTableDDL() {
         return _deltaHistoryTableDDL;
+    }
+
+    BlockedDeltaTableDDL getBlockedDeltaTableDDL() {
+        return _blockedDeltaTableDDL;
     }
 
     // for debugging

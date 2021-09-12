@@ -32,6 +32,14 @@ public class ConstantConditionImpl extends AbstractCondition implements Constant
         buf.append(_value ? "alwaysTrue()" : "alwaysFalse()");
     }
 
+    /**
+     * Constant conditions are effectively free since the result is simply "true" or "false" with no computation necessary.
+     */
+    @Override
+    public int weight() {
+        return 0;
+    }
+
     @Override
     public boolean equals(Object o) {
         return this == o || (o instanceof ConstantCondition) && _value == ((ConstantCondition) o).getValue();

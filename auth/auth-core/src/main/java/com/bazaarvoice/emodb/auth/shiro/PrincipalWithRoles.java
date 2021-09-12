@@ -2,6 +2,7 @@ package com.bazaarvoice.emodb.auth.shiro;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
+import org.apache.http.auth.BasicUserPrincipal;
 import org.eclipse.jetty.security.DefaultUserIdentity;
 import org.eclipse.jetty.server.UserIdentity;
 
@@ -49,7 +50,7 @@ public class PrincipalWithRoles implements Principal {
 
             _userIdentity = new DefaultUserIdentity(
                     new javax.security.auth.Subject(true, ImmutableSet.of(this), ImmutableSet.of(), ImmutableSet.of()),
-                    this, roles);
+                    new BasicUserPrincipal(getId()), roles);
         }
         return _userIdentity;
     }

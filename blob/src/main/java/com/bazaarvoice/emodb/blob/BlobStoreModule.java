@@ -5,15 +5,21 @@ import com.bazaarvoice.emodb.blob.core.BlobStoreProviderProxy;
 import com.bazaarvoice.emodb.blob.core.DefaultBlobStore;
 import com.bazaarvoice.emodb.blob.core.LocalBlobStore;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
+import com.bazaarvoice.emodb.blob.db.MetadataProvider;
 import com.bazaarvoice.emodb.blob.db.StorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.AstyanaxStorageProvider;
 import com.bazaarvoice.emodb.blob.db.astyanax.BlobPlacementFactory;
+import com.bazaarvoice.emodb.blob.db.s3.AmazonS3Provider;
+import com.bazaarvoice.emodb.blob.db.s3.S3HealthCheck;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
+import com.bazaarvoice.emodb.blob.db.s3.config.S3HealthCheckConfiguration;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CassandraFactory;
 import com.bazaarvoice.emodb.common.cassandra.CassandraKeyspace;
 import com.bazaarvoice.emodb.common.cassandra.cqldriver.HintsPollerCQLSession;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
+import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
@@ -32,7 +38,6 @@ import com.bazaarvoice.emodb.datacenter.DataCenterConfiguration;
 import com.bazaarvoice.emodb.datacenter.api.KeyspaceDiscovery;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.table.db.ClusterInfo;
-import com.bazaarvoice.emodb.table.db.Mutex;
 import com.bazaarvoice.emodb.table.db.ShardsPerTable;
 import com.bazaarvoice.emodb.table.db.TableChangesEnabled;
 import com.bazaarvoice.emodb.table.db.TableDAO;
@@ -55,7 +60,6 @@ import com.bazaarvoice.emodb.table.db.astyanax.PlacementFactory;
 import com.bazaarvoice.emodb.table.db.astyanax.PlacementsUnderMove;
 import com.bazaarvoice.emodb.table.db.astyanax.RateLimiterCache;
 import com.bazaarvoice.emodb.table.db.astyanax.SystemTableNamespace;
-import com.bazaarvoice.emodb.table.db.astyanax.SystemTablePlacement;
 import com.bazaarvoice.emodb.table.db.astyanax.TableChangesEnabledTask;
 import com.bazaarvoice.emodb.table.db.astyanax.ValidTablePlacements;
 import com.bazaarvoice.emodb.table.db.consistency.CassandraClusters;
@@ -69,7 +73,7 @@ import com.bazaarvoice.emodb.table.db.consistency.HintsPollerManager;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagConsistencyTimeProvider;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationTask;
 import com.bazaarvoice.emodb.table.db.consistency.MinLagDurationValues;
-import com.bazaarvoice.emodb.table.db.curator.CuratorMutex;
+import com.bazaarvoice.emodb.table.db.curator.TableMutexManager;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAO;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAODelegate;
 import com.bazaarvoice.emodb.table.db.generic.CachingTableDAORegistry;
@@ -90,10 +94,12 @@ import com.google.inject.Singleton;
 import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.name.Names;
+import com.netflix.astyanax.model.ConsistencyLevel;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.utils.ZKPaths;
-import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -137,6 +143,7 @@ public class BlobStoreModule extends PrivateModule {
 
     @Override
     protected void configure() {
+
         // Note: we only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         // Chain TableDAO -> MutexTableDAO -> CachingTableDAO -> AstyanaxTableDAO.
         bind(TableDAO.class).to(MutexTableDAO.class).asEagerSingleton();
@@ -150,11 +157,14 @@ public class BlobStoreModule extends PrivateModule {
         bind(HintsConsistencyTimeProvider.class).asEagerSingleton();
         bind(MinLagConsistencyTimeProvider.class).asEagerSingleton();
 
+        requireBinding(Key.get(String.class, SystemTablePlacement.class));
+
         // No bootstrap tables are required.  System tables are stored as regular SoR tables.
         bind(new TypeLiteral<Map<String, Long>>() {}).annotatedWith(BootstrapTables.class)
                 .toInstance(ImmutableMap.<String, Long>of());
 
         bind(StorageProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
+        bind(MetadataProvider.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(DataCopyDAO.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
         bind(DataPurgeDAO.class).to(AstyanaxStorageProvider.class).asEagerSingleton();
 
@@ -195,6 +205,8 @@ public class BlobStoreModule extends PrivateModule {
         bind(BlobStore.class).annotatedWith(LocalBlobStore.class).to(DefaultBlobStore.class);
         expose(BlobStore.class);
 
+        bind(AmazonS3Provider.class).asEagerSingleton();
+        bind(S3HealthCheck.class).asEagerSingleton();
         // Bind any methods annotated with @ParameterizedTimed
         bindListener(Matchers.any(), new ParameterizedTimedListener(_metricsGroup, _metricRegistry));
     }
@@ -212,20 +224,14 @@ public class BlobStoreModule extends PrivateModule {
             return new BlobStoreProviderProxy(localBlobStoreProvider, systemBlobStoreProvider);
         }
     }
-    
+
     @Provides @Singleton
-    Optional<Mutex> provideMutex(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
+    Optional<TableMutexManager> provideTableMutexManager(DataCenterConfiguration dataCenterConfiguration, @BlobStoreZooKeeper CuratorFramework curator) {
         // We only use ZooKeeper if this is the data center that is allowed to edit table metadata (create/drop table)
         if (dataCenterConfiguration.isSystemDataCenter()) {
-            return Optional.<Mutex>of(new CuratorMutex(curator, "/lock/tables"));
+            return Optional.of(new TableMutexManager(curator, "/lock/table-partitions"));
         }
         return Optional.absent();
-    }
-
-
-    @Provides @Singleton @SystemTablePlacement
-    String provideSystemTablePlacement(BlobStoreConfiguration configuration) {
-        return configuration.getSystemTablePlacement();
     }
 
     @Provides @Singleton @CurrentDataCenter
@@ -353,13 +359,33 @@ public class BlobStoreModule extends PrivateModule {
         return new RateLimiterCache(rateLimits, 1000);
     }
 
-    private Map<String, String> validateMoveMap(Map<String, String> moveMap, Set<String> validPlacements) {
+    private static Map<String, String> validateMoveMap(Map<String, String> moveMap, Set<String> validPlacements) {
         for (Map.Entry<String, String> entry : moveMap.entrySet()) {
-            checkArgument(validPlacements.contains(entry.getKey()), "Invalid move-from placement");
-            checkArgument(validPlacements.contains(entry.getValue()), "Invalid move-to placement");
+            checkArgument(validPlacements.contains(entry.getKey()), String.format("Invalid move-from placement: %s", entry.getKey()));
+            checkArgument(validPlacements.contains(entry.getValue()), String.format("Invalid move-to placement: %s", entry.getValue()));
             // Prevent chained moves
             checkArgument(!moveMap.containsKey(entry.getValue()), "Chained moves are not allowed");
         }
         return moveMap;
+    }
+
+    @Provides @Singleton @BlobReadConsistency
+    ConsistencyLevel provideBlobReadConsistency(BlobStoreConfiguration configuration) {
+        // By default use local quorum
+        return Optional.fromNullable(configuration.getReadConsistency()).or(ConsistencyLevel.CL_LOCAL_QUORUM);
+    }
+
+    @Provides @Singleton @Nullable
+    S3Configuration provideS3BucketConfiguration(BlobStoreConfiguration configuration) {
+        return configuration.getS3Configuration();
+    }
+
+    @Provides @Singleton
+    S3HealthCheckConfiguration provideS3HealthCheckConfiguration(@Nullable S3Configuration s3Configuration) {
+        if (null != s3Configuration && null != s3Configuration.getS3BucketConfigurations()) {
+            return s3Configuration.getS3HealthCheckConfiguration();
+        } else {
+            return new S3HealthCheckConfiguration();
+        }
     }
 }

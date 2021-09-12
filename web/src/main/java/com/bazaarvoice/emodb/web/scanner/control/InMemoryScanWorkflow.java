@@ -4,8 +4,8 @@ import com.bazaarvoice.emodb.sor.db.ScanRange;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
-import org.joda.time.Duration;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Queue;

@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>5.5.6-SNAPSHOT</version>
+        <version>6.4.11-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -20,55 +20,22 @@
         <mavenPluginPluginVersion>3.2</mavenPluginPluginVersion>
         <config.file>config-local.yaml</config.file>
         <ddl.file>config-ddl-local.yaml</ddl.file>
+        <permissions.file />
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-core</artifactId>
-            <version>3.1.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard.metrics</groupId>
-            <artifactId>metrics-jvm</artifactId>
-            <version>3.1.1</version>
-        </dependency>
         <!-- Bazaarvoice dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-web</artifactId>
+            <artifactId>${yumArtifactId}</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.yaml</groupId>
-                    <artifactId>snakeyaml</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.codahale.metrics</groupId>
-                    <artifactId>metrics-core</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>com.codahale.metrics</groupId>
-                    <artifactId>metrics-jvm</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
-            <groupId>com.bazaarvoice.curator</groupId>
-            <artifactId>test</artifactId>
-            <exclusions>
-                <!-- Exclude dependencies that cause slf4j warnings due to overlap with emodb-web shaded jar. -->
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-            </exclusions>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-test</artifactId>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -150,6 +117,8 @@
                                         <argument>${project.basedir}/${config.file}</argument>
                                         <argument>${project.basedir}/${ddl.file}</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -212,6 +181,8 @@
                                         <argument>${project.basedir}/config-local-main-role.yaml</argument>
                                         <argument>${project.basedir}/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
@@ -257,12 +228,58 @@
             <build>
                 <defaultGoal>verify</defaultGoal>
                 <plugins>
+                    <plugin>
+                        <groupId>com.bazaarvoice.emodb</groupId>
+                        <artifactId>emodb-sdk</artifactId>
+                        <version>${project.version}</version>
+                        <executions>
+                            <execution>
+                                <id>start-emodb-main</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8081</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-emodb-main</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8081</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <!-- Run the server using Jetty -->
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>exec-maven-plugin</artifactId>
                         <executions>
                             <execution>
+                                <id>start-emodb-scanner</id>
                                 <phase>integration-test</phase>
                                 <goals>
                                     <goal>java</goal>
@@ -274,6 +291,87 @@
                                         <argument>${project.basedir}/config-scantest.yaml</argument>
                                         <argument>${project.basedir}/config-ddl-local.yaml</argument>
                                         <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- Profile that enables build/install of jar - by default, skip running EmoServiceWithZK. -->
+            <id>start-emodb-megabus-role</id>
+            <build>
+                <defaultGoal>verify</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>com.bazaarvoice.emodb</groupId>
+                        <artifactId>emodb-sdk</artifactId>
+                        <version>${project.version}</version>
+                        <executions>
+                            <execution>
+                                <id>start-emodb-main</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8081</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-emodb-main</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                                <configuration>
+                                    <healthCheckPort>8081</healthCheckPort>
+                                    <cassandraRpcPort>9160</cassandraRpcPort>
+                                    <emoConfigurationFile>${project.basedir}/config-local.yaml</emoConfigurationFile>
+                                    <ddlConfigurationFile>${project.basedir}/config-ddl-local.yaml</ddlConfigurationFile>
+                                    <cassandraDir>${project.build.directory}/cassandra</cassandraDir>
+                                    <emoDir>emodb</emoDir>
+                                    <autoStartCassandra>false</autoStartCassandra>
+                                    <autoStartZookeeper>true</autoStartZookeeper>
+                                    <autoStartEmo>true</autoStartEmo>
+                                    <emoLogFile>${project.basedir}/target/emodb.log</emoLogFile>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <!-- Run the server using Jetty -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>start-emodb-megabus</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>java</goal>
+                                </goals>
+                                <configuration>
+                                    <mainClass>com.bazaarvoice.emodb.local.EmoServiceWithZK</mainClass>
+                                    <arguments>
+                                        <argument>server</argument>
+                                        <argument>${project.basedir}/config-megabus.yaml</argument>
+                                        <argument>${project.basedir}/config-ddl-local.yaml</argument>
+                                        <argument>-z</argument>
+                                        <argument>-p</argument>
+                                        <argument>${permissions.file}</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

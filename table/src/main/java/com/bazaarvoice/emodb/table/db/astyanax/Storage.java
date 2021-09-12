@@ -1,14 +1,15 @@
 package com.bazaarvoice.emodb.table.db.astyanax;
 
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.Ordering;
-import org.joda.time.DateTime;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.bazaarvoice.emodb.table.db.astyanax.RowKeyUtils.LEGACY_SHARDS_LOG2;
@@ -28,33 +29,33 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </li>
  * <li>
  *     Each storage in a group is a separate copy of the same set of data.
- *     <p>
+ * <p>
  *     In the steady state, all storages in a particular group have identical copies of the data.  The only exception
  *     is when a new storage is first created and added to a group--its data set must be copied from one of the other
  *     storages before it matches the rest.
- *     <p>
+ * <p>
  *     For live (non-dropped) tables there's always one group of storages for the master table data, the data you
  *     read&write with regular operations (see {@link TableJson#getMasterStorage()}).
- *     <p>
+ * <p>
  *     There are zero or more groups of objects for facades, one group for each facade (see
  *     {@link TableJson#getFacades()}).
- *     <p>
+ * <p>
  *     Dropped storage objects don't belong to a group (see @link TableJson#getStorage()} where
  *     {@code isDropped() == true}).
  * </li>
  * <li>
  *     Within a group of storages there's always one storage that's designated the "primary".  The remainder are
  *     designated "mirrors".
- *     <p>
+ * <p>
  *     The system tries to keep the primary and the mirrors in sync by writing every write
  *     to every mirror, so they all have exactly the same data at all times (except for writes in-flight).
- *     <p>
+ * <p>
  *     Writers apply every update to the primary and to all mirrors.  In the steady state, this keeps all the
  *     storages in a group in sync so they always have the exact same data.  The only exception is immediately after
  *     a mirror is created where not all servers may know about the new mirror yet.  This is important because the
  *     system can't perform the initial background bulk-copy to seed a new mirror until it knows every server knows
  *     about the new mirror and is actively mirroring writes to it.
- *     <p>
+ * <p>
  *     In general, readers always read from the primary.  The one exception is that the getSplits() call returns split
  *     identifiers that reference specific storage uuids, so the getSplit() method is allowed to read from mirrors
  *     as long as the mirror is consistent and has not expired.
@@ -67,28 +68,44 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * </ol>
  */
 class Storage extends JsonMap implements Comparable<Storage> {
-    /** Storage-level flag, if true then the table uuid points to facade data, not the primary data. */
+    /**
+     * Storage-level flag, if true then the table uuid points to facade data, not the primary data.
+     */
     static final Attribute<Boolean> FACADE = Attribute.create("facade");
 
-    /** Storage-level identifier of which keyspace and column family contains the storage data. */
+    /**
+     * Storage-level identifier of which keyspace and column family contains the storage data.
+     */
     static final Attribute<String> PLACEMENT = Attribute.create("placement");
 
-    /** Storage-level # of shards the storage data is split across, always a power of 2. */
+    /**
+     * Storage-level # of shards the storage data is split across, always a power of 2.
+     */
     static final Attribute<Integer> SHARDS = Attribute.create("shards");
 
-    /** Storage-level id identifying the group of primary+mirrors this storage belongs to.  Defaults to 'uuid'. */
+    /**
+     * Storage-level id identifying the group of primary+mirrors this storage belongs to.  Defaults to 'uuid'.
+     */
     static final Attribute<String> GROUP_ID = Attribute.create("groupId");
 
-    /** Storage-level table uuid that data in this storage should move to. */
+    /**
+     * Storage-level table uuid that data in this storage should move to.
+     */
     static final Attribute<String> MOVE_TO = Attribute.create("moveTo");
 
-    /** Storage-level time uuid of when this storage was promoted from mirror to primary. */
+    /**
+     * Storage-level time uuid of when this storage was promoted from mirror to primary.
+     */
     static final Attribute<String> PROMOTION_ID = Attribute.create("promotionId");
 
-    /** Storage-level timestamp of when this mirror expires and should be dropped and purged. */
-    static final Attribute<DateTime> MIRROR_EXPIRES_AT = TimestampAttribute.create("mirrorExpiresAt");
+    /**
+     * Storage-level timestamp of when this mirror expires and should be dropped and purged.
+     */
+    static final Attribute<Instant> MIRROR_EXPIRES_AT = TimestampAttribute.create("mirrorExpiresAt");
 
-    /** Storage-level marker to indicate the move is taking place as a placement level move. */
+    /**
+     * Storage-level marker to indicate the move is taking place as a placement level move.
+     */
     static final Attribute<Boolean> IS_PLACEMENT_MOVE = Attribute.create("placementMove");
 
     private final String _uuid;
@@ -153,7 +170,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
     }
 
     String getGroupId() {
-        return Objects.firstNonNull(get(GROUP_ID), _uuid);
+        return Optional.ofNullable(get(GROUP_ID)).orElse(_uuid);
     }
 
     boolean isFacade() {
@@ -191,7 +208,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
      * Returns the most recent time that this storage transitioned to the specified state.  This does not
      * check whether the the storage is in the specified state right now.
      */
-    DateTime getTransitionedTimestamp(StorageState state) {
+    Instant getTransitionedTimestamp(StorageState state) {
         return state.getTransitionedAt(this);
     }
 
@@ -208,7 +225,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
         return destUuid != null ? find(getMirrors(), destUuid) : null;
     }
 
-    DateTime getMirrorExpiresAt() {
+    Instant getMirrorExpiresAt() {
         return get(MIRROR_EXPIRES_AT);
     }
 
@@ -237,7 +254,9 @@ class Storage extends JsonMap implements Comparable<Storage> {
         return null;
     }
 
-    /** Storage objects sort such that primaries sort first, mirrors after. */
+    /**
+     * Storage objects sort such that primaries sort first, mirrors after.
+     */
     @Override
     public int compareTo(Storage o) {
         return ComparisonChain.start()
@@ -248,7 +267,9 @@ class Storage extends JsonMap implements Comparable<Storage> {
                 .result();
     }
 
-    /** Two Storage objects are equal if they're for the same table uuid. */
+    /**
+     * Two Storage objects are equal if they're for the same table uuid.
+     */
     @Override
     public boolean equals(Object o) {
         return this == o || (o instanceof Storage && _uuid.equals(((Storage) o)._uuid));
@@ -262,7 +283,7 @@ class Storage extends JsonMap implements Comparable<Storage> {
     // For debugging
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("primary", isPrimary())
                 .add("uuid", _uuid)
                 .add("placement", getPlacement())

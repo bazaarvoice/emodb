@@ -5,6 +5,7 @@ import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.bazaarvoice.emodb.common.uuid.TimeUUIDs;
 import com.bazaarvoice.emodb.databus.ChannelNames;
 import com.bazaarvoice.emodb.databus.DefaultJoinFilter;
+import com.bazaarvoice.emodb.databus.MasterFanoutPartitions;
 import com.bazaarvoice.emodb.databus.QueueDrainExecutorService;
 import com.bazaarvoice.emodb.databus.SystemIdentity;
 import com.bazaarvoice.emodb.databus.api.Event;
@@ -37,7 +38,8 @@ import com.bazaarvoice.emodb.sor.api.UnknownTableException;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
-import com.bazaarvoice.emodb.sor.core.UpdateIntentEvent;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriter;
+import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
 import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.codahale.metrics.Meter;
@@ -46,30 +48,29 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Ticker;
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
-import com.google.common.eventbus.EventBus;
-import com.google.common.eventbus.Subscribe;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.Managed;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.time.Clock;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -89,24 +90,24 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
-public class DefaultDatabus implements OwnerAwareDatabus, Managed {
+public class DefaultDatabus implements OwnerAwareDatabus, DatabusEventWriter, Managed {
 
     private static final Logger _log = LoggerFactory.getLogger(DefaultDatabus.class);
 
     /**
      * How long should poll loop, searching for events before giving up and returning.
      */
-    private static final Duration MAX_POLL_TIME = Duration.millis(100);
+    private static final Duration MAX_POLL_TIME = Duration.ofMillis(100);
 
     /**
      * How long should the app wait before querying the data store again when it finds an unknown change?
      */
-    private static final Duration RECENT_UNKNOWN_RETRY = Duration.millis(400);
+    private static final Duration RECENT_UNKNOWN_RETRY = Duration.ofMillis(400);
 
     /**
      * How old does an event need to be before we stop aggressively looking for it?
      */
-    private static final Duration STALE_UNKNOWN_AGE = Duration.standardSeconds(2);
+    private static final Duration STALE_UNKNOWN_AGE = Duration.ofSeconds(2);
 
     /**
      * Don't merge too many duplicate events together to avoid event keys getting unreasonably long.
@@ -117,9 +118,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private static final int MAX_ITEMS_TO_FETCH_FOR_QUEUE_DRAINING = 100;
 
     /* This is how long we submit tasks to drain the queue for each subscription from one poll request */
-    private static final Duration MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION = Duration.standardMinutes(1);
+    private static final Duration MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION = Duration.ofMinutes(1);
 
-    private final EventBus _eventBus;
+    /* We don't allow subscriptions to be created beyond this number. */
+    private static final Duration MAX_SUBSCRIPTION_TTL = Duration.ofDays(365 * 10);
+    /* We don't allow subscriptions to be created with event TTLs beyond this number. */
+    public static final Duration MAX_EVENT_TTL = Duration.ofDays(365);
+
+    private final DatabusEventWriterRegistry _eventWriterRegistry;
     private final SubscriptionDAO _subscriptionDao;
     private final DatabusEventStore _eventStore;
     private final DataProvider _dataProvider;
@@ -127,6 +133,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private final JobService _jobService;
     private final DatabusAuthorizer _databusAuthorizer;
     private final String _systemOwnerId;
+    private final PartitionSelector _masterPartitionSelector;
+    private final List<String> _masterFanoutChannels;
     private final Meter _peekedMeter;
     private final Meter _polledMeter;
     private final Meter _renewedMeter;
@@ -148,15 +156,17 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private ConcurrentMap<String, Long> _drainedSubscriptionsMap = Maps.newConcurrentMap();
 
     @Inject
-    public DefaultDatabus(LifeCycleRegistry lifeCycle, EventBus eventBus, DataProvider dataProvider,
-                          SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
+    public DefaultDatabus(LifeCycleRegistry lifeCycle, DatabusEventWriterRegistry eventWriterRegistry,
+                          DataProvider dataProvider, SubscriptionDAO subscriptionDao, DatabusEventStore eventStore,
                           SubscriptionEvaluator subscriptionEvaluator, JobService jobService,
                           JobHandlerRegistry jobHandlerRegistry, DatabusAuthorizer databusAuthorizer,
                           @SystemIdentity String systemOwnerId,
                           @DefaultJoinFilter Supplier<Condition> defaultJoinFilterCondition,
                           @QueueDrainExecutorService ExecutorService drainService,
+                          @MasterFanoutPartitions int masterPartitions,
+                          @MasterFanoutPartitions PartitionSelector masterPartitionSelector,
                           MetricRegistry metricRegistry, Clock clock) {
-        _eventBus = eventBus;
+        _eventWriterRegistry = eventWriterRegistry;
         _subscriptionDao = subscriptionDao;
         _eventStore = eventStore;
         _dataProvider = dataProvider;
@@ -166,6 +176,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         _systemOwnerId = systemOwnerId;
         _defaultJoinFilterCondition = defaultJoinFilterCondition;
         _drainService = checkNotNull(drainService, "drainService");
+        _masterPartitionSelector = masterPartitionSelector;
         _ticker = ClockTicker.getTicker(clock);
         _clock = clock;
         _peekedMeter = newEventMeter("peeked", metricRegistry);
@@ -194,6 +205,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 });
         lifeCycle.manage(this);
 
+        ImmutableList.Builder<String> masterFanoutChannels = ImmutableList.builder();
+        for (int partition=0; partition < masterPartitions; partition++) {
+            masterFanoutChannels.add(ChannelNames.getMasterFanoutChannel(partition));
+        }
+        _masterFanoutChannels = masterFanoutChannels.build();
+        
         checkNotNull(jobHandlerRegistry, "jobHandlerRegistry");
         registerMoveSubscriptionJobHandler(jobHandlerRegistry);
         registerReplaySubscriptionJobHandler(jobHandlerRegistry);
@@ -248,9 +265,9 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                                 // Make sure that we have completed the replay request in time.
                                 // If replay took more than the replay TTL time, we should fail it as
                                 // there could be some events that were expired before we could replay it
-                                if (request.getSince() != null && new DateTime(request.getSince())
+                                if (request.getSince() != null && request.getSince().toInstant()
                                         .plus(DatabusChannelConfiguration.REPLAY_TTL)
-                                        .isBeforeNow()) {
+                                        .isBefore(_clock.instant())) {
                                     // Uh-oh we were too late in replaying, and could have lost some events
                                     throw new ReplayTooLateException();
                                 }
@@ -264,7 +281,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     private void createDatabusReplaySubscription() {
         // Create a master databus replay subscription where the events expire every 50 hours (2 days + 2 hours)
         subscribe(_systemOwnerId, ChannelNames.getMasterReplayChannel(), Conditions.alwaysTrue(),
-                Duration.standardDays(3650), DatabusChannelConfiguration.REPLAY_TTL, false);
+                Duration.ofDays(3650), DatabusChannelConfiguration.REPLAY_TTL, false);
     }
 
     private Meter newEventMeter(String name, MetricRegistry metricRegistry) {
@@ -285,13 +302,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             throws Exception {
         // Create a databus replay subscription
         createDatabusReplaySubscription();
-        _eventBus.register(this);
+        _eventWriterRegistry.registerDatabusEventWriter(this);
     }
 
     @Override
     public void stop()
             throws Exception {
-        _eventBus.unregister(this);
     }
 
     @Override
@@ -328,9 +344,11 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         checkLegalSubscriptionName(subscription);
         checkSubscriptionOwner(ownerId, subscription);
         checkNotNull(tableFilter, "tableFilter");
-        checkArgument(subscriptionTtl.isLongerThan(Duration.ZERO), "SubscriptionTtl must be >0");
-        checkArgument(eventTtl.isLongerThan(Duration.ZERO), "EventTtl must be >0");
-        TableFilterValidator.checkAllowed(tableFilter);
+        checkArgument(subscriptionTtl.compareTo(Duration.ZERO) > 0, "SubscriptionTtl must be >0");
+        checkArgument(subscriptionTtl.compareTo(MAX_SUBSCRIPTION_TTL) <= 0, "Subscription TTL duration limit is 10 years. The value cannot go beyond that.");
+        checkArgument(eventTtl.compareTo(Duration.ZERO) > 0, "EventTtl must be >0");
+        checkArgument(eventTtl.compareTo(MAX_EVENT_TTL) <= 0, "Event TTL duration limit is 365 days. The value cannot go beyond that.");
+        SubscriptionConditionValidator.checkAllowed(tableFilter);
 
         if (includeDefaultJoinFilter) {
             // If the default join filter condition is set (that is, isn't "alwaysTrue()") then add it to the filter
@@ -378,15 +396,16 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         return subscription;
     }
 
-    @Subscribe
-    public void onUpdateIntent(UpdateIntentEvent event) {
-        List<ByteBuffer> eventIds = Lists.newArrayListWithCapacity(event.getUpdateRefs().size());
-        for (UpdateRef ref : event.getUpdateRefs()) {
-            eventIds.add(UpdateRefSerializer.toByteBuffer(ref));
+    @Override
+    public void writeEvents(Collection<UpdateRef> refs) {
+        ImmutableMultimap.Builder<String, ByteBuffer> eventIds = ImmutableMultimap.builder();
+        for (UpdateRef ref : refs) {
+            int partition = _masterPartitionSelector.getPartition(ref.getKey());
+            eventIds.put(_masterFanoutChannels.get(partition), UpdateRefSerializer.toByteBuffer(ref));
         }
-        _eventStore.addAll(ChannelNames.getMasterFanoutChannel(), eventIds);
+        _eventStore.addAll(eventIds.build());
     }
-
+    
     @Override
     public long getEventCount(String ownerId, String subscription) {
         return getEventCountUpTo(ownerId, subscription, Long.MAX_VALUE);
@@ -436,7 +455,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     @Override
     public PollResult poll(String ownerId, final String subscription, final Duration claimTtl, int limit) {
         checkLegalSubscriptionName(subscription);
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.compareTo(Duration.ZERO) >= 0, "ClaimTtl must be >=0");
         checkArgument(limit > 0, "Limit must be >0");
         checkSubscriptionOwner(ownerId, subscription);
 
@@ -449,10 +468,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         Map<Coordinate, EventList> rawEvents = ImmutableMap.of();
         Map<Coordinate, Item> uniqueItems = Maps.newHashMap();
         boolean isPeek = claimTtl == null;
-        boolean repeatable = !isPeek && claimTtl.getMillis() > 0;
+        boolean repeatable = !isPeek && claimTtl.toMillis() > 0;
         boolean eventsAvailableForNextPoll = false;
         boolean noMaxPollTimeOut = true;
-        boolean itemsDiscarded = false;
+        int itemsDiscarded = 0;
         Meter eventMeter = isPeek ? _peekedMeter : _polledMeter;
 
         // Reading raw events from the event store is a significantly faster operation than resolving the events into
@@ -489,7 +508,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
             // Resolve the raw events in batches of 10 until at least one response item is found for a maximum time of MAX_POLL_TIME.
             do {
-                boolean batchItemsDiscarded = resolvePeekOrPollEvents(subscription, rawEvents, Math.min(10, remaining),
+                int batchItemsDiscarded = resolvePeekOrPollEvents(subscription, rawEvents, Math.min(10, remaining),
                         (coord, item) -> {
                             // Check whether we've already added this piece of content to the poll result.  If so, consolidate
                             // the two together to reduce the amount of work a client must do.  Note that the previous item
@@ -504,8 +523,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                             }
                         });
                 remaining = limit - uniqueItems.size();
-                itemsDiscarded = itemsDiscarded || batchItemsDiscarded;
-            } while (!rawEvents.isEmpty() && remaining > 0 && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis());
+                itemsDiscarded += batchItemsDiscarded;
+            } while (!rawEvents.isEmpty() && remaining > 0 && stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.toMillis());
 
             // There are more events for the next poll if either the event store explicitly said so or if, due to padding,
             // we got more events than "limit", in which case we're likely to unclaim at last one.
@@ -520,7 +539,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // don't timeout the request.  This helps move through large amounts of redundant deltas relatively quickly
             // while also putting a bound on the total amount of work done by a single call to poll().
             padding = 10;
-        } while (repeatable && (noMaxPollTimeOut = stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.getMillis()));
+        } while (repeatable && (noMaxPollTimeOut = stopwatch.elapsed(TimeUnit.MILLISECONDS) < MAX_POLL_TIME.toMillis()));
 
         Iterator<Event> events;
         int approximateSize;
@@ -530,18 +549,12 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             // quit now and return an empty result.  The caller can always poll again to try to pick up any more events,
             // and if necessary an async drain will kick off a few lines down to assist in clearing the redundant update
             // wasteland.
-            events = Iterators.emptyIterator();
+            events = Collections.emptyIterator();
             approximateSize = 0;
 
             // If there are still more unresolved events claimed then unclaim them now
             if (repeatable && !rawEvents.isEmpty()) {
                 unclaim(subscription, rawEvents.values());
-            }
-
-            // Try draining the queue asynchronously if NO items were returned within the MAX_POLL_TIME.
-            // Doing this only in the poll case for now.
-            if (repeatable && itemsDiscarded && !noMaxPollTimeOut) {
-                drainQueueAsync(subscription);
             }
         } else if (rawEvents.isEmpty()) {
             // All events have been resolved
@@ -556,7 +569,7 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             final int initialDeferredLimit = remaining;
 
             Iterator<Event> deferredEvents = new AbstractIterator<Event>() {
-                private Iterator<Event> currentBatch = Iterators.emptyIterator();
+                private Iterator<Event> currentBatch = Collections.emptyIterator();
                 private int remaining = initialDeferredLimit;
 
                 @Override
@@ -617,6 +630,13 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             approximateSize = uniqueItems.size() + deferredRawEvents.size();
         }
 
+        // Try draining the queue asynchronously if there are still more events available and more redundant events were
+        // discarded than resolved items found so far.
+        // Doing this only in the poll case for now.
+        if (repeatable && eventsAvailableForNextPoll && itemsDiscarded > uniqueItems.size()) {
+            drainQueueAsync(subscription);
+        }
+
         return new PollResult(events, approximateSize, eventsAvailableForNextPoll);
     }
 
@@ -633,15 +653,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
      *     <li>All events processed are removed from <code>rawEvents</code>.</li>
      * </ol>
      *
-     * Finally, this method returns true if any redundant events were found and deleted, false otherwise.
+     * Finally, this method returns the number of redundant events that were found and deleted, false otherwise.
      */
-    private boolean resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
+    private int resolvePeekOrPollEvents(String subscription, Map<Coordinate, EventList> rawEvents, int limit,
                                             ResolvedItemSink sink) {
         Map<Coordinate, Integer> eventOrder = Maps.newHashMap();
         List<String> eventIdsToDiscard = Lists.newArrayList();
         List<String> recentUnknownEventIds = Lists.newArrayList();
         int remaining = limit;
-        boolean itemsDiscarded = false;
+        int itemsDiscarded = 0;
 
         DataProvider.AnnotatedGet annotatedGet = _dataProvider.prepareGetAnnotated(ReadConsistency.STRONG);
         Iterator<Map.Entry<Coordinate, EventList>> rawEventIterator = rawEvents.entrySet().iterator();
@@ -728,9 +748,8 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             _eventStore.renew(subscription, recentUnknownEventIds, RECENT_UNKNOWN_RETRY, false);
         }
         // Ack events we never again want to see.
-        if (!eventIdsToDiscard.isEmpty()) {
+        if ((itemsDiscarded = eventIdsToDiscard.size()) != 0) {
             _eventStore.delete(subscription, eventIdsToDiscard, true);
-            itemsDiscarded = true;
         }
         // Remove all coordinates from rawEvents which were processed by this method
         for (Coordinate coord : eventOrder.keySet()) {
@@ -775,14 +794,14 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
     }
 
     private boolean isRecent(UUID changeId) {
-        return _clock.millis() - TimeUUIDs.getTimeMillis(changeId) < STALE_UNKNOWN_AGE.getMillis();
+        return _clock.millis() - TimeUUIDs.getTimeMillis(changeId) < STALE_UNKNOWN_AGE.toMillis();
     }
 
     @Override
     public void renew(String ownerId, String subscription, Collection<String> eventKeys, Duration claimTtl) {
         checkLegalSubscriptionName(subscription);
         checkNotNull(eventKeys, "eventKeys");
-        checkArgument(claimTtl.getMillis() >= 0, "ClaimTtl must be >=0");
+        checkArgument(claimTtl.compareTo(Duration.ZERO) >= 0, "ClaimTtl must be >=0");
         checkSubscriptionOwner(ownerId, subscription);
 
         _eventStore.renew(subscription, EventKeyFormat.decodeAll(eventKeys), claimTtl, true);
@@ -818,13 +837,13 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
     public void replay(String subscription, Date since) {
         // Make sure since is within Replay TTL
-        checkState(since == null || new DateTime(since).plus(DatabusChannelConfiguration.REPLAY_TTL).isAfterNow(),
+        checkState(since == null || since.toInstant().plus(DatabusChannelConfiguration.REPLAY_TTL).isAfter(_clock.instant()),
                 "Since timestamp is outside the replay TTL.");
         String source = ChannelNames.getMasterReplayChannel();
         final OwnedSubscription destination = getSubscriptionByName(subscription);
 
         _eventStore.copy(source, subscription,
-                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes),
+                (eventDataBytes) -> _subscriptionEvaluator.matches(destination, eventDataBytes, since),
                 since);
     }
 
@@ -975,27 +994,33 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
                 _log.info("Starting the draining process for subscription: {}.", subscription);
                 _drainQueueAsyncMeter.mark();
                 // submit a task to drain the queue.
-                submitDrainServiceTask(subscription, MAX_ITEMS_TO_FETCH_FOR_QUEUE_DRAINING);
+                try {
+                    submitDrainServiceTask(subscription, MAX_ITEMS_TO_FETCH_FOR_QUEUE_DRAINING, null);
+                } catch (Exception e) {
+                    // Failed to submit the task.  This is unlikely, but just in case clear the draining marker
+                    _drainedSubscriptionsMap.remove(subscription);
+                }
             } else {
-                _log.info("Draining for subscription: {} was already started from a previous poll.", subscription);
+                _log.debug("Draining for subscription: {} was already started from a previous poll.", subscription);
             }
         } catch (Exception e) {
             _log.error("Encountered exception while draining the queue for subscription: {}.", subscription, e);
         }
     }
 
-    private void submitDrainServiceTask(String subscription, int itemsToFetch) {
+    private void submitDrainServiceTask(String subscription, int itemsToFetch, @Nullable Cache<String, Boolean> knownNonRedundantEvents) {
         _drainQueueTaskMeter.mark();
         _drainService.submit(new Runnable() {
             @Override
             public void run() {
-                doDrainQueue(subscription, itemsToFetch);
+                doDrainQueue(subscription, itemsToFetch,
+                        knownNonRedundantEvents != null ? knownNonRedundantEvents : CacheBuilder.newBuilder().maximumSize(1000).build());
             }
         });
     }
 
-    private void doDrainQueue(String subscription, int itemsToFetch) {
-        boolean nonRedundantItemFound = false;
+    private void doDrainQueue(String subscription, int itemsToFetch, Cache<String, Boolean> knownNonRedundantEvents) {
+        boolean anyRedundantItemFound = false;
         Stopwatch stopwatch = Stopwatch.createStarted(_ticker);
 
         ConsolidatingEventSink sink = new ConsolidatingEventSink(itemsToFetch);
@@ -1015,14 +1040,23 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
         for (Map.Entry<Coordinate, EventList> entry : rawEvents.entrySet()) {
             Coordinate coord = entry.getKey();
 
-            // Query the table/key pair.
-            try {
-                annotatedGet.add(coord.getTable(), coord.getId());
-            } catch (UnknownTableException | UnknownPlacementException e) {
-                // It's likely the table or facade was dropped since the event was queued.  Discard the events.
-                EventList list = entry.getValue();
-                for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
-                    eventIdsToDiscard.add(pair.first());
+            // If we've determined on a previous iteration that all change IDs returned for this coordinate are
+            // not redundant then skip it.
+
+            boolean anyUnverifiedEvents = entry.getValue().getEventAndChangeIds().stream()
+                    .map(Pair::first)
+                    .anyMatch(eventId -> knownNonRedundantEvents.getIfPresent(eventId) == null);
+
+            if (anyUnverifiedEvents) {
+                // Query the table/key pair.
+                try {
+                    annotatedGet.add(coord.getTable(), coord.getId());
+                } catch (UnknownTableException | UnknownPlacementException e) {
+                    // It's likely the table or facade was dropped since the event was queued.  Discard the events.
+                    EventList list = entry.getValue();
+                    for (Pair<String, UUID> pair : list.getEventAndChangeIds()) {
+                        eventIdsToDiscard.add(pair.first());
+                    }
                 }
             }
         }
@@ -1046,9 +1080,10 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
 
                 // Is the change redundant?
                 if (readResult.isChangeDeltaRedundant(changeId)) {
+                    anyRedundantItemFound = true;
                     eventIdsToDiscard.add(eventId);
                 } else {
-                    nonRedundantItemFound = true;
+                    knownNonRedundantEvents.put(eventId, Boolean.TRUE);
                 }
             }
         }
@@ -1059,15 +1094,15 @@ public class DefaultDatabus implements OwnerAwareDatabus, Managed {
             _eventStore.delete(subscription, eventIdsToDiscard, true);
         }
 
-        long totalSubscriptionDrainTime = _drainedSubscriptionsMap.get(subscription).longValue() + stopwatch.elapsed(TimeUnit.MILLISECONDS);
+        long totalSubscriptionDrainTime = _drainedSubscriptionsMap.getOrDefault(subscription, 0L) + stopwatch.elapsed(TimeUnit.MILLISECONDS);
 
-        // submit a new task for next batch if all the found items in this batch are redundant and there are more items available on the queue.
+        // submit a new task for next batch if any the found items in this batch are redundant and there are more items available on the queue.
         // Also right now, we are only giving MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION time for draining for a subscription for each poll. This is because there is no guarantee that the local server
         // remains as the owner of the subscription through out. The right solution here is to check if the local service still owns the subscription for each task submission.
         // But, MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION may be OK as we can easily expect subsequent polls from the clients which will trigger these tasks again.
-        if (!nonRedundantItemFound && more && totalSubscriptionDrainTime < MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION.getMillis()) {
+        if (anyRedundantItemFound && more && totalSubscriptionDrainTime < MAX_QUEUE_DRAIN_TIME_FOR_A_SUBSCRIPTION.toMillis()) {
             _drainedSubscriptionsMap.replace(subscription, totalSubscriptionDrainTime);
-            submitDrainServiceTask(subscription, itemsToFetch);
+            submitDrainServiceTask(subscription, itemsToFetch, knownNonRedundantEvents);
         } else {
             _drainedSubscriptionsMap.remove(subscription);
         }

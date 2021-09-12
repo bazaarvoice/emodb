@@ -22,11 +22,11 @@ import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Service;
 import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +75,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         // Build a cache of name -> leader service, used to track which objects this server is responsible for.
         CacheBuilder<Object, Object> cacheBuilder = CacheBuilder.newBuilder();
         if (_expireWhenInactive) {
-            cacheBuilder.expireAfterAccess(expireWhenInactive.getMillis(), TimeUnit.MILLISECONDS);
+            cacheBuilder.expireAfterAccess(expireWhenInactive.toMillis(), TimeUnit.MILLISECONDS);
         }
         cacheBuilder.removalListener(new RemovalListener<String, Optional<LeaderService>>() {
             @Override
@@ -108,20 +108,21 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
     /**
      * Returns the specified managed service if this server is responsible for the specified object and has won a
      * ZooKeeper-managed leader election.
-     * @param name object name.  Whether this server owns the object is computed by Ostrich using consistent hashing.
+     *
+     * @param name         object name.  Whether this server owns the object is computed by Ostrich using consistent hashing.
      * @param waitDuration the amount of time to wait for this server to win the leader election and for the service
      *                     to startup, if the object is managed by this server.
      */
     @Nullable
     @Override
     public T startIfOwner(String name, Duration waitDuration) {
-        long timeoutAt = System.currentTimeMillis() + waitDuration.getMillis();
+        long timeoutAt = System.currentTimeMillis() + waitDuration.toMillis();
         LeaderService leaderService = _leaderMap.getUnchecked(name).orNull();
         if (leaderService == null || !awaitRunning(leaderService, timeoutAt)) {
             return null;
         }
         Service service;
-        for (;;) {
+        for (; ; ) {
             Optional<Service> opt = leaderService.getCurrentDelegateService();
             if (opt.isPresent()) {
                 service = opt.get();
@@ -189,7 +190,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         // eligible to manage it, start or stop it and update our cache.
         List<String> pending = Lists.newArrayList();
         for (Iterator<Map.Entry<String, Optional<LeaderService>>> it =
-                     _leaderMap.asMap().entrySet().iterator(); it.hasNext(); ) {
+             _leaderMap.asMap().entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<String, Optional<LeaderService>> entry = it.next();
             if (isOwner(entry.getKey()) != entry.getValue().isPresent()) {
                 // Remove the entry from the cache.  This will stop the service (if started).
@@ -225,7 +226,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         });
         ServiceFailureListener.listenTo(leaderService, _metricRegistry);
         _dropwizardTask.register(taskName, leaderService);
-        leaderService.start();
+        leaderService.startAsync().awaitRunning();
         return Optional.of(leaderService);
     }
 
@@ -233,12 +234,14 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
         if (ref.isPresent()) {
             Service service = ref.get();
             _log.info("Stopping owned service {}: {}", _group, name);
-            service.stop();
+            service.stopAsync().awaitTerminated();
         }
     }
 
-    /** Returns true if the Guava service entered the RUNNING state within the specified time period. */
-    private boolean awaitRunning(Service service, long timeoutAt) {
+    /**
+     * Returns true if the Guava service entered the RUNNING state within the specified time period.
+     */
+    private static boolean awaitRunning(Service service, long timeoutAt) {
         if (service.isRunning()) {
             return true;
         }
@@ -247,7 +250,7 @@ public class OstrichOwnerGroup<T extends Service> implements OwnerGroup<T> {
             return false;
         }
         try {
-            service.start().get(waitMillis, TimeUnit.MILLISECONDS);
+            service.startAsync().awaitRunning(waitMillis, TimeUnit.MILLISECONDS);
         } catch (Exception e) {
             // Fall through
         }

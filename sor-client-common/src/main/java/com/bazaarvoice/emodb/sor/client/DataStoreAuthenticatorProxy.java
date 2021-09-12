@@ -12,15 +12,16 @@ import com.bazaarvoice.emodb.sor.api.Table;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
 import com.bazaarvoice.emodb.sor.api.UnknownTableException;
+import com.bazaarvoice.emodb.sor.api.UnpublishedDatabusEvent;
 import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
-import com.google.common.collect.Sets;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,11 @@ class DataStoreAuthenticatorProxy implements DataStore {
     @Override
     public Iterator<Table> listTables(@Nullable String fromTableExclusive, long limit) {
         return _authDataStore.listTables(_apiKey, fromTableExclusive, limit);
+    }
+
+    @Override
+    public Iterator<UnpublishedDatabusEvent> listUnpublishedDatabusEvents(Date fromInclusive, Date toExclusive) {
+        return _authDataStore.listUnpublishedDatabusEvents(_apiKey, fromInclusive, toExclusive);
     }
 
     @Override
@@ -150,13 +156,13 @@ class DataStoreAuthenticatorProxy implements DataStore {
     }
 
     @Override
-    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _authDataStore.scan(_apiKey, table, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> scan(String table, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _authDataStore.scan(_apiKey, table, fromKeyExclusive, limit, includeDeletes, consistency);
     }
 
     @Override
-    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, ReadConsistency consistency) {
-        return _authDataStore.getSplit(_apiKey, table, split, fromKeyExclusive, limit, consistency);
+    public Iterator<Map<String, Object>> getSplit(String table, String split, @Nullable String fromKeyExclusive, long limit, boolean includeDeletes, ReadConsistency consistency) {
+        return _authDataStore.getSplit(_apiKey, table, split, fromKeyExclusive, limit, includeDeletes, consistency);
     }
 
     @Override

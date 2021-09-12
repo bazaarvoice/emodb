@@ -35,10 +35,10 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
 import io.dropwizard.lifecycle.ExecutorServiceManager;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;
 import java.util.Iterator;
@@ -106,9 +106,9 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin {
     /** The amount of time to wait for services to start for fast operations like peek, poll. */
-    private static final Duration SERVICE_FAST_WAIT_DURATION = Duration.millis(100);
+    private static final Duration SERVICE_FAST_WAIT_DURATION = Duration.ofMillis(100);
     /** The amount of time to wait for services to start for slow operations like copy, purge. */
-    private static final Duration SERVICE_SLOW_WAIT_DURATION = Duration.standardSeconds(3);
+    private static final Duration SERVICE_SLOW_WAIT_DURATION = Duration.ofSeconds(3);
     private static final int COPY_BATCH_SIZE = 2000;
 
     private final EventStore _delegate;
@@ -153,7 +153,7 @@ public class DefaultDedupEventStore implements DedupEventStore, DedupQueueAdmin 
                 String writeChannel = _channels.writeChannel(queue);
                 return new DedupQueue(queue, readChannel, writeChannel, queueDAO, delegate, dedupEnabled, executor, sortedQueueFactory, metricRegistry);
             }
-        }, Duration.standardHours(1)));
+        }, Duration.ofHours(1)));
     }
 
     /**

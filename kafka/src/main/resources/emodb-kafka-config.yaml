@@ -1,0 +1,8 @@
+bootstrapServers: kafka:9092
+producer:
+  bufferMemory: 12356789
+  batchSize: 100
+  lingerMs: 5
+sasl:
+  username: username
+  password: password

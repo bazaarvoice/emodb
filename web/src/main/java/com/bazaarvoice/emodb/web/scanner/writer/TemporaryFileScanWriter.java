@@ -1,7 +1,9 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
+import com.bazaarvoice.emodb.common.dropwizard.time.ClockTicker;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Predicate;
@@ -13,8 +15,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -50,9 +52,11 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     private final ReentrantLock _lock = new ReentrantLock();
     private final Condition _shardFilesClosedOrExceptionCaught = _lock.newCondition();
     private volatile IOException _uploadException = null;
+    private final ObjectMapper _mapper;
 
     protected TemporaryFileScanWriter(String type, int taskId, URI baseUri, Compression compression,
-                                      MetricRegistry metricRegistry, Optional<Integer> maxOpenShards) {
+                                      MetricRegistry metricRegistry, Optional<Integer> maxOpenShards,
+                                      ObjectMapper objectMapper) {
         super(type, taskId, baseUri, compression, metricRegistry);
         checkNotNull(maxOpenShards, "maxOpenShards");
 
@@ -61,6 +65,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
 
         _openTransfers = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "open-transfers"));
         _blockedNewShards = metricRegistry.counter(MetricRegistry.name("bv.emodb.scan", "ScanUploader", "blocked-new-shards"));
+        _mapper = checkNotNull(objectMapper, "objectMapper");
     }
 
     /**
@@ -74,7 +79,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     abstract protected Map<TransferKey, TransferStatus> getStatusForActiveTransfers();
 
     @Override
-    public ShardWriter writeShardRows(String tableName, final String placement, int shardId, long tableUuid)
+    public ScanDestinationWriter writeShardRows(String tableName, final String placement, int shardId, long tableUuid)
             throws IOException, InterruptedException {
         final ShardFiles shardFiles = getShardFiles(shardId, tableUuid);
 
@@ -97,7 +102,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
             final URI uri = getUriForShard(tableName, shardId, tableUuid);
             OutputStream out = open(shardFile, getCounterForPlacement(placement));
 
-            return new ShardWriter(out) {
+            return new ShardWriter(out, _mapper) {
                 @Override
                 synchronized protected void ready(boolean isEmpty, Optional<Integer> finalPartCount)
                         throws IOException {
@@ -221,28 +226,28 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
     /** Blocks until the number of open shards is equal to or less than the provided threshold. */
     private void blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable TransferKey permittedKey)
             throws IOException, InterruptedException {
-        blockUntilOpenShardsAtMost(maxOpenShards, permittedKey, Long.MAX_VALUE);
+        blockUntilOpenShardsAtMost(maxOpenShards, permittedKey, Instant.MAX);
     }
 
     /**
      * Blocks until the number of open shards is equal to or less than the provided threshold or the current time
      * is after the timeout timestamp.
      */
-    private boolean blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable TransferKey permittedKey, long timeoutTimestamp)
+    private boolean blockUntilOpenShardsAtMost(int maxOpenShards, @Nullable TransferKey permittedKey, Instant timeout)
             throws IOException, InterruptedException {
-        Stopwatch stopWatch = new Stopwatch().start();
-        long now;
+        Stopwatch stopWatch = Stopwatch.createStarted();
+        Instant now;
 
         _lock.lock();
         try {
             while (!_closed &&
                     maxOpenShardsGreaterThan(maxOpenShards, permittedKey) &&
-                    (now = System.currentTimeMillis()) < timeoutTimestamp) {
+                    (now = Instant.now()).isBefore(timeout)) {
                 // Stop blocking if there is an exception
                 propagateExceptionIfPresent();
 
                 // Wait no longer than 30 seconds; we want to log at least every 30 seconds we've been waiting.
-                long waitTime = Math.min(Duration.standardSeconds(30).getMillis(), timeoutTimestamp - now);
+                long waitTime = Math.min(Duration.ofSeconds(30).toMillis(), Duration.between(now, timeout).toMillis());
                 _shardFilesClosedOrExceptionCaught.await(waitTime, TimeUnit.MILLISECONDS);
 
                 if (!maxOpenShardsGreaterThan(maxOpenShards, permittedKey)) {
@@ -289,7 +294,7 @@ abstract public class TemporaryFileScanWriter extends AbstractScanWriter {
 
     @Override
     public WaitForAllTransfersCompleteResult waitForAllTransfersComplete(Duration duration) throws IOException, InterruptedException {
-        boolean complete = blockUntilOpenShardsAtMost(0, null, DateTime.now().plus(duration).getMillis());
+        boolean complete = blockUntilOpenShardsAtMost(0, null, Instant.now().plus(duration));
         if (complete) {
             return new WaitForAllTransfersCompleteResult(ImmutableMap.<TransferKey, TransferStatus>of());
         }

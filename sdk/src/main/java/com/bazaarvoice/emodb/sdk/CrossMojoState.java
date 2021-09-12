@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.sdk;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import org.apache.curator.test.TestingServer;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class CrossMojoState {
     private static final String ZOOKEEPER_TESTING_SERVER = "emo.zookeeperTestingServer";
@@ -35,7 +35,7 @@ public final class CrossMojoState {
     @SuppressWarnings("unchecked")
     public static List<EmoExec> getEmoProcesses(Map pluginContext) {
         List<EmoExec> processes = (List<EmoExec>) pluginContext.get(EMO_PROCESSES);
-        return Objects.firstNonNull(processes, Collections.<EmoExec>emptyList());
+        return Optional.ofNullable(processes).orElse(Collections.emptyList());
     }
 
     @SuppressWarnings("unchecked")

@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.util.ISO8601Utils;
 import com.google.common.base.Throwables;
-import io.dropwizard.jackson.Jackson;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -19,7 +18,7 @@ import java.util.Date;
 
 public abstract class JsonHelper {
 
-    private static final ObjectMapper JSON = Jackson.newObjectMapper()
+    private static final ObjectMapper JSON = CustomJsonObjectMapperFactory.build()
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .registerModule(new LazyJsonModule());
 
@@ -124,7 +123,7 @@ public abstract class JsonHelper {
 
     /** Formats the specified timestamp as an ISO 8601 string with milliseconds and UTC timezone. */
     public static String formatTimestamp(@Nullable Date date) {
-        return (date != null) ? ISO8601Utils.format(date, true) : null;
+        return (date != null) ? date.toInstant().toString() : null;
     }
 
     /** Formats the specified timestamp as an ISO 8601 string with milliseconds and UTC timezone. */

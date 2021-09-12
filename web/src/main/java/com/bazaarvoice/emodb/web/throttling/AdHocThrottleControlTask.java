@@ -5,13 +5,12 @@ import com.bazaarvoice.emodb.common.zookeeper.store.ZkDurationSerializer;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.inject.Inject;
 import io.dropwizard.servlets.tasks.Task;
-import org.joda.time.DateTime;
-import org.joda.time.Duration;
-import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -74,7 +73,7 @@ public class AdHocThrottleControlTask extends Task {
         // Default method
         String method = "GET";
         // Default duration
-        Duration expiryDuration = Duration.standardHours(24);
+        Duration expiryDuration = Duration.ofHours(24);
 
         // Get specified parameters related for method and duration, if present
         for (String string : parameters.get("method")) {
@@ -105,7 +104,7 @@ public class AdHocThrottleControlTask extends Task {
                 for (String string : parameters.get("limit")) {
                     limit = Integer.parseInt(string);
                 }
-                DateTime expiryTime = DateTime.now().plus(expiryDuration);
+                Instant expiryTime = Instant.now().plus(expiryDuration);
 
                 if (limit == null) {
                     out.printf("Limit is required; throttle unchanged for %s %s\n", method, path);
@@ -122,7 +121,7 @@ public class AdHocThrottleControlTask extends Task {
                 AdHocThrottle throttle = entry.getValue();
 
                 out.printf("%s %s (limit %d expires at %s)\n", endpoint.getMethod(), endpoint.getPath(),
-                        throttle.getLimit(), ISODateTimeFormat.dateTime().print(throttle.getExpiration()));
+                        throttle.getLimit(), throttle.getExpiration());
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.event.core;
 
-import org.joda.time.Duration;
-
+import java.time.Duration;
 import java.util.Collection;
 
 public interface ClaimSet {

@@ -1,9 +1,8 @@
 package com.bazaarvoice.emodb.web.scanner.writer;
 
-import org.joda.time.Duration;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.Date;
 
 /**
@@ -13,9 +12,9 @@ public interface ScanWriter extends Closeable {
     /**
      * Creates a new {@link ShardWriter} for writing a particular table, shard and batch to the file system.
      * The contents are actually written by writing to {@link ShardWriter#getOutputStream()}
-     * then transferred to the file system using {@link ShardWriter#closeAndTransferAysnc(com.google.common.base.Optional)}.
+     * then transferred to the file system using {@link ShardWriter#closeAndTransferAsync(com.google.common.base.Optional)}.
      */
-    ShardWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
+    ScanDestinationWriter writeShardRows(String tableName, String placement, int shardId, long tableUuid)
             throws IOException, InterruptedException;
 
     /**
