@@ -175,7 +175,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
     @Test
     public void testListSubscriptions1() {
-        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Iterators.<Subscription>emptyIterator());
+        when(_local.listSubscriptions(isSubject(), nullable(String.class), eq(Long.MAX_VALUE))).thenReturn(Collections.<Subscription>emptyIterator());
 
         Iterator<Subscription> actual = databusClient().listSubscriptions(null, Long.MAX_VALUE);
 
@@ -548,7 +548,7 @@ public class DatabusJerseyTest extends ResourceTest {
                     new Event("id-2", ImmutableMap.of("key-2", "value-2"), ImmutableList.<List<String>>of(ImmutableList.<String>of("tag-2"))));
             //noinspection unchecked
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenReturn(new PollResult(pollResults.iterator(), 2, true));
 
             List<Event> expected;
@@ -647,7 +647,7 @@ public class DatabusJerseyTest extends ResourceTest {
 
             SubjectDatabus databus = mock(SubjectDatabus.class);
             when(databus.poll(isSubject(), eq("queue-name"), eq(Duration.ofSeconds(10)), eq(100)))
-                    .thenReturn(new PollResult(Iterators.emptyIterator(), 0, false))
+                    .thenReturn(new PollResult(Collections.emptyIterator(), 0, false))
                     .thenThrow(new RuntimeException("Simulated read failure from Cassandra"));
 
             final StringWriter out = new StringWriter();

@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -119,7 +120,7 @@ public class AdaptiveResultSet implements ResultSet {
 
     private final Session _session;
     private ResultSet _delegate;
-    private Iterator<Row> _fetchedResults = Iterators.emptyIterator();
+    private Iterator<Row> _fetchedResults = Collections.emptyIterator();
     private volatile ResultSet _delegateWithPrefetchFailure;
     private volatile Throwable _prefetchFailure;
     private int _remainingAdaptations;

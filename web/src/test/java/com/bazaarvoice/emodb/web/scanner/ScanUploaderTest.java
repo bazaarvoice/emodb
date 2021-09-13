@@ -649,7 +649,7 @@ public class ScanUploaderTest {
                 scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
         // Give it an executor service that will run the scan synchronously in the current thread
-        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
+        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.newDirectExecutorService(), mock(ScheduledExecutorService.class));
         distributedScanRangeMonitor.startScansIfAvailable();
 
         // Verify the task is complete and there are no pending tasks
@@ -708,7 +708,7 @@ public class ScanUploaderTest {
                 scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
         // Give it an executor service that will run the scan synchronously in the current thread
-        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
+        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.newDirectExecutorService(), mock(ScheduledExecutorService.class));
         distributedScanRangeMonitor.startScansIfAvailable();
 
         // The scan range should never have been released
@@ -1001,7 +1001,7 @@ public class ScanUploaderTest {
         DistributedScanRangeMonitor distributedScanRangeMonitor = new DistributedScanRangeMonitor(
                 scanWorkflow, scanStatusDAO, rangeScanUploader, 1, mock(LifeCycleRegistry.class));
 
-        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.sameThreadExecutor(), mock(ScheduledExecutorService.class));
+        distributedScanRangeMonitor.setExecutorServices(MoreExecutors.newDirectExecutorService(), mock(ScheduledExecutorService.class));
         distributedScanRangeMonitor.startScansIfAvailable();
 
         scanStatus = scanStatusDAO.getScanStatus(id);

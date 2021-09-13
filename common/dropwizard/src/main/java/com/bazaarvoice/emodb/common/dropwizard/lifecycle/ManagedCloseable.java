@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.common.dropwizard.lifecycle;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.io.Closeables;
 import io.dropwizard.lifecycle.Managed;
 
@@ -30,6 +30,6 @@ public class ManagedCloseable implements Managed {
     // For debugging
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).addValue(_closeable).toString();
+        return MoreObjects.toStringHelper(this).addValue(_closeable).toString();
     }
 }

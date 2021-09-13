@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.common.dropwizard.discovery;
 
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.bazaarvoice.ostrich.ServiceRegistry;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import io.dropwizard.lifecycle.Managed;
 
 /**
@@ -30,6 +30,6 @@ public class ManagedRegistration implements Managed {
     // For debugging
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).addValue(_endPoint).toString();
+        return MoreObjects.toStringHelper(this).addValue(_endPoint).toString();
     }
 }

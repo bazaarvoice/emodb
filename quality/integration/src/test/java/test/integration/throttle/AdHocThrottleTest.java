@@ -303,7 +303,7 @@ public class AdHocThrottleTest extends ResourceTest {
             // than polling each future independently later on.
             future.addListener(
                     () -> completeThrottledFutures.add(future),
-                    MoreExecutors.sameThreadExecutor());
+                    MoreExecutors.newDirectExecutorService());
         }
 
         // Wait until all three threads are blocked getting the table size

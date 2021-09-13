@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.4.10-SNAPSHOT</version>
+    <version>6.4.11-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -31,7 +31,7 @@
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
-        <guava.version>17.0</guava.version>
+        <guava.version>18.0</guava.version>
         <guice.version>4.0</guice.version>
         <jackson.version>2.6.7.2</jackson.version>
         <jna.version>4.1.0</jna.version>

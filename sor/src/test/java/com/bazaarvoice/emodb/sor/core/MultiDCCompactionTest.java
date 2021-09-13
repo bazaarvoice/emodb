@@ -158,7 +158,7 @@ public class MultiDCCompactionTest {
         Record record = mock(Record.class);
         when(record.getKey()).thenReturn(key);
         when(record.passOneIterator()).thenReturn(compactions.iterator()).thenReturn(compactions.iterator());
-        when(record.passTwoIterator()).thenReturn(Iterators.emptyIterator()).thenReturn(Iterators.emptyIterator());
+        when(record.passTwoIterator()).thenReturn(Collections.emptyIterator()).thenReturn(Collections.emptyIterator());
 
         //noinspection unchecked
         Supplier<Record> requeryFn = mock(Supplier.class);

@@ -138,7 +138,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
@@ -181,7 +181,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
@@ -227,7 +227,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
@@ -279,7 +279,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 500);
@@ -350,7 +350,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 10);
@@ -402,7 +402,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider(), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
 
         List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
