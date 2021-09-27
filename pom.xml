@@ -2,14 +2,6 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <dependencies>
-        <dependency>
-            <groupId>javax.ws.rs</groupId>
-            <artifactId>javax.ws.rs-api</artifactId>
-            <version>2.1.1</version>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
 
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
@@ -26,7 +18,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
@@ -67,7 +59,8 @@
         <module>databus-client</module>
         <module>databus</module>
         <module>blob-client-common</module>
-        <module>blob-client</module>
+        <module>blob-clients/blob-client</module>
+        <module>blob-clients/blob-jersey2-client</module>
         <module>blob</module>
         <module>uac-client</module>
         <module>plugins</module>
