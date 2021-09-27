@@ -33,8 +33,11 @@ import com.google.common.net.HttpHeaders;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
+import org.glassfish.jersey.client.JerseyClient;
+
 
 import javax.annotation.Nullable;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -92,13 +95,13 @@ public class BlobStoreClient implements AuthBlobStore {
      */
     private static final Duration BLOB_CONNECTION_CLOSED_TIMEOUT = Duration.ofSeconds(2);
 
-    private final EmoClient _client;
+    private final JerseyClient _client;
     private final UriBuilder _blobStore;
     private final ScheduledExecutorService _connectionManagementService;
 
     public BlobStoreClient(URI endPoint, EmoClient client,
                            @Nullable ScheduledExecutorService connectionManagementService) {
-        _client = checkNotNull(client, "client");
+        _client = (JerseyClient) checkNotNull(client, "client");
         _blobStore = EmoUriBuilder.fromUri(endPoint);
 
         if (connectionManagementService != null) {
@@ -119,10 +122,11 @@ public class BlobStoreClient implements AuthBlobStore {
                     .queryParam("from", (fromTableExclusive != null) ? new Object[]{fromTableExclusive} : new Object[0])
                     .queryParam("limit", limit)
                     .build();
-            return _client.resource(uri)
+            Response response= _client.target(uri).request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Iterator<Table>>(){});
+                    .get();
+            return response.readEntity(Iterator.class);
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -141,10 +145,10 @@ public class BlobStoreClient implements AuthBlobStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
         try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
+            _client.target(uri).request()
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
+                    .put(Entity.json(attributes));
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -159,8 +163,8 @@ public class BlobStoreClient implements AuthBlobStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
         try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
+            _client.target(uri).request()
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .delete();
         } catch (EmoClientException e) {
@@ -177,10 +181,10 @@ public class BlobStoreClient implements AuthBlobStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
         try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
+            _client.target(uri).request()
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .post();
+                    .post(null);
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -192,7 +196,7 @@ public class BlobStoreClient implements AuthBlobStore {
         URI uri = _blobStore.clone()
                 .segment("_table", table)
                 .build();
-        EmoResponse response = _client.resource(uri)
+        EmoResponse response = _client.target(uri).request()
                 .accept(MediaType.APPLICATION_JSON_TYPE)
                 .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                 .head();
@@ -219,7 +223,7 @@ public class BlobStoreClient implements AuthBlobStore {
             URI uri = _blobStore.clone()
                     .segment("_table", table, "metadata")
                     .build();
-            return _client.resource(uri)
+            return _client.target(uri).request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
                     .get(Table.class);
@@ -235,10 +239,11 @@ public class BlobStoreClient implements AuthBlobStore {
             URI uri = _blobStore.clone()
                     .segment("_table", table)
                     .build();
-            return _client.resource(uri)
+            Response response= _client.target(uri).request()
                     .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .get(new TypeReference<Map<String, String>>(){});
+                    .get();
+            return response.readEntity(Map.class);
         } catch (EmoClientException e) {
             throw convertException(e);
         }
@@ -254,10 +259,10 @@ public class BlobStoreClient implements AuthBlobStore {
                 .queryParam("audit", RisonHelper.asORison(audit))
                 .build();
         try {
-            _client.resource(uri)
-                    .type(MediaType.APPLICATION_JSON_TYPE)
+            _client.target(uri).request()
+                    .accept(MediaType.APPLICATION_JSON_TYPE)
                     .header(ApiKeyRequest.AUTHENTICATION_HEADER, apiKey)
-                    .put(attributes);
+                    .put(Entity.json(attributes));
         } catch (EmoClientException e) {
             throw convertException(e);
         }
