@@ -50,6 +50,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -885,4 +886,34 @@ public class BlobStoreJerseyTest extends ResourceTest {
         actual.writeTo(actualBytes);
         return actualBytes.toByteArray();
     }
+
+ /* target() method doesn't get identified with dw 0.71 test suite
+ private void testContentType(byte[] content, String metadataContentType, String expectedContentType) throws Exception {
+        Map<String, String> attributes = ImmutableMap.of("content-type", metadataContentType);
+        BlobMetadata expectedMd = new DefaultBlobMetadata("blob-id", new Date(), content.length, "00", "ff", attributes);
+        Range expectedRange = new Range(0, content.length);
+        when(_server.get("table-name", "blob-id", null))
+                .thenReturn(new DefaultBlob(expectedMd, expectedRange, out -> out.write(content)));
+
+        // The blob store client doesn't interact directly with the Content-Type header.  Therefore this test must bypass
+        // and use the underlying client.
+
+        Response response = _resourceTestRule.client().target("/blob/1/table-name/blob-id")
+                .request()
+                .accept("*")
+                .header(AUTHENTICATION_HEADER, APIKEY_BLOB)
+                .get();
+
+        assertEquals(response.getStatus(), 200);
+        assertEquals(response.getHeaders().getFirst("X-BVA-content-type"), metadataContentType);
+        assertEquals(response.getMediaType().toString(), expectedContentType);
+
+        byte[] actual = new byte[content.length];
+        InputStream in = response.readEntity(InputStream.class);
+        assertEquals(content.length, in.read(actual, 0, content.length));
+        assertEquals(-1, in.read());
+        assertEquals(actual, content);
+
+        verify(_server).get("table-name", "blob-id", null);
+    }*/
 }

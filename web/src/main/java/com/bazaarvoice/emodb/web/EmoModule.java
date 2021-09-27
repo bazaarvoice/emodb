@@ -10,6 +10,7 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
+import com.bazaarvoice.emodb.blob.jersey2.client.BlobStoreJersey2ClientFactory;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
@@ -303,6 +304,15 @@ public class EmoModule extends AbstractModule {
             return new JerseyClientBuilder(environment).using(configuration).using(environment).build("emodb");
         }
 
+        @Provides
+        @Singleton
+        @Named("Jersey2Client")
+        javax.ws.rs.client.Client provideJersey2Client(JerseyClientConfiguration configuration, Environment environment) {
+            System.out.println("Jersey2Client...");
+            //JerseyClientBuilder used below is from dropwizard 0.71, update it during dw upgrade
+            return (javax.ws.rs.client.Client) new JerseyClientBuilder(environment).using(configuration).using(environment).build("emodb");
+        }
+
         private Class<? extends TaskRegistry> getTaskRegistryClass() {
             if (_serviceMode.specifies(EmoServiceMode.Aspect.task)) {
                 return DropwizardTaskRegistry.class;
@@ -408,6 +418,35 @@ public class EmoModule extends AbstractModule {
 
             ServiceFactory<BlobStore> clientFactory = BlobStoreClientFactory
                     .forClusterAndHttpClient(_configuration.getCluster(), jerseyClient)
+                    .usingCredentials(apiKey);
+
+            URI uri = config.getSystemDataCenterServiceUri();
+            ServiceEndPoint endPoint = new ServiceEndPointBuilder()
+                    .withServiceName(clientFactory.getServiceName())
+                    .withId(config.getSystemDataCenter())
+                    .withPayload(new PayloadBuilder()
+                            .withUrl(uri.resolve(BlobStoreClient.SERVICE_PATH))
+                            .withAdminUrl(uri)
+                            .toString())
+                    .build();
+
+            return ServicePoolBuilder.create(BlobStore.class)
+                    .withMetricRegistry(metricRegistry)
+                    .withHostDiscovery(new FixedHostDiscovery(endPoint))
+                    .withServiceFactory(clientFactory)
+                    .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
+        }
+    }
+
+    /** Provides a BlobStore client with jax rs jersey2, that delegates to the remote system center blob store. */
+    @Provides @Singleton @SystemBlobStore
+    @Named("Jersey2BlobStore")
+    BlobStore provideSystemBlobStoreJersey2 (DataCenterConfiguration config, @Named("Jersey2Client") javax.ws.rs.client.Client jersey2Client, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
+        System.out.println("Jersey2BlobStore...");
+        {
+
+            ServiceFactory<BlobStore> clientFactory = BlobStoreJersey2ClientFactory
+                    .forClusterAndHttpClient(_configuration.getCluster(), jersey2Client)
                     .usingCredentials(apiKey);
 
             URI uri = config.getSystemDataCenterServiceUri();
