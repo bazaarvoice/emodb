@@ -29,6 +29,16 @@
 										],
 										"type": "text/javascript"
 									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('table', 'postman_'+uuid.v4());"
+										],
+										"type": "text/javascript"
+									}
 								}
 							],
 							"request": {
