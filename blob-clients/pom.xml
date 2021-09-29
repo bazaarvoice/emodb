@@ -11,7 +11,7 @@
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>blob-clients</artifactId>
+    <artifactId>emodb-blob-clients</artifactId>
     <name>Blob clients</name>
     <packaging>pom</packaging>
 

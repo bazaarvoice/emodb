@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
+import com.bazaarvoice.emodb.blob.client.AbstractBlobStoreClientFactory;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;

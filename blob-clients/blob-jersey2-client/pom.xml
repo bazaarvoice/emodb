@@ -10,7 +10,7 @@
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
-    <artifactId>emodb-blob-jersey-2client</artifactId>
+    <artifactId>emodb-blob-jersey2-client</artifactId>
     <packaging>jar</packaging>
 
     <name>EmoDB Blob HTTP Client</name>
@@ -20,6 +20,12 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-jersey2-client</artifactId>
             <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bazaarvoice.emodb</groupId>
+            <artifactId>emodb-blob-client-common</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

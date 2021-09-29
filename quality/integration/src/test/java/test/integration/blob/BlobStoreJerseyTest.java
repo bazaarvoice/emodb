@@ -23,6 +23,7 @@ import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreStreaming;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
+import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.api.DataStore;
@@ -50,6 +51,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -133,7 +135,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private BlobStore blobClient(String apiKey) {
         return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
-                new JerseyEmoClient(_resourceTestRule.client()), _connectionManagementService))
+                new Jersey2EmoClient((Client) _resourceTestRule.client()), _connectionManagementService))
                 .usingCredentials(apiKey);
     }
 
@@ -885,6 +887,16 @@ public class BlobStoreJerseyTest extends ResourceTest {
         ByteArrayOutputStream actualBytes = new ByteArrayOutputStream();
         actual.writeTo(actualBytes);
         return actualBytes.toByteArray();
+    }
+
+    private BlobStore blobClientJersey2(String apiKey) {
+        return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
+                        new Jersey2EmoClient((Client) _resourceTestRule.client()), _connectionManagementService))
+                .usingCredentials(apiKey);
+    }
+
+    private BlobStore blobClientJersey2() {
+        return blobClientJersey2(APIKEY_BLOB);
     }
 
  /* target() method doesn't get identified with dw 0.71 test suite
