@@ -23,9 +23,8 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-blob-client-common</artifactId>
+            <artifactId>emodb-blob-jersey2-client-common</artifactId>
             <version>${project.version}</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

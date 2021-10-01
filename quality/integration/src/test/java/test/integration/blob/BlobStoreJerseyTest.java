@@ -52,7 +52,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import javax.ws.rs.client.Client;
-import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -135,7 +134,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private BlobStore blobClient(String apiKey) {
         return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
-                new Jersey2EmoClient((Client) _resourceTestRule.client()), _connectionManagementService))
+                new JerseyEmoClient( _resourceTestRule.client()), _connectionManagementService))
                 .usingCredentials(apiKey);
     }
 
@@ -889,7 +888,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
         return actualBytes.toByteArray();
     }
 
-    private BlobStore blobClientJersey2(String apiKey) {
+    /*private BlobStore blobClientJersey2(String apiKey) {
         return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
                         new Jersey2EmoClient((Client) _resourceTestRule.client()), _connectionManagementService))
                 .usingCredentials(apiKey);
@@ -897,7 +896,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private BlobStore blobClientJersey2() {
         return blobClientJersey2(APIKEY_BLOB);
-    }
+    }*/
 
  /* target() method doesn't get identified with dw 0.71 test suite
  private void testContentType(byte[] content, String metadataContentType, String expectedContentType) throws Exception {

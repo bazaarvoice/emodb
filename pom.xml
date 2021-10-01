@@ -58,7 +58,8 @@
         <module>databus-client-common</module>
         <module>databus-client</module>
         <module>databus</module>
-        <module>blob-client-common</module>
+        <module>blob-clients-common/blob-client-common</module>
+        <module>blob-clients-common/blob-jersey2-client-common</module>
         <module>blob-clients/blob-client</module>
         <module>blob-clients/blob-jersey2-client</module>
         <module>blob</module>
