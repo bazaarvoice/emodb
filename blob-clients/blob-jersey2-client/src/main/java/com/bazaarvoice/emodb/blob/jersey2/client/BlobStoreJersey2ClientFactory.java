@@ -9,7 +9,7 @@ import org.glassfish.jersey.client.ClientProperties;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.client.Client;
-import java.util.concurrent.ScheduledExecutorService;
+import java.net.URI;
 
 
 public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2ClientFactory {
@@ -18,18 +18,13 @@ public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2Clien
      * Connects to the Blob Store using the specified Jersey client.  If you're using Dropwizard, use this
      * constructor and pass the Dropwizard-constructed Jersey client.
      */
-    public static BlobStoreJersey2ClientFactory forClusterAndHttpClient(String clusterName, Client client) {
+    public static BlobStoreJersey2ClientFactory forClusterAndHttpClient(String clusterName, Client client, URI endpoint) {
         client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
-        return new BlobStoreJersey2ClientFactory(clusterName, client);
+        return new BlobStoreJersey2ClientFactory(clusterName, client, endpoint );
     }
 
-    public BlobStoreJersey2ClientFactory withConnectionManagementService(ScheduledExecutorService service) {
-        setConnectionManagementService(service);
-        return this;
-    }
-
-    private BlobStoreJersey2ClientFactory(String clusterName, Client jerseyClient) {
-        super(clusterName, new Jersey2EmoClient(jerseyClient));
+    private BlobStoreJersey2ClientFactory(String clusterName, Client jerseyClient, URI endpoint) {
+        super(clusterName, new Jersey2EmoClient(jerseyClient), endpoint);
     }
 
     @Override

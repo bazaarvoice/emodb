@@ -439,31 +439,20 @@ public class EmoModule extends AbstractModule {
     }
 
     /** Provides a BlobStore client with jax rs jersey2, that delegates to the remote system center blob store. */
-    @Provides @Singleton @SystemBlobStore
+    @Provides @Singleton
     @Named("Jersey2BlobStore")
     BlobStore provideSystemBlobStoreJersey2 (DataCenterConfiguration config, @Named("Jersey2Client") javax.ws.rs.client.Client jersey2Client, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
         System.out.println("Jersey2BlobStore...");
         {
 
-            ServiceFactory<BlobStore> clientFactory = BlobStoreJersey2ClientFactory
-                    .forClusterAndHttpClient(_configuration.getCluster(), jersey2Client)
+            URI uri = config.getSystemDataCenterServiceUri();
+            System.out.println("URI : "+uri.toString());
+
+
+            return BlobStoreJersey2ClientFactory
+                    .forClusterAndHttpClient(_configuration.getCluster(), jersey2Client, uri)
                     .usingCredentials(apiKey);
 
-            URI uri = config.getSystemDataCenterServiceUri();
-            ServiceEndPoint endPoint = new ServiceEndPointBuilder()
-                    .withServiceName(clientFactory.getServiceName())
-                    .withId(config.getSystemDataCenter())
-                    .withPayload(new PayloadBuilder()
-                            .withUrl(uri.resolve(BlobStoreClient.SERVICE_PATH))
-                            .withAdminUrl(uri)
-                            .toString())
-                    .build();
-
-            return ServicePoolBuilder.create(BlobStore.class)
-                    .withMetricRegistry(metricRegistry)
-                    .withHostDiscovery(new FixedHostDiscovery(endPoint))
-                    .withServiceFactory(clientFactory)
-                    .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
         }
     }
 
