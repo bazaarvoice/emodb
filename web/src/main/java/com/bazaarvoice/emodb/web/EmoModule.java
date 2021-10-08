@@ -164,6 +164,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.client.ClientBuilder;
 import java.net.URI;
 import java.time.Clock;
 import java.util.List;
@@ -309,8 +310,7 @@ public class EmoModule extends AbstractModule {
         @Named("Jersey2Client")
         javax.ws.rs.client.Client provideJersey2Client(JerseyClientConfiguration configuration, Environment environment) {
             System.out.println("Jersey2Client...");
-            //JerseyClientBuilder used below is from dropwizard 0.71, update it during dw upgrade
-            return (javax.ws.rs.client.Client) new JerseyClientBuilder(environment).using(configuration).using(environment).build("emodb");
+            return ClientBuilder.newClient();
         }
 
         private Class<? extends TaskRegistry> getTaskRegistryClass() {
