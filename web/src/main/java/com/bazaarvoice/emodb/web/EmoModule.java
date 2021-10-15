@@ -10,7 +10,6 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClient;
 import com.bazaarvoice.emodb.blob.client.BlobStoreClientFactory;
 import com.bazaarvoice.emodb.blob.core.SystemBlobStore;
-import com.bazaarvoice.emodb.blob.jersey2.client.BlobStoreJersey2ClientFactory;
 import com.bazaarvoice.emodb.cachemgr.CacheManagerModule;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
@@ -435,24 +434,6 @@ public class EmoModule extends AbstractModule {
                     .withHostDiscovery(new FixedHostDiscovery(endPoint))
                     .withServiceFactory(clientFactory)
                     .buildProxy(new ExponentialBackoffRetry(30, 1, 10, TimeUnit.SECONDS));
-        }
-    }
-
-    /** Provides a BlobStore client with jax rs jersey2, that delegates to the remote system center blob store. */
-    @Provides @Singleton
-    @Named("Jersey2BlobStore")
-    BlobStore provideSystemBlobStoreJersey2 (DataCenterConfiguration config, @Named("Jersey2Client") javax.ws.rs.client.Client jersey2Client, @Named ("AdminKey") String apiKey, MetricRegistry metricRegistry) {
-        System.out.println("Jersey2BlobStore...");
-        {
-
-            URI uri = config.getSystemDataCenterServiceUri();
-            System.out.println("URI : "+uri.toString());
-
-
-            return BlobStoreJersey2ClientFactory
-                    .forClusterAndHttpClient(_configuration.getCluster(), jersey2Client, uri)
-                    .usingCredentials(apiKey);
-
         }
     }
 
