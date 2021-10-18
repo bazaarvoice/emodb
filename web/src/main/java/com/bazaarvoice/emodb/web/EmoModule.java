@@ -304,14 +304,6 @@ public class EmoModule extends AbstractModule {
             return new JerseyClientBuilder(environment).using(configuration).using(environment).build("emodb");
         }
 
-        @Provides
-        @Singleton
-        @Named("Jersey2Client")
-        javax.ws.rs.client.Client provideJersey2Client(JerseyClientConfiguration configuration, Environment environment) {
-            System.out.println("Jersey2Client...");
-            return ClientBuilder.newClient();
-        }
-
         private Class<? extends TaskRegistry> getTaskRegistryClass() {
             if (_serviceMode.specifies(EmoServiceMode.Aspect.task)) {
                 return DropwizardTaskRegistry.class;

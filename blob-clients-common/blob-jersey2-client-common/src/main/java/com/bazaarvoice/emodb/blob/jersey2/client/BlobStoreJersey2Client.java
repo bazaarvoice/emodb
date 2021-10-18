@@ -64,6 +64,7 @@ import static com.google.common.base.Preconditions.checkState;
  * is managed by the {@link EmoClient} implementation to allow for flexible usage by variety of HTTP client
  * implementations, such as Jersey.
  */
+//TODO add documentation for using the client once it is validated
 public class BlobStoreJersey2Client implements AuthBlobStore {
 
     /**

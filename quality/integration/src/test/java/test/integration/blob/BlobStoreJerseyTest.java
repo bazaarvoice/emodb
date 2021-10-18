@@ -132,7 +132,7 @@ public class BlobStoreJerseyTest extends ResourceTest {
 
     private BlobStore blobClient(String apiKey) {
         return BlobStoreAuthenticator.proxied(new BlobStoreClient(URI.create("/blob/1"),
-                new JerseyEmoClient( _resourceTestRule.client()), _connectionManagementService))
+                new JerseyEmoClient(_resourceTestRule.client()), _connectionManagementService))
                 .usingCredentials(apiKey);
     }
 
