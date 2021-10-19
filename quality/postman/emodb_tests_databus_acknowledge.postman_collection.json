@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "c0453cf3-650f-498a-a22c-758f6e5d40f1",
+		"_postman_id": "eaf31022-71ea-4550-af62-0588b26455ec",
 		"name": "EmoDB_Tests_databus_acknowledge",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -158,7 +158,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).eql(true);    ",
 											"});"
 										],
@@ -284,7 +284,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -438,7 +438,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -592,7 +592,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -746,7 +746,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -900,7 +900,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.to.have.body('0'));",
 											"});"
 										],
@@ -1009,7 +1009,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 4) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -1179,20 +1179,22 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", function () {",
+											"pm.test(\"Status code is 200\", function () { ",
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json() < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
 											"            return response.json() > 0;",
 											"        }, \"Retrying request\");",
 											"    }",
-											"    pm.expect(response.json()).to.be.above(0);    ",
+											"",
+											"    pm.expect(response.json()).to.be.above(0);",
+											"    await delay(setTimeout, 10000);",
 											"}));",
-											" "
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -1302,6 +1304,15 @@
 										],
 										"type": "text/javascript"
 									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"false\");"
+										],
+										"type": "text/javascript"
+									}
 								}
 							],
 							"request": {
@@ -1322,7 +1333,7 @@
 									"raw": "[\n    \"{{eventId0}}\",\n    \"{{eventId1}}\",\n    \"{{eventId2}}\",\n    \"{{eventId3}}\"\n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -1335,7 +1346,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -1348,7 +1359,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -1361,7 +1372,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -1400,7 +1411,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    pm.expect(pm.response.to.have.body('0'));  ",
 											"}));",
 											" "
@@ -1511,7 +1522,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
 											"    if(pm.response.status !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -1519,15 +1530,6 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response).to.have.status(200);",
-											"}));",
-											"",
-											"pm.test(\"Successful DELETE request\", asyncTest(async function () {",
-											"    if(pm.response.status !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
 											"    pm.expect(response.json().success).eql(true);",
 											"}));",
 											""
@@ -1640,7 +1642,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -1881,7 +1883,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).eql(true);    ",
 											"});"
 										],
@@ -2007,7 +2009,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -2161,7 +2163,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -2315,7 +2317,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -2469,7 +2471,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -2623,7 +2625,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.to.have.body('0'));",
 											"});"
 										],
@@ -2732,7 +2734,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 4) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -2906,7 +2908,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(!response.json() > 0) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -3023,9 +3025,18 @@
 											"    pm.response.to.have.status(403);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().reason).to.eql(\"not authorized\");",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"true\");"
 										],
 										"type": "text/javascript"
 									}
@@ -3044,12 +3055,8 @@
 										"type": "text"
 									}
 								],
-								"body": {
-									"mode": "raw",
-									"raw": "[\n    \"{{eventId0}}\",\n    \"{{eventId1}}\",\n    \"{{eventId2}}\",\n    \"{{eventId3}}\"\n]"
-								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -3062,7 +3069,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -3075,7 +3082,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -3088,7 +3095,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -3127,7 +3134,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(!response.json() > 0) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -3244,7 +3251,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(pm.response.status !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -3252,17 +3259,9 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response).to.have.status(200);",
-											"}));",
-											"",
-											"pm.test(\"Successful DELETE request\", asyncTest(async function () {",
-											"    if(pm.response.status !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
 											"    pm.expect(response.json().success).eql(true);",
 											"}));",
+											"",
 											""
 										],
 										"type": "text/javascript"
@@ -3373,7 +3372,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -3614,7 +3613,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).eql(true);    ",
 											"});"
 										],
@@ -3740,7 +3739,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -3898,7 +3897,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -4065,9 +4064,18 @@
 											"    pm.response.to.have.status(400);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.text()).to.eql(\"Invalid event ID: \");",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"true\");"
 										],
 										"type": "text/javascript"
 									}
@@ -4091,7 +4099,7 @@
 									"raw": "[\n    \"\",\n    \"\"\n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -4104,7 +4112,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									],
 									"variable": [
@@ -4124,7 +4132,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -4137,7 +4145,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -4176,7 +4184,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -4343,9 +4351,18 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"true\");"
 										],
 										"type": "text/javascript"
 									}
@@ -4369,7 +4386,7 @@
 									"raw": "[\n    \n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -4382,7 +4399,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -4395,7 +4412,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -4408,7 +4425,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -4447,7 +4464,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -4614,9 +4631,18 @@
 											"    pm.response.to.have.status(422);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().errors).to.eql([]);",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"true\");"
 										],
 										"type": "text/javascript"
 									}
@@ -4640,7 +4666,7 @@
 									"raw": ""
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -4653,7 +4679,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -4666,7 +4692,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -4679,7 +4705,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -4843,7 +4869,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -5084,7 +5110,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).eql(true);    ",
 											"});"
 										],
@@ -5210,7 +5236,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -5368,7 +5394,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -5536,7 +5562,7 @@
 											"    pm.response.to.have.status(400);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.text()).to.eql(\"Invalid event ID: wrong_event_id\");",
 											"});"
 										],
@@ -5588,7 +5614,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -5601,7 +5627,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -5636,7 +5662,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
@@ -5794,7 +5820,7 @@
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Body matches strings\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
@@ -5961,7 +5987,7 @@
 											"    pm.response.to.have.status(400);",
 											"});",
 											"",
-											"pm.test(\"Body matches string\", function () {",
+											"pm.test(\"Assert response body\", function () {",
 											"     pm.expect(pm.response.text()).to.eql(\"Invalid event ID: wrong_event_id\");",
 											"});"
 										],
@@ -6013,7 +6039,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
 												"{{baseUrl}}"
 											],
@@ -6026,7 +6052,7 @@
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												}
 											],
 											"variable": [
@@ -6190,7 +6216,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -6283,6 +6309,17 @@
 				},
 				{
 					"name": "Acknowledge operation.",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.environment.set(\"partitioned\", \"true\");"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -6296,27 +6333,20 @@
 							"raw": "[\n    \"\",\n    \"\"\n]"
 						},
 						"url": {
-							"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned=true",
+							"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription/ack?partitioned={{partitioned}}",
 							"host": [
 								"{{baseurl_dc1}}"
 							],
 							"path": [
 								"bus",
 								"1",
-								":subscription",
+								"not_existing_subscription",
 								"ack"
 							],
 							"query": [
 								{
 									"key": "partitioned",
-									"value": "true"
-								}
-							],
-							"variable": [
-								{
-									"key": "subscription",
-									"value": "adipisicing",
-									"description": "(Required) "
+									"value": "{{partitioned}}"
 								}
 							]
 						},
@@ -6329,7 +6359,7 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned=adipisicing ea",
+									"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseUrl}}"
 									],
@@ -6342,7 +6372,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "adipisicing ea"
+											"value": "{{partitioned}}"
 										}
 									],
 									"variable": [
@@ -6439,7 +6469,10 @@
 					"        }",
 					"    };",
 					"}",
-					""
+					"",
+					"delay = (setTimeout, timeInMs) => {",
+					"    return new Promise((resolve) => setTimeout(resolve, timeInMs));",
+					"}"
 				]
 			}
 		},
