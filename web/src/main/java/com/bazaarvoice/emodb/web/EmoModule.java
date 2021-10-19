@@ -163,7 +163,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.client.ClientBuilder;
 import java.net.URI;
 import java.time.Clock;
 import java.util.List;

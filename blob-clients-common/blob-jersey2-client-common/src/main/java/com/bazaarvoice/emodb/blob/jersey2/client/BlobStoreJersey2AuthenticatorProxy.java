@@ -1,6 +1,13 @@
 package com.bazaarvoice.emodb.blob.jersey2.client;
 
-import com.bazaarvoice.emodb.blob.api.*;
+import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
+import com.bazaarvoice.emodb.blob.api.Blob;
+import com.bazaarvoice.emodb.blob.api.BlobMetadata;
+import com.bazaarvoice.emodb.blob.api.BlobNotFoundException;
+import com.bazaarvoice.emodb.blob.api.BlobStore;
+import com.bazaarvoice.emodb.blob.api.RangeNotSatisfiableException;
+import com.bazaarvoice.emodb.blob.api.RangeSpecification;
+import com.bazaarvoice.emodb.blob.api.Table;
 import com.bazaarvoice.emodb.sor.api.Audit;
 import com.bazaarvoice.emodb.sor.api.TableExistsException;
 import com.bazaarvoice.emodb.sor.api.TableOptions;
