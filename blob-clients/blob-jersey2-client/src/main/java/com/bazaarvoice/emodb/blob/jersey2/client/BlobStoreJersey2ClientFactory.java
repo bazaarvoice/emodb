@@ -18,13 +18,13 @@ public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2Clien
      * Connects to the Blob Store using the specified Jersey client.  If you're using Dropwizard, use this
      * constructor and pass the Dropwizard-constructed Jersey client.
      */
-    public static BlobStoreJersey2ClientFactory forClusterAndHttpClient(String clusterName, Client client, URI endpoint) {
+    public static BlobStoreJersey2ClientFactory forClusterAndHttpClient(Client client, URI endpoint) {
         client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
-        return new BlobStoreJersey2ClientFactory(clusterName, client, endpoint );
+        return new BlobStoreJersey2ClientFactory(client, endpoint );
     }
 
-    private BlobStoreJersey2ClientFactory(String clusterName, Client jerseyClient, URI endpoint) {
-        super(clusterName, new Jersey2EmoClient(jerseyClient), endpoint);
+    private BlobStoreJersey2ClientFactory(Client jerseyClient, URI endpoint) {
+        super(new Jersey2EmoClient(jerseyClient), endpoint);
     }
 
     @Override

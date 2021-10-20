@@ -20,7 +20,7 @@ abstract public class AbstractBlobStoreJersey2ClientFactory implements Serializa
     private URI _endPoint;
     private ScheduledExecutorService _connectionManagementService;
 
-    protected AbstractBlobStoreJersey2ClientFactory(String clusterName, EmoClient client, URI endPoint) {
+    protected AbstractBlobStoreJersey2ClientFactory(EmoClient client, URI endPoint) {
         _client = client;
         _endPoint = endPoint;
     }
