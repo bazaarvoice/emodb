@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "7d835f6f-d00d-40f6-9df7-d96916f3cad2",
+		"_postman_id": "3dea194d-d6b1-45a6-93b1-a36ded9fa108",
 		"name": "EmoDB_Tests_databus_get_subscription",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -277,7 +277,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", false);"
+											"pm.environment.set(\"partitioned\", \"false\");",
+											"",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
 										],
 										"type": "text/javascript"
 									}
@@ -716,7 +720,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", true);"
+											"pm.environment.set(\"partitioned\", \"true\");",
+											"",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
 										],
 										"type": "text/javascript"
 									}
@@ -1156,7 +1164,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", true);"
+											"pm.environment.set(\"partitioned\", \"true\");",
+											"",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
 										],
 										"type": "text/javascript"
 									}
@@ -1404,46 +1416,46 @@
 					]
 				}
 			],
-"event": [
-	{
-		"listen": "prerequest",
-		"script": {
-			"type": "text/javascript",
-			"exec": [
-				"const retryRequest = () => {",
-				"    return new Promise((resolve, reject) => {",
-				"        pm.sendRequest({",
-				"            url: `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`,",
-				"            method: '{DELETE}',",
-				"            header: {",
-				"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
-				"            }",
-				"        },async (error, response) => {",
-				"            if (error) {",
-				"                reject(error);",
-				"            }",
-				"            resolve(response);",
-				"        });        ",
-				"    });",
-				"};",
-				"",
-				"const retryRequestCall = {",
-				"    retryRequest: retryRequest.toString()",
-				"};",
-				"",
-				"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
-			]
-		}
-	},
-	{
-		"listen": "test",
-		"script": {
-			"type": "text/javascript",
-			"exec": [
-				""
-			]
-		}
-	}
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"            }",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);            ",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
 			]
 		}
 	],
