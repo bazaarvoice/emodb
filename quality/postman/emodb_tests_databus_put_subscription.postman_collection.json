@@ -105,31 +105,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -236,14 +236,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -287,8 +287,8 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 											"",
-											"pm.environment.set(\"ttl\", \"86400\");",
-											"pm.environment.set(\"eventTtl\", \"86400\");",
+											"pm.environment.set(\"ttl\", \"{{ttl}}\");",
+											"pm.environment.set(\"eventTtl\", \"{{eventTtl}}\");",
 											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
 											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 										],
@@ -375,31 +375,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -505,14 +505,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -556,10 +556,10 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
 											"",
-											"pm.environment.set(\"ttl\", \"86400\");",
-											"pm.environment.set(\"eventTtl\", \"86400\");",
-											"pm.environment.set(\"ignoreSuppressedEvents\", true);",
-											"pm.environment.set(\"includeDefaultJoinFilter\", true);"
+											"pm.environment.set(\"ttl\", \"{{ttl}}\");",
+											"pm.environment.set(\"eventTtl\", \"{{eventTtl}}\");",
+											"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+											"pm.environment.set(\"includeDefaultJoinFilter\", false);"
 										],
 										"type": "text/javascript"
 									}
@@ -611,22 +611,22 @@
 									"query": [
 										{
 											"key": "ttl",
-											"value": "86400",
+											"value": "{{ttl}}",
 											"disabled": true
 										},
 										{
 											"key": "eventTtl",
-											"value": "86400",
+											"value": "{{eventTtl}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreSuppressedEvents",
-											"value": "true",
+											"value": "{{ignoreSuppressedEvents}}",
 											"disabled": true
 										},
 										{
 											"key": "includeDefaultJoinFilter",
-											"value": "true",
+											"value": "{{includeDefaultJoinFilter}}",
 											"disabled": true
 										}
 									]
@@ -644,31 +644,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -774,14 +774,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -880,22 +880,22 @@
 									"query": [
 										{
 											"key": "ttl",
-											"value": "86400",
+											"value": "{{ttl}}",
 											"disabled": true
 										},
 										{
 											"key": "eventTtl",
-											"value": "86400",
+											"value": "{{eventTtl}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreSuppressedEvents",
-											"value": "true",
+											"value": "{{ignoreSuppressedEvents}}",
 											"disabled": true
 										},
 										{
 											"key": "includeDefaultJoinFilter",
-											"value": "true",
+											"value": "{{includeDefaultJoinFilter}}",
 											"disabled": true
 										}
 									]
@@ -913,31 +913,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -1053,14 +1053,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -1159,22 +1159,22 @@
 									"query": [
 										{
 											"key": "ttl",
-											"value": "86400",
+											"value": "{{ttl}}",
 											"disabled": true
 										},
 										{
 											"key": "eventTtl",
-											"value": "86400",
+											"value": "{{eventTtl}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreSuppressedEvents",
-											"value": "true",
+											"value": "{{ignoreSuppressedEvents}}",
 											"disabled": true
 										},
 										{
 											"key": "includeDefaultJoinFilter",
-											"value": "true",
+											"value": "{{includeDefaultJoinFilter}}",
 											"disabled": true
 										}
 									]
@@ -1192,31 +1192,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -1332,14 +1332,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscriptionn?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -1438,22 +1438,22 @@
 									"query": [
 										{
 											"key": "ttl",
-											"value": "86400",
+											"value": "{{ttl}}",
 											"disabled": true
 										},
 										{
 											"key": "eventTtl",
-											"value": "86400",
+											"value": "{{eventTtl}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreSuppressedEvents",
-											"value": "true",
+											"value": "{{ignoreSuppressedEvents}}",
 											"disabled": true
 										},
 										{
 											"key": "includeDefaultJoinFilter",
-											"value": "true",
+											"value": "{{includeDefaultJoinFilter}}",
 											"disabled": true
 										}
 									]
@@ -1471,31 +1471,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -1584,22 +1584,22 @@
 									"query": [
 										{
 											"key": "ttl",
-											"value": "86400",
+											"value": "{{ttl}}",
 											"disabled": true
 										},
 										{
 											"key": "eventTtl",
-											"value": "86400",
+											"value": "{{eventTtl}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreSuppressedEvents",
-											"value": "true",
+											"value": "{{ignoreSuppressedEvents}}",
 											"disabled": true
 										},
 										{
 											"key": "includeDefaultJoinFilter",
-											"value": "true",
+											"value": "{{includeDefaultJoinFilter}}",
 											"disabled": true
 										}
 									]
@@ -1617,31 +1617,31 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
 													"key": "ttl",
-													"value": "86400"
+													"value": "{{ttl}}"
 												},
 												{
 													"key": "eventTtl",
-													"value": "86400"
+													"value": "{{eventTtl}}"
 												},
 												{
 													"key": "ignoreSuppressedEvents",
-													"value": "true"
+													"value": "{{ignoreSuppressedEvents}}"
 												},
 												{
 													"key": "includeDefaultJoinFilter",
-													"value": "true"
+													"value": "{{includeDefaultJoinFilter}}"
 												}
 											],
 											"variable": [
@@ -1757,14 +1757,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscriptionn?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -1885,14 +1885,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"not_existing_subscription"
 											],
 											"query": [
 												{
@@ -1940,31 +1940,31 @@
 					"raw": ""
 				},
 				"url": {
-					"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+					"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 					"host": [
 						"{{baseurl_dc1}}"
 					],
 					"path": [
 						"bus",
 						"1",
-						":subscription"
+						"not_existing_subscription"
 					],
 					"query": [
 						{
 							"key": "ttl",
-							"value": "86400"
+							"value": "{{ttl}}"
 						},
 						{
 							"key": "eventTtl",
-							"value": "86400"
+							"value": "{{eventTtl}}"
 						},
 						{
 							"key": "ignoreSuppressedEvents",
-							"value": "true"
+							"value": "{{ignoreSuppressedEvents}}"
 						},
 						{
 							"key": "includeDefaultJoinFilter",
-							"value": "true"
+							"value": "{{includeDefaultJoinFilter}}"
 						}
 					],
 					"variable": [
@@ -1988,31 +1988,31 @@
 							"raw": ""
 						},
 						"url": {
-							"raw": "{{baseUrl}}/bus/1/:subscription?ttl=86400&eventTtl=86400&ignoreSuppressedEvents=true&includeDefaultJoinFilter=true",
+							"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 							"host": [
-								"{{baseUrl}}"
+								"{{baseurl_dc1}}"
 							],
 							"path": [
 								"bus",
 								"1",
-								":subscription"
+								"not_existing_subscription"
 							],
 							"query": [
 								{
 									"key": "ttl",
-									"value": "86400"
+									"value": "{{ttl}}"
 								},
 								{
 									"key": "eventTtl",
-									"value": "86400"
+									"value": "{{eventTtl}}"
 								},
 								{
 									"key": "ignoreSuppressedEvents",
-									"value": "true"
+									"value": "{{ignoreSuppressedEvents}}"
 								},
 								{
 									"key": "includeDefaultJoinFilter",
-									"value": "true"
+									"value": "{{includeDefaultJoinFilter}}"
 								}
 							],
 							"variable": [
