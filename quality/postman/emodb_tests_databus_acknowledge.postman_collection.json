@@ -1384,13 +1384,10 @@
 											"pm.test(\"Status code is 200\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
-											"var response = pm.response;",
-											"pm.test(\"Assert response body\", function () {",
-											"    if (response.json() !== 0) {",
-											"        postman.setNextRequest(\"Acknowledge operation. 1\");",
-											"    }",
-											"    pm.expect(response.json()).eql(0);",
-											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
+											"    pm.expect(pm.response.to.have.body('0'));  ",
+											"}));",
 											" "
 										],
 										"type": "text/javascript"
