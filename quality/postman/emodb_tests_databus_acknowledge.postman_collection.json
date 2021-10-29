@@ -145,7 +145,8 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -300,11 +301,7 @@
 										"exec": [
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id1', uuid.v4());",
-											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -454,11 +451,7 @@
 										"exec": [
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id2', uuid.v4());",
-											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -608,11 +601,7 @@
 										"exec": [
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id3', uuid.v4());",
-											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -762,11 +751,7 @@
 										"exec": [
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id4', uuid.v4());",
-											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -890,7 +875,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -911,7 +896,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -1040,13 +1025,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", 300);",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -1068,7 +1049,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -1081,27 +1062,26 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
+											"value": "{{partitioned}}",
 											"disabled": true
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -1169,7 +1149,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -1184,15 +1164,14 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json() < 1) {",
+											"    if(response.json() < 4) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
-											"            return response.json() > 0;",
+											"            return response.json() == 4;",
 											"        }, \"Retrying request\");",
 											"    }",
 											"",
-											"    pm.expect(response.json()).to.be.above(0);",
-											"    await delay(setTimeout, 10000);",
+											"    pm.expect(response.json()).eql(4);",
 											"}));",
 											""
 										],
@@ -1203,8 +1182,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");",
@@ -1292,14 +1269,15 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 1",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
-											"pm.test(\"Status code is 200\", function () {",
+											"pm.test(\"Assert response\", function () {",
 											"    pm.response.to.have.status(200);",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -1309,7 +1287,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"false\");"
+											"pm.environment.set(\"partitioned\", false);"
 										],
 										"type": "text/javascript"
 									}
@@ -1397,23 +1375,23 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 3",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
-											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
-											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
-											"var response = pm.response;",
 											"pm.test(\"Status code is 200\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
-											"",
-											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    pm.expect(pm.response.to.have.body('0'));  ",
-											"}));",
+											"var response = pm.response;",
+											"pm.test(\"Assert response body\", function () {",
+											"    if (response.json() !== 0) {",
+											"        postman.setNextRequest(\"Acknowledge operation. 1\");",
+											"    }",
+											"    pm.expect(response.json()).eql(0);",
+											"});",
 											" "
 										],
 										"type": "text/javascript"
@@ -1423,11 +1401,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
-											"pm.environment.set(\"url\", url);",
-											"pm.environment.set(\"method\", \"GET\");",
 											""
 										],
 										"type": "text/javascript"
@@ -1529,7 +1502,7 @@
 											"            return response.code === 200;",
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
-											"    pm.expect(response).to.have.status(200);",
+											"    pm.expect(response.code).to.eql(200);",
 											"    pm.expect(response.json().success).eql(true);",
 											"}));",
 											""
@@ -1642,7 +1615,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
+											"    pm.expect(pm.response.json().success).eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -2026,10 +1999,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id1', uuid.v4());",
 											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -2166,7 +2136,7 @@
 											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
 											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
-											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"    pm.expect(pm.response.json().success).eql(true);",
 											"",
 											"});"
 										],
@@ -2180,10 +2150,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id2', uuid.v4());",
 											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -2334,10 +2301,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id3', uuid.v4());",
 											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -2488,10 +2452,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id4', uuid.v4());",
 											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -2615,7 +2576,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -2636,7 +2597,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -2765,13 +2726,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -2793,7 +2750,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -2806,27 +2763,26 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
+											"value": "{{partitioned}}",
 											"disabled": true
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -2894,7 +2850,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -2926,8 +2882,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");",
@@ -3036,7 +2990,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -3120,7 +3074,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 3",
 							"event": [
 								{
 									"listen": "test",
@@ -3152,8 +3106,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");",
@@ -3271,8 +3223,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
@@ -3372,7 +3322,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
+											"    pm.expect(pm.response.json().success).eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -3729,7 +3679,7 @@
 							]
 						},
 						{
-							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -3755,11 +3705,7 @@
 										"exec": [
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id1', uuid.v4());",
-											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -3883,7 +3829,7 @@
 							]
 						},
 						{
-							"name": "poll operation.",
+							"name": "poll operation. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -3925,13 +3871,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -3953,7 +3895,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -3966,27 +3908,26 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
+											"value": "{{partitioned}}",
 											"disabled": true
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -4054,7 +3995,7 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -4075,7 +4016,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -4099,27 +4040,20 @@
 									"raw": "[\n    \"\",\n    \"\"\n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"bus",
 										"1",
-										":subscription",
+										"{{subscription}}",
 										"ack"
 									],
 									"query": [
 										{
 											"key": "partitioned",
 											"value": "{{partitioned}}"
-										}
-									],
-									"variable": [
-										{
-											"key": "subscription",
-											"value": "adipisicing",
-											"description": "(Required) "
 										}
 									]
 								},
@@ -4170,7 +4104,157 @@
 							]
 						},
 						{
-							"name": "poll operation.",
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. 2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id1', uuid.v4());",
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-delta"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{..,\"test_delta\":\"set\"}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"{{table}}",
+										"{{document_id1}}"
+									],
+									"query": [
+										{
+											"key": "changeId",
+											"value": "{{change_id}}",
+											"disabled": true
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										},
+										{
+											"key": "consistency",
+											"value": "{{consistency}}"
+										},
+										{
+											"key": "tag",
+											"value": "{{tag}}"
+										},
+										{
+											"key": "debug",
+											"value": "{{debug}}"
+										}
+									]
+								},
+								"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												":table",
+												":key"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "{{change_id}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												},
+												{
+													"key": "consistency",
+													"value": "{{consistency}}"
+												},
+												{
+													"key": "tag",
+													"value": "{{tag}}"
+												},
+												{
+													"key": "debug",
+													"value": "{{debug}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												},
+												{
+													"key": "key"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -4212,13 +4296,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -4240,7 +4320,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -4253,27 +4333,26 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
+											"value": "{{partitioned}}",
 											"disabled": true
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -4341,7 +4420,7 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -4362,7 +4441,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -4450,7 +4529,157 @@
 							]
 						},
 						{
-							"name": "poll operation.",
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. 3",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id1', uuid.v4());",
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-delta"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{..,\"test_delta\":\"set\"}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"{{table}}",
+										"{{document_id1}}"
+									],
+									"query": [
+										{
+											"key": "changeId",
+											"value": "{{change_id}}",
+											"disabled": true
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										},
+										{
+											"key": "consistency",
+											"value": "{{consistency}}"
+										},
+										{
+											"key": "tag",
+											"value": "{{tag}}"
+										},
+										{
+											"key": "debug",
+											"value": "{{debug}}"
+										}
+									]
+								},
+								"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												":table",
+												":key"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "{{change_id}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												},
+												{
+													"key": "consistency",
+													"value": "{{consistency}}"
+												},
+												{
+													"key": "tag",
+													"value": "{{tag}}"
+												},
+												{
+													"key": "debug",
+													"value": "{{debug}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												},
+												{
+													"key": "key"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 3",
 							"event": [
 								{
 									"listen": "test",
@@ -4492,15 +4721,12 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
+											"pm.environment.set(\"method\", \"GET\")",
 											"pm.environment.set(\"url\", url);",
-											"pm.environment.set(\"method\", \"GET\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -4520,7 +4746,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -4533,13 +4759,12 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
+											"value": "{{partitioned}}",
 											"disabled": true
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
@@ -4621,7 +4846,7 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 3",
 							"event": [
 								{
 									"listen": "test",
@@ -4642,7 +4867,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -4768,8 +4993,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
@@ -4961,7 +5184,7 @@
 					]
 				},
 				{
-					"name": "TC: Request with access and with wrong evend ids to existing subscription",
+					"name": "TC: Request with access and with wrong event ids to existing subscription",
 					"item": [
 						{
 							"name": "Creates a table",
@@ -5097,7 +5320,8 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -5226,7 +5450,7 @@
 							]
 						},
 						{
-							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -5254,9 +5478,7 @@
 											"pm.environment.set('document_id1', uuid.v4());",
 											"",
 											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -5380,7 +5602,7 @@
 							]
 						},
 						{
-							"name": "poll operation.",
+							"name": "poll operation. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -5423,13 +5645,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -5451,7 +5669,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -5464,27 +5682,25 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true",
-											"disabled": true
+											"value": "{{partitioned}}"
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -5552,7 +5768,7 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -5563,8 +5779,17 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", function () {",
-											"    pm.expect(pm.response.text()).to.eql(\"Invalid event ID: wrong_event_id\");",
+											"    pm.expect(pm.response.text()).to.include(\"Invalid event ID:\");",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -5588,7 +5813,7 @@
 									"raw": "[\n    \"{{eventId}}\",\n    \"wrong_event_id\"\n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -5601,7 +5826,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -5652,7 +5877,7 @@
 							]
 						},
 						{
-							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. Copy",
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -5679,10 +5904,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id1', uuid.v4());",
 											"",
-											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
-											"pm.environment.set(\"consistency\", \"GLOBAL\");",
-											"pm.environment.set(\"tag\", \"test_tag\");",
-											"pm.environment.set(\"debug\", \"true\");"
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");"
 										],
 										"type": "text/javascript"
 									}
@@ -5806,12 +6028,14 @@
 							]
 						},
 						{
-							"name": "poll operation.",
+							"name": "poll operation. 2",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
+											"pm.environment.set(\"ttl\", \"300\");",
+											"",
 											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
@@ -5848,13 +6072,9 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"ttl\", \"30\");",
-											"pm.environment.set(\"limit\", \"10\");",
-											"pm.environment.set(\"ignoreLongPoll\", \"false\");",
-											"pm.environment.set(\"includeTags\", \"false\");",
+											"pm.environment.set(\"ttl\", \"300\");",
 											"",
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"GET\");"
 										],
@@ -5876,7 +6096,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -5894,22 +6114,21 @@
 										},
 										{
 											"key": "ttl",
-											"value": "30",
-											"disabled": true
+											"value": "{{ttl}}"
 										},
 										{
 											"key": "limit",
-											"value": "10",
+											"value": "{{limit}}",
 											"disabled": true
 										},
 										{
 											"key": "ignoreLongPoll",
-											"value": "false",
+											"value": "{{ignoreLongPoll}}",
 											"disabled": true
 										},
 										{
 											"key": "includeTags",
-											"value": "false",
+											"value": "{{includeTags}}",
 											"disabled": true
 										}
 									]
@@ -5977,19 +6196,28 @@
 							]
 						},
 						{
-							"name": "Acknowledge operation.",
+							"name": "Acknowledge operation. 2",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
-											"pm.test(\"Status code is 400\", function () {",
+											"    pm.test(\"Status code is 400\", function () {",
 											"    pm.response.to.have.status(400);",
 											"});",
 											"",
 											"pm.test(\"Assert response body\", function () {",
 											"     pm.expect(pm.response.text()).to.eql(\"Invalid event ID: wrong_event_id\");",
 											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -6013,7 +6241,7 @@
 									"raw": "[\n    \"wrong_event_id\"\n]"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned=true",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -6026,7 +6254,7 @@
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "true"
+											"value": "{{partitioned}}"
 										}
 									]
 								},
@@ -6115,8 +6343,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"true\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
@@ -6314,7 +6540,7 @@
 							"listen": "prerequest",
 							"script": {
 								"exec": [
-									"pm.environment.set(\"partitioned\", \"true\");"
+									""
 								],
 								"type": "text/javascript"
 							}
@@ -6395,6 +6621,58 @@
 							"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 						}
 					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"            }",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);            ",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+							"pm.environment.set(\"ttl\", \"86400\");",
+							"pm.environment.set(\"eventTtl\", \"86400\");",
+							"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+							"pm.environment.set(\"includeDefaultJoinFilter\", false);",
+							"pm.environment.set(\"ignoreLongPoll\", false);",
+							"pm.environment.set(\"includeTags\", false);",
+							"pm.environment.set(\"consistency\", \"GLOBAL\");",
+							"pm.environment.set(\"tag\", \"test_tag\");",
+							"pm.environment.set(\"debug\", \"true\");",
+							"pm.environment.set(\"partitioned\", \"true\");",
+							"pm.environment.set(\"limit\", \"10\");"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		}
