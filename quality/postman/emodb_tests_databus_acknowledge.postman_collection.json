@@ -145,8 +145,7 @@
 									"script": {
 										"exec": [
 											"var uuid = require('uuid');",
-											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');",
-											""
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 										],
 										"type": "text/javascript"
 									}
@@ -875,7 +874,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 1",
 							"event": [
 								{
 									"listen": "test",
@@ -1149,7 +1148,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 2",
 							"event": [
 								{
 									"listen": "test",
@@ -1172,7 +1171,6 @@
 											"    }",
 											"",
 											"    pm.expect(response.json()).eql(4);",
-											"    await delay(setTimeout, 10000);",
 											"}));",
 											""
 										],
@@ -1288,7 +1286,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											""
+											"pm.environment.set(\"partitioned\", false);"
 										],
 										"type": "text/javascript"
 									}
@@ -1376,7 +1374,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count.",
+							"name": "Gets the claim count. 3",
 							"event": [
 								{
 									"listen": "test",
@@ -1391,7 +1389,7 @@
 											"    if (response.json() !== 0) {",
 											"        postman.setNextRequest(\"Acknowledge operation. 1\");",
 											"    }",
-											"    pm.expect(pm.response.to.have.body('0'));",
+											"    pm.expect(response.json()).eql(0);",
 											"});",
 											" "
 										],
