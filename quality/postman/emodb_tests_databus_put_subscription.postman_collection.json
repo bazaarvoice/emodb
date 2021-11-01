@@ -1,6 +1,6 @@
-{
+:q!{
 	"info": {
-		"_postman_id": "55908797-3416-48e5-b32b-498b4d9e42b1",
+		"_postman_id": "e8da36cb-4425-4008-bd2c-cae73692663c",
 		"name": "EmoDB_Tests_databus_put_subscription",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -183,8 +183,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", false);",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
@@ -1332,7 +1330,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscriptionn?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1757,7 +1755,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscriptionn?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?partitioned={{partitioned}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1923,116 +1921,53 @@
 						}
 					]
 				}
-			]
-		},
-		{
-			"name": "Subscribe operation.",
-			"request": {
-				"method": "PUT",
-				"header": [
-					{
-						"key": "Content-Type",
-						"value": "application/x.json-condition"
-					}
-				],
-				"body": {
-					"mode": "raw",
-					"raw": ""
-				},
-				"url": {
-					"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
-					"host": [
-						"{{baseurl_dc1}}"
-					],
-					"path": [
-						"bus",
-						"1",
-						"not_existing_subscription"
-					],
-					"query": [
-						{
-							"key": "ttl",
-							"value": "{{ttl}}"
-						},
-						{
-							"key": "eventTtl",
-							"value": "{{eventTtl}}"
-						},
-						{
-							"key": "ignoreSuppressedEvents",
-							"value": "{{ignoreSuppressedEvents}}"
-						},
-						{
-							"key": "includeDefaultJoinFilter",
-							"value": "{{includeDefaultJoinFilter}}"
-						}
-					],
-					"variable": [
-						{
-							"key": "subscription",
-							"value": "true",
-							"description": "(Required) "
-						}
-					]
-				},
-				"description": "Returns a SuccessResponse."
-			},
-			"response": [
+			],
+			"event": [
 				{
-					"name": "successful operation",
-					"originalRequest": {
-						"method": "PUT",
-						"header": [],
-						"body": {
-							"mode": "raw",
-							"raw": ""
-						},
-						"url": {
-							"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
-							"host": [
-								"{{baseurl_dc1}}"
-							],
-							"path": [
-								"bus",
-								"1",
-								"not_existing_subscription"
-							],
-							"query": [
-								{
-									"key": "ttl",
-									"value": "{{ttl}}"
-								},
-								{
-									"key": "eventTtl",
-									"value": "{{eventTtl}}"
-								},
-								{
-									"key": "ignoreSuppressedEvents",
-									"value": "{{ignoreSuppressedEvents}}"
-								},
-								{
-									"key": "includeDefaultJoinFilter",
-									"value": "{{includeDefaultJoinFilter}}"
-								}
-							],
-							"variable": [
-								{
-									"key": "subscription"
-								}
-							]
-						}
-					},
-					"status": "OK",
-					"code": 200,
-					"_postman_previewlanguage": "json",
-					"header": [
-						{
-							"key": "Content-Type",
-							"value": "application/json"
-						}
-					],
-					"cookie": [],
-					"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"            }",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);            ",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+							"",
+							"pm.environment.set(\"partitioned\", \"false\");",
+							"pm.environment.set(\"ttl\", \"86400\");",
+							"pm.environment.set(\"eventTtl\", \"86400\");",
+							"pm.environment.set(\"partitioned\", \"false\");",
+							"pm.environment.set(\"ignoreSuppressedEvents\", \"false\");",
+							"pm.environment.set(\"includeDefaultJoinFilter\", \"false\");"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		}
