@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "03e129ab-ce6a-43ba-bf94-e8eed0bc72be",
+		"_postman_id": "2ac487b7-0473-48e4-9521-f286b98a4423",
 		"name": "EmoDB_Tests_databus_get_poll",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -880,7 +880,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);    ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);    ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -3600,7 +3600,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);    ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);    ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -5941,7 +5941,7 @@
 											"});",
 											"",
 											"pm.test(\"Body matches string\", asyncTest(async function () {",
-											"    if(!response.json() > 0) {",
+											"    if(response.json() < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
 											"            return response.json() > 0;",
@@ -6186,7 +6186,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -7719,7 +7719,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -7820,7 +7820,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true); ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
 											"});"
 										],
 										"type": "text/javascript"
@@ -10528,7 +10528,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);    ",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);    ",
 											"});"
 										],
 										"type": "text/javascript"

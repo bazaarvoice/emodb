@@ -1051,12 +1051,23 @@
 											"    pm.response.to.have.status(404);",
 											"});",
 											"",
+											"const subscription = pm.environment.get(\"not_existing_subscription\");",
 											"pm.test(\"Body matches string\", function () {",
 											"    pm.expect(pm.response.json()).to.have.keys(\"message\",\"subscription\",\"suppressed\");",
-											"    pm.expect(pm.response.json().message).to.eql(\"not_existing_subscription\");",
-											"    pm.expect(pm.response.json().subscription).to.eql(\"not_existing_subscription\");",
+											"    pm.expect(pm.response.json().message).to.eql(subscription);",
+											"    pm.expect(pm.response.json().subscription).to.eql(subscription);",
 											"});",
 											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('not_existing_subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 										],
 										"type": "text/javascript"
 									}
@@ -1076,14 +1087,14 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription",
+									"raw": "{{baseurl_dc1}}/bus/1/{{not_existing_subscription}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"bus",
 										"1",
-										"not_existing_subscription"
+										"{{not_existing_subscription}}"
 									]
 								},
 								"description": "Returns a Subscription."

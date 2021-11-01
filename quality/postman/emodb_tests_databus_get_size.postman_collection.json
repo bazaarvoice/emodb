@@ -2095,7 +2095,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Status code is 200 and response body\", asyncTest(async function () {",
 											"    if(pm.response.status !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -2103,16 +2103,7 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response).to.have.status(200);",
-											"}));",
-											"",
-											"pm.test(\"Successful DELETE request\", asyncTest(async function () {",
-											"    if(pm.response.status !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
-											"    pm.expect(response.json().success).eql(true);",
+											"    pm.expect(response.json().success).to.eql(true);",
 											"}));",
 											""
 										],
@@ -2224,7 +2215,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -4532,7 +4523,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -7452,7 +7443,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -9759,7 +9750,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -12067,7 +12058,7 @@
 											"});",
 											"",
 											"pm.test(\"Successful DELETE request\", function () {",
-											"    pm.expect(pm.response.json().success).eql(true);",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);",
 											"});"
 										],
 										"type": "text/javascript"
@@ -12303,7 +12294,10 @@
 									"script": {
 										"exec": [
 											"pm.environment.set(\"partitioned\", \"true\");",
-											"pm.environment.set(\"limit\", \"10\");"
+											"pm.environment.set(\"limit\", \"10\");",
+											"",
+											"var uuid = require('uuid');",
+											"pm.environment.set('not_existing_subscription', 'postman_'+uuid.v4()+'_test_subscription');"
 										],
 										"type": "text/javascript"
 									}
@@ -12323,14 +12317,14 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription/size?partitioned={{partitioned}}&limit={{limit}}",
+									"raw": "{{baseurl_dc1}}/bus/1/{{not_existing_subscription}}/size?partitioned={{partitioned}}&limit={{limit}}",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"bus",
 										"1",
-										"not_existing_subscription",
+										"{{not_existing_subscription}}",
 										"size"
 									],
 									"query": [
