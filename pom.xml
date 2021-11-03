@@ -72,6 +72,7 @@
         <module>yum</module>
         <module>megabus</module>
         <module>kafka</module>
+        <module>databus-client2</module>
     </modules>
 
 </project>
