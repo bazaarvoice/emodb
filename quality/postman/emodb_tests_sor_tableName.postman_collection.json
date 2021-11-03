@@ -13097,20 +13097,30 @@
 												],
 												"type": "text/javascript"
 											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"var uuid = require('uuid');",
+													"pm.environment.set('not_existing_tablename', 'postman_'+uuid.v4()+'_test_table');"
+												],
+												"type": "text/javascript"
+											}
 										}
 									],
 									"request": {
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/some_table_name?APIKey={{api_key}}",
+											"raw": "{{baseurl_dc1}}/sor/1/not_existing_tablename?APIKey={{api_key}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												"some_table_name"
+												"not_existing_tablename"
 											],
 											"query": [
 												{
@@ -13140,8 +13150,7 @@
 												},
 												{
 													"key": "APIKey",
-													"value": "{{api_key}}",
-													"description": "(Required) "
+													"value": "{{api_key}}"
 												}
 											]
 										},

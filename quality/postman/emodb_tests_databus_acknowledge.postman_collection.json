@@ -539,9 +539,6 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.json().length < 1) {",
@@ -564,6 +561,7 @@
 											"        }, \"Retrying until there no events to poll\");",
 											"    }",
 											"    pm.expect(response.json().length).to.be.eql(0);",
+											"    response.to.have.status(200);",
 											"}));",
 											""
 										],
@@ -698,133 +696,17 @@
 							]
 						},
 						{
-							"name": "Gets the claim count. 2",
+							"name": "Acknowledge operation. 2",
 							"event": [
 								{
 									"listen": "test",
 									"script": {
 										"exec": [
-											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
-											"const retryRequest = eval(retryRequestCall.retryRequest);",
-											"",
-											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", function () { ",
+											"pm.test(\"Status code is 200\", function () {",
 											"    pm.response.to.have.status(200);",
 											"});",
 											"",
-											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json() < 1) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();            ",
-											"            return response.json() > 0;",
-											"        }, \"Retrying request\");",
-											"    }",
-											"    pm.expect(response.json()).to.be.above(0);",
-											"}));",
-											""
-										],
-										"type": "text/javascript"
-									}
-								},
-								{
-									"listen": "prerequest",
-									"script": {
-										"exec": [
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
-											"pm.environment.set(\"url\", url);",
-											"pm.environment.set(\"method\", \"GET\");",
-											""
-										],
-										"type": "text/javascript"
-									}
-								}
-							],
-							"request": {
-								"method": "GET",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "X-BV-API-Key",
-										"value": "{{api_key}}",
-										"type": "text"
-									}
-								],
-								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
-									"host": [
-										"{{baseurl_dc1}}"
-									],
-									"path": [
-										"bus",
-										"1",
-										"{{subscription}}",
-										"claimcount"
-									],
-									"query": [
-										{
-											"key": "partitioned",
-											"value": "{{partitioned}}"
-										}
-									]
-								},
-								"description": "Returns a long."
-							},
-							"response": [
-								{
-									"name": "successful operation",
-									"originalRequest": {
-										"method": "GET",
-										"header": [],
-										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
-											"host": [
-												"{{baseUrl}}"
-											],
-											"path": [
-												"bus",
-												"1",
-												":subscription",
-												"claimcount"
-											],
-											"query": [
-												{
-													"key": "partitioned",
-													"value": "{{partitioned}}"
-												}
-											],
-											"variable": [
-												{
-													"key": "subscription"
-												}
-											]
-										}
-									},
-									"status": "OK",
-									"code": 200,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Type",
-											"value": "application/json"
-										}
-									],
-									"cookie": [],
-									"body": ""
-								}
-							]
-						},
-						{
-							"name": "Acknowledge operation. 1",
-							"event": [
-								{
-									"listen": "test",
-									"script": {
-										"exec": [
-											"pm.test(\"Assert response\", function () {",
-											"    pm.response.to.have.status(200);",
+											"pm.test(\"Assert response body\", function () {",
 											"    pm.expect(pm.response.json().success).to.eql(true);",
 											"});"
 										],
@@ -835,7 +717,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", false);",
 											""
 										],
 										"type": "text/javascript"
@@ -857,7 +738,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[]"
+									"raw": "[\n    \n]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
@@ -1091,7 +972,7 @@
 							]
 						},
 						{
-							"name": "Gets the claim count. 3",
+							"name": "Gets the claim count. 2",
 							"event": [
 								{
 									"listen": "test",
