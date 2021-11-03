@@ -399,11 +399,11 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Response code 200 and Body matches string\", asyncTest(async function () {",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
 											"    if(response.code !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
-											"            return response.json() === true;",
+											"            return response.code === 200;",
 											"        }, \"Error retrying unsubscribe checking success\");",
 											"    }",
 											"    pm.expect(response.code).to.be.eql(200);",
@@ -418,8 +418,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", false);",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
