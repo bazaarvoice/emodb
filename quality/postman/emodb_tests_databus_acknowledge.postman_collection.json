@@ -995,19 +995,18 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json().length < 4) {",
+											"    if(response.json().length > 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
-											"            return response.json().length == 4;",
+											"            return response.json().length > 0;",
 											"        },\"Retrying to get events to poll\");    ",
 											"    }",
-											"    pm.expect(response.json().length == 4);",
+											"    pm.expect(response.json().length > 0);",
 											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
 											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
-											"        ",
-											"    for (let i = 0; i < 4; i++) {",
-											"            pm.environment.set(\"eventId\"+i, response.json()[i].eventKey);",
-											"    }",
+											"    ",
+											"    pm.environment.set(\"eventId\", response.json()[0].eventKey);",
+											"    ",
 											"",
 											"    if(response.json().length > 0) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
@@ -1165,14 +1164,13 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json() < 4) {",
+											"    if(response.json() < 1) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
-											"            return response.json() == 4;",
+											"            return response.json() > 0;",
 											"        }, \"Retrying request\");",
 											"    }",
-											"",
-											"    pm.expect(response.json()).eql(4);",
+											"    pm.expect(response.json()).to.be.above(0);",
 											"}));",
 											""
 										],
@@ -1288,7 +1286,8 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", false);"
+											"pm.environment.set(\"partitioned\", false);",
+											""
 										],
 										"type": "text/javascript"
 									}
@@ -1309,7 +1308,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n    \"{{eventId0}}\",\n    \"{{eventId1}}\",\n    \"{{eventId2}}\",\n    \"{{eventId3}}\"\n]"
+									"raw": "[\n    \"{{eventId}}\"\n]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
@@ -1372,6 +1371,173 @@
 									],
 									"cookie": [],
 									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    }",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"",
+											"",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length == 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"ttl\", 300);",
+											"",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll?ttl=${pm.environment.get(\"ttl\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?ttl={{ttl}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}"
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseUrl}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
 								}
 							]
 						},
