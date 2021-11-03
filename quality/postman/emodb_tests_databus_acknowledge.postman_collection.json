@@ -857,7 +857,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n    {{eventId}}\n]"
+									"raw": "[]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
