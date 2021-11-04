@@ -13092,8 +13092,11 @@
 													"});",
 													"",
 													"pm.test(\"Body matches string\", function () {",
-													"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: some_table_name\",\"table\":\"some_table_name\",\"suppressed\":[]});",
-													"});"
+													"    pm.expect(pm.response.json()).to.eql({\"message\":`Unknown table: ${pm.environment.get(\"not_existing_tablename\")}`,\"table\":`${pm.environment.get(\"not_existing_tablename\")}`,\"suppressed\":[]});",
+													"    ",
+													"});",
+													"",
+													""
 												],
 												"type": "text/javascript"
 											}
@@ -13113,14 +13116,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/not_existing_tablename?APIKey={{api_key}}",
+											"raw": "{{baseurl_dc1}}/sor/1/{{not_existing_tablename}}?APIKey={{api_key}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												"not_existing_tablename"
+												"{{not_existing_tablename}}"
 											],
 											"query": [
 												{
