@@ -1,10 +1,5 @@
 package com.bazaarvoice.emodb.databus.client2.discovery;
 
-/*import org.sparkproject.guava.collect.Lists;
-import org.sparkproject.guava.collect.Maps;
-import org.sparkproject.guava.hash.Hasher;
-import org.sparkproject.guava.hash.Hashing;*/
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hasher;
@@ -30,7 +25,7 @@ public class PartitionedDiscovery extends EmoServiceDiscovery {
         super(zookeeperConnectionString, zookeeperNamespace, service, directUri);
         Hasher hasher = Hashing.md5().newHasher();
         putUnencodedChars(hasher, partitionKey);
-        _partitionHash =  hasher.hash().asInt();
+        _partitionHash = hasher.hash().asInt();
         _partitionedUri = directUri;
     }
 
@@ -74,7 +69,7 @@ public class PartitionedDiscovery extends EmoServiceDiscovery {
 
     private void putUnencodedChars(Hasher hasher, String str) {
         int len = str.length();
-        for (int i=0; i < len; i++) {
+        for (int i = 0; i < len; i++) {
             hasher.putChar(str.charAt(i));
         }
     }

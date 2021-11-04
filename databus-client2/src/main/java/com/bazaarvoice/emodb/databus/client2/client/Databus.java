@@ -1,8 +1,8 @@
 package com.bazaarvoice.emodb.databus.client2.client;
 
 
-import com.bazaarvoice.emodb.databus.client2.Exceptions.PollFailedException;
-import com.bazaarvoice.emodb.databus.client2.Exceptions.SubscribeFailedException;
+import com.bazaarvoice.emodb.databus.client2.exceptions.PollFailedException;
+import com.bazaarvoice.emodb.databus.client2.exceptions.SubscribeFailedException;
 import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.hadoop.io.retry.RetryPolicies;

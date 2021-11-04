@@ -1,10 +1,9 @@
-package com.bazaarvoice.emodb.databus.client2.Factory;
+package com.bazaarvoice.emodb.databus.client2.factory;
 
 
 import com.bazaarvoice.emodb.databus.client2.client.Databus;
 import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
 import com.google.common.base.Throwables;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Service;
 import org.glassfish.jersey.client.ClientConfig;
 import org.glassfish.jersey.client.ClientProperties;
@@ -37,10 +36,11 @@ public class DatabusFactory implements Serializable {
 
     public Databus create() {
         DatabusDiscovery databusDiscovery = _databusDiscoveryBuilder.build();
-        ListenableFuture<Service.State> future = databusDiscovery.startAsync();
+        Service service = databusDiscovery.startAsync();
 
         try {
-            future.get(30, TimeUnit.SECONDS);
+            service.awaitRunning(30, TimeUnit.SECONDS);
+//            TODO revise exceptions
         } catch (TimeoutException e) {
             _log.error("Databus discovery did not start in a reasonable time");
             throw Throwables.propagate(e);

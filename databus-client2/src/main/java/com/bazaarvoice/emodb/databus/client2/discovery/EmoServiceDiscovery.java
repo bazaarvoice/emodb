@@ -1,18 +1,10 @@
 package com.bazaarvoice.emodb.databus.client2.discovery;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-/*
-import org.sparkproject.guava.base.Throwables;
-import org.sparkproject.guava.collect.Lists;
-import org.sparkproject.guava.io.Closeables;
-import org.sparkproject.guava.util.concurrent.AbstractService;
-*/
-
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.AbstractService;
-import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
@@ -28,7 +20,6 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 
 import static com.bazaarvoice.emodb.databus.client2.Json.JsonUtil.parseJson;
 import static com.google.common.base.Preconditions.checkArgument;

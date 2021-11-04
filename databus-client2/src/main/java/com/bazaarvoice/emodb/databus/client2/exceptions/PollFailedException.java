@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.client2.Exceptions;
+package com.bazaarvoice.emodb.databus.client2.exceptions;
 
 public class PollFailedException extends RuntimeException {
 

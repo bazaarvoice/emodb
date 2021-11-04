@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.databus.client2.Exceptions;
+package com.bazaarvoice.emodb.databus.client2.exceptions;
 
 public class SubscribeFailedException extends RuntimeException {
 
@@ -19,6 +19,7 @@ public class SubscribeFailedException extends RuntimeException {
         _content = cause.getMessage();
         _cause = cause;
     }
+
     public int getResponseCode() {
         return _responseCode;
     }
