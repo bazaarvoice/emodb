@@ -1,7 +1,7 @@
 {
 	"info": {
-		"_postman_id": "7f1aa46c-5c60-4d25-b3ad-47c0a918fde3",
-		"name": "EmoDB_Tests_databus_replay",
+		"_postman_id": "ed66b122-9a3c-4002-8bb4-9d49525704f3",
+		"name": "EmoDB_Tests_databus_replay Copy",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -29,6 +29,16 @@
 										],
 										"type": "text/javascript"
 									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('not_existing_subscription', 'postman_'+uuid.v4()+'_subscription');"
+										],
+										"type": "text/javascript"
+									}
 								}
 							],
 							"request": {
@@ -49,14 +59,14 @@
 									"raw": "{\n    \"authenticationId\": \"\",\n    \"id\": \"\"\n}"
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/bus/1/not_existing_subscription/replay?since=",
+									"raw": "{{baseurl_dc1}}/bus/1/{{not_existing_subscription}}/replay?since=",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"bus",
 										"1",
-										"not_existing_subscription",
+										"{{not_existing_subscription}}",
 										"replay"
 									],
 									"query": [
@@ -75,9 +85,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/replay?since=adipisicing ea",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -88,7 +98,7 @@
 											"query": [
 												{
 													"key": "since",
-													"value": "adipisicing ea"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -332,9 +342,9 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -771,9 +781,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -867,9 +877,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/replay?since=adipisicing ea",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -880,7 +890,7 @@
 											"query": [
 												{
 													"key": "since",
-													"value": "adipisicing ea"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -984,9 +994,9 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/_replay/:replayId",
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -1026,7 +1036,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
 											"    if(response.code !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -1034,18 +1044,8 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response.code).to.be.eql(200);",
-											"}));",
-											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
-											"    if(response.code !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
 											"    pm.expect(response.json().success).to.be.eql(true);",
-											"}));",
-											""
+											"}));"
 										],
 										"type": "text/javascript"
 									}
@@ -1105,9 +1105,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -1205,9 +1205,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
@@ -1462,9 +1462,9 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -1543,6 +1543,7 @@
 											"const since = new Date();",
 											"pm.environment.set(\"time\", since.toISOString());",
 											"",
+											"console.log(pm.environment.get(\"time\"));",
 											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 											"pm.environment.set(\"consistency\", \"GLOBAL\");",
 											"pm.environment.set(\"tag\", \"test_tag\");",
@@ -1905,9 +1906,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -2171,9 +2172,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/replay?since=adipisicing ea",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -2184,7 +2185,7 @@
 											"query": [
 												{
 													"key": "since",
-													"value": "adipisicing ea"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -2287,9 +2288,9 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/_replay/:replayId",
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -2486,7 +2487,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
 											"    if(response.code !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -2494,18 +2495,8 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response.code).to.be.eql(200);",
-											"}));",
-											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
-											"    if(response.code !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
 											"    pm.expect(response.json().success).to.be.eql(true);",
-											"}));",
-											""
+											"}));"
 										],
 										"type": "text/javascript"
 									}
@@ -2565,9 +2556,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -2665,9 +2656,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
@@ -2922,9 +2913,9 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -2999,6 +2990,7 @@
 											"var uuid = require('uuid');",
 											"pm.environment.set('document_id1', uuid.v4());",
 											"",
+											"console.log(pm.environment.get(\"time\"));",
 											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
 											"pm.environment.set(\"consistency\", \"GLOBAL\");",
 											"pm.environment.set(\"tag\", \"test_tag\");",
@@ -3363,9 +3355,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -3629,9 +3621,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/replay?since=adipisicing ea",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -3642,7 +3634,7 @@
 											"query": [
 												{
 													"key": "since",
-													"value": "adipisicing ea"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -3745,9 +3737,9 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/_replay/:replayId",
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -3944,7 +3936,7 @@
 											"const retryRequest = eval(retryRequestCall.retryRequest);",
 											"",
 											"var response = pm.response;",
-											"pm.test(\"Status code is 200\", asyncTest(async function () {",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
 											"    if(response.code !== 200) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();",
@@ -3952,18 +3944,8 @@
 											"        }, \"Error retrying unsubscribe checking status \");",
 											"    }",
 											"    pm.expect(response.code).to.be.eql(200);",
-											"}));",
-											"",
-											"pm.test(\"Body matches string\", asyncTest(async function () {",
-											"    if(response.code !== 200) {",
-											"        await waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();",
-											"            return response.code === 200;",
-											"        }, \"Error retrying unsubscribe checking success\");",
-											"    }",
 											"    pm.expect(response.json().success).to.be.eql(true);",
-											"}));",
-											""
+											"}));"
 										],
 										"type": "text/javascript"
 									}
@@ -3972,8 +3954,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"false\");",
-											"",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
@@ -4025,9 +4005,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
@@ -4125,9 +4105,9 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
