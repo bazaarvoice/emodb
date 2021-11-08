@@ -5,9 +5,10 @@ import com.bazaarvoice.emodb.databus.client2.exceptions.PollFailedException;
 import com.bazaarvoice.emodb.databus.client2.exceptions.SubscribeFailedException;
 import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryPolicy;
-import org.apache.hadoop.io.retry.RetryProxy;
+
+import org.apache.curator.RetryPolicy;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryOneTime;
 import org.apache.http.HttpStatus;
 import org.glassfish.jersey.client.JerseyClient;
 import org.slf4j.Logger;
@@ -51,7 +52,7 @@ public class Databus implements Closeable {
 
     /**
      * Interface {@link IDatabusClient} is only to satisfy
-     * use of {@link RetryProxy} for retrying low-level client API calls.
+     * use of {@link CuratorFrameworkFactory} for retrying low-level client API calls.
      */
     private interface IDatabusClient {
         void subscribe(String subscription, String condition, Duration subscriptionTtl, Duration eventTtl) throws SubscribeFailedException;
@@ -269,16 +270,16 @@ public class Databus implements Closeable {
     }
 
     private IDatabusClient client(RetryPolicy retryPolicy) {
-        if (retryPolicy == null || retryPolicy == RetryPolicies.TRY_ONCE_THEN_FAIL) {
+        if (retryPolicy == null || retryPolicy instanceof RetryOneTime) {
             return _databusClient;
         } else {
-            return (IDatabusClient) RetryProxy.create(IDatabusClient.class, _databusClient, retryPolicy);
+            return (IDatabusClient)CuratorFrameworkFactory.newClient("127.0.0.1:2181", retryPolicy);
         }
     }
 
     @Override
     synchronized public void close() throws IOException {
-        _databusDiscovery.stop();// Check if stopAsync can be used here
+        _databusDiscovery.stopAsync();
         _client.close();
     }
 

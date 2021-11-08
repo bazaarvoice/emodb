@@ -54,8 +54,7 @@ public abstract class EmoServiceDiscovery extends AbstractService {
     protected void doStart() {
         if (_zookeeperConnectionString != null) {
             try {
-                _rootCurator = CuratorPool.getStartedCurator(_zookeeperConnectionString);
-                _curator = _rootCurator.usingNamespace(_zookeeperNamespace);
+
                 startNodeListener();
             } catch (Exception e) {
                 doStop();

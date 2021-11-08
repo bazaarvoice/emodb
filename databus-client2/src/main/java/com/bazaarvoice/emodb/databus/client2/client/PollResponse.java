@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.databus.client2.client;
 
-import com.bazaarvoice.emodb.databus.client2.DocumentMetadata;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
@@ -11,8 +10,6 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import java.io.IOException;
 import java.util.List;
-
-import static com.bazaarvoice.emodb.databus.client2.Json.JsonUtil.parseJson;
 
 /**
  * Response object for Databus poll requests.
@@ -39,24 +36,11 @@ public class PollResponse {
     public static class Event {
         private final String _eventKey;
         private final String _content;
-        private final DocumentMetadata _documentMetadata;
+
 
         public Event(String eventKey, String content) throws IOException {
             _eventKey = eventKey;
             _content = content;
-            _documentMetadata = parseJson(content, DocumentMetadata.class);
-        }
-
-        public String getEventKey() {
-            return _eventKey;
-        }
-
-        public String getContent() {
-            return _content;
-        }
-
-        public DocumentMetadata getDocumentMetadata() {
-            return _documentMetadata;
         }
     }
 
