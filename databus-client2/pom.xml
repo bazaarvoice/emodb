@@ -23,14 +23,10 @@
         <dependency>
             <groupId>javax.ws.rs</groupId>
             <artifactId>javax.ws.rs-api</artifactId>
-            <!-- TODO move version definition to the parent pom dependency management section -->
-            <version>2.1.1</version>
         </dependency>
         <dependency>
             <groupId>org.glassfish.jersey.core</groupId>
             <artifactId>jersey-client</artifactId>
-            <!-- TODO move version definition to the parent pom dependency management section -->
-            <version>${jersey2.version}</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>

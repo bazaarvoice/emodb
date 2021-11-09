@@ -40,7 +40,6 @@ public class DatabusFactory implements Serializable {
 
         try {
             service.awaitRunning(30, TimeUnit.SECONDS);
-//            TODO revise exceptions
         } catch (TimeoutException e) {
             _log.error("Databus discovery did not start in a reasonable time");
             throw Throwables.propagate(e);

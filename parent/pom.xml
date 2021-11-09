@@ -330,6 +330,11 @@
                 <version>0.12.0</version>
             </dependency>
             <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>${jersey2.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
                 <version>${cassandra-client.version}</version>
