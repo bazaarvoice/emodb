@@ -418,6 +418,11 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+<<<<<<< HEAD
+=======
+											"pm.environment.set(\"partitioned\", false);",
+											"",
+>>>>>>> master
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"DELETE\");"
