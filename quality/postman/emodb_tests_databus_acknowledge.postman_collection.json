@@ -1284,10 +1284,21 @@
 									"listen": "test",
 									"script": {
 										"exec": [
-											"pm.test(\"Assert response\", function () {",
-											"    pm.response.to.have.status(200);",
-											"    pm.expect(pm.response.json().success).to.eql(true);",
-											"});"
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
+											"    if (response.code !== 200) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.code == 200;",
+											"        }, \"Retrying acknowledge request\");",
+											"    }",
+											"    response.to.have.status(200);",
+											"    pm.expect(response.json().success).to.eql(true);",
+											"}));"
 										],
 										"type": "text/javascript"
 									}
@@ -1296,7 +1307,10 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"pm.environment.set(\"partitioned\", \"false\");"
+											"pm.environment.set(\"partitioned\", \"false\");",
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/ack?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"POST\");"
 										],
 										"type": "text/javascript"
 									}
