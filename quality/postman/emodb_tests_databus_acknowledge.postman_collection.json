@@ -1331,7 +1331,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n    \"{{eventId0}}\",\n    \"{{eventId1}}\",\n    \"{{eventId2}}\",\n    \"{{eventId3}}\"\n]"
+									"raw": "[\"\"]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
