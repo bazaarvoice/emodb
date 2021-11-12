@@ -852,7 +852,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\"\"]"
+									"raw": "[]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl={{ttl}}",
@@ -2127,7 +2127,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n\"\"\n]"
+									"raw": "[]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew",
@@ -3406,7 +3406,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n    \"\"\n]"
+									"raw": "[]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl={{ttl}}",
@@ -4693,7 +4693,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[\n    \"\"\n]"
+									"raw": "[]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl={{ttl}}",
@@ -5119,7 +5119,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "[\n    \"\",\n    \"\"\n]"
+							"raw": "[]"
 						},
 						"url": {
 							"raw": "{{baseurl_dc1}}/bus/1/:subscription/renew?partitioned={{partitioned}}&ttl={{ttl}}",
