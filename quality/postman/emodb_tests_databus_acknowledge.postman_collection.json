@@ -998,16 +998,21 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json().length < 1) {",
+											"    if(response.json().length < 4) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
-											"            return response.json().length > 0;",
+											"            return response.json().length == 4;",
 											"        },\"Retrying to get events to poll\");    ",
-											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json().length == 4);",
 											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
 											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
 											"    }    ",
 											"}));",
+											"",
+											"//set event ids for just polled events",
+											"for (let i = 0; i < 4; i++) {",
+											"    pm.environment.set(\"eventId\"+i, response.json()[i].eventKey);",
+											"}",
 											"",
 											"pm.test(\"Assert response body after events are polled\", asyncTest(async function () {",
 											"   if(response.json().length > 0) {",
@@ -1168,14 +1173,14 @@
 											"});",
 											"",
 											"pm.test(\"Assert response body\", asyncTest(async function () {",
-											"    if(response.json() < 1) {",
+											"    if(response.json() < 4) {",
 											"        await waitUntil(setTimeout, clearTimeout, async () => {",
 											"            response = await retryRequest();            ",
-											"            return response.json() > 0;",
+											"            return response.json() == 4;",
 											"        }, \"Retrying request\");",
 											"    }",
 											"",
-											"    pm.expect(response.json()).to.be.above(0);",
+											"    pm.expect(response.json()).to.eql(4);",
 											"}));",
 											""
 										],
@@ -1302,6 +1307,7 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
+											"pm.environment.set(\"partitioned\", \"false\");",
 											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/ack?partitioned=${pm.environment.get(\"partitioned\")}`;",
 											"pm.environment.set(\"url\", url);",
 											"pm.environment.set(\"method\", \"POST\");"
@@ -1325,7 +1331,7 @@
 								],
 								"body": {
 									"mode": "raw",
-									"raw": "[]"
+									"raw": "[\n    \"{{eventId0}}\",\n    \"{{eventId1}}\",\n    \"{{eventId2}}\",\n    \"{{eventId3}}\"\n]"
 								},
 								"url": {
 									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
