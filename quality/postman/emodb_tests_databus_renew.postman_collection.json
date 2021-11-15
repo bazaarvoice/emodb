@@ -96,7 +96,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -104,7 +104,7 @@
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -225,14 +225,14 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -370,15 +370,15 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{key}}?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												":table",
-												":key"
+												"{{table}}",
+												"{{key}}"
 											],
 											"query": [
 												{
@@ -494,14 +494,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -635,14 +635,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"poll"
 											],
 											"query": [
@@ -770,14 +770,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -885,20 +885,20 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/renew?partitioned=adipisicing ea&ttl=30",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl=30",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"renew"
 											],
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												},
 												{
 													"key": "ttl",
@@ -1008,14 +1008,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -1127,14 +1127,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -1227,15 +1227,15 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -1354,7 +1354,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1362,7 +1362,7 @@
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -1483,14 +1483,14 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -1629,15 +1629,15 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{key}}?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												":table",
-												":key"
+												"{{table}}",
+												"{{key}}"
 											],
 											"query": [
 												{
@@ -1753,14 +1753,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -1896,14 +1896,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"poll"
 											],
 											"query": [
@@ -2031,14 +2031,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -2162,20 +2162,20 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/renew?partitioned=adipisicing ea&ttl=30",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl=30",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"renew"
 											],
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "partitioned"
 												},
 												{
 													"key": "ttl",
@@ -2285,14 +2285,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -2404,14 +2404,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -2504,15 +2504,15 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -2631,7 +2631,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -2639,7 +2639,7 @@
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -2760,14 +2760,14 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -2906,15 +2906,15 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{key}}?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												":table",
-												":key"
+												"{{table}}",
+												"{{key}}"
 											],
 											"query": [
 												{
@@ -3030,14 +3030,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -3173,14 +3173,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"poll"
 											],
 											"query": [
@@ -3308,14 +3308,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -3439,20 +3439,20 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/renew?partitioned=adipisicing ea&ttl=30",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl=30",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"renew"
 											],
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												},
 												{
 													"key": "ttl",
@@ -3562,14 +3562,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -3681,14 +3681,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -3781,15 +3781,15 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -3908,7 +3908,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -3916,7 +3916,7 @@
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -4037,14 +4037,14 @@
 											"raw": ""
 										},
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -4183,15 +4183,15 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{key}}?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
-												":table",
-												":key"
+												"{{table}}",
+												"{{key}}"
 											],
 											"query": [
 												{
@@ -4307,14 +4307,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -4460,14 +4460,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"poll"
 											],
 											"query": [
@@ -4595,14 +4595,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -4726,20 +4726,20 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/renew?partitioned=adipisicing ea&ttl=30",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl=30",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"renew"
 											],
 											"query": [
 												{
 													"key": "partitioned",
-													"value": "adipisicing ea"
+													"value": "{{partitioned}}"
 												},
 												{
 													"key": "ttl",
@@ -4849,14 +4849,14 @@
 										"method": "GET",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription/claimcount?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/claimcount?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription",
+												"{{subscription}}",
 												"claimcount"
 											],
 											"query": [
@@ -4968,14 +4968,14 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"bus",
 												"1",
-												":subscription"
+												"{{subscription}}"
 											],
 											"query": [
 												{
@@ -5068,15 +5068,15 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_table/:table?audit={{audit}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
@@ -5122,14 +5122,14 @@
 							"raw": "[]"
 						},
 						"url": {
-							"raw": "{{baseurl_dc1}}/bus/1/:subscription/renew?partitioned={{partitioned}}&ttl={{ttl}}",
+							"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl={{ttl}}",
 							"host": [
 								"{{baseurl_dc1}}"
 							],
 							"path": [
 								"bus",
 								"1",
-								":subscription",
+								"{{subscription}}",
 								"renew"
 							],
 							"query": [
@@ -5159,20 +5159,20 @@
 								"method": "POST",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/bus/1/:subscription/renew?partitioned=adipisicing ea&ttl=30",
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/renew?partitioned={{partitioned}}&ttl=30",
 									"host": [
-										"{{baseUrl}}"
+										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"bus",
 										"1",
-										":subscription",
+										"{{subscription}}",
 										"renew"
 									],
 									"query": [
 										{
 											"key": "partitioned",
-											"value": "adipisicing ea"
+											"value": "{{partitioned}}"
 										},
 										{
 											"key": "ttl",
