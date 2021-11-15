@@ -3437,7 +3437,7 @@
 									"path": [
 										"bus",
 										"1",
-										"{{subscription}}",
+										":subscription",
 										"ack"
 									],
 									"query": [
