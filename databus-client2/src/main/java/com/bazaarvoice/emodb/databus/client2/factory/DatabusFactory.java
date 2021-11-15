@@ -1,7 +1,8 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
 
-import com.bazaarvoice.emodb.databus.client2.client.Databus;
+import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
+import com.bazaarvoice.emodb.databus.client2.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Service;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeoutException;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Factory for creating {@link Databus} clients.
+ * Factory for creating {@link DatabusClient} clients.
  */
 public class DatabusFactory implements Serializable {
 
@@ -34,7 +35,7 @@ public class DatabusFactory implements Serializable {
         _apiKey = requireNonNull(apiKey, "API key is required");
     }
 
-    public Databus create() {
+    public DatabusClient create() {
         DatabusDiscovery databusDiscovery = _databusDiscoveryBuilder.build();
         Service service = databusDiscovery.startAsync();
 
@@ -51,6 +52,8 @@ public class DatabusFactory implements Serializable {
                 .property(ClientProperties.CONNECT_TIMEOUT, (int) Duration.ofSeconds(5).toMillis())
                 .property(ClientProperties.READ_TIMEOUT, (int) Duration.ofSeconds(60).toMillis()));
 
-        return new Databus(databusDiscovery, client, _apiKey);
+        Jersey2EmoClient emoClient = new Jersey2EmoClient(client);
+
+        return new DatabusClient(databusDiscovery, emoClient, _apiKey);
     }
 }

@@ -19,7 +19,7 @@ public class JsonUtil {
         try {
             return OBJECT_MAPPER.readValue(json, type);
         } catch (IOException e) {
-            throw Throwables.propagate(e);
+            throw new RuntimeException(e);
         }
     }
 
