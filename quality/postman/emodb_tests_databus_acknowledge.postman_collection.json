@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "efe523f4-d05c-47d4-9bde-21f2ab13366e",
+		"_postman_id": "336c450c-0905-4ef3-86cd-e01f0163fabc",
 		"name": "EmoDB_Tests_databus_acknowledge",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -955,23 +955,20 @@
 											"var response = pm.response;",
 											"",
 											"pm.test(\"Assert response\", asyncTest(async function () {",
-											"    if (response.json() !== 0) {",
-											"        waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();       ",
+											"    if(response.json() > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
 											"            return response.json() == 0;",
 											"        }, \"Retrying claimcount request\");",
 											"    }",
 											"",
 											"    if (response.json() == 0) {",
-											"        response.to.have.status(200);",
-											"        pm.expect(response.to.have.body('0'));",
+											"        pm.expect(response.code).eql(200);",
+											"        pm.expect(response.json()).eql(0);",
 											"        postman.setNextRequest(\"Unsubscribe operation.\");",
 											"    } else {",
 											"        postman.setNextRequest(\"Acknowledge operation. Repeat\");",
 											"    }",
-											"",
-											"    console.log(\"response.json() \", response.json());",
-											"    ",
 											"}));",
 											" "
 										],
@@ -1196,21 +1193,11 @@
 									"listen": "test",
 									"script": {
 										"exec": [
-											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
-											"const retryRequest = eval(retryRequestCall.retryRequest);",
-											"",
 											"var response = pm.response;",
 											"",
 											"pm.test(\"Assert response\", asyncTest(async function () {",
-											"    if (response.json() !== 0) {",
-											"        waitUntil(setTimeout, clearTimeout, async () => {",
-											"            response = await retryRequest();            ",
-											"            return response.json() == 0;",
-											"        }, \"Retrying claimcount request\");",
-											"    }",
-											"",
-											"    response.to.have.status(200);",
-											"    pm.expect(response.to.have.body('0'));",
+											"    pm.expect(response.code).eql(200);",
+											"    pm.expect(response.json()).eql(0);",
 											"}));",
 											" "
 										],
@@ -1221,9 +1208,6 @@
 									"listen": "prerequest",
 									"script": {
 										"exec": [
-											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/claimcount?partitioned=${pm.environment.get(\"partitioned\")}`;",
-											"pm.environment.set(\"url\", url);",
-											"pm.environment.set(\"method\", \"GET\");",
 											""
 										],
 										"type": "text/javascript"
