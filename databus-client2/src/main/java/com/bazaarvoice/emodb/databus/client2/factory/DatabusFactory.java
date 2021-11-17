@@ -1,6 +1,7 @@
 package com.bazaarvoice.emodb.databus.client2.factory;
 
 
+import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.common.jersey2.Jersey2EmoClient;
 import com.bazaarvoice.emodb.databus.client2.client.DatabusClient;
 import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
@@ -27,17 +28,16 @@ public class DatabusFactory implements Serializable {
 
     private final Logger _log = LoggerFactory.getLogger(DatabusFactory.class);
 
-    private final DatabusDiscovery.Builder _databusDiscoveryBuilder;
+    private final DatabusDiscovery _databusDiscovery;
     private final String _apiKey;
 
-    public DatabusFactory(DatabusDiscovery.Builder databusDiscoveryBuilder, String apiKey) {
-        _databusDiscoveryBuilder = requireNonNull(databusDiscoveryBuilder, "Databus discovery builder is required");
+    public DatabusFactory(DatabusDiscovery discovery, String apiKey) {
+        _databusDiscovery = requireNonNull(discovery, "Databus discovery is required");
         _apiKey = requireNonNull(apiKey, "API key is required");
     }
 
     public DatabusClient create() {
-        DatabusDiscovery databusDiscovery = _databusDiscoveryBuilder.build();
-        Service service = databusDiscovery.startAsync();
+        Service service = _databusDiscovery.startAsync();
 
         try {
             service.awaitRunning(30, TimeUnit.SECONDS);
@@ -52,8 +52,8 @@ public class DatabusFactory implements Serializable {
                 .property(ClientProperties.CONNECT_TIMEOUT, (int) Duration.ofSeconds(5).toMillis())
                 .property(ClientProperties.READ_TIMEOUT, (int) Duration.ofSeconds(60).toMillis()));
 
-        Jersey2EmoClient emoClient = new Jersey2EmoClient(client);
+        EmoClient emoClient = new Jersey2EmoClient(client);
 
-        return new DatabusClient(databusDiscovery, emoClient, _apiKey);
+        return new DatabusClient(_databusDiscovery, emoClient, _apiKey);
     }
 }

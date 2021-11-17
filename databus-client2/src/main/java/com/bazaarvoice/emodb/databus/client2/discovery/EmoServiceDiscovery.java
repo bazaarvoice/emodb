@@ -54,9 +54,10 @@ public abstract class EmoServiceDiscovery extends AbstractService {
     protected void doStart() {
         if (_zookeeperConnectionString != null) {
             try {
-
+                _log.info("zookeeper config {} ", _zookeeperConnectionString);
                 startNodeListener();
             } catch (Exception e) {
+                _log.error("Exception while trying to start NodeListener {}", e);
                 doStop();
                 throw Throwables.propagate(e);
             }
@@ -68,6 +69,7 @@ public abstract class EmoServiceDiscovery extends AbstractService {
     @Override
     protected void doStop() {
         try {
+            _log.debug("closing zookeeper pathCache... ");
             if (_pathCache != null) {
                 Closeables.close(_pathCache, true);
                 _pathCache = null;
@@ -105,6 +107,8 @@ public abstract class EmoServiceDiscovery extends AbstractService {
     private void rebuildHosts() throws IOException {
         List<ChildData> currentData = _pathCache.getCurrentData();
         List<Host> hosts = Lists.newArrayListWithCapacity(currentData.size());
+        _log.info("Total no. of hosts {}, host:{} ", currentData.size(),
+                currentData.size() > 0 ? hosts.get(0).baseUri : 0);
         for (ChildData childData : currentData) {
             RegistrationData registrationData = parseJson(childData.getData(), RegistrationData.class);
             PayloadData payloadData = parseJson(registrationData.payload, PayloadData.class);
