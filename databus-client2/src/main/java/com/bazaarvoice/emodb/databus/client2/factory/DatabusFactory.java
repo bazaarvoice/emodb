@@ -36,7 +36,7 @@ public class DatabusFactory implements Serializable {
         _apiKey = requireNonNull(apiKey, "API key is required");
     }
 
-    public DatabusClient create() {
+    public DatabusClient create(JerseyClient client) {
         Service service = _databusDiscovery.startAsync();
 
         try {
@@ -48,12 +48,6 @@ public class DatabusFactory implements Serializable {
             _log.error("Databus discovery startup failed", e);
         }
 
-        JerseyClient client = JerseyClientBuilder.createClient(new ClientConfig()
-                .property(ClientProperties.CONNECT_TIMEOUT, (int) Duration.ofSeconds(5).toMillis())
-                .property(ClientProperties.READ_TIMEOUT, (int) Duration.ofSeconds(60).toMillis()));
-
-        EmoClient emoClient = new Jersey2EmoClient(client);
-
-        return new DatabusClient(_databusDiscovery, emoClient, _apiKey);
+        return new DatabusClient(_databusDiscovery, new Jersey2EmoClient(client), _apiKey);
     }
 }
