@@ -17,7 +17,7 @@ import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Event;
-import com.bazaarvoice.emodb.databus.client2.discovery.DatabusDiscovery;
+import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
@@ -53,12 +53,12 @@ public class DatabusClient implements Databus, Closeable {
     private static final String POLL_DATABUS_EMPTY_HEADER = "X-BV-Databus-Empty";
     private static final MediaType JSON_CONDITION_MEDIA_TYPE = new MediaType("application", "x.json-condition");
 
-    private final DatabusDiscovery _databusDiscovery;
+    private EmoServiceDiscovery _databusDiscovery;
     private final EmoClient _client;
     private final String _apiKey;
     private final boolean _partitionSafe;
 
-    public DatabusClient(DatabusDiscovery databusDiscovery, EmoClient client, String apiKey) {
+    public DatabusClient(EmoServiceDiscovery databusDiscovery, EmoClient client, String apiKey) {
         _databusDiscovery = databusDiscovery;
         _client = client;
         _apiKey = apiKey;
@@ -574,8 +574,9 @@ public class DatabusClient implements Databus, Closeable {
 
     @Override
     synchronized public void close() throws IOException {
-        _log.debug("Stopping databusServiceDiscovery... ");
-        _databusDiscovery.stopAsync();
+        _log.debug("Closing ServiceDiscovery... ");
+            _databusDiscovery = null;
+            
     }
 
     @Override

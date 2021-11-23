@@ -1,5 +1,6 @@
 package com.bazaarvoice.emodb.databus.client2.discovery;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.hash.Hasher;
@@ -11,11 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * Service discovery implementation which directs requests to a spectific host based on a partition key.  The algorithm
  * comes directly from EmoDB and Ostrich.
  */
-public class PartitionedDiscovery extends EmoServiceDiscovery {
+public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
 
     private final int _partitionHash;
     private volatile URI _partitionedUri;
@@ -73,4 +76,43 @@ public class PartitionedDiscovery extends EmoServiceDiscovery {
             hasher.putChar(str.charAt(i));
         }
     }
+
+    public static class Builder extends ZKEmoServiceDiscovery.Builder {
+        private String _subscription;
+
+        Builder(String cluster) {
+            super(requireNonNull(cluster, "Cluster is required") + "-emodb-bus-1");
+        }
+
+        @Override
+        public Builder withZookeeperDiscovery(String zookeeperConnectionString, String zookeeperNamespace) {
+            super.withZookeeperDiscovery(zookeeperConnectionString, zookeeperNamespace);
+            return this;
+        }
+
+        @Override
+        public Builder withDirectUri(URI directUri) {
+            super.withDirectUri(directUri);
+            return this;
+        }
+
+        public Builder withSubscription(String subscription) {
+            _subscription = subscription;
+            return this;
+        }
+
+        public void validate() {
+            super.validate();
+            if (Strings.isNullOrEmpty(_subscription)) {
+                throw new IllegalStateException("A valid subscription is required");
+            }
+        }
+
+        public PartitionedDiscovery build() {
+            validate();
+            return new PartitionedDiscovery(
+                    getZookeeperConnectionString(), getZookeeperNamespace(), getService(), _subscription, getDirectUri());
+        }
+    }
+
 }
