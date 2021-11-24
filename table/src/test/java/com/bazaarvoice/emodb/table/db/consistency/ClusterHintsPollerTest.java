@@ -10,16 +10,17 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.VersionNumber;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
+import javax.management.ObjectName;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -30,6 +31,7 @@ import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -42,8 +44,11 @@ import static org.testng.Assert.assertTrue;
 
 public class ClusterHintsPollerTest {
 
+    private static final VersionNumber CASSANDRA_VERSION_2_2_19 = VersionNumber.parse("2.2.19");
+    private static final VersionNumber CASSANDRA_VERSION_3_0_0 = VersionNumber.parse("3.0.0");
+
     @Test
-    public void testClusterHintsPollerWhenNodeDown() throws UnknownHostException {
+    public void testClusterHintsPollerWhenNodeDownCassandra2x() throws UnknownHostException {
         ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
         Session mockSession = mock(Session.class);
         Cluster mockCluster = mock(Cluster.class);
@@ -52,10 +57,13 @@ public class ClusterHintsPollerTest {
         when(mockCluster.getClusterName()).thenReturn("test-cluster");
         Host node1 = mock(Host.class);
         when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
         Host node2 = mock(Host.class);
         when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
         Host node3 = mock(Host.class);
         when(node3.getAddress()).thenReturn(InetAddress.getByName("127.0.0.3"));
+        when(node3.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
 
         when(mockSession.getCluster()).thenReturn(mockCluster);
         // The first node queried is down
@@ -69,11 +77,40 @@ public class ClusterHintsPollerTest {
         assertEquals(actualResult.getHostFailure(), ImmutableSet.of(InetAddress.getByName("127.0.0.1")), "Node 1 should return with host failure");
     }
 
+    @Test
+    public void testClusterHintsPollerWhenNodeDownCassandra3x() throws UnknownHostException {
+        ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
+        Session mockSession = mock(Session.class);
+        Cluster mockCluster = mock(Cluster.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
+        when(mockCluster.getClusterName()).thenReturn("test-cluster");
+        Host node1 = mock(Host.class);
+        when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+        Host node2 = mock(Host.class);
+        when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+        Host node3 = mock(Host.class);
+        when(node3.getAddress()).thenReturn(InetAddress.getByName("127.0.0.3"));
+        when(node3.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+
+        when(mockSession.getCluster()).thenReturn(mockCluster);
+        // The first node queried is down
+
+        when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2, node3));
+        HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
+
+        // Make sure HintsPollerResult fails
+        assertFalse(actualResult.areAllHostsPolling(), "Result should show hosts failing");
+        assertEquals(actualResult.getHostFailure(), ImmutableSet.of(InetAddress.getByName("127.0.0.1")), "Node 1 should return with host failure");
+    }
+
     /**
      * This test mocks 2 nodes that both return two target Id's with hints, and verifies that oldest hint is returned
      */
     @Test
-    public void testClusterHintsPollerWithOldestHint() throws Exception {
+    public void testClusterHintsPollerWithOldestHintCassandra2x() throws Exception {
 
         // Mocks
 
@@ -85,8 +122,10 @@ public class ClusterHintsPollerTest {
         when(mockCluster.getClusterName()).thenReturn("test-cluster");
         Host node1 = mock(Host.class);
         when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
         Host node2 = mock(Host.class);
         when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
 
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
@@ -152,10 +191,48 @@ public class ClusterHintsPollerTest {
     }
 
     /**
+     * This test mocks 2 nodes that both return hints in progress
+     */
+    @Test
+    public void testClusterHintsPollerWithOldestHintCassandra3x() throws Exception {
+
+        // Mocks
+
+        ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
+        Session mockSession = mock(Session.class);
+        Cluster mockCluster = mock(Cluster.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
+        when(mockCluster.getClusterName()).thenReturn("test-cluster");
+        Host node1 = mock(Host.class);
+        when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+        Host node2 = mock(Host.class);
+        when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+
+        when(mockSession.getCluster()).thenReturn(mockCluster);
+
+        when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2));
+
+        JmxClient jmxClient = mock(JmxClient.class);
+        when(jmxClient.getAttribute(any(ObjectName.class), anyString())).thenReturn(3L);
+
+        HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
+
+        // Make sure HintsPollerResult gives us the oldest hint (oldest hint is on node 2)
+        assertTrue(actualResult.getOldestHintTimestamp().isPresent(), "Hints are there, but none found.");
+//        assertEquals((long) actualResult.getOldestHintTimestamp().get(), oldestHintOnNode2);
+        assertTrue(actualResult.areAllHostsPolling(), "All hosts should be polling fine");
+        assertEquals(actualResult.getAllPolledHosts(),
+                ImmutableSet.of(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2")));
+    }
+
+    /**
      * This test verifies when there are no hints on any of the nodes
      */
     @Test
-    public void testClusterHintsPollerWhenThereAreNoHints()
+    public void testClusterHintsPollerWhenThereAreNoHintsCassandra2x()
             throws Exception {
         // Mocks
 
@@ -167,8 +244,10 @@ public class ClusterHintsPollerTest {
         when(mockCluster.getClusterName()).thenReturn("test-cluster");
         Host node1 = mock(Host.class);
         when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
         Host node2 = mock(Host.class);
         when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
 
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
@@ -204,6 +283,41 @@ public class ClusterHintsPollerTest {
     }
 
     /**
+     * This test verifies when there are no hints on any of the nodes
+     */
+    @Test
+    public void testClusterHintsPollerWhenThereAreNoHintsCassandra3x()
+            throws Exception {
+        // Mocks
+
+        ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
+        Session mockSession = mock(Session.class);
+        Cluster mockCluster = mock(Cluster.class);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
+        when(mockCluster.getClusterName()).thenReturn("test-cluster");
+        Host node1 = mock(Host.class);
+        when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+        Host node2 = mock(Host.class);
+        when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
+
+        when(mockSession.getCluster()).thenReturn(mockCluster);
+
+        // Create target ids with sample timestamps
+
+        when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2));
+        HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
+
+        // Make sure HintsPollerResult shows that no hints were found
+        assertFalse(actualResult.getOldestHintTimestamp().isPresent(), "No hints should be found");
+        assertTrue(actualResult.areAllHostsPolling(), "All hosts should be polling fine");
+        assertEquals(actualResult.getAllPolledHosts(),
+                ImmutableSet.of(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2")));
+    }
+
+    /**
      * This tests a race condition where a node returns a non-empty set of target_ids, but on the subsequent call those hints are cleared
      */
     @Test
@@ -220,8 +334,11 @@ public class ClusterHintsPollerTest {
         when(mockCluster.getClusterName()).thenReturn("test-cluster");
         Host node1 = mock(Host.class);
         when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
+        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
+
         Host node2 = mock(Host.class);
         when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
+        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_2_2_19);
 
         when(mockSession.getCluster()).thenReturn(mockCluster);
 
@@ -254,7 +371,8 @@ public class ClusterHintsPollerTest {
         // The following line mocks all the results we will get back from our CQL queries
         // Note that this is based on the knowledge that we have about the order of CQL queries made in
         // ClusterHintsPoller.getOldestHintsInfo method.
-        // If in future, the way we make CQL queries in the above method is changed, then we would have to rewrite the test.
+        // If in the future, the way we make CQL queries in the above method is changed,
+        // then we would have to rewrite the test.
         doReturn(targetIdQueryNode1).when(mockSession).execute(argThat(getHostStatementMatcher(node1,
                 ClusterHintsPoller.DISTINCT_TARGET_IDS_QUERY)));
         doReturn(targetIdQueryNode2).when(mockSession).execute(argThat(getHostStatementMatcher(node2,
@@ -280,7 +398,7 @@ public class ClusterHintsPollerTest {
                 format(ClusterHintsPoller.OLDEST_HINT_QUERY_FORMAT, targetIds))));
     }
 
-    private ArgumentMatcher<Statement> getHostStatementMatcher(final Host host, final String query) {
+    private static ArgumentMatcher<Statement> getHostStatementMatcher(final Host host, final String query) {
         return new ArgumentMatcher<Statement>() {
             @Override
             public boolean matches(Statement argument) {

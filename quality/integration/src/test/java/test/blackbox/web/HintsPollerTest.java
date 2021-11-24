@@ -106,7 +106,7 @@ public class HintsPollerTest extends BaseRoleConnectHelper {
 
     private String getInsertHintsQuery(long hintTimestamp) {
 
-        // bigintAsBlob is not supported with Cassandra 2.0 - it works with Cassandra 2.2.4.
+//        bigintAsBlob is not supported with Cassandra 2.0 - it works with Cassandra 2.2.4+.
 //        return "INSERT INTO system.hints (target_id, hint_id, message_version, mutation) " +
 //                "VALUES (" + TEST_TARGET_ID + ", " + TimeUUIDs.uuidForTimeMillis(hintTimestamp) + ", 1, system.bigintAsBlob(3))";
 
