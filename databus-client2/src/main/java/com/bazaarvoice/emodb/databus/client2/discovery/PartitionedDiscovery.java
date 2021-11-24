@@ -16,20 +16,18 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Service discovery implementation which directs requests to a spectific host based on a partition key.  The algorithm
- * comes directly from EmoDB and Ostrich.
+ * comes directly from EmoDB and Zookeeper.
  */
 public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
 
     private final int _partitionHash;
     private volatile URI _partitionedUri;
 
-    public PartitionedDiscovery(String zookeeperConnectionString, String zookeeperNamespace, String service, String partitionKey,
-                                URI directUri) {
-        super(zookeeperConnectionString, zookeeperNamespace, service, directUri);
+    public PartitionedDiscovery(String zookeeperConnectionString, String service, String partitionKey) {
+        super(zookeeperConnectionString, service);
         Hasher hasher = Hashing.md5().newHasher();
         putUnencodedChars(hasher, partitionKey);
         _partitionHash = hasher.hash().asInt();
-        _partitionedUri = directUri;
     }
 
     @Override
@@ -90,12 +88,6 @@ public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
             return this;
         }
 
-        @Override
-        public Builder withDirectUri(URI directUri) {
-            super.withDirectUri(directUri);
-            return this;
-        }
-
         public Builder withSubscription(String subscription) {
             _subscription = subscription;
             return this;
@@ -111,7 +103,7 @@ public class PartitionedDiscovery extends ZKEmoServiceDiscovery {
         public PartitionedDiscovery build() {
             validate();
             return new PartitionedDiscovery(
-                    getZookeeperConnectionString(), getZookeeperNamespace(), getService(), _subscription, getDirectUri());
+                    getZookeeperConnectionString(), getService(), _subscription);
         }
     }
 

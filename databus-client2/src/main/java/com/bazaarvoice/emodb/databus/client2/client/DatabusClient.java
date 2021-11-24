@@ -8,15 +8,15 @@ import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.Ttls;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.databus.api.Databus;
-import com.bazaarvoice.emodb.databus.api.Subscription;
-import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
-import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
-import com.bazaarvoice.emodb.databus.api.UnknownMoveException;
-import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
+import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
-import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;
-import com.bazaarvoice.emodb.databus.api.Event;
+import com.bazaarvoice.emodb.databus.api.Subscription;
+import com.bazaarvoice.emodb.databus.api.UnauthorizedSubscriptionException;
+import com.bazaarvoice.emodb.databus.api.UnknownMoveException;
+import com.bazaarvoice.emodb.databus.api.UnknownReplayException;
+import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.databus.client2.discovery.EmoServiceDiscovery;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,7 +29,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 import java.io.Closeable;
-import java.io.IOException;
 import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
@@ -56,6 +55,8 @@ public class DatabusClient implements Databus, Closeable {
     private EmoServiceDiscovery _databusDiscovery;
     private final EmoClient _client;
     private final String _apiKey;
+// TODO    this is always false, do we want to add ability to configure that
+//    or convert to constant?
     private final boolean _partitionSafe;
 
     public DatabusClient(EmoServiceDiscovery databusDiscovery, EmoClient client, String apiKey) {
@@ -573,10 +574,10 @@ public class DatabusClient implements Databus, Closeable {
 
 
     @Override
-    synchronized public void close() throws IOException {
+    synchronized public void close() {
         _log.debug("Closing ServiceDiscovery... ");
-            _databusDiscovery = null;
-            
+//        TODO think how to improve this
+        _databusDiscovery = null;
     }
 
     @Override

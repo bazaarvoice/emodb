@@ -29,27 +29,22 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
     private static final Logger _log = LoggerFactory.getLogger(ZKEmoServiceDiscovery.class);
 
     private final String _zookeeperConnectionString;
-    private final String _zookeeperNamespace;
     private final String _service;
-    private final URI _directUri;
 
     private volatile CuratorFramework _rootCurator;
     private volatile CuratorFramework _curator;
     private volatile PathChildrenCache _pathCache;
 
-    protected ZKEmoServiceDiscovery(String zookeeperConnectionString, String zookeeperNamespace, String service,
-                                    URI directUri) {
+    protected ZKEmoServiceDiscovery(String zookeeperConnectionString, String service) {
         _zookeeperConnectionString = zookeeperConnectionString;
-        _zookeeperNamespace = zookeeperNamespace;
         _service = service;
-        _directUri = directUri;
     }
 
     @Override
     protected void doStart() {
         if (_zookeeperConnectionString != null) {
             try {
-                _log.info("zookeeper config {} ", _zookeeperConnectionString);
+                _log.debug("Zookeeper config {} ", _zookeeperConnectionString);
                 startNodeListener();
             } catch (Exception e) {
                 _log.error("Exception while trying to start NodeListener {}", e);
@@ -64,7 +59,7 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
     @Override
     protected void doStop() {
         try {
-            _log.debug("closing zookeeper pathCache... ");
+            _log.debug("Closing zookeeper pathCache... ");
             if (_pathCache != null) {
                 Closeables.close(_pathCache, true);
                 _pathCache = null;
@@ -92,15 +87,12 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
     public URI getBaseUri() throws UnknownHostException {
         URI uri = getBaseUriFromDiscovery();
         if (uri == null) {
-            if (_directUri == null) {
-                throw new UnknownHostException("No hosts discovered");
-            }
-            uri = _directUri;
+            throw new UnknownHostException("No hosts discovered");
         }
         return uri;
     }
 
-    private void rebuildHosts() throws IOException {
+    private void rebuildHosts() {
         List<ChildData> currentData = _pathCache.getCurrentData();
         List<ZKEmoServiceDiscovery.Host> hosts = Lists.newArrayListWithCapacity(currentData.size());
         _log.info("Total no. of hosts {}, host:{} ", currentData.size(),
@@ -135,8 +127,8 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
     }
 
     protected static class Host implements Comparable<ZKEmoServiceDiscovery.Host> {
-        public String id;
-        public URI baseUri;
+        public final String id;
+        public final URI baseUri;
 
         public Host(String id, URI baseUri) {
             this.id = id;
@@ -150,10 +142,9 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
     }
 
     abstract protected static class Builder implements Serializable {
-        private String _service;
+        private final String _service;
         private String _zookeeperConnectionString;
         private String _zookeeperNamespace;
-        private URI _directUri;
 
         public Builder(String service) {
             _service = Objects.requireNonNull(service, "Service name is required");
@@ -166,11 +157,6 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
             return this;
         }
 
-        public ZKEmoServiceDiscovery.Builder withDirectUri(URI directUri) {
-            _directUri = directUri;
-            return this;
-        }
-
         protected String getService() {
             return _service;
         }
@@ -179,17 +165,14 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
             return _zookeeperConnectionString;
         }
 
+//        TODO this is still unused, do we miss something?
         protected String getZookeeperNamespace() {
             return _zookeeperNamespace;
         }
 
-        protected URI getDirectUri() {
-            return _directUri;
-        }
-
         protected void validate() {
-            if (_zookeeperConnectionString == null && _directUri == null) {
-                throw new IllegalStateException("At least one service discovery method is required");
+            if (_zookeeperConnectionString == null) {
+                throw new IllegalStateException("zookeeperConnectionString is required");
             }
         }
     }

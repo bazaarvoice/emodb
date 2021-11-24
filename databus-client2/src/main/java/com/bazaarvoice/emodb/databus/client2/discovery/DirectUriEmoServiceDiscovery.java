@@ -4,10 +4,11 @@ import java.net.URI;
 import java.net.UnknownHostException;
 
 public class DirectUriEmoServiceDiscovery implements EmoServiceDiscovery {
-    private URI _baseUri;
 
-    public DirectUriEmoServiceDiscovery(URI directUri) {
-        _baseUri = directUri;
+    private final URI _baseUri;
+
+    public DirectUriEmoServiceDiscovery(URI baseUri) {
+        _baseUri = baseUri;
     }
 
     @Override

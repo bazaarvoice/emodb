@@ -4,7 +4,8 @@ package com.bazaarvoice.emodb.databus.client2.discovery;
 import java.net.URI;
 import java.net.UnknownHostException;
 
+//TODO add documentation
 public interface EmoServiceDiscovery {
 
-    public URI getBaseUri() throws UnknownHostException;
+    URI getBaseUri() throws UnknownHostException;
 }
