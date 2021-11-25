@@ -117,7 +117,7 @@ public class ResilientService extends AbstractExecutionThreadService {
             public void failed(State from, Throwable failure) {
                 _semaphore.release();
             }
-        }, MoreExecutors.sameThreadExecutor());
+        }, MoreExecutors.newDirectExecutorService());
         return delegate;
     }
 }

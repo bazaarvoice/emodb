@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.auth.apikey;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import org.apache.shiro.authc.AuthenticationToken;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -29,6 +29,6 @@ public class ApiKeyAuthenticationToken implements AuthenticationToken {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this).add("apiKey", _apiKey).toString();
+        return MoreObjects.toStringHelper(this).add("apiKey", _apiKey).toString();
     }
 }

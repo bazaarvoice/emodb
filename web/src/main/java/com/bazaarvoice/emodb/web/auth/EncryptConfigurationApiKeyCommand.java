@@ -1,11 +1,12 @@
 package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.web.EmoConfiguration;
-import com.google.common.base.Objects;
 import io.dropwizard.cli.ConfiguredCommand;
 import io.dropwizard.setup.Bootstrap;
 import net.sourceforge.argparse4j.inf.Namespace;
 import net.sourceforge.argparse4j.inf.Subparser;
+
+import java.util.Optional;
 
 /**
  * Command for encrypting API keys which must go into config.yaml.
@@ -30,7 +31,7 @@ public class EncryptConfigurationApiKeyCommand extends ConfiguredCommand<EmoConf
     protected void run(Bootstrap<EmoConfiguration> bootstrap, Namespace namespace, EmoConfiguration configuration)
             throws Exception {
         String apiKey = namespace.getString("api_key");
-        String cluster = Objects.firstNonNull(namespace.getString("cluster"), configuration.getCluster());
+        String cluster = Optional.ofNullable(namespace.getString("cluster")).orElse(configuration.getCluster());
 
         ApiKeyEncryption encryption = new ApiKeyEncryption(cluster);
         System.out.println(encryption.encrypt(apiKey));

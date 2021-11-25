@@ -15,9 +15,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
+import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.testng.SkipException;
@@ -40,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
 import static java.lang.String.format;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -53,14 +51,10 @@ public class StashReaderTest {
         AmazonS3 s3 = mock(AmazonS3.class);
 
         final AtomicReference<String> latest = new AtomicReference<>("2015-01-01-00-00-00");
-        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer(new Answer<S3Object>() {
-            @Override
-            public S3Object answer(InvocationOnMock invocation)
-                    throws Throwable {
-                S3Object s3Object = new S3Object();
-                s3Object.setObjectContent(new ByteArrayInputStream(latest.get().getBytes(Charsets.UTF_8)));
-                return s3Object;
-            }
+        when(s3.getObject(argThat(getsObject("stash-bucket", "stash/test/_LATEST")))).thenAnswer((Answer<S3Object>) invocation -> {
+            S3Object s3Object = new S3Object();
+            s3Object.setObjectContent(new ByteArrayInputStream(latest.get().getBytes(Charsets.UTF_8)));
+            return s3Object;
         });
 
         // Get the latest
@@ -167,7 +161,7 @@ public class StashReaderTest {
         // Add an initial summary for the _SUCCESS file
         S3ObjectSummary objectSummary = new S3ObjectSummary();
         objectSummary.setBucketName("stash-bucket");
-        objectSummary.setKey(String.format("stash/test/2015-01-01-00-00-00/_SUCCESS"));
+        objectSummary.setKey("stash/test/2015-01-01-00-00-00/_SUCCESS");
         objectSummary.setSize(10);
         listing.getObjectSummaries().add(objectSummary);
 
@@ -254,8 +248,8 @@ public class StashReaderTest {
         assertEquals(tableMetadata.getSize(), 300);
 
         List<StashFileMetadata> files = tableMetadata.getFiles();
-        assertEquals(3, files.size());
-        for (int i =0; i < 3; i++) {
+        assertEquals(files.size(), 3);
+        for (int i = 0; i < 3; i++) {
             StashFileMetadata fileMetadata = files.get(i);
             assertEquals(fileMetadata.getBucket(), "stash-bucket");
             assertEquals(fileMetadata.getKey(),
@@ -394,26 +388,24 @@ public class StashReaderTest {
         assertEquals(lockedViewTables, ImmutableList.of("table0102"));
     }
 
-    private Matcher<GetObjectRequest> getsObject(final String bucket, final String key) {
-        return new BaseMatcher<GetObjectRequest>() {
+    private ArgumentMatcher<GetObjectRequest> getsObject(final String bucket, final String key) {
+        return new ArgumentMatcher<GetObjectRequest>() {
             @Override
-            public boolean matches(Object o) {
-                GetObjectRequest request = (GetObjectRequest) o;
+            public boolean matches(GetObjectRequest request) {
                 return request != null && request.getBucketName().equals(bucket) && request.getKey().equals(key);
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("gets object s3://").appendText(bucket).appendText("/").appendText(key);
+            public String toString() {
+                return "GetObjectRequest s3://" + bucket + "/" + key;
             }
         };
     }
 
-    private Matcher<ListObjectsRequest> listObjectRequest(final String bucket, final String prefix, @Nullable final String marker) {
-        return new BaseMatcher<ListObjectsRequest>() {
+    private ArgumentMatcher<ListObjectsRequest> listObjectRequest(final String bucket, final String prefix, @Nullable final String marker) {
+        return new ArgumentMatcher<ListObjectsRequest>() {
             @Override
-            public boolean matches(Object item) {
-                ListObjectsRequest request = (ListObjectsRequest) item;
+            public boolean matches(ListObjectsRequest request) {
                 return request != null &&
                         request.getBucketName().equals(bucket) &&
                         request.getPrefix().equals(prefix) &&
@@ -421,12 +413,12 @@ public class StashReaderTest {
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("ListObjectRequest[s3://").appendText(bucket).appendText("/").appendText(prefix);
+            public String toString() {
+                String s = "ListObjectRequest s3://" + bucket + "/" + prefix;
                 if (marker != null) {
-                    description.appendText(", marker=").appendText(marker);
+                    s = s + ", marker=" + marker;
                 }
-                description.appendText("]");
+                return s;
             }
         };
     }

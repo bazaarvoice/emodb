@@ -14,7 +14,6 @@ import com.bazaarvoice.emodb.sor.api.WriteConsistency;
 import com.bazaarvoice.emodb.sor.delta.Delta;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.cache.CacheBuilder;
@@ -29,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
@@ -100,7 +100,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
                             return metadata.getDefaultValue();
                         }
                         Object value;
-                        int version = Objects.firstNonNull((Integer) valueMap.get(VERSION_ATTRIBUTE), -1);
+                        int version = Optional.ofNullable((Integer) valueMap.get(VERSION_ATTRIBUTE)).orElse(-1);
                         if (version == CURRENT_SETTING_VERSION) {
                             String rawValue = (String) valueMap.get(VALUE_ATTRIBUTE);
                             value = JsonHelper.fromJson(rawValue, metadata.getTypeReference());
@@ -168,7 +168,7 @@ public class SettingsManager implements SettingsRegistry, Settings {
     private <T> void set(SettingMetadata<T> metadata, T value) {
         checkNotNull(value, "value");
 
-        Delta delta =  Deltas.mapBuilder()
+        Delta delta = Deltas.mapBuilder()
                 .put(VALUE_ATTRIBUTE, JsonHelper.asJson(value))
                 .put(VERSION_ATTRIBUTE, CURRENT_SETTING_VERSION)
                 .build();

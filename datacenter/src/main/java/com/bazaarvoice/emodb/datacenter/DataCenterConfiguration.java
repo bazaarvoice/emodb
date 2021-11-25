@@ -1,12 +1,12 @@
 package com.bazaarvoice.emodb.datacenter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;
 
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.net.URI;
+import java.util.Optional;
 import java.util.Set;
 
 public class DataCenterConfiguration {
@@ -31,12 +31,16 @@ public class DataCenterConfiguration {
     @JsonProperty("systemDataCenterServiceUri")
     private URI _systemDataCenterServiceUri;
 
-    /** Load-balanced highly available base URL for the EmoDB service (eg. http://localhost:8080). */
+    /**
+     * Load-balanced highly available base URL for the EmoDB service (eg. http://localhost:8080).
+     */
     @Valid
     @NotNull
     private URI _dataCenterServiceUri;
 
-    /** Load-balanced highly available base URL for the EmoDB administration tasks (eg. http://localhost:8081). */
+    /**
+     * Load-balanced highly available base URL for the EmoDB administration tasks (eg. http://localhost:8081).
+     */
     @Valid
     @NotNull
     private URI _dataCenterAdminUri;
@@ -64,7 +68,7 @@ public class DataCenterConfiguration {
     }
 
     public String getCassandraDataCenter() {
-        return Objects.firstNonNull(_cassandraDataCenter, _currentDataCenter);
+        return Optional.ofNullable(_cassandraDataCenter).orElse(_currentDataCenter);
     }
 
     public DataCenterConfiguration setCassandraDataCenter(String cassandraDataCenter) {

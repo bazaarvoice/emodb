@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.2.1-SNAPSHOT</version>
+        <version>6.4.12-SNAPSHOT</version>
         <relativePath>../../parent/pom.xml</relativePath>
     </parent>
 
@@ -14,10 +14,6 @@
     <packaging>jar</packaging>
 
     <name>EmoDB Authentication</name>
-
-    <properties>
-        <shiro.version>1.2.6</shiro.version>
-    </properties>
 
     <dependencies>
         <!-- Bazaarvoice dependencies -->
@@ -50,17 +46,12 @@
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-all</artifactId>
+            <artifactId>mockito-core</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.dropwizard</groupId>
-            <artifactId>dropwizard-testing</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

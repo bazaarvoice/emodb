@@ -8,6 +8,8 @@ import com.amazonaws.regions.Regions;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatch;
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClient;
 import com.amazonaws.services.cloudwatch.model.Dimension;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
 import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sqs.AmazonSQS;
@@ -72,7 +74,6 @@ import com.bazaarvoice.ostrich.pool.ServicePoolBuilder;
 import com.bazaarvoice.ostrich.retry.ExponentialBackoffRetry;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
 import com.google.common.base.Optional;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
@@ -102,6 +103,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Optional.ofNullable;
 
 /**
  * Guice module for use with {@link com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode#SCANNER}
@@ -154,9 +156,9 @@ public class ScanUploadModule extends PrivateModule {
         bind(String.class).annotatedWith(StashRequestTable.class).toInstance(_config.getScanRequestTable());
         bind(Integer.class).annotatedWith(MaxConcurrentScans.class).toInstance(_config.getScanThreadCount());
 
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("pendingScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {}).annotatedWith(Names.named("pendingScanRangeQueueName"))
                 .toInstance(_config.getPendingScanRangeQueueName());
-        bind(new TypeLiteral<Optional<String>>(){}).annotatedWith(Names.named("completeScanRangeQueueName"))
+        bind(new TypeLiteral<Optional<String>>() {}).annotatedWith(Names.named("completeScanRangeQueueName"))
                 .toInstance(_config.getCompleteScanRangeQueueName());
 
         bind(ScanWriterGenerator.class).to(DefaultScanWriterGenerator.class).asEagerSingleton();
@@ -196,22 +198,28 @@ public class ScanUploadModule extends PrivateModule {
     protected String provideScanRequestTablePlacement(@SystemTablePlacement String tablePlacement) {
         return tablePlacement;
     }
-    
+
     @Provides
     @Singleton
     protected Region provideAmazonRegion() {
-        return Objects.firstNonNull(Regions.getCurrentRegion(), Region.getRegion(Regions.US_EAST_1));
+        return ofNullable(Regions.getCurrentRegion()).orElse(Region.getRegion(Regions.US_EAST_1));
     }
 
     @Provides
     @Singleton
     @S3CredentialsProvider
-    protected AWSCredentialsProvider provideAmazonS3CredentialsProvider(AWSCredentialsProvider credentialsProvider,
-                                                                        @SelfHostAndPort HostAndPort hostAndPort) {
+    protected AWSCredentialsProvider provideAmazonS3CredentialsProvider(Region region, AWSCredentialsProvider credentialsProvider,@SelfHostAndPort HostAndPort hostAndPort) {
         AWSCredentialsProvider s3CredentialsProvider = credentialsProvider;
         if (_config.getS3AssumeRole().isPresent()) {
-            s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider(
-                    credentialsProvider, _config.getS3AssumeRole().get(), "stash-" + hostAndPort.getHostText());
+            final AWSSecurityTokenService sts = AWSSecurityTokenServiceClientBuilder.standard()
+                    .withCredentials(s3CredentialsProvider)
+                    .withRegion(region.getName())
+                    .build();
+            s3CredentialsProvider = new STSAssumeRoleSessionCredentialsProvider
+                            .Builder(_config.getS3AssumeRole().get(),"stash-" + hostAndPort.getHostText())
+                            .withStsClient(sts)
+                            .build();
+
         }
         return s3CredentialsProvider;
     }
@@ -219,25 +227,22 @@ public class ScanUploadModule extends PrivateModule {
     @Provides
     @Singleton
     protected AmazonSNS provideAmazonSNS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSNS amazonSNS = new AmazonSNSClient(credentialsProvider);
-        amazonSNS.setRegion(region);
-        return amazonSNS;
+        return AmazonSNSClient.builder().withCredentials(credentialsProvider)
+                .withRegion(region.getName()).build();
     }
 
     @Provides
     @Singleton
     protected AmazonSQS provideAmazonSQS(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonSQS amazonSQS = new AmazonSQSClient(credentialsProvider);
-        amazonSQS.setRegion(region);
-        return amazonSQS;
+        return AmazonSQSClient.builder().withCredentials(credentialsProvider)
+                .withRegion(region.getName()).build();
     }
 
     @Provides
     @Singleton
     protected AmazonCloudWatch provideAmazonCloudWatch(Region region, AWSCredentialsProvider credentialsProvider) {
-        AmazonCloudWatch cloudWatch = new AmazonCloudWatchClient(credentialsProvider);
-        cloudWatch.setRegion(region);
-        return cloudWatch;
+        return AmazonCloudWatchClient.builder().withCredentials(credentialsProvider)
+                .withRegion(region.getName()).build();
     }
 
     @Provides
@@ -323,7 +328,7 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    @Named ("plugin")
+    @Named("plugin")
     protected List<StashStateListener> providePluginStashStateListeners(Environment environment, PluginServerMetadata metadata) {
         List<PluginConfiguration> pluginConfigs = _config.getNotifications().getStashStateListenerPluginConfigurations();
         if (pluginConfigs.isEmpty()) {
@@ -394,7 +399,7 @@ public class ScanUploadModule extends PrivateModule {
 
     @Provides
     @Singleton
-    @Named ("ScannerAPIKey")
+    @Named("ScannerAPIKey")
     protected String provideScannerApiKey(@ServerCluster String cluster) {
         if (!_config.getScannerApiKey().isPresent()) {
             return "anonymous";
@@ -409,7 +414,9 @@ public class ScanUploadModule extends PrivateModule {
         return scannerApiKey;
     }
 
-    /** Provider used internally when EmoDB queues are configured */
+    /**
+     * Provider used internally when EmoDB queues are configured
+     */
     public static class QueueScanWorkflowProvider implements Provider<ScanWorkflow> {
         private final CuratorFramework _curator;
         private final String _cluster;
@@ -422,9 +429,9 @@ public class ScanUploadModule extends PrivateModule {
 
         @Inject
         public QueueScanWorkflowProvider(@Global CuratorFramework curator, @ServerCluster String cluster,
-                                         Client client, @Named ("ScannerAPIKey") String apiKey,
-                                         @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
-                                         @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName,
+                                         Client client, @Named("ScannerAPIKey") String apiKey,
+                                         @Named("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                         @Named("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName,
                                          Environment environment, MetricRegistry metricRegistry) {
             _curator = curator;
             _cluster = cluster;
@@ -456,7 +463,9 @@ public class ScanUploadModule extends PrivateModule {
         }
     }
 
-    /** Provider used internally when SQS queues are configured */
+    /**
+     * Provider used internally when SQS queues are configured
+     */
     public static class SQSScanWorkflowProvider implements Provider<ScanWorkflow> {
         private final AmazonSQS _amazonSQS;
         private final String _pendingScanRangeQueueName;
@@ -464,8 +473,8 @@ public class ScanUploadModule extends PrivateModule {
 
         @Inject
         public SQSScanWorkflowProvider(@ServerCluster String cluster, AmazonSQS amazonSQS,
-                                       @Named ("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
-                                       @Named ("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
+                                       @Named("pendingScanRangeQueueName") Optional<String> pendingScanRangeQueueName,
+                                       @Named("completeScanRangeQueueName") Optional<String> completeScanRangeQueueName) {
             _amazonSQS = amazonSQS;
             _pendingScanRangeQueueName = pendingScanRangeQueueName.or(String.format("emodb-pending-scan-ranges-%s", cluster));
             _completeScanRangeQueueName = completeScanRangeQueueName.or(String.format("emodb-complete-scan-ranges-%s", cluster));

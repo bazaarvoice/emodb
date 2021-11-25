@@ -29,7 +29,6 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.PeekingIterator;
-import com.google.common.io.InputSupplier;
 import com.sun.jersey.api.client.ClientResponse;
 import io.dropwizard.jersey.params.AbstractParam;
 import io.dropwizard.jersey.params.LongParam;
@@ -64,7 +63,6 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
@@ -73,6 +71,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Spliterators;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.StreamSupport;
 
@@ -81,7 +80,7 @@ import static java.lang.String.format;
 @Path("/blob/1")
 @Produces(MediaType.APPLICATION_JSON)
 @RequiresAuthentication
-@Api (value="BlobStore: " , description = "All BlobStore operations")
+@Api(value = "BlobStore: ", description = "All BlobStore operations")
 public class BlobStoreResource1 {
     private static final Logger _log = LoggerFactory.getLogger(BlobStoreResource1.class);
 
@@ -152,7 +151,7 @@ public class BlobStoreResource1 {
     @GET
     @Path("_table")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.listTables", absolute = true)
-    @ApiOperation (value = "List all the tables.",
+    @ApiOperation(value = "List all the tables.",
             notes = "Returns a list of tables.",
             response = Table.class
     )
@@ -172,7 +171,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.createTable", absolute = true)
-    @ApiOperation (value = "Creates a table.",
+    @ApiOperation(value = "Creates a table.",
             notes = "Returns a SuccessResponse if table is created.",
             response = SuccessResponse.class
     )
@@ -201,7 +200,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}")
     @RequiresPermissions("blob|drop_table|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.dropTable", absolute = true)
-    @ApiOperation (value = "Drops a table.",
+    @ApiOperation(value = "Drops a table.",
             notes = "Returns a SucessResponse if the table is dropped.",
             response = SuccessResponse.class
     )
@@ -219,7 +218,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}/purge")
     @RequiresPermissions("blob|purge|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.purgeTable", absolute = true)
-    @ApiOperation (value = "Purges a table.",
+    @ApiOperation(value = "Purges a table.",
             notes = "Returns a SucessResponse if the table is purged..",
             response = SuccessResponse.class
     )
@@ -236,7 +235,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.getTableAttributes", absolute = true)
-    @ApiOperation (value = "Gets all the attributes of a table.",
+    @ApiOperation(value = "Gets all the attributes of a table.",
             notes = "Returns a Map",
             response = Map.class
     )
@@ -251,7 +250,7 @@ public class BlobStoreResource1 {
     @Consumes(MediaType.APPLICATION_JSON)
     @RequiresPermissions("blob|set_table_attributes|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.setTableAttributes", absolute = true)
-    @ApiOperation (value = "Sets the attibutes for a table.",
+    @ApiOperation(value = "Sets the attibutes for a table.",
             notes = "Returns a SucessResponse if the attributes are set.",
             response = SuccessResponse.class
     )
@@ -270,7 +269,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}/options")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.getTableOptions", absolute = true)
-    @ApiOperation (value = "Gets the options of the table.",
+    @ApiOperation(value = "Gets the options of the table.",
             notes = "Returns TableOptions object.",
             response = TableOptions.class
     )
@@ -284,7 +283,7 @@ public class BlobStoreResource1 {
     @Path("_table/{table}/size")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.getTableSize", absolute = true)
-    @ApiOperation (value = "Gets the size of the table.",
+    @ApiOperation(value = "Gets the size of the table.",
             notes = "Retuns a long.",
             response = long.class
     )
@@ -295,14 +294,14 @@ public class BlobStoreResource1 {
     }
 
     @GET
-    @Path ("_table/{table}/metadata")
+    @Path("_table/{table}/metadata")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.getTableMetadata", absolute = true)
-    @ApiOperation (value = "Gets metadata of the table.",
+    @ApiOperation(value = "Gets metadata of the table.",
             notes = "Returns a Table object.",
             response = Table.class
     )
-    public Table getTableMetadata(@PathParam ("table") String table,
+    public Table getTableMetadata(@PathParam("table") String table,
                                   @Authenticated Subject subject) {
         _getTableMetadataRequestsByApiKey.getUnchecked(subject.getId()).mark();
         return _blobStore.getTableMetadata(table);
@@ -315,7 +314,7 @@ public class BlobStoreResource1 {
     @Path("{table}/{blobId}")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.head", absolute = true)
-    @ApiOperation (value = "Retrieves the current version of a piece of content from the data store.",
+    @ApiOperation(value = "Retrieves the current version of a piece of content from the data store.",
             notes = "Returns a response object.",
             response = Response.class
     )
@@ -337,7 +336,7 @@ public class BlobStoreResource1 {
     @Path("{table}")
     @RequiresPermissions("blob|read|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.scanMetadata", absolute = true)
-    @ApiOperation (value = "Retrieves a list of content items in a particular table.",
+    @ApiOperation(value = "Retrieves a list of content items in a particular table.",
             notes = "Retuns BlobMetadata.",
             response = BlobMetadata.class
     )
@@ -349,11 +348,13 @@ public class BlobStoreResource1 {
         return streamingIterator(_blobStore.scanMetadata(table, Strings.emptyToNull(blobId), limit.get()));
     }
 
-    /** Returns a list of valid table placements. */
+    /**
+     * Returns a list of valid table placements.
+     */
     @GET
     @Path("_tableplacement")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.getTablePlacements", absolute = true)
-    @ApiOperation (value = "Returns a list of valid table placements.",
+    @ApiOperation(value = "Returns a list of valid table placements.",
             notes = "Retuns a Collection of strings.",
             response = String.class
     )
@@ -371,7 +372,7 @@ public class BlobStoreResource1 {
     @RequiresPermissions("blob|read|{table}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.get", absolute = true)
-    @ApiOperation (value = "Retrieves the current version of a piece of content from the data store..",
+    @ApiOperation(value = "Retrieves the current version of a piece of content from the data store..",
             notes = "Returns a Response.",
             response = Response.class
     )
@@ -383,12 +384,7 @@ public class BlobStoreResource1 {
         RangeSpecification rangeSpec = rangeParam != null ? rangeParam.get() : null;
         final Blob blob = _blobStore.get(table, blobId, rangeSpec);
 
-        Response.ResponseBuilder response = Response.ok(new StreamingOutput() {
-            @Override
-            public void write(OutputStream output) throws IOException {
-                blob.writeTo(output);
-            }
-        });
+        Response.ResponseBuilder response = Response.ok((StreamingOutput) blob::writeTo);
         setHeaders(response, blob, (rangeSpec != null) ? blob.getByteRange() : null);
         return response.build();
     }
@@ -445,7 +441,7 @@ public class BlobStoreResource1 {
      *         &lt;/script&gt;
      *     &lt;/html&gt;
      * </code>
-     *
+     * <p>
      * To prevent this we always pass back the X-BVA content type as provided but only set the HTTP response's
      * "Content-Type" header if it matches an approved set of safe types.
      */
@@ -462,7 +458,7 @@ public class BlobStoreResource1 {
     @Consumes(MediaType.WILDCARD)
     @RequiresPermissions("blob|update|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.put", absolute = true)
-    @ApiOperation (value = "Put operation.",
+    @ApiOperation(value = "Put operation.",
             notes = "Returns a SuccessReponse on success.",
             response = SuccessResponse.class
     )
@@ -493,7 +489,7 @@ public class BlobStoreResource1 {
         // The "ttl" query param can be specified to delete the blob automatically after a period of time
         Duration ttl = (ttlParam != null) ? ttlParam.get() : null;
         if (null != ttl) {
-            throw new IllegalArgumentException(String.format("Ttl:{} is specified for blobId:{}"));
+            throw new IllegalArgumentException(String.format("Ttl:%s is specified for blobId:%s", ttl, blobId));
         }
 
         // Perform the put
@@ -506,7 +502,7 @@ public class BlobStoreResource1 {
     @Path("{table}/{blobId}")
     @RequiresPermissions("blob|update|{table}")
     @Timed(name = "bv.emodb.blob.BlobStoreResource1.delete", absolute = true)
-    @ApiOperation (value = "Delete operation.",
+    @ApiOperation(value = "Delete operation.",
             notes = "Returns SuccessReponse.",
             response = SuccessResponse.class
     )
@@ -549,16 +545,13 @@ public class BlobStoreResource1 {
      * Returns an InputSupplier that throws an exception if the caller attempts to consume the input stream
      * multiple times.
      */
-    private InputSupplier<InputStream> onceOnlySupplier(final InputStream in) {
+    private Supplier<InputStream> onceOnlySupplier(final InputStream in) {
         final AtomicBoolean once = new AtomicBoolean();
-        return new InputSupplier<InputStream>() {
-            @Override
-            public InputStream getInput() throws IOException {
-                if (!once.compareAndSet(false, true)) {
-                    throw new IllegalStateException("Input stream may be consumed only once per BlobStore call.");
-                }
-                return in;
+        return () -> {
+            if (!once.compareAndSet(false, true)) {
+                throw new IllegalStateException("Input stream may be consumed only once per BlobStore call.");
             }
+            return in;
         };
     }
 }

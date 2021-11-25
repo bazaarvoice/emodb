@@ -2,13 +2,13 @@ package com.bazaarvoice.emodb.table.db.consistency;
 
 import com.bazaarvoice.emodb.common.zookeeper.store.ValueStore;
 import com.bazaarvoice.emodb.table.db.astyanax.FullConsistencyTimeProvider;
-import com.google.common.base.Objects;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -37,6 +37,6 @@ public class MinLagConsistencyTimeProvider implements FullConsistencyTimeProvide
 
     private Duration getConsistencyLag(String cluster) {
         Supplier<Duration> holder = _durationCache.get(cluster);
-        return Objects.firstNonNull(holder != null ? holder.get() : null, DEFAULT_LAG);
+        return Optional.ofNullable(holder != null ? holder.get() : null).orElse(DEFAULT_LAG);
     }
 }

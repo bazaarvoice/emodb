@@ -13,13 +13,16 @@ public class KafkaConfiguration {
     private String _kafkaBootstrapServers;
 
     @Valid
-    @JsonProperty("ssl")
-    private SslConfiguration _sslConfiguration;
+    @JsonProperty("sasl")
+    private SaslConfiguration _saslConfiguration;
 
     @Valid
     @NotNull
     @JsonProperty("producer")
     private KafkaProducerConfiguration _kafkaProducerConfiguration = new KafkaProducerConfiguration();
+
+    private final String adminHealthCheckName = "kafka-cluster";
+
 
     public String getBootstrapServers() {
         return _kafkaBootstrapServers;
@@ -29,11 +32,16 @@ public class KafkaConfiguration {
         return _kafkaProducerConfiguration;
     }
 
-    public SslConfiguration getSslConfiguration() {
-        return _sslConfiguration;
+    public SaslConfiguration getSaslConfiguration() {
+        return _saslConfiguration;
     }
 
-    public void setSslConfiguration(final SslConfiguration sslConfiguration) {
-        _sslConfiguration = sslConfiguration;
+    public void setSaslConfiguration(final SaslConfiguration saslConfiguration) {
+        _saslConfiguration = saslConfiguration;
     }
+
+    public String getAdminHealthCheckName(){
+        return adminHealthCheckName;
+    }
+
 }

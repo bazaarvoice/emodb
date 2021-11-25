@@ -5,9 +5,7 @@ import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
-import com.bazaarvoice.emodb.common.dropwizard.jersey.ServerErrorResponseMetricsFilter;
-import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamFilter;
-import com.bazaarvoice.emodb.common.dropwizard.jersey.UnbufferedStreamResourceFilterFactory;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamFilter;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
 import com.bazaarvoice.emodb.common.dropwizard.metrics.EmoGarbageCollectorMetricSet;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
@@ -24,17 +22,14 @@ import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.sor.compactioncontrol.LocalCompactionControl;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.web.auth.EncryptConfigurationApiKeyCommand;
-import com.bazaarvoice.emodb.web.cli.AllTablesReportCommand;
-import com.bazaarvoice.emodb.web.cli.ListCassandraCommand;
 import com.bazaarvoice.emodb.web.cli.PurgeDatabusEventsCommand;
-import com.bazaarvoice.emodb.web.cli.RegisterCassandraCommand;
-import com.bazaarvoice.emodb.web.cli.UnregisterCassandraCommand;
 import com.bazaarvoice.emodb.web.ddl.CreateKeyspacesCommand;
 import com.bazaarvoice.emodb.web.ddl.DdlConfiguration;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
+import com.bazaarvoice.emodb.web.jersey.ServerErrorResponseMetricsFilter;
+import com.bazaarvoice.emodb.web.jersey.UnbufferedStreamResourceFilterFactory;
 import com.bazaarvoice.emodb.web.megabus.resource.MegabusResource1;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
-import com.bazaarvoice.emodb.web.report.ReportLoader;
 import com.bazaarvoice.emodb.web.resources.FaviconResource;
 import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.blob.BlobStoreResource1;
@@ -44,7 +39,6 @@ import com.bazaarvoice.emodb.web.resources.databus.ReplicationResource1;
 import com.bazaarvoice.emodb.web.resources.databus.SubjectDatabus;
 import com.bazaarvoice.emodb.web.resources.queue.DedupQueueResource1;
 import com.bazaarvoice.emodb.web.resources.queue.QueueResource1;
-import com.bazaarvoice.emodb.web.resources.report.ReportResource1;
 import com.bazaarvoice.emodb.web.resources.sor.DataStoreResource1;
 import com.bazaarvoice.emodb.web.resources.uac.ApiKeyResource1;
 import com.bazaarvoice.emodb.web.resources.uac.RoleResource1;
@@ -106,7 +100,6 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.invalidation_cache_listener;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_web;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.swagger;
@@ -151,11 +144,7 @@ public class EmoService extends Application<EmoConfiguration> {
     @Override
     public void initialize(Bootstrap<EmoConfiguration> bootstrap) {
         bootstrap.addCommand(new CreateKeyspacesCommand());
-        bootstrap.addCommand(new RegisterCassandraCommand());
-        bootstrap.addCommand(new ListCassandraCommand());
-        bootstrap.addCommand(new UnregisterCassandraCommand());
         bootstrap.addCommand(new PurgeDatabusEventsCommand());
-        bootstrap.addCommand(new AllTablesReportCommand());
         bootstrap.addCommand(new EncryptConfigurationApiKeyCommand());
         EmoServiceObjectMapperFactory.configure(bootstrap.getObjectMapper());
 
@@ -212,7 +201,6 @@ public class EmoService extends Application<EmoConfiguration> {
         evaluateDatabus();
         evaluateQueue();
         evaluateBlackList();
-        evaluateReporting();
         evaluateThrottling();
         evaluateSecurity();
         evaluateScanner();
@@ -359,16 +347,6 @@ public class EmoService extends Application<EmoConfiguration> {
 
         // Allow manually specifying IPs to be throttled or blacklisted.
         _environment.getApplicationContext().addFilter(new FilterHolder(new BlackListedIpFilter(blackListIpValueStore)), "/*", EnumSet.of(DispatcherType.REQUEST));
-    }
-
-    private void evaluateReporting()
-            throws Exception {
-        if (!runPerServiceMode(report)) {
-            return;
-        }
-
-        // Add the reporting endpoint.  This is for internal use and is therefore not discoverable.
-        _environment.jersey().register(new ReportResource1(_injector.getInstance(ReportLoader.class)));
     }
 
     private void evaluateThrottling()

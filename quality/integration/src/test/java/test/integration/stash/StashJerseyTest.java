@@ -29,16 +29,16 @@ import org.junit.Test;
 import javax.ws.rs.core.Response;
 import java.util.Date;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
+import static org.testng.Assert.assertEquals;
 
 /**
  * Note:  This class uses the "JerseyTest" naming convention even though there is currently no Java Jersey client
- *        implementation for accessing the Stash API.
+ * implementation for accessing the Stash API.
  */
 public class StashJerseyTest extends ResourceTest {
 
@@ -46,7 +46,6 @@ public class StashJerseyTest extends ResourceTest {
     private final static String UNAUTH_API_KEY = "unauth-api-key";
 
     private String _stashKeyId;
-    private String _unauthKeyId;
     private ScanUploader _scanUploader;
     private StashRequestManager _stashRequestManager;
 
@@ -56,7 +55,6 @@ public class StashJerseyTest extends ResourceTest {
     private ResourceTestRule setupResourceTestRule() {
         final InMemoryAuthIdentityManager<ApiKey> authIdentityManager = new InMemoryAuthIdentityManager<>();
         _stashKeyId = authIdentityManager.createIdentity(STASH_API_KEY, new ApiKeyModification().addRoles("stash"));
-        _unauthKeyId = authIdentityManager.createIdentity(UNAUTH_API_KEY, new ApiKeyModification());
 
         final EmoPermissionResolver permissionResolver = new EmoPermissionResolver(mock(DataStore.class), mock(BlobStore.class));
         final InMemoryPermissionManager permissionManager = new InMemoryPermissionManager(permissionResolver);

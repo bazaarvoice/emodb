@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.guava.GuavaModule;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import javax.annotation.Nullable;
 
@@ -23,7 +23,7 @@ public class CustomJsonObjectMapperFactory {
     public static ObjectMapper configure(ObjectMapper mapper) {
         return mapper
                 .registerModule(new Jdk8Module())
-                .registerModule(new JSR310Module())
+                .registerModule(new JavaTimeModule())
                 .configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, false)
                 // The following module present to maintain compatibility in the API clients caused by importing DropWizard.
                 // Eventually all API clients should have minimal dependencies. At that time Guava will be removed and the

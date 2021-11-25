@@ -4,7 +4,7 @@ import com.amazonaws.ClientConfiguration;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -25,6 +25,8 @@ import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -107,9 +109,9 @@ abstract public class StashReader {
                                                       @Nullable ClientConfiguration s3Config) {
         AmazonS3 s3;
         if (s3Config == null) {
-            s3 = new AmazonS3Client(credentialsProvider);
+            s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider).build();
         } else {
-            s3 = new AmazonS3Client(credentialsProvider, s3Config);
+            s3 = AmazonS3ClientBuilder.standard().withCredentials(credentialsProvider).withClientConfiguration(s3Config).build();
         }
         s3.setEndpoint(endPoint);
         return s3;
@@ -156,7 +158,7 @@ abstract public class StashReader {
         final String prefix = String.format("%s/", root);
 
         return new AbstractIterator<StashTable>() {
-            Iterator<String> _commonPrefixes = Iterators.emptyIterator();
+            Iterator<String> _commonPrefixes = Collections.emptyIterator();
             String _marker = null;
             boolean _truncated = true;
 
@@ -208,7 +210,7 @@ abstract public class StashReader {
 
         return new AbstractIterator<StashTableMetadata>() {
             PeekingIterator<S3ObjectSummary> _listResponse =
-                    Iterators.peekingIterator(Iterators.<S3ObjectSummary>emptyIterator());
+                    Iterators.peekingIterator(Collections.<S3ObjectSummary>emptyIterator());
             String _marker = null;
             boolean _truncated = true;
 

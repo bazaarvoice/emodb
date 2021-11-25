@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.common.cassandra;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 
@@ -12,7 +11,6 @@ import java.util.Map;
 public class CassandraReplication {
     private final boolean _networkTopology;
     private final int _replicationFactor;
-    private final Map<String, Integer> _replicationFactorByDataCenter;
 
     public CassandraReplication(KeyspaceDefinition keyspaceDefinition) {
         _networkTopology = keyspaceDefinition.getStrategyClass().endsWith("NetworkTopologyStrategy");
@@ -29,11 +27,9 @@ public class CassandraReplication {
                 dataCenterBuilder.put(dataCenter, repFactor);
             }
             _replicationFactor = replicationFactor;
-            _replicationFactorByDataCenter = dataCenterBuilder.build();
         } else {
             // SimpleStrategy and OldNetworkTopologyStrategy both require a 'replication_factor' setting
             _replicationFactor = Integer.parseInt(keyspaceDefinition.getStrategyOptions().get("replication_factor"));
-            _replicationFactorByDataCenter = ImmutableMap.of();
         }
     }
 
@@ -45,7 +41,4 @@ public class CassandraReplication {
         return _replicationFactor;
     }
 
-    public int getReplicationFactorForDataCenter(String dataCenter) {
-        return Objects.firstNonNull(_replicationFactorByDataCenter.get(dataCenter), 0);
-    }
 }

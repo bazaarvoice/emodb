@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.2.1-SNAPSHOT</version>
+        <version>6.4.12-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -18,7 +18,10 @@
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
-                    <descriptor>dep.xml</descriptor>
+                    <descriptors>
+                        <descriptor>dep.xml</descriptor>
+                    </descriptors>
+                    <tarLongFileMode>posix</tarLongFileMode>
                     <finalName>emodb-${project.version}</finalName>
                 </configuration>
                 <executions>
@@ -42,6 +45,7 @@
                     <plugin>
                         <groupId>com.bazaarvoice.maven.plugins</groupId>
                         <artifactId>s3repo-maven-plugin</artifactId>
+                        <version>3.6</version>
                         <executions>
                             <execution>
                                 <phase>deploy</phase>

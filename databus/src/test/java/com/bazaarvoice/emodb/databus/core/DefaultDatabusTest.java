@@ -35,9 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
+import org.mockito.ArgumentMatcher;
 import org.testng.annotations.Test;
 
 import java.nio.ByteBuffer;
@@ -54,19 +52,18 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyCollectionOf;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -141,14 +138,14 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
         testDatabus.drainQueueAsync("test-subscription");
 
         // no deletes should be happening.
-        verifyZeroInteractions(dedupEventStore);
+        verifyNoMoreInteractions(dedupEventStore);
 
         // the entry should be removed from map.
         assertEquals(testDatabus.getDrainedSubscriptionsMap().size(), 0);
@@ -184,7 +181,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
@@ -230,7 +227,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider().add(annotatedContent), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", ignoreReEtl, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), Clock.systemUTC());
 
         // Call the drainQueue method.
@@ -253,7 +250,7 @@ public class DefaultDatabusTest {
         TestDataProvider testDataProvider = new TestDataProvider();
 
         final Set<String> expectedIds = Sets.newHashSet();
-        
+
         DatabusEventStore eventStore = mock(DatabusEventStore.class);
         when(eventStore.poll(eq("subscription"), eq(Duration.ofMinutes(1)), any(EventSink.class)))
                 .thenAnswer(invocationOnMock -> {
@@ -282,7 +279,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 500);
@@ -353,7 +350,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), testDataProvider, subscriptionDAO,
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), databusAuthorizer, "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 1, key -> 0, new MetricRegistry(), clock);
 
         PollResult pollResult = testDatabus.poll("owner", "subscription", Duration.ofMinutes(1), 10);
@@ -364,8 +361,8 @@ public class DefaultDatabusTest {
         // Verify that the redundant events where deleted
         verify(eventStore).delete(eq("subscription"), argThat(containsExactly(expectedDeleteIds)), eq(true));
         // Padded events will be unclaimed lazily upon iterating over the event list, so verify they haven't been unclaimed yet
-        verify(eventStore, never()).renew(anyString(), anyCollectionOf(String.class), any(Duration.class), anyBoolean());
-        
+        verify(eventStore, never()).renew(anyString(), anyCollection(), any(Duration.class), anyBoolean());
+
         Iterator<Event> events = pollResult.getEventIterator();
         // Read the entire event list
         Set<String> actualIds = Sets.newHashSet();
@@ -378,7 +375,7 @@ public class DefaultDatabusTest {
         // Verify the padded events were unclaimed
         verify(eventStore).renew(eq("subscription"), argThat(containsExactly(expectedUnclaimIds)), eq(Duration.ZERO), eq(false));
     }
-    
+
     @Test
     @SuppressWarnings("unchecked")
     public void testFanoutToMasterPartitions() {
@@ -405,7 +402,7 @@ public class DefaultDatabusTest {
         DefaultDatabus testDatabus = new DefaultDatabus(
                 mock(LifeCycleRegistry.class), mock(DatabusEventWriterRegistry.class), new TestDataProvider(), mock(SubscriptionDAO.class),
                 eventStore, mock(SubscriptionEvaluator.class), mock(JobService.class),
-                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.sameThreadExecutor(),
+                mock(JobHandlerRegistry.class), mock(DatabusAuthorizer.class), "systemOwnerId", acceptAll, MoreExecutors.newDirectExecutorService(),
                 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
 
         List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
@@ -494,19 +491,17 @@ public class DefaultDatabusTest {
         testDataProvider.add(annotatedContent);
     }
 
-    private static <T> Matcher<Collection<T>> containsExactly(final Collection<T> expected) {
-        return new BaseMatcher<Collection<T>>() {
+    private static <T> ArgumentMatcher<Collection<T>> containsExactly(final Collection<T> expected) {
+        return new ArgumentMatcher<Collection<T>>() {
             @Override
-            public boolean matches(Object o) {
+            public boolean matches(Collection<T> o) {
                 return o != null &&
-                        o instanceof Collection &&
                         ImmutableSet.copyOf((Collection) o).equals(ImmutableSet.copyOf(expected));
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText("contains exactly ").appendValue(expected);
-
+            public String toString() {
+                return "contains exactly " + expected;
             }
         };
     }

@@ -14,14 +14,17 @@ import org.apache.kafka.clients.admin.TopicDescription;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
-import org.apache.kafka.common.config.SslConfigs;
+import org.apache.kafka.common.config.SaslConfigs;
 import org.apache.kafka.common.errors.TopicExistsException;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -35,12 +38,13 @@ public class DefaultKafkaCluster implements KafkaCluster {
     private final String _instanceIdentifier;
     private final KafkaProducerConfiguration _kafkaProducerConfiguration;
     private final Supplier<Producer<String, JsonNode>> _producerSupplier;
-    private final SslConfiguration _sslConfiguration;
+    private final SaslConfiguration _saslConfiguration;
+    private final Set<String> topics = new HashSet<>();
 
     @Inject
     public DefaultKafkaCluster(AdminClient adminClient,
                                @BootstrapServers String bootstrapServers,
-                               @Nullable SslConfiguration sslConfiguration,
+                               @Nullable SaslConfiguration saslConfiguration,
                                @SelfHostAndPort HostAndPort hostAndPort,
                                KafkaProducerConfiguration producerConfiguration) {
         _adminClient = requireNonNull(adminClient);
@@ -48,7 +52,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         _instanceIdentifier = requireNonNull(hostAndPort).toString();
         _kafkaProducerConfiguration = requireNonNull(producerConfiguration);
         _producerSupplier = Suppliers.memoize(this::createProducer);
-        _sslConfiguration = sslConfiguration;
+        _saslConfiguration = saslConfiguration;
     }
 
     @Override
@@ -57,6 +61,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         newTopic.configs(config);
         try {
             _adminClient.createTopics(Collections.singleton(newTopic)).all().get();
+            topics.add(topic.getName());
         } catch (ExecutionException | InterruptedException e) {
             if (e.getCause() instanceof TopicExistsException) {
                 checkTopicPropertiesMatching(topic);
@@ -73,6 +78,7 @@ public class DefaultKafkaCluster implements KafkaCluster {
         checkArgument(topicDescription.partitions().size() == topic.getPartitions());
         topicDescription.partitions().forEach(topicPartitionInfo ->
                 checkArgument(topicPartitionInfo.replicas().size() == topic.getReplicationFactor()));
+        topics.add(topic.getName());
     }
 
     private Producer<String, JsonNode> createProducer() {
@@ -100,15 +106,10 @@ public class DefaultKafkaCluster implements KafkaCluster {
             props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, _kafkaProducerConfiguration.getBufferMemory().get());
         }
 
-        if (null != _sslConfiguration) {
-            props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SslConfiguration.PROTOCOL);
-
-            props.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, _sslConfiguration.getTrustStoreLocation());
-            props.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, _sslConfiguration.getTrustStorePassword());
-
-            props.put(SslConfigs.SSL_KEYSTORE_LOCATION_CONFIG, _sslConfiguration.getKeyStoreLocation());
-            props.put(SslConfigs.SSL_KEYSTORE_PASSWORD_CONFIG, _sslConfiguration.getKeyStorePassword());
-            props.put(SslConfigs.SSL_KEY_PASSWORD_CONFIG, _sslConfiguration.getKeyPassword());
+        if (null != _saslConfiguration) {
+            props.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SaslConfiguration.PROTOCOL);
+            props.put(SaslConfigs.SASL_MECHANISM,SaslConfiguration.SASL_MECHANISM);
+            props.put(SaslConfigs.SASL_JAAS_CONFIG, _saslConfiguration.getJaasConfig());
         }
 
         return new KafkaProducer<>(props);
@@ -124,7 +125,12 @@ public class DefaultKafkaCluster implements KafkaCluster {
     }
 
     @Override
-    public SslConfiguration getSSLConfiguration() {
-        return _sslConfiguration;
+    public SaslConfiguration getSaslConfiguration() {
+        return _saslConfiguration;
+    }
+
+    @Override
+    public Collection<String> getAllTopics() {
+        return topics;
     }
 }

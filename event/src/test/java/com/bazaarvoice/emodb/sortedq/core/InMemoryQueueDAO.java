@@ -101,7 +101,7 @@ public class InMemoryQueueDAO implements QueueDAO {
                                             int batchSize, int limit) {
         NavigableSet<ByteBuffer> segments = _records.get(dataId);
         if (segments == null) {
-            return Iterators.emptyIterator();
+            return Collections.emptyIterator();
         }
 
         if (from != null) {

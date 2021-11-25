@@ -17,21 +17,20 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import org.hamcrest.Description;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.UUID;
 
 import static java.lang.String.format;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -60,7 +59,7 @@ public class ClusterHintsPollerTest {
 
         when(mockSession.getCluster()).thenReturn(mockCluster);
         // The first node queried is down
-        when(mockSession.execute(any(Statement.class))).thenThrow(new NoHostAvailableException(ImmutableMap.<InetSocketAddress, Throwable>of()));
+        when(mockSession.execute(any(Statement.class))).thenThrow(new NoHostAvailableException(ImmutableMap.of()));
 
         when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2, node3));
         HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
@@ -70,7 +69,9 @@ public class ClusterHintsPollerTest {
         assertEquals(actualResult.getHostFailure(), ImmutableSet.of(InetAddress.getByName("127.0.0.1")), "Node 1 should return with host failure");
     }
 
-    /** This test mocks 2 nodes that both return two target Id's with hints, and verifies that oldest hint is returned */
+    /**
+     * This test mocks 2 nodes that both return two target Id's with hints, and verifies that oldest hint is returned
+     */
     @Test
     public void testClusterHintsPollerWithOldestHint() throws Exception {
 
@@ -135,7 +136,7 @@ public class ClusterHintsPollerTest {
 
         // Make sure HintsPollerResult gives us the oldest hint (oldest hint is on node 2)
         assertTrue(actualResult.getOldestHintTimestamp().isPresent(), "Hints are there, but none found.");
-        assertEquals((long)actualResult.getOldestHintTimestamp().get(), oldestHintOnNode2);
+        assertEquals((long) actualResult.getOldestHintTimestamp().get(), oldestHintOnNode2);
         assertTrue(actualResult.areAllHostsPolling(), "All hosts should be polling fine");
         assertEquals(actualResult.getAllPolledHosts(),
                 ImmutableSet.of(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2")));
@@ -150,7 +151,9 @@ public class ClusterHintsPollerTest {
                 format(ClusterHintsPoller.OLDEST_HINT_QUERY_FORMAT, targetIds))));
     }
 
-    /** This test verifies when there are no hints on any of the nodes */
+    /**
+     * This test verifies when there are no hints on any of the nodes
+     */
     @Test
     public void testClusterHintsPollerWhenThereAreNoHints()
             throws Exception {
@@ -173,11 +176,11 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);
-        when(targetIdQueryNode2.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode2.iterator()).thenReturn(Collections.emptyIterator());
 
         // The following line mocks all the results we will get back from our CQL queries
         doReturn(targetIdQueryNode1).when(mockSession).execute(argThat(getHostStatementMatcher(node1,
@@ -200,7 +203,9 @@ public class ClusterHintsPollerTest {
                 ClusterHintsPoller.DISTINCT_TARGET_IDS_QUERY)));
     }
 
-    /** This tests a race condition where a node returns a non-empty set of target_ids, but on the subsequent call those hints are cleared */
+    /**
+     * This tests a race condition where a node returns a non-empty set of target_ids, but on the subsequent call those hints are cleared
+     */
     @Test
     public void testClusterHintsPollerWithNoHintsOnSubsequentCall()
             throws Exception {
@@ -231,7 +236,7 @@ public class ClusterHintsPollerTest {
 
         // Mock node 1 ResultSets
         ResultSet targetIdQueryNode1 = mock(ResultSet.class);
-        when(targetIdQueryNode1.iterator()).thenReturn(Iterators.<Row>emptyIterator());
+        when(targetIdQueryNode1.iterator()).thenReturn(Collections.emptyIterator());
 
         // Mock node 2 ResultSets
         ResultSet targetIdQueryNode2 = mock(ResultSet.class);
@@ -275,20 +280,19 @@ public class ClusterHintsPollerTest {
                 format(ClusterHintsPoller.OLDEST_HINT_QUERY_FORMAT, targetIds))));
     }
 
-    private ArgumentMatcher<Statement> getHostStatementMatcher(final Host host, final String query)
-            throws Exception {
+    private ArgumentMatcher<Statement> getHostStatementMatcher(final Host host, final String query) {
         return new ArgumentMatcher<Statement>() {
             @Override
-            public boolean matches(Object argument) {
+            public boolean matches(Statement argument) {
                 SelectedHostStatement statement = (SelectedHostStatement) argument;
 
-                return ((SimpleStatement)statement.getStatement()).getQueryString().equals(query) &&
+                return ((SimpleStatement) statement.getStatement()).getQueryString().equals(query) &&
                         Objects.equals(statement.getHostCordinator().getAddress(), host.getAddress());
             }
 
             @Override
-            public void describeTo(Description description) {
-                description.appendText(format("query:%s host:%s", query, host.getAddress().toString()));
+            public String toString() {
+                return format("query:%s host:%s", query, host.getAddress().toString());
             }
         };
     }

@@ -15,23 +15,18 @@ import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.cassandra.CassandraConfiguration;
 import com.bazaarvoice.emodb.common.cassandra.CqlDriverConfiguration;
-import com.bazaarvoice.emodb.common.dropwizard.discovery.DropwizardResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.PayloadBuilder;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ResourceRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ServiceNames;
 import com.bazaarvoice.emodb.common.dropwizard.guice.Global;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfAdminHostAndPort;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPort;
-import com.bazaarvoice.emodb.common.dropwizard.guice.SelfHostAndPortModule;
 import com.bazaarvoice.emodb.common.dropwizard.guice.ServerCluster;
 import com.bazaarvoice.emodb.common.dropwizard.guice.SystemTablePlacement;
-import com.bazaarvoice.emodb.common.dropwizard.healthcheck.DropwizardHealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.leader.LeaderServiceTask;
-import com.bazaarvoice.emodb.common.dropwizard.lifecycle.DropwizardLifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.LifeCycleRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode;
-import com.bazaarvoice.emodb.common.dropwizard.task.DropwizardTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.IgnoreAllTaskRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.task.TaskRegistry;
 import com.bazaarvoice.emodb.common.zookeeper.store.MapStore;
@@ -91,11 +86,14 @@ import com.bazaarvoice.emodb.web.auth.OwnerDatabusAuthorizer;
 import com.bazaarvoice.emodb.web.auth.SecurityModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlModule;
 import com.bazaarvoice.emodb.web.compactioncontrol.CompactionControlMonitorManager;
+import com.bazaarvoice.emodb.web.discovery.DropwizardResourceRegistry;
+import com.bazaarvoice.emodb.web.guice.SelfHostAndPortModule;
+import com.bazaarvoice.emodb.web.healthcheck.DropwizardHealthCheckRegistry;
+import com.bazaarvoice.emodb.web.lifecycle.DropwizardLifeCycleRegistry;
 import com.bazaarvoice.emodb.web.megabus.MegabusStashModule;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareClient;
 import com.bazaarvoice.emodb.web.partition.PartitionAwareServiceFactory;
 import com.bazaarvoice.emodb.web.plugins.DefaultPluginServerMetadata;
-import com.bazaarvoice.emodb.web.report.ReportsModule;
 import com.bazaarvoice.emodb.web.resources.blob.ApprovedBlobContentTypes;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusRelayClientFactory;
 import com.bazaarvoice.emodb.web.resources.databus.DatabusResourcePoller;
@@ -110,6 +108,7 @@ import com.bazaarvoice.emodb.web.settings.Setting;
 import com.bazaarvoice.emodb.web.settings.SettingsModule;
 import com.bazaarvoice.emodb.web.settings.SettingsRegistry;
 import com.bazaarvoice.emodb.web.settings.SorCqlDriverTask;
+import com.bazaarvoice.emodb.web.task.DropwizardTaskRegistry;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottle;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleControlTask;
 import com.bazaarvoice.emodb.web.throttling.AdHocThrottleManager;
@@ -117,9 +116,9 @@ import com.bazaarvoice.emodb.web.throttling.AdHocThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.BlackListIpValueStore;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottle;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleControlTask;
+import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleMapStore;
 import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottler;
-import com.bazaarvoice.emodb.web.throttling.DataStoreUpdateThrottleManager;
 import com.bazaarvoice.emodb.web.throttling.IpBlacklistControlTask;
 import com.bazaarvoice.emodb.web.throttling.ZkAdHocThrottleSerializer;
 import com.bazaarvoice.emodb.web.throttling.ZkDataStoreUpdateThrottleSerializer;
@@ -182,11 +181,10 @@ import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Asp
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.dataStore_web;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.full_consistency;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.job_module;
+import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.leader_control;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.megabus;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.kafka;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.queue_module;
-import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.report;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.scanner;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.security;
 import static com.bazaarvoice.emodb.common.dropwizard.service.EmoServiceMode.Aspect.throttle;
@@ -223,7 +221,6 @@ public class EmoModule extends AbstractModule {
         evaluate(throttle, new ThrottleSetup());
         evaluate(blackList, new BlacklistSetup());
         evaluate(scanner, new ScannerSetup());
-        evaluate(report, new ReportSetup());
         evaluate(job_module, new JobSetup());
         evaluate(security, new SecuritySetup());
         evaluate(full_consistency, new FullConsistencySetup());
@@ -600,13 +597,6 @@ public class EmoModule extends AbstractModule {
         @Override
         protected void configure() {
             install(new DataStoreAsyncModule());
-        }
-    }
-
-    private class ReportSetup extends AbstractModule  {
-        @Override
-        protected void configure() {
-            install(new ReportsModule());
         }
     }
 

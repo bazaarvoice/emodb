@@ -267,54 +267,55 @@ public class LazyJsonMap implements Map<String, Object> {
             return;
         }
 
-        JsonParser parser = codec.getFactory().createParser(deserState.json);
-        checkState(parser.nextToken() == JsonToken.START_OBJECT, "JSON did not contain an object");
-        generator.writeStartObject();
+        try (JsonParser parser = codec.getFactory().createParser(deserState.json)) {
+            checkState(parser.nextToken() == JsonToken.START_OBJECT, "JSON did not contain an object");
+            generator.writeStartObject();
 
-        // Typically the JSON string has been pre-sorted.  Insert the overrides in order.  If it turns out the
-        // JSON wasn't sorted then we'll just dump the remaining overrides at the end; it's valid JSON
-        // one way or the other.
+            // Typically the JSON string has been pre-sorted.  Insert the overrides in order.  If it turns out the
+            // JSON wasn't sorted then we'll just dump the remaining overrides at the end; it's valid JSON
+            // one way or the other.
 
-        //noinspection unchecked
-        Iterator<Map.Entry<String, Object>> sortedOverrides =
-                ((Map<String, Object>) OrderedJson.ordered(deserState.overrides)).entrySet().iterator();
+            //noinspection unchecked
+            Iterator<Map.Entry<String, Object>> sortedOverrides =
+                    ((Map<String, Object>) OrderedJson.ordered(deserState.overrides)).entrySet().iterator();
 
-        Map.Entry<String, Object> nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
+            Map.Entry<String, Object> nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
 
-        JsonToken token;
-        while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
-            assert token == JsonToken.FIELD_NAME;
+            JsonToken token;
+            while ((token = parser.nextToken()) != JsonToken.END_OBJECT) {
+                assert token == JsonToken.FIELD_NAME;
 
-            String field = parser.getText();
-            if (deserState.overrides.containsKey(field)) {
-                // There's an override for this entry; skip it
-                token = parser.nextToken();
-                if (token.isStructStart()) {
-                    parser.skipChildren();
+                String field = parser.getText();
+                if (deserState.overrides.containsKey(field)) {
+                    // There's an override for this entry; skip it
+                    token = parser.nextToken();
+                    if (token.isStructStart()) {
+                        parser.skipChildren();
+                    }
+                } else {
+                    // Write all overrides which sort prior to this field
+                    while (nextOverride != null && OrderedJson.KEY_COMPARATOR.compare(nextOverride.getKey(), field) < 0) {
+                        generator.writeFieldName(nextOverride.getKey());
+                        generator.writeObject(nextOverride.getValue());
+                        nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
+                    }
+
+                    // Copy this field name and value to the generator
+                    generator.copyCurrentStructure(parser);
                 }
-            } else {
-                // Write all overrides which sort prior to this field
-                while (nextOverride != null && OrderedJson.KEY_COMPARATOR.compare(nextOverride.getKey(), field) < 0) {
-                    generator.writeFieldName(nextOverride.getKey());
-                    generator.writeObject(nextOverride.getValue());
-                    nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
-                }
-
-                // Copy this field name and value to the generator
-                generator.copyCurrentStructure(parser);
+                // Both of the above operations leave the current token immediately prior to the next
+                // field or the end object token.
             }
-            // Both of the above operations leave the current token immediately prior to the next
-            // field or the end object token.
-        }
 
-        // Write any remaining overrides
-        while (nextOverride != null) {
-            generator.writeFieldName(nextOverride.getKey());
-            generator.writeObject(nextOverride.getValue());
-            nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
-        }
+            // Write any remaining overrides
+            while (nextOverride != null) {
+                generator.writeFieldName(nextOverride.getKey());
+                generator.writeObject(nextOverride.getValue());
+                nextOverride = sortedOverrides.hasNext() ? sortedOverrides.next() : null;
+            }
 
-        generator.writeEndObject();
+            generator.writeEndObject();
+        }
     }
 
     public LazyJsonMap lazyCopy() {

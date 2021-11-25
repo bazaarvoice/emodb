@@ -8,16 +8,16 @@ import com.bazaarvoice.emodb.sor.api.Update;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.table.db.TableBackingStore;
 import com.codahale.metrics.MetricRegistry;
-import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.testng.annotations.Test;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
-import org.testng.annotations.Test;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -72,7 +72,9 @@ public class WriteCloseableDatastoreTest {
                 writeCloseableDataStore.updateAll(updateIterable);
                 fail("Write succeeded when it should have failed due to shutdown. Should have thrown a" +
                         "ServiceUnavailablException.");
-            } catch (ServiceUnavailableException e) { }
+            } catch (ServiceUnavailableException e) {
+                //expected
+            }
         });
 
         iteratorLock.acquireUninterruptibly();

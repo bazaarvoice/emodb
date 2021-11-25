@@ -15,7 +15,7 @@ import com.bazaarvoice.emodb.sortedq.core.ReadOnlyQueueException;
 import com.bazaarvoice.emodb.sortedq.db.QueueDAO;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Function;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -370,7 +370,7 @@ public class DedupQueue extends AbstractIdleService {
     @Override
     public String toString() {
         SortedQueue queue = _queue;
-        Objects.ToStringHelper helper = Objects.toStringHelper(this);
+        MoreObjects.ToStringHelper helper = MoreObjects.toStringHelper(this);
         helper.add("name", _name);
         helper.add("#write", _eventStore.getSizeEstimate(_writeChannel, 1000));
         helper.add("#write-claims", _eventStore.getClaimCount(_writeChannel));

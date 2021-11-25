@@ -3,12 +3,13 @@ package com.bazaarvoice.emodb.databus.api;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonView;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
@@ -24,7 +25,7 @@ public class Event {
         _eventKey = checkNotNull(eventKey, "eventKey");
         _content = checkNotNull(content, "content");
         // Permit nulls; older version of the API omit tags from the response
-        _tags = Objects.firstNonNull(tags, ImmutableList.<List<String>>of());
+        _tags = Optional.ofNullable(tags).orElse(ImmutableList.of());
     }
 
     @JsonView(EventViews.ContentOnly.class)
@@ -76,7 +77,7 @@ public class Event {
 
     @Override
     public String toString() {
-        return Objects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this)
                 .add("eventKey", _eventKey)
                 .add("content", _content)
                 .add("tags", _tags)

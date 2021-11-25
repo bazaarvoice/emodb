@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.2.1-SNAPSHOT</version>
+        <version>6.4.12-SNAPSHOT</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
@@ -18,7 +18,7 @@
         <connection>scm:git:git@github.com:bazaarvoice/emodb.git</connection>
         <developerConnection>scm:git:git@github.com:bazaarvoice/emodb.git</developerConnection>
         <url>scm:git:git@github.com:bazaarvoice/emodb.git</url>
-      <tag>HEAD</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <modules>
@@ -31,6 +31,8 @@
         <module>common/zookeeper</module>
         <module>common/stash</module>
         <module>common/client</module>
+        <module>common/jersey-client</module>
+        <module>common/jersey2-client</module>
         <module>common/dropwizard-client</module>
         <module>auth/auth-client</module>
         <module>auth/auth-core</module>
@@ -56,18 +58,18 @@
         <module>databus-client-common</module>
         <module>databus-client</module>
         <module>databus</module>
-        <module>blob-client-common</module>
-        <module>blob-client</module>
+        <module>blob-clients-common/blob-client-common</module>
+        <module>blob-clients-common/blob-jersey2-client-common</module>
+        <module>blob-clients/blob-client</module>
+        <module>blob-clients/blob-jersey2-client</module>
         <module>blob</module>
         <module>uac-client</module>
-        <module>shaded-clients</module>
         <module>plugins</module>
         <module>web</module>
         <module>web-local</module>
         <module>sdk</module>
         <module>quality</module>
         <module>yum</module>
-        <module>mapreduce</module>
         <module>megabus</module>
         <module>kafka</module>
     </modules>

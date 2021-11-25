@@ -5,9 +5,7 @@ import com.bazaarvoice.emodb.client.EmoResource;
 import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
-import org.hamcrest.Description;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Matchers;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -18,9 +16,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static java.lang.String.format;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -35,8 +33,8 @@ public class UrlEncodedKeysTest {
         _client = mock(EmoClient.class);
 
         when(_client.resource(any(URI.class))).thenReturn(resource);
-        when(resource.accept(Matchers.any(MediaType.class))).thenReturn(resource);
-        when(resource.type(Matchers.any(MediaType.class))).thenReturn(resource);
+        when(resource.accept(any(MediaType.class))).thenReturn(resource);
+        when(resource.type(any(MediaType.class))).thenReturn(resource);
         when(resource.header(anyString(), anyString())).thenReturn(resource);
     }
 
@@ -71,9 +69,9 @@ public class UrlEncodedKeysTest {
 
         dataStore.update("api_key", table, key, changeId,
                 Deltas.mapBuilder()
-                    .put("score", 10)
-                    .put("technique", "awesome")
-                    .build(),
+                        .put("score", 10)
+                        .put("technique", "awesome")
+                        .build(),
                 new AuditBuilder().setComment("judgement").build());
 
         verify(_client, times(1)).resource(argThat(getURIMatcher("test.server", table, key)));
@@ -102,16 +100,13 @@ public class UrlEncodedKeysTest {
 
         return new ArgumentMatcher<URI>() {
             @Override
-            public boolean matches(Object argument) {
-                URI uri = (URI) argument;
-
+            public boolean matches(URI uri) {
                 return Objects.equals(uri.getHost(), host) &&
                         Objects.equals(uri.getRawPath(), format("/%s/%s", table, encodedKey));
             }
 
-            @Override
-            public void describeTo(Description description) {
-                description.appendText(format("http://%s/%s/%s?...", host, table, encodedKey));
+            public String toString() {
+                return format("http://%s/%s/%s?...", host, table, encodedKey);
             }
         };
     }

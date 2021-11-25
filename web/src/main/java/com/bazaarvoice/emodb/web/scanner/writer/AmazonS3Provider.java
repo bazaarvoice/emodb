@@ -4,6 +4,7 @@ import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.regions.Region;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.cache.Cache;
@@ -82,8 +83,8 @@ public class AmazonS3Provider {
      * necessity to code in the s3 endpoint pattern, but this is extremely unlikely to change.
      */
     public AmazonS3 createS3ClientForRegion(String regionName) {
-        return new AmazonS3Client(_credentialsProvider)
-                .withEndpoint(String.format("s3.%s.amazonaws.com", regionName));
+        return AmazonS3ClientBuilder.standard().withCredentials(_credentialsProvider)
+                .withRegion(regionName).build();
     }
 
     public String getRegionForBucket(String bucket) {
