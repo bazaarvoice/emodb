@@ -23,7 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class JmxClient implements Closeable {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterHintsPoller.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JmxClient.class);
 
     private final String host;
     private final int port;
