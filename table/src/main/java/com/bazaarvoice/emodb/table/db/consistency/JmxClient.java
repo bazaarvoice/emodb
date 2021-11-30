@@ -36,11 +36,12 @@ public class JmxClient implements Closeable {
         this(host, port, null, null);
     }
 
-    public JmxClient(String host, int port, String username, String password) {
+    public JmxClient(String host, int port, String username, String password) throws IOException {
         this.host = host;
         this.port = port;
         this.username = username;
         this.password = password;
+        connect();
     }
 
     private void connect() throws IOException {
@@ -69,7 +70,6 @@ public class JmxClient implements Closeable {
     public Object getAttribute(ObjectName objectName, String attributeName)
             throws AttributeNotFoundException, InstanceNotFoundException, MBeanException,
             ReflectionException, IOException {
-        connect();
         Object attr = mbs.getAttribute(objectName, attributeName);
         if (attr instanceof javax.management.Attribute) {
             return ((Attribute) attr).getValue();

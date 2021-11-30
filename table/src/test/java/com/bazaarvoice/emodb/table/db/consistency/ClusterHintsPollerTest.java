@@ -191,44 +191,6 @@ public class ClusterHintsPollerTest {
     }
 
     /**
-     * This test mocks 2 nodes that both return hints in progress
-     */
-    @Test
-    public void testClusterHintsPollerWithOldestHintCassandra3x() throws Exception {
-
-        // Mocks
-
-        ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
-        Session mockSession = mock(Session.class);
-        Cluster mockCluster = mock(Cluster.class);
-        Metadata mockMetadata = mock(Metadata.class);
-        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
-        when(mockCluster.getClusterName()).thenReturn("test-cluster");
-        Host node1 = mock(Host.class);
-        when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
-        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
-        Host node2 = mock(Host.class);
-        when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
-        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
-
-        when(mockSession.getCluster()).thenReturn(mockCluster);
-
-        when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2));
-
-        JmxClient jmxClient = mock(JmxClient.class);
-        when(jmxClient.getAttribute(any(ObjectName.class), anyString())).thenReturn(3L);
-
-        HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
-
-        // Make sure HintsPollerResult gives us the oldest hint (oldest hint is on node 2)
-        assertTrue(actualResult.getOldestHintTimestamp().isPresent(), "Hints are there, but none found.");
-//        assertEquals((long) actualResult.getOldestHintTimestamp().get(), oldestHintOnNode2);
-        assertTrue(actualResult.areAllHostsPolling(), "All hosts should be polling fine");
-        assertEquals(actualResult.getAllPolledHosts(),
-                ImmutableSet.of(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2")));
-    }
-
-    /**
      * This test verifies when there are no hints on any of the nodes
      */
     @Test
@@ -283,45 +245,10 @@ public class ClusterHintsPollerTest {
     }
 
     /**
-     * This test verifies when there are no hints on any of the nodes
-     */
-    @Test
-    public void testClusterHintsPollerWhenThereAreNoHintsCassandra3x()
-            throws Exception {
-        // Mocks
-
-        ClusterHintsPoller clusterHintsPoller = new ClusterHintsPoller();
-        Session mockSession = mock(Session.class);
-        Cluster mockCluster = mock(Cluster.class);
-        Metadata mockMetadata = mock(Metadata.class);
-        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
-        when(mockCluster.getClusterName()).thenReturn("test-cluster");
-        Host node1 = mock(Host.class);
-        when(node1.getAddress()).thenReturn(InetAddress.getByName("127.0.0.1"));
-        when(node1.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
-        Host node2 = mock(Host.class);
-        when(node2.getAddress()).thenReturn(InetAddress.getByName("127.0.0.2"));
-        when(node2.getCassandraVersion()).thenReturn(CASSANDRA_VERSION_3_0_0);
-
-        when(mockSession.getCluster()).thenReturn(mockCluster);
-
-        // Create target ids with sample timestamps
-
-        when(mockMetadata.getAllHosts()).thenReturn(ImmutableSet.of(node1, node2));
-        HintsPollerResult actualResult = clusterHintsPoller.getOldestHintsInfo(mockSession);
-
-        // Make sure HintsPollerResult shows that no hints were found
-        assertFalse(actualResult.getOldestHintTimestamp().isPresent(), "No hints should be found");
-        assertTrue(actualResult.areAllHostsPolling(), "All hosts should be polling fine");
-        assertEquals(actualResult.getAllPolledHosts(),
-                ImmutableSet.of(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2")));
-    }
-
-    /**
      * This tests a race condition where a node returns a non-empty set of target_ids, but on the subsequent call those hints are cleared
      */
     @Test
-    public void testClusterHintsPollerWithNoHintsOnSubsequentCall()
+    public void testClusterHintsPollerWithNoHintsOnSubsequentCallCassandra2x()
             throws Exception {
 
         // Mocks

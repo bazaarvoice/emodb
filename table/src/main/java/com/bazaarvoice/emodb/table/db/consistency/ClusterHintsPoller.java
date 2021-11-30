@@ -37,7 +37,8 @@ public class ClusterHintsPoller {
     /**
      * In Cassandra 3.x, hints are no longer stored in system.hints table.
      * They are stored in flat files, bypassing the storage engine altogether.
-     * More info on why this change was made can be found here" https://www.datastax.com/dev/blog/whats-coming-to-cassandra-in-3-0-improved-hint-storage-and-delivery
+     * More info on why this change was made can be found here:
+     *  "https://www.datastax.com/dev/blog/whats-coming-to-cassandra-in-3-0-improved-hint-storage-and-delivery"
      */
     private static final VersionNumber CASSANDRA_VERSION_3_0_0 = VersionNumber.parse("3.0.0");
     private static final int DEFAULT_CASSANDRA_JMX_PORT = 7199;
@@ -46,7 +47,6 @@ public class ClusterHintsPoller {
     protected static final String DISTINCT_TARGET_IDS_QUERY = "SELECT DISTINCT target_id FROM hints";
     @VisibleForTesting
     protected static final String OLDEST_HINT_QUERY_FORMAT = "SELECT hint_id FROM hints WHERE target_id IN (%s) ORDER BY hint_id ASC LIMIT 1";
-
 
     /**
      * @return HintsPollerResult that has results from the HintsPoller for the entire ring
@@ -68,12 +68,11 @@ public class ClusterHintsPoller {
             LOGGER.debug("Looking for hints on host: '{}'\n", host.getAddress());
 
             VersionNumber cassandraVersion = host.getCassandraVersion();
+            // TODO rewrite to use org.apache.cassandra.metrics:type=HintsService during C* 3.11 migration
             if (CASSANDRA_VERSION_3_0_0.compareTo(cassandraVersion) <= 0) {
                 try (JmxClient jmxClient = new JmxClient(host.getAddress().getHostName(), DEFAULT_CASSANDRA_JMX_PORT)) {
-                    // TODO rewrite to use org.apache.cassandra.metrics:type=HintsService during C* 3.11 migration
                     ObjectName name = new ObjectName("org.apache.cassandra.metrics:type=Storage,name=TotalHintsInProgress");
                     long hintsInProgressCount = (Long) jmxClient.getAttribute(name, "Count");
-
                     if (hintsInProgressCount > 0) {
                         LOGGER.debug("In progress hints found on host: {}", host.getAddress());
                         hintsPollerResult.setHostWithFailure(host.getAddress());
