@@ -50,13 +50,7 @@ sense for you.
 
 With that in mind, there are a few suggestions and requirements for your Cassandra stack to work with EmoDB.
 
-* EmoDB is only compatible with the 2.x versions of Cassandra.  Cassandra 3.0 changed the way it stores hinted-handoffs
-  and the new method is incompatible with the way EmoDB determines full-consistency lag.
-* Additionally, while EmoDB works with the latest 2.2 Cassandra we've seen performance issues running EmoDB with
-  Cassandra 2.1+ which only showed up at high scale.  We haven't completed our investigation into root cause and it's
-  possible that EmoDB and Cassandra 2.2 can be configured to work well together.  However, we found that by using
-  Cassandra 2.0 we saw no similar performance degradation under comparable high EmoDB load.  We currently use
-  Cassandra 2.0.17 and recommend you do the same, but feel free to try any 2.x Cassandra as your mileage may vary.
+* EmoDB is compatible with the 2.x and 3.0.x versions of Cassandra.
 * EmoDB uses a custom key format that provides a contiguous layout of records by table for efficient scanning
   while also balancing records around the ring to prevent hot spots.  For this reason the Cassandra ring used by the
   System of Record (SoR) and Blob stores must be configured with a byte-ordered partitioner,
