@@ -9,11 +9,11 @@ import com.google.common.collect.Sets;
 import org.junit.Test;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
 public class HintsPollerServiceTest {
@@ -22,22 +22,18 @@ public class HintsPollerServiceTest {
 
     @Test
     public void testPollForHintsWhenAHintIsFound()
-            throws UnknownHostException {
+            throws Exception {
 
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         long currentTimestamp = System.currentTimeMillis();
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                        .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.of(currentTimestamp)));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.of(currentTimestamp)));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
 
         HintsPollerService hintsPollerService = new HintsPollerService("emo-cluster", timestamp, _session, clusterHintsPoller, new MetricRegistry());
-        try {
-            hintsPollerService.pollForHints();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        hintsPollerService.pollForHints();
 
         long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
         assertEquals((long) hintsPollerService.getTimestamp().get(), expectedTimestamp);
@@ -45,22 +41,18 @@ public class HintsPollerServiceTest {
 
     @Test
     public void testPollForHintsForOldestHintTimestampWhenMultipleHintsAreFound()
-            throws UnknownHostException {
+            throws Exception {
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         long currentTimestamp = System.currentTimeMillis();
         long laterTimestamp = currentTimestamp + 10000;
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                        .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.of(laterTimestamp))
-                        .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.of(currentTimestamp)));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.of(laterTimestamp))
+                .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.of(currentTimestamp)));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
         HintsPollerService hintsPollerService = new HintsPollerService("emo-cluster", timestamp, _session, clusterHintsPoller, new MetricRegistry());
-        try {
-            hintsPollerService.pollForHints();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        hintsPollerService.pollForHints();
 
         long expectedTimestamp = currentTimestamp - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
         assertEquals((long) hintsPollerService.getTimestamp().get(), expectedTimestamp);
@@ -80,53 +72,45 @@ public class HintsPollerServiceTest {
 
         hintsPollerService.pollForHints();
 
-        assertEquals(hintsPollerService.getTimestamp().get(), null);
+        assertNull(hintsPollerService.getTimestamp().get());
     }
 
     @Test
     public void testPollForHintsWhenNoHintsAreFound()
-            throws UnknownHostException {
+            throws Exception {
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                        .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.<Long>absent())
-                        .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.<Long>absent()));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.absent())
+                .setHintsResult(InetAddress.getByName("127.0.0.2"), Optional.absent()));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
         // Since no hints were found, we should expect the hints poll time to get updated to some time later than this timestamp
         long baseTime = System.currentTimeMillis() - (HintsPollerService.CASSANDRA_RPC_TIMEOUT.toMillis() * 2);
 
         HintsPollerService hintsPollerService = new HintsPollerService("emo-cluster", timestamp, _session, clusterHintsPoller, new MetricRegistry());
-        try {
-            hintsPollerService.pollForHints();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        hintsPollerService.pollForHints();
 
         assertTrue(baseTime <= hintsPollerService.getTimestamp().get(), "Hints polled time was not updated correctly");
     }
 
     @Test
     public void testInfoLogsWhenRingIsUpdated()
-            throws UnknownHostException {
+            throws Exception {
         ClusterHintsPoller clusterHintsPoller = mock(ClusterHintsPoller.class);
 
         when(clusterHintsPoller.getOldestHintsInfo(_session)).thenReturn(new HintsPollerResult()
-                        .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.<Long>absent())
-                        .setHintsResult(InetAddress.getByName("127.0.0.3"), Optional.<Long>absent()));
+                .setHintsResult(InetAddress.getByName("127.0.0.1"), Optional.absent())
+                .setHintsResult(InetAddress.getByName("127.0.0.3"), Optional.absent()));
 
         ValueStore<Long> timestamp = new TestValueStore<>();
 
         HintsPollerService hintsPollerService = new HintsPollerService("emo-cluster", timestamp, _session, clusterHintsPoller, new MetricRegistry());
         hintsPollerService._hosts = Sets.newHashSet(InetAddress.getByName("127.0.0.1"), InetAddress.getByName("127.0.0.2"));
-        try {
-            hintsPollerService.pollForHints();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        hintsPollerService.pollForHints();
     }
 
-    private class TestValueStore<T> implements ValueStore<T> {
+    private static class TestValueStore<T> implements ValueStore<T> {
         private volatile T _value = null;
 
         @Override
