@@ -45,11 +45,25 @@ newman run "tests_preconditions.postman_collection.json" -e "sor-1-_table-table.
 3. Run existing postman tests collection
 
 ```
-newman run "emodb_tests.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$API_KEY"
+newman run "$POSTMAN_COLELCTION_NAME" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=$API_KEY"
 ```
 `$API_KEY` is admin api key that is available on the server under testing.
+`$POSTMAN_COLLECTION_NAME` set one of the available postman collection names
+e.g.
+"emodb_tests_databus.postman_collection.json"
+"emodb_tests_databus_get_claimcount.postman_collection.json"
+"emodb_tests_databus_get_peek.postman_collection.json"
+"emodb_tests_databus_get_poll.postman_collection.json"
+"emodb_tests_databus_get_size.postman_collection.json"
+"emodb_tests_databus_get_subscription.postman_collection.json"
+"emodb_tests_databus_unsubscribe.postman_collection.json"
+"emodb_tests_sor.postman_collection.json"
+"emodb_tests_sor_facade.postman_collection.json"
+"emodb_tests_sor_imports_arbitary_size.postman_collection.json"
+"emodb_tests_sor_table.postman_collection.json"
+"emodb_tests_sor_tableName.postman_collection.json"
 
 Run the same on local:
 ```
-newman run "emodb_tests.postman_collection.json" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=local_admin"
+newman run "$POSTMAN_COLELCTION_NAME" -e "sor-1-_table-table.postman_environment.json" --env-var "api_key=local_admin"
 ```

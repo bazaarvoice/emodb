@@ -1,0 +1,4283 @@
+{
+	"info": {
+		"_postman_id": "ed66b122-9a3c-4002-8bb4-9d49525704f3",
+		"name": "EmoDB_Tests_databus_replay Copy",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Replay events",
+			"item": [
+				{
+					"name": "TC: Request without permission",
+					"item": [
+						{
+							"name": "Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 403\", function () {",
+											"    pm.response.to.have.status(403);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(pm.response.json().reason).eql(\"not authorized\");",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('not_existing_subscription', 'postman_'+uuid.v4()+'_subscription');"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key_no_rights}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"authenticationId\": \"\",\n    \"id\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{not_existing_subscription}}/replay?since=",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{not_existing_subscription}}",
+										"replay"
+									],
+									"query": [
+										{
+											"key": "since",
+											"value": ""
+										}
+									]
+								},
+								"description": "Returns a Map."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"replay"
+											],
+											"query": [
+												{
+													"key": "since",
+													"value": ""
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "TC: Successful replay events without since parameter",
+					"item": [
+						{
+							"name": "Creates a table",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('table', 'postman_'+uuid.v4());",
+											"",
+											"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+											"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful PUT request\", function () {",
+											"    pm.expect(pm.response.json().success).eql(true);    ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "options",
+											"value": "{{options}}"
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is created"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "{{options}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Subscribe operation.",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Body matches string\", function () {",
+											"    pm.expect(pm.response.json().success).eql(true);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-condition"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "intrinsic(\"~table\":\"{{table}}\")"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "ttl",
+											"value": "{{ttl}}"
+										},
+										{
+											"key": "eventTtl",
+											"value": "{{eventTtl}}"
+										},
+										{
+											"key": "ignoreSuppressedEvents",
+											"value": "{{ignoreSuppressedEvents}}"
+										},
+										{
+											"key": "includeDefaultJoinFilter",
+											"value": "{{includeDefaultJoinFilter}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "eventTtl",
+													"value": "{{eventTtl}}"
+												},
+												{
+													"key": "ignoreSuppressedEvents",
+													"value": "{{ignoreSuppressedEvents}}"
+												},
+												{
+													"key": "includeDefaultJoinFilter",
+													"value": "{{includeDefaultJoinFilter}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"",
+											"    pm.environment.set(\"eventId\", pm.response.json().debug.changeId);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id1', uuid.v4());",
+											"",
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
+											"pm.environment.set(\"consistency\", \"GLOBAL\");",
+											"pm.environment.set(\"tag\", \"test_tag\");",
+											"pm.environment.set(\"debug\", \"true\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-delta"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{..,\"test_delta\":\"set\"}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"{{table}}",
+										"{{document_id1}}"
+									],
+									"query": [
+										{
+											"key": "changeId",
+											"value": "{{change_id}}",
+											"disabled": true
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										},
+										{
+											"key": "consistency",
+											"value": "{{consistency}}"
+										},
+										{
+											"key": "tag",
+											"value": "{{tag}}"
+										},
+										{
+											"key": "debug",
+											"value": "{{debug}}"
+										}
+									]
+								},
+								"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												":table",
+												":key"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "{{change_id}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												},
+												{
+													"key": "consistency",
+													"value": "{{consistency}}"
+												},
+												{
+													"key": "tag",
+													"value": "{{tag}}"
+												},
+												{
+													"key": "debug",
+													"value": "{{debug}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												},
+												{
+													"key": "key"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"    }    ",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length === 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Acknowledge operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 422\", function () {",
+											"    pm.response.to.have.status(422);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json().errors).to.eql([]);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"partitioned\", \"true\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"ack"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns a SucessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"ack"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"id\");",
+											"});",
+											"",
+											"pm.environment.set(\"replayId\", pm.response.json().id);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"authenticationId\": \"\",\n    \"id\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/replay",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"replay"
+									]
+								},
+								"description": "Returns a Map."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"replay"
+											],
+											"query": [
+												{
+													"key": "since",
+													"value": ""
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{}"
+								}
+							]
+						},
+						{
+							"name": "gets the status of the Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(response.json()).to.have.property(\"subscription\", pm.environment.get(\"subscription\"));",
+											"    pm.expect(response.json()).to.have.keys(\"subscription\", \"status\");",
+											"});",
+											"",
+											"pm.test(\"Assert replay status\", asyncTest(async function () {",
+											"    if (response.json().status !== \"COMPLETE\") {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().status === 'COMPLETE';",
+											"        });",
+											"    }",
+											"    pm.expect(response.json().status === 'COMPLETE');",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/_replay/${pm.environment.get(\"replayId\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/_replay/{{replayId}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"_replay",
+										"{{replayId}}"
+									]
+								},
+								"description": "Returns a ReplaySubsciptionStatus."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												"_replay",
+												":replayId"
+											],
+											"variable": [
+												{
+													"key": "replayId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"subscription\": \"aute eu ex velit\",\n \"status\": \"COMPLETE\"\n}"
+								}
+							]
+						},
+						{
+							"name": "Unsubscribe operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
+											"    if(response.code !== 200) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.code === 200;",
+											"        }, \"Error retrying unsubscribe checking status \");",
+											"    }",
+											"    pm.expect(response.code).to.be.eql(200);",
+											"    pm.expect(response.json().success).to.be.eql(true);",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns an Iterator of Subscription."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Drops a table",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful DELETE request\", function () {",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is dropped"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "TC: Successful replay events with since parameter before events",
+					"item": [
+						{
+							"name": "Creates a table",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('table', 'postman_'+uuid.v4());",
+											"",
+											"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+											"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful PUT request\", function () {",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);    ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "options",
+											"value": "{{options}}"
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is created"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "{{options}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Subscribe operation.",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Body matches string\", function () {",
+											"    pm.expect(pm.response.json().success).eql(true);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-condition"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "intrinsic(\"~table\":\"{{table}}\")"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "ttl",
+											"value": "{{ttl}}"
+										},
+										{
+											"key": "eventTtl",
+											"value": "{{eventTtl}}"
+										},
+										{
+											"key": "ignoreSuppressedEvents",
+											"value": "{{ignoreSuppressedEvents}}"
+										},
+										{
+											"key": "includeDefaultJoinFilter",
+											"value": "{{includeDefaultJoinFilter}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "eventTtl",
+													"value": "{{eventTtl}}"
+												},
+												{
+													"key": "ignoreSuppressedEvents",
+													"value": "{{ignoreSuppressedEvents}}"
+												},
+												{
+													"key": "includeDefaultJoinFilter",
+													"value": "{{includeDefaultJoinFilter}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"",
+											"    pm.environment.set(\"eventId\", pm.response.json().debug.changeId);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id1', uuid.v4());",
+											"",
+											"//setting time for using it in replay request",
+											"const since = new Date();",
+											"pm.environment.set(\"time\", since.toISOString());",
+											"",
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
+											"pm.environment.set(\"consistency\", \"GLOBAL\");",
+											"pm.environment.set(\"tag\", \"test_tag\");",
+											"pm.environment.set(\"debug\", \"true\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-delta"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{..,\"test_delta\":\"set\"}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"{{table}}",
+										"{{document_id1}}"
+									],
+									"query": [
+										{
+											"key": "changeId",
+											"value": "{{change_id}}",
+											"disabled": true
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										},
+										{
+											"key": "consistency",
+											"value": "{{consistency}}"
+										},
+										{
+											"key": "tag",
+											"value": "{{tag}}"
+										},
+										{
+											"key": "debug",
+											"value": "{{debug}}"
+										}
+									]
+								},
+								"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												":table",
+												":key"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "{{change_id}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												},
+												{
+													"key": "consistency",
+													"value": "{{consistency}}"
+												},
+												{
+													"key": "tag",
+													"value": "{{tag}}"
+												},
+												{
+													"key": "debug",
+													"value": "{{debug}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												},
+												{
+													"key": "key"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    }    ",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length === 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Acknowledge operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 422\", function () {",
+											"    pm.response.to.have.status(422);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json().errors).to.eql([]);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"ack"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns a SucessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"ack"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {    ",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length === 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"id\");",
+											"});",
+											"",
+											"pm.environment.set(\"replayId\", pm.response.json().id);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"authenticationId\": \"\",\n    \"id\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/replay?since={{time}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"replay"
+									],
+									"query": [
+										{
+											"key": "since",
+											"value": "{{time}}"
+										}
+									]
+								},
+								"description": "Returns a Map."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"replay"
+											],
+											"query": [
+												{
+													"key": "since",
+													"value": ""
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{}"
+								}
+							]
+						},
+						{
+							"name": "gets the status of the Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(response.json()).to.have.property(\"subscription\", pm.environment.get(\"subscription\"));",
+											"    pm.expect(response.json()).to.have.keys(\"subscription\", \"status\");",
+											"});",
+											"",
+											"pm.test(\"Assert replay status\", asyncTest(async function () {",
+											"    if (response.json().status !== \"COMPLETE\") {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().status === 'COMPLETE';",
+											"        });",
+											"    }",
+											"    pm.expect(response.json().status === 'COMPLETE');",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/_replay/${pm.environment.get(\"replayId\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/_replay/{{replayId}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"_replay",
+										"{{replayId}}"
+									]
+								},
+								"description": "Returns a ReplaySubsciptionStatus."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												"_replay",
+												":replayId"
+											],
+											"variable": [
+												{
+													"key": "replayId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"subscription\": \"aute eu ex velit\",\n \"status\": \"COMPLETE\"\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {    ",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    }    ",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Unsubscribe operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
+											"    if(response.code !== 200) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.code === 200;",
+											"        }, \"Error retrying unsubscribe checking status \");",
+											"    }",
+											"    pm.expect(response.code).to.be.eql(200);",
+											"    pm.expect(response.json().success).to.be.eql(true);",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns an Iterator of Subscription."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Drops a table",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful DELETE request\", function () {",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is dropped"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "TC: Successful replay events with since parameter after events",
+					"item": [
+						{
+							"name": "Creates a table",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('table', 'postman_'+uuid.v4());",
+											"",
+											"pm.environment.set(\"options\", \"placement:'ugc_global:ugc'\");",
+											"pm.environment.set(\"audit\", \"comment:'initial+provisioning'\");"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful PUT request\", function () {",
+											"    pm.expect(pm.response.json().success).to.be.eql(true);    ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"customer\": \"postman\",\n    \"test_table\":\"{{table}}\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options}}&audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "options",
+											"value": "{{options}}"
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is created"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?options={{options}}&audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "options",
+													"value": "{{options}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Subscribe operation.",
+							"event": [
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('subscription', 'postman_'+uuid.v4()+'_test_subscription');"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Body matches string\", function () {",
+											"    pm.expect(pm.response.json().success).eql(true);",
+											"});",
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-condition"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "intrinsic(\"~table\":\"{{table}}\")"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "ttl",
+											"value": "{{ttl}}"
+										},
+										{
+											"key": "eventTtl",
+											"value": "{{eventTtl}}"
+										},
+										{
+											"key": "ignoreSuppressedEvents",
+											"value": "{{ignoreSuppressedEvents}}"
+										},
+										{
+											"key": "includeDefaultJoinFilter",
+											"value": "{{includeDefaultJoinFilter}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "PUT",
+										"header": [],
+										"body": {
+											"mode": "raw",
+											"raw": ""
+										},
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?ttl={{ttl}}&eventTtl={{eventTtl}}&ignoreSuppressedEvents={{ignoreSuppressedEvents}}&includeDefaultJoinFilter={{includeDefaultJoinFilter}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "eventTtl",
+													"value": "{{eventTtl}}"
+												},
+												{
+													"key": "ignoreSuppressedEvents",
+													"value": "{{ignoreSuppressedEvents}}"
+												},
+												{
+													"key": "includeDefaultJoinFilter",
+													"value": "{{includeDefaultJoinFilter}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"success\", \"debug\");",
+											"    pm.expect(pm.response.json().debug).to.have.keys(\"changeId\");",
+											"    pm.expect(pm.response.json().success).to.eql(true);",
+											"",
+											"    pm.environment.set(\"eventId\", pm.response.json().debug.changeId);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"var uuid = require('uuid');",
+											"pm.environment.set('document_id1', uuid.v4());",
+											"",
+											"pm.environment.set(\"audit\", \"comment:'update+data'\");",
+											"pm.environment.set(\"consistency\", \"GLOBAL\");",
+											"pm.environment.set(\"tag\", \"test_tag\");",
+											"pm.environment.set(\"debug\", \"true\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/x.json-delta"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{..,\"test_delta\":\"set\"}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/{{table}}/{{document_id1}}?audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"{{table}}",
+										"{{document_id1}}"
+									],
+									"query": [
+										{
+											"key": "changeId",
+											"value": "{{change_id}}",
+											"disabled": true
+										},
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										},
+										{
+											"key": "consistency",
+											"value": "{{consistency}}"
+										},
+										{
+											"key": "tag",
+											"value": "{{tag}}"
+										},
+										{
+											"key": "debug",
+											"value": "{{debug}}"
+										}
+									]
+								},
+								"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/:table/:key?changeId={{change_id}}&audit={{audit}}&consistency={{consistency}}&tag={{tag}}&debug={{debug}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												":table",
+												":key"
+											],
+											"query": [
+												{
+													"key": "changeId",
+													"value": "{{change_id}}"
+												},
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												},
+												{
+													"key": "consistency",
+													"value": "{{consistency}}"
+												},
+												{
+													"key": "tag",
+													"value": "{{tag}}"
+												},
+												{
+													"key": "debug",
+													"value": "{{debug}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												},
+												{
+													"key": "key"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    }    ",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length === 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Acknowledge operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 422\", function () {",
+											"    pm.response.to.have.status(422);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", function () {",
+											"    pm.expect(pm.response.json().errors).to.eql([]);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"//setting time after event for using it in replay request",
+											"const since = new Date();",
+											"pm.environment.set(\"time\", since.toISOString());"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/ack?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"ack"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns a SucessResponse."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/ack?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"ack"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {    ",
+											"    if(response.json().length > 0) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().length === 0;",
+											"        }, \"Retrying until there no events to poll\");",
+											"    }",
+											"    pm.expect(response.json().length).to.be.eql(0);",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(pm.response.json()).to.have.keys(\"id\");",
+											"});",
+											"",
+											"pm.environment.set(\"replayId\", pm.response.json().id);"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											""
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"authenticationId\": \"\",\n    \"id\": \"\"\n}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/replay?since={{time}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"replay"
+									],
+									"query": [
+										{
+											"key": "since",
+											"value": "{{time}}"
+										}
+									]
+								},
+								"description": "Returns a Map."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "POST",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/replay?since=",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"replay"
+											],
+											"query": [
+												{
+													"key": "since",
+													"value": ""
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{}"
+								}
+							]
+						},
+						{
+							"name": "gets the status of the Replay operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response\", function () {",
+											"    pm.expect(response.json()).to.have.property(\"subscription\", pm.environment.get(\"subscription\"));",
+											"    pm.expect(response.json()).to.have.keys(\"subscription\", \"status\");",
+											"});",
+											"",
+											"pm.test(\"Assert replay status\", asyncTest(async function () {",
+											"    if (response.json().status !== \"COMPLETE\") {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.json().status === 'COMPLETE';",
+											"        });",
+											"    }",
+											"    pm.expect(response.json().status === 'COMPLETE');",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/_replay/${pm.environment.get(\"replayId\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/_replay/{{replayId}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"_replay",
+										"{{replayId}}"
+									]
+								},
+								"description": "Returns a ReplaySubsciptionStatus."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/_replay/:replayId",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												"_replay",
+												":replayId"
+											],
+											"variable": [
+												{
+													"key": "replayId"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"subscription\": \"aute eu ex velit\",\n \"status\": \"COMPLETE\"\n}"
+								}
+							]
+						},
+						{
+							"name": "poll operation. 2",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Assert response body\", asyncTest(async function () {    ",
+											"    if(response.json().length < 1) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();            ",
+											"            return response.json().length > 0;",
+											"        },\"Retrying to get events to poll\");    ",
+											"    }    ",
+											"    pm.expect(response.json().length > 0);",
+											"    pm.expect(response.json()[0]).to.have.keys(\"eventKey\", \"content\");",
+											"    pm.expect(response.json()[0].content).to.have.keys(\"test_delta\",\"test_table\",\"customer\",\"~id\",\"~table\",\"~version\",\"~signature\",\"~deleted\",\"~firstUpdateAt\",\"~lastUpdateAt\",\"~lastMutateAt\");",
+											"}));",
+											""
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}/poll`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"GET\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}/poll",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}",
+										"poll"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}",
+											"disabled": true
+										},
+										{
+											"key": "ttl",
+											"value": "{{ttl}}",
+											"disabled": true
+										},
+										{
+											"key": "limit",
+											"value": "{{limit}}",
+											"disabled": true
+										},
+										{
+											"key": "ignoreLongPoll",
+											"value": "{{ignoreLongPoll}}",
+											"disabled": true
+										},
+										{
+											"key": "includeTags",
+											"value": "{{includeTags}}",
+											"disabled": true
+										}
+									]
+								},
+								"description": "Returns a Response."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "GET",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription/poll?partitioned={{partitioned}}&ttl={{ttl}}&limit={{limit}}&ignoreLongPoll={{ignoreLongPoll}}&includeTags={{includeTags}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription",
+												"poll"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												},
+												{
+													"key": "ttl",
+													"value": "{{ttl}}"
+												},
+												{
+													"key": "limit",
+													"value": "{{limit}}"
+												},
+												{
+													"key": "ignoreLongPoll",
+													"value": "{{ignoreLongPoll}}"
+												},
+												{
+													"key": "includeTags",
+													"value": "{{includeTags}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "Internal Server Error",
+									"code": 500,
+									"_postman_previewlanguage": "text",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "text/plain"
+										}
+									],
+									"cookie": [],
+									"body": ""
+								}
+							]
+						},
+						{
+							"name": "Unsubscribe operation.",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
+											"var response = pm.response;",
+											"pm.test(\"Assert response\", asyncTest(async function () {",
+											"    if(response.code !== 200) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.code === 200;",
+											"        }, \"Error retrying unsubscribe checking status \");",
+											"    }",
+											"    pm.expect(response.code).to.be.eql(200);",
+											"    pm.expect(response.json().success).to.be.eql(true);",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc1\")}/bus/1/${pm.environment.get(\"subscription\")}?partitioned=${pm.environment.get(\"partitioned\")}`;",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"DELETE\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{baseurl_dc1}}/bus/1/{{subscription}}?partitioned={{partitioned}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"bus",
+										"1",
+										"{{subscription}}"
+									],
+									"query": [
+										{
+											"key": "partitioned",
+											"value": "{{partitioned}}"
+										}
+									]
+								},
+								"description": "Returns an Iterator of Subscription."
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/bus/1/:subscription?partitioned={{partitioned}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"bus",
+												"1",
+												":subscription"
+											],
+											"query": [
+												{
+													"key": "partitioned",
+													"value": "{{partitioned}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "subscription"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						},
+						{
+							"name": "Drops a table",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Successful DELETE request\", function () {",
+											"    pm.expect(pm.response.json().success).to.be.eql(true); ",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"pm.environment.set(\"audit\", \"comment:'remove+table'\");"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "X-BV-API-Key",
+										"value": "{{api_key}}",
+										"type": "text"
+									}
+								],
+								"url": {
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit={{audit}}",
+									"host": [
+										"{{baseurl_dc1}}"
+									],
+									"path": [
+										"sor",
+										"1",
+										"_table",
+										"{{table}}"
+									],
+									"query": [
+										{
+											"key": "audit",
+											"value": "{{audit}}"
+										}
+									]
+								},
+								"description": "Returns a SuccessResponse if table is dropped"
+							},
+							"response": [
+								{
+									"name": "successful operation",
+									"originalRequest": {
+										"method": "DELETE",
+										"header": [],
+										"url": {
+											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit={{audit}}",
+											"host": [
+												"{{baseurl_dc1}}"
+											],
+											"path": [
+												"sor",
+												"1",
+												"_table",
+												":table"
+											],
+											"query": [
+												{
+													"key": "audit",
+													"value": "{{audit}}"
+												}
+											],
+											"variable": [
+												{
+													"key": "table"
+												}
+											]
+										}
+									},
+									"status": "OK",
+									"code": 200,
+									"_postman_previewlanguage": "json",
+									"header": [
+										{
+											"key": "Content-Type",
+											"value": "application/json"
+										}
+									],
+									"cookie": [],
+									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
+								}
+							]
+						}
+					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"            }",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+							"",
+							"pm.environment.set(\"partitioned\", false);",
+							"pm.environment.set(\"ttl\", \"86400\");",
+							"pm.environment.set(\"eventTtl\", \"86400\");",
+							"pm.environment.set(\"ignoreSuppressedEvents\", false);",
+							"pm.environment.set(\"includeDefaultJoinFilter\", false);"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/**",
+					" * Waits until the given predicate returns a truthy value. Calls and awaits the predicate",
+					" * function at the given interval time. Can be used to poll until a certain condition is true.",
+					" *",
+					" * @example",
+					" * ```js",
+					" * import { fixture, waitUntil } from '@open-wc/testing-helpers';",
+					" *",
+					" * const element = await fixture(html`<my-element></my-element>`);",
+					" *",
+					" * await waitUntil(() => element.someAsyncProperty, 'element should become ready');",
+					" *",
+					"",
+					" *",
+					" * @param {() => boolean | Promise<boolean>} predicate - predicate function which is called each poll interval.",
+					" *   The predicate is awaited, so it can return a promise.",
+					" * @param {string} [message] an optional message to display when the condition timed out",
+					" * @param {{ interval?: number, timeout?: number }} [options] timeout and polling interval",
+					" */",
+					"waitUntil = (setTimeout, clearTimeout, predicate, message, options = {}) => {",
+					"  const { interval = 1000, timeout = 120000 } = options;",
+					"",
+					"  return new Promise((resolve, reject) => {",
+					"    let timeoutId;",
+					"    let failTimeoutId;",
+					"",
+					"    failTimeoutId = setTimeout(() => {",
+					"      clearTimeout(timeoutId);",
+					"      try {",
+					"          pm.expect.fail(message ? `Timeout: ${message}` : `waitUntil timed out after ${timeout}ms`);",
+					"      } catch(err) {",
+					"          reject(err);",
+					"      }",
+					"    }, timeout);",
+					"",
+					"    async function nextInterval() {",
+					"      try {",
+					"        const result = await predicate();",
+					"        if (result) {",
+					"          clearTimeout(failTimeoutId);",
+					"          resolve();",
+					"        } else {",
+					"          timeoutId = setTimeout(function() {",
+					"            nextInterval();",
+					"          }, interval);",
+					"        }",
+					"      } catch (error) {",
+					"        clearTimeout(failTimeoutId);",
+					"        reject(error);",
+					"      }",
+					"    }",
+					"    nextInterval();",
+					"  });",
+					"};",
+					"",
+					"asyncTest = (cb) => {",
+					"    return (done) => {",
+					"        try {",
+					"            cb(done).then(() => done()).catch((err) => done(err));",
+					"        } catch (err) {",
+					"            done(err);",
+					"        }",
+					"    };",
+					"}",
+					"",
+					"delay = (setTimeout, timeInMs) => {",
+					"    return new Promise((resolve) => setTimeout(resolve, timeInMs));",
+					"}",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
