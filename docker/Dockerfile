@@ -1,4 +1,4 @@
-FROM amazoncorretto:8-alpine
+FROM amazoncorretto:11
 
 ARG version
 ARG APP_ROLE
@@ -19,8 +19,10 @@ ENV LOCAL_HOST=${LOCAL_HOST}
 ENV LOCAL_PORT=${LOCAL_PORT}
 ENV LOCAL_ADMIN_PORT=${LOCAL_ADMIN_PORT}
 
-RUN addgroup -S emodb -g 1000
-RUN adduser -S emodb -G emodb -u 1000
+# Create a "emodb" non-root user for the next image by updating an /etc/passwd
+# file. This is necessary since the next image is based on scratch, which doesn't have adduser.
+#COPY etc/passwd /etc/passwd
+RUN echo "emodb:x:1000:1000:EmoDB:/:" >> /etc/passwd
 
 COPY --chown=1000 maven/emodb-web-* /app/emodb-web.jar
 
