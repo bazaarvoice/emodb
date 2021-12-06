@@ -26,8 +26,8 @@
     <properties>
         <astyanax.version>3.8.0-bv12</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra-server.version>2.2.19</cassandra-server.version>
-        <cassandra-client.version>3.0.25</cassandra-client.version>
+        <cassandra.version>3.0.25</cassandra.version>
+        <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
@@ -332,7 +332,7 @@
             <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
-                <version>${cassandra-client.version}</version>
+                <version>${cassandra.version}</version>
                 <exclusions>
                     <!-- ignore stuff that conflicts with Dropwizard -->
                     <exclusion>
@@ -565,7 +565,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra-server.version}</version>
+                    <version>${cassandra-maven-plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
