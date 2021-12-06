@@ -19,9 +19,8 @@ ENV LOCAL_HOST=${LOCAL_HOST}
 ENV LOCAL_PORT=${LOCAL_PORT}
 ENV LOCAL_ADMIN_PORT=${LOCAL_ADMIN_PORT}
 
-# Create a "emodb" non-root user for the next image by updating an /etc/passwd
-# file. This is necessary since the next image is based on scratch, which doesn't have adduser.
-#COPY etc/passwd /etc/passwd
+# Create a "emodb" non-root user by updating an /etc/passwd
+# file. This is necessary since the image is based on scratch, which doesn't have adduser.
 RUN echo "emodb:x:1000:1000:EmoDB:/:" >> /etc/passwd
 
 COPY --chown=1000 maven/emodb-web-* /app/emodb-web.jar
