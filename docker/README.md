@@ -26,7 +26,10 @@ Also, to speed things up, you can try skipping tests. I usually do ` -DskipTests
 
 It's based on the official image, but in order to supply our own `cassandra.yml` configuration, we have to "inherit" the official build. Again, running from `$GITROOT`:
 
-    docker build $GITROOT -f ./docker/cassandra-Dockerfile -t bazaarvoice/cassandra:2.2.19
+```bash
+  cd docker/
+  docker build . -f ./cassandra-Dockerfile -t bazaarvoice/cassandra:2.2.19
+```
 
 Note that `docker-compose up` will build this for you if you skip this step and  the image hasn't been built before. If you make changes and want to rebuild, you can also skip this step and just include  the `--build` argument to `docker-compose up`, which will force rebuilding the Cassandra image.
 
