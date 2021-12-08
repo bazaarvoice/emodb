@@ -36,7 +36,7 @@
         <jackson.version>2.6.7.2</jackson.version>
         <jna.version>4.1.0</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
-        <metrics.version>3.1.2</metrics.version>
+        <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.29</slf4j.version>
@@ -116,22 +116,22 @@
 
             <!-- 3rd-party dependencies -->
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-servlets</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-logback</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
@@ -249,6 +249,17 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.coursera</groupId>
+                <artifactId>metrics-datadog</artifactId>
+                <version>${dropwizard-metrics-datadog.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${curator.version}</version>
@@ -346,6 +357,10 @@
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>*</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -714,6 +729,11 @@
                                 <dependencyConvergence />
                                 <requireUpperBoundDeps />
                                 <banDuplicatePomDependencyVersions />
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>io.dropwizard.metrics:*</exclude>
+                                    </excludes>
+                                </bannedDependencies>
                             </rules>
                         </configuration>
                         <goals>

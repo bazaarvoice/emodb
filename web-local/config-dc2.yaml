@@ -7,31 +7,6 @@ cluster: local_default
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
 
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#metrics:
-#  reporters:
-#  - type: datadogExpansionFiltered
-#    host: test-host
-#    excludes:
-#    - ch.qos.logback
-#    - com.bazaarvoice.ostrich.pool
-#    excludeExpansions:
-#    - 5MinuteRate
-#    - 15MinuteRate
-#    - meanRate
-#    - min
-#    - max
-#    - mean
-#    - stddev
-#    - p95
-#    - p99
-#    - p999
-#    transport:
-#      type: http
-#      apiKey: invalid-key
-
-
-
 dataCenter:
   # Which data center does this server belong to?
   currentDataCenter: datacenter2
