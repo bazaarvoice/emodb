@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.common.dropwizard.jetty;
+package com.bazaarvoice.emodb.web.jetty;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.MetricRegistry;
