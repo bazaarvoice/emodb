@@ -6,7 +6,7 @@ networks:
 
 services:
   zookeeper:
-    image: 'zookeeper:3.4.14'
+    image: 'zookeeper:3.5.9'
     networks:
       - emodb
     ports:
@@ -20,7 +20,7 @@ services:
       interval: 10s
 
   cassandra-dc1:
-    image: 'bazaarvoice/cassandra:2.2.19'
+    image: 'bazaarvoice/cassandra:3.0.25'
     build:
       context: .
       dockerfile: cassandra-Dockerfile

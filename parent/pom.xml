@@ -11,7 +11,7 @@
 
     <groupId>com.bazaarvoice.emodb</groupId>
     <artifactId>emodb-parent</artifactId>
-    <version>6.4.12-SNAPSHOT</version>
+    <version>6.5.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>EmoDB Parent</name>
@@ -26,8 +26,8 @@
     <properties>
         <astyanax.version>3.8.0-bv12</astyanax.version>
         <dropwizard-metrics-datadog.version>1.1.13</dropwizard-metrics-datadog.version>
-        <cassandra-server.version>2.2.19</cassandra-server.version>
-        <cassandra-client.version>3.0.25</cassandra-client.version>
+        <cassandra.version>3.0.25</cassandra.version>
+        <cassandra-maven-plugin.version>${cassandra.version}.1</cassandra-maven-plugin.version>
         <curator.version>2.4.2</curator.version>
         <curator-extensions.version>1.4.2</curator-extensions.version>
         <dropwizard.version>0.7.1</dropwizard.version>
@@ -36,7 +36,7 @@
         <jackson.version>2.6.7.2</jackson.version>
         <jna.version>4.1.0</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
-        <metrics.version>3.1.2</metrics.version>
+        <metrics.version>3.0.2</metrics.version>
         <ostrich.version>1.9.3</ostrich.version>
         <rison.version>2.6.3</rison.version>
         <slf4j.version>1.7.29</slf4j.version>
@@ -116,22 +116,22 @@
 
             <!-- 3rd-party dependencies -->
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-servlets</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-jvm</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
             <dependency>
-                <groupId>io.dropwizard.metrics</groupId>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-logback</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
@@ -249,6 +249,17 @@
                 </exclusions>
             </dependency>
             <dependency>
+                <groupId>org.coursera</groupId>
+                <artifactId>metrics-datadog</artifactId>
+                <version>${dropwizard-metrics-datadog.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>metrics-core</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-client</artifactId>
                 <version>${curator.version}</version>
@@ -337,7 +348,7 @@
             <dependency>
                 <groupId>org.apache.cassandra</groupId>
                 <artifactId>cassandra-all</artifactId>
-                <version>${cassandra-client.version}</version>
+                <version>${cassandra.version}</version>
                 <exclusions>
                     <!-- ignore stuff that conflicts with Dropwizard -->
                     <exclusion>
@@ -351,6 +362,10 @@
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>io.dropwizard.metrics</groupId>
+                        <artifactId>*</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -465,7 +480,7 @@
             <dependency>
                 <groupId>org.yaml</groupId>
                 <artifactId>snakeyaml</artifactId>
-                <version>1.21</version>
+                <version>1.26</version>
             </dependency>
             <dependency>
                 <groupId>javax.xml.bind</groupId>
@@ -570,7 +585,7 @@
                 <plugin>
                     <groupId>com.bazaarvoice.maven.plugins</groupId>
                     <artifactId>cassandra-maven-plugin</artifactId>
-                    <version>${cassandra-server.version}</version>
+                    <version>${cassandra-maven-plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
@@ -719,6 +734,11 @@
                                 <dependencyConvergence />
                                 <requireUpperBoundDeps />
                                 <banDuplicatePomDependencyVersions />
+                                <bannedDependencies>
+                                    <excludes>
+                                        <exclude>io.dropwizard.metrics:*</exclude>
+                                    </excludes>
+                                </bannedDependencies>
                             </rules>
                         </configuration>
                         <goals>
