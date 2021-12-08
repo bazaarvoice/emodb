@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.web.config;
 
-import com.bazaarvoice.emodb.common.dropwizard.metrics.DatadogExpansionFilteredReporterFactory;
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -10,7 +9,9 @@ import com.codahale.metrics.ScheduledReporter;
 import com.codahale.metrics.Timer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.dropwizard.jackson.Jackson;
+import io.dropwizard.metrics.DatadogReporterFactory;
 import io.dropwizard.metrics.ReporterFactory;
+import org.coursera.metrics.datadog.DatadogReporter;
 import org.coursera.metrics.datadog.model.DatadogGauge;
 import org.coursera.metrics.datadog.transport.AbstractTransportFactory;
 import org.coursera.metrics.datadog.transport.Transport;
@@ -18,6 +19,7 @@ import org.mockito.ArgumentMatcher;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.argThat;
@@ -42,9 +44,9 @@ public class DatadogMetricFilterTest {
     public void testExpansionFilterInclusion() throws Exception {
         String json =
                 "{" +
-                    "\"type\": \"datadogExpansionFiltered\"," +
+                    "\"type\": \"datadog\"," +
                     "\"host\": \"test-host\"," +
-                    "\"includeExpansions\": [\"count\", \"min\", \"max\", \"p95\"]," +
+                    "\"expansions\": [\"COUNT\", \"MIN\", \"MAX\", \"P95\"]," +
                     "\"transport\": {" +
                         "\"type\": \"http\"," +
                         "\"apiKey\": \"12345\"" +
@@ -98,9 +100,9 @@ public class DatadogMetricFilterTest {
     public void testExpansionFilterExclusion() throws Exception {
         String json =
                 "{" +
-                    "\"type\": \"datadogExpansionFiltered\"," +
+                    "\"type\": \"datadog\"," +
                     "\"host\": \"test-host\"," +
-                    "\"excludeExpansions\": [\"min\", \"max\", \"p75\", \"p95\", \"p98\", \"p99\", \"p999\"]," +
+                    "\"expansions\": [\"COUNT\", \"MEAN\", \"MEDIAN\", \"STD_DEV\"]," +
                     "\"transport\": {" +
                         "\"type\": \"http\"," +
                         "\"apiKey\": \"12345\"" +
@@ -121,7 +123,7 @@ public class DatadogMetricFilterTest {
         verify(_request).addGauge(argThat(hasGauge("test.histogram.count", 3)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.mean", 2)));
         verify(_request).addGauge(argThat(hasGauge("test.histogram.median", 2)));
-        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 0.816496580927726)));
+        verify(_request).addGauge(argThat(hasGauge("test.histogram.stddev", 1)));
 
         // Send was called exactly once
         verify(_request).send();
@@ -134,8 +136,7 @@ public class DatadogMetricFilterTest {
         ObjectMapper objectMapper = Jackson.newObjectMapper();
         ReporterFactory reporterFactory = objectMapper.readValue(json, ReporterFactory.class);
 
-        assertTrue(reporterFactory instanceof DatadogExpansionFilteredReporterFactory);
-        DatadogExpansionFilteredReporterFactory datadogReporterFactory = (DatadogExpansionFilteredReporterFactory) reporterFactory;
+        assertTrue(reporterFactory instanceof DatadogReporterFactory);
 
         // Replace the transport with our own mock for testing
 
@@ -145,10 +146,48 @@ public class DatadogMetricFilterTest {
         AbstractTransportFactory transportFactory = mock(AbstractTransportFactory.class);
         when(transportFactory.build()).thenReturn(transport);
 
-        datadogReporterFactory.setTransport(transportFactory);
+        setField(reporterFactory, "transport", transportFactory);
 
         // Build the reporter
-        return datadogReporterFactory.build(_metricRegistry);
+        DatadogReporter.forRegistry(_metricRegistry)
+                .withTransport(transport)
+                .build();
+        return reporterFactory.build(_metricRegistry);
+    }
+
+    /**
+     * Sets a field value on a given object
+     *
+     * @param targetObject the object to set the field value on
+     * @param fieldName    exact name of the field
+     * @param fieldValue   value to set on the field
+     * @return true if the value was successfully set, false otherwise
+     */
+    public static boolean setField(Object targetObject, String fieldName, Object fieldValue) {
+        Field field;
+        try {
+            field = targetObject.getClass().getDeclaredField(fieldName);
+        } catch (NoSuchFieldException e) {
+            field = null;
+        }
+        Class superClass = targetObject.getClass().getSuperclass();
+        while (field == null && superClass != null) {
+            try {
+                field = superClass.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                superClass = superClass.getSuperclass();
+            }
+        }
+        if (field == null) {
+            return false;
+        }
+        field.setAccessible(true);
+        try {
+            field.set(targetObject, fieldValue);
+            return true;
+        } catch (IllegalAccessException e) {
+            return false;
+        }
     }
 
     private static ArgumentMatcher<DatadogGauge> hasGauge(final String metricName, final Number value) {

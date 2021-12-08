@@ -7,27 +7,6 @@ cluster: local_default
 # Where does the system store information such as table definitions?
 systemTablePlacement: app_global:sys
 
-# Define how yammer metrics should be pushed to third-party metrics aggregators/reporters
-#metrics:
-#  reporters:
-#  - type: datadogExpansionFiltered
-#    host: <output-of-"hostname -f">
-#    excludeExpansions:
-#    - 5MinuteRate
-#    - 15MinuteRate
-#    - meanRate
-#    - min
-#    - max
-#    - mean
-#    - stddev
-#    - p95
-#    - p99
-#    - p999
-#    transport:
-#      type: http
-#      apiKey: <api-key>
-
-
 dataCenter:
   currentDataCenter: us-east-1           # Which data center does this server belong to?
   cassandraDataCenter: us-east       # What is the name of this DataCenter as configured in Cassandra's NetworkTopologyStrategy?
