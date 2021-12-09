@@ -78,6 +78,12 @@
             <groupId>com.amazonaws</groupId>
             <artifactId>aws-java-sdk-s3</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-logging</artifactId>
+            <version>${dropwizard.version}</version>
+        </dependency>
+
 
         <!-- Test dependencies -->
         <dependency>
@@ -95,6 +101,12 @@
             <groupId>org.testng</groupId>
             <artifactId>testng</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-logging</artifactId>
+            <version>0.7.1</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
