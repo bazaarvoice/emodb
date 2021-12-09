@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
-import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.PollResult;
 import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Histogram;
@@ -9,7 +9,6 @@ import com.codahale.metrics.Timer;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterators;
 import com.google.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

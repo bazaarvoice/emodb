@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.test;
 
-import com.bazaarvoice.emodb.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
@@ -12,10 +11,10 @@ import com.bazaarvoice.emodb.auth.role.InMemoryRoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleIdentifier;
 import com.bazaarvoice.emodb.auth.role.RoleManager;
 import com.bazaarvoice.emodb.auth.role.RoleModification;
-import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.sor.api.DataStore;
 import com.bazaarvoice.emodb.web.auth.EmoPermissionResolver;
+import com.bazaarvoice.emodb.web.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.web.jersey.ExceptionMappers;
 import com.bazaarvoice.emodb.web.throttling.ConcurrentRequestsThrottlingFilter;
 import com.google.common.collect.ImmutableList;
@@ -142,7 +141,7 @@ public abstract class ResourceTest {
      * is complex enough and creating roles is done with sufficient frequency that this method is beneficial to
      * maintain readability.
      */
-    protected static void createRole(RoleManager roleManager, @Nullable String group, String id,Set<String> permissions) {
+    protected static void createRole(RoleManager roleManager, @Nullable String group, String id, Set<String> permissions) {
         roleManager.createRole(new RoleIdentifier(group, id),
                 new RoleModification().withPermissionUpdate(new PermissionUpdateRequest().permit(permissions)));
     }

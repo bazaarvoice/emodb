@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.resources.uac;
 
-import com.bazaarvoice.emodb.auth.jersey.Authenticated;
-import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
+import com.bazaarvoice.emodb.web.auth.jersey.Subject;
 import com.bazaarvoice.emodb.uac.api.CreateEmoRoleRequest;
 import com.bazaarvoice.emodb.uac.api.EmoRole;
 import com.bazaarvoice.emodb.uac.api.EmoRoleKey;

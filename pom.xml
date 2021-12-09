@@ -35,7 +35,6 @@
         <module>common/jersey2-client</module>
         <module>auth/auth-client</module>
         <module>auth/auth-core</module>
-        <module>auth/auth-test</module>
         <module>auth/auth-store</module>
         <module>cachemgr</module>
         <module>queue-api</module>

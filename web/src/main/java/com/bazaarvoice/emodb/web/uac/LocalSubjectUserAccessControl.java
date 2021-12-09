@@ -6,7 +6,7 @@ import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityModification;
 import com.bazaarvoice.emodb.auth.identity.IdentityExistsException;
 import com.bazaarvoice.emodb.auth.identity.IdentityNotFoundException;
-import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.auth.jersey.Subject;
 import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.role.Role;
 import com.bazaarvoice.emodb.auth.role.RoleExistsException;

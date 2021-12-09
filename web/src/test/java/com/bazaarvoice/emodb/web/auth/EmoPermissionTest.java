@@ -92,9 +92,9 @@ public class EmoPermissionTest {
     public void testSorCreatePermissionMatcherMultipleRestrictions() {
         EmoPermission perm = _resolver.resolvePermission("sor|create_table|" +
                 "if(and(" +
-                        "intrinsic(\"~table\":like(\"test:*\"))," +
-                        "intrinsic(\"~placement\":\"ugc_us\")," +
-                        "{..,\"a\":\"b\"}" +
+                "intrinsic(\"~table\":like(\"test:*\"))," +
+                "intrinsic(\"~placement\":\"ugc_us\")," +
+                "{..,\"a\":\"b\"}" +
                 "))");
 
         assertTrue(perm.implies(_resolver.resolvePermission("sor|create_table|createTable(name:'test:table',placement:ugc_us,attributes:(a:b))")));
@@ -162,9 +162,9 @@ public class EmoPermissionTest {
     public void testBlobCreatePermissionMatcherMultipleRestrictions() {
         EmoPermission perm = _resolver.resolvePermission("blob|create_table|" +
                 "if(and(" +
-                        "intrinsic(\"~table\":like(\"test:*\"))," +
-                        "intrinsic(\"~placement\":\"ugc_us\")," +
-                        "{..,\"a\":\"b\"}" +
+                "intrinsic(\"~table\":like(\"test:*\"))," +
+                "intrinsic(\"~placement\":\"ugc_us\")," +
+                "{..,\"a\":\"b\"}" +
                 "))");
 
         assertTrue(perm.implies(_resolver.resolvePermission("blob|create_table|createTable(name:'test:table',placement:ugc_us,attributes:(a:b))")));
@@ -233,9 +233,9 @@ public class EmoPermissionTest {
 
         EmoPermission perm = _resolver.resolvePermission("sor|update|" +
                 "if(and(" +
-                        "intrinsic(\"~table\":like(\"test:*\"))," +
-                        "intrinsic(\"~placement\":in(\"ugc_us\",\"ugc_global\"))," +
-                        "{..,\"foo\":\"bar\"}" +
+                "intrinsic(\"~table\":like(\"test:*\"))," +
+                "intrinsic(\"~placement\":in(\"ugc_us\",\"ugc_global\"))," +
+                "{..,\"foo\":\"bar\"}" +
                 "))");
 
         assertTrue(perm.implies(_resolver.resolvePermission("sor|update|test:good")));
@@ -394,22 +394,22 @@ public class EmoPermissionTest {
                 .implies(_resolver.resolvePermission("sor|read|if(intrinsic(\"~table\":\":test:table\"))")));
     }
 
-    @Test (expectedExceptions = InvalidPermissionStringException.class)
+    @Test(expectedExceptions = InvalidPermissionStringException.class)
     public void testNonConstantInitialScopeRejected() {
         _resolver.resolvePermission("s*");
     }
 
-    @Test (expectedExceptions = InvalidPermissionStringException.class)
+    @Test(expectedExceptions = InvalidPermissionStringException.class)
     public void testNarrowedWildcardScopeRejected() {
         _resolver.resolvePermission("*|update");
     }
 
-    @Test (expectedExceptions = InvalidPermissionStringException.class)
+    @Test(expectedExceptions = InvalidPermissionStringException.class)
     public void testInvalidActionCondition() {
         _resolver.resolvePermission("sor|if(intrinsic(\"~table\":\"foo\"))");
     }
 
-    @Test (expectedExceptions = InvalidPermissionStringException.class)
+    @Test(expectedExceptions = InvalidPermissionStringException.class)
     public void testInvalidTableCondition() {
         _resolver.resolvePermission("sor|*|if(intrinsic(\"~version\":~))");
     }

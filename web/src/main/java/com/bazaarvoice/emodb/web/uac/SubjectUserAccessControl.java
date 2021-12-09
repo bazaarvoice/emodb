@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.uac;
 
-import com.bazaarvoice.emodb.auth.jersey.Subject;
+import com.bazaarvoice.emodb.web.auth.jersey.Subject;
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyResponse;
 import com.bazaarvoice.emodb.uac.api.CreateEmoRoleRequest;
@@ -11,7 +11,6 @@ import com.bazaarvoice.emodb.uac.api.MigrateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 
 /**

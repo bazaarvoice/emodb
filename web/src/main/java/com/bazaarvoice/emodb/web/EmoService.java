@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web;
 
-import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
+import com.bazaarvoice.emodb.web.auth.DropwizardAuthConfigurator;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
 import com.bazaarvoice.emodb.cachemgr.invalidate.InvalidationService;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.ManagedRegistration;
