@@ -43,10 +43,6 @@
             <artifactId>emodb-common-jersey-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.ostrich</groupId>
-            <artifactId>ostrich-dropwizard</artifactId>
-        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
