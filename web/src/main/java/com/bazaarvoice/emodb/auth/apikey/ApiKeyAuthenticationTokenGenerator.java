@@ -6,6 +6,7 @@ import com.sun.jersey.api.core.HttpRequestContext;
 
 /**
  * {@link AuthenticationTokenGenerator} implementation for ApiKeys.  Key can arrive as either a header or query param.
+ *
  * @see ApiKeyRequest
  */
 public class ApiKeyAuthenticationTokenGenerator implements AuthenticationTokenGenerator<ApiKey> {

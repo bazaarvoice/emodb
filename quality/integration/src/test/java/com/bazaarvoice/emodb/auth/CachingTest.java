@@ -35,7 +35,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.function.Supplier;
 
 import static com.bazaarvoice.emodb.auth.permissions.MatchingPermission.escape;
@@ -60,13 +59,13 @@ public class CachingTest {
     @Rule
     public ResourceTestRule _resourceTestRule = setupResourceTestRule();
 
-    @Path ("explicit/country/{country}")
-    @Produces (MediaType.TEXT_PLAIN)
+    @Path("explicit/country/{country}")
+    @Produces(MediaType.TEXT_PLAIN)
     @RequiresAuthentication
     public static class ExplicitPermissionResource {
-        @Path ("city/{city}")
+        @Path("city/{city}")
         @GET
-        public String getCity(@PathParam ("country") String country, @PathParam("city") String city,
+        public String getCity(@PathParam("country") String country, @PathParam("city") String city,
                               @Authenticated Subject subject) {
             if (!subject.hasPermissions(format("country|get|%s", escape(country)), format("city|get|%s", escape(city)))) {
                 throw new WebApplicationException(Response.Status.FORBIDDEN);
@@ -75,7 +74,7 @@ public class CachingTest {
         }
     }
 
-    protected ResourceTestRule setupResourceTestRule()  {
+    protected ResourceTestRule setupResourceTestRule() {
         ResourceTestRule.Builder resourceTestRuleBuilder = ResourceTestRule.builder();
 
         CacheRegistry cacheRegistry = new DefaultCacheRegistry(new SimpleLifeCycleRegistry(), new MetricRegistry());
@@ -84,7 +83,7 @@ public class CachingTest {
         //noinspection unchecked
         Supplier<String> idSupplier = mock(Supplier.class);
         when(idSupplier.get()).thenReturn("id0", "id1").thenThrow(new IllegalStateException("Unexpected createIdentity call"));
-        
+
         InMemoryAuthIdentityManager<ApiKey> authIdentityDAO = new InMemoryAuthIdentityManager<>(idSupplier);
         _authIdentityCaching = new CacheManagingAuthIdentityManager<>(authIdentityDAO, _cacheManager);
         _authIdentityManager = spy(_authIdentityCaching);
