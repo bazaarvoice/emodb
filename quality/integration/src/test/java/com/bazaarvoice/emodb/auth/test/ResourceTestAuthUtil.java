@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.test;
+package com.bazaarvoice.emodb.auth.test;
 
 import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfiguration;
 import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfigurationBuilder;
