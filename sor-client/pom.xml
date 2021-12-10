@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.3-SNAPSHOT</version>
+        <version>6.5.4-SNAPSHOT</version>
         <relativePath>../parent/pom.xml</relativePath>
     </parent>
 
@@ -24,7 +24,7 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-dropwizard-client</artifactId>
+            <artifactId>emodb-common-jersey-client</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

@@ -71,7 +71,7 @@ public class SecurityManagerBuilder {
     public EmoSecurityManager build() {
         checkNotNull(_authIdentityReader, "authIdentityManager not set");
         checkNotNull(_permissionReader, "permissionManager not set");
-        if(_cacheManager == null) { // intended for test use
+        if (_cacheManager == null) { // intended for test use
             _cacheManager = new GuavaCacheManager(null);
         }
         ApiKeyRealm realm = new ApiKeyRealm(_realmName, _cacheManager, _authIdentityReader, _permissionReader, _anonymousId);

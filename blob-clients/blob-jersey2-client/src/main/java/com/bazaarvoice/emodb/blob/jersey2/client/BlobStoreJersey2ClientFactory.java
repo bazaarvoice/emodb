@@ -20,7 +20,7 @@ public class BlobStoreJersey2ClientFactory extends AbstractBlobStoreJersey2Clien
      */
     public static BlobStoreJersey2ClientFactory forClusterAndHttpClient(Client client, URI endpoint) {
         client.property(ClientProperties.SUPPRESS_HTTP_COMPLIANCE_VALIDATION, true);
-        return new BlobStoreJersey2ClientFactory(client, endpoint );
+        return new BlobStoreJersey2ClientFactory(client, endpoint);
     }
 
     private BlobStoreJersey2ClientFactory(Client jerseyClient, URI endpoint) {

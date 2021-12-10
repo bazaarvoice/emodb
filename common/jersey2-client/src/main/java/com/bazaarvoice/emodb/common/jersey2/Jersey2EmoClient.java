@@ -7,7 +7,8 @@ import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import javax.ws.rs.client.Client;
 import java.net.URI;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * EmoClient implementation that uses a Jersey client.
@@ -17,8 +18,8 @@ public class Jersey2EmoClient implements EmoClient {
     private final Client _client;
 
     public Jersey2EmoClient(final Client client) {
-        _client = checkNotNull(client, "client");
-        if(!_client.getConfiguration().isRegistered(JacksonJsonProvider.class)) {
+        _client = requireNonNull(client, "client");
+        if (!_client.getConfiguration().isRegistered(JacksonJsonProvider.class)) {
             _client.register(JacksonJsonProvider.class);
         }
     }
