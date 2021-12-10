@@ -4,6 +4,7 @@ import com.bazaarvoice.emodb.auth.AuthCacheRegistry;
 import com.bazaarvoice.emodb.auth.AuthZooKeeper;
 import com.bazaarvoice.emodb.auth.EmoSecurityManager;
 import com.bazaarvoice.emodb.auth.InternalAuthorizer;
+import com.bazaarvoice.emodb.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.dropwizard.DropwizardAuthConfigurator;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;

@@ -20,7 +20,6 @@ import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.bazaarvoice.emodb.cachemgr.api.CacheRegistry;
 import com.bazaarvoice.emodb.cachemgr.core.DefaultCacheRegistry;
 import com.bazaarvoice.emodb.common.dropwizard.lifecycle.SimpleLifeCycleRegistry;
-import com.bazaarvoice.emodb.web.auth.SecurityManagerBuilder;
 import com.codahale.metrics.MetricRegistry;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;

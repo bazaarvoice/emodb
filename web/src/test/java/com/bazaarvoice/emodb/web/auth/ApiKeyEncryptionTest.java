@@ -34,7 +34,7 @@ public class ApiKeyEncryptionTest {
     public void testEncryptKey() {
         ApiKeyEncryption apiKeyEncryption = new ApiKeyEncryption(CLUSTER);
 
-        for (Map.Entry<String, String> entry : _rawToEncryptedKeyMap.entrySet()) {
+        for (Map.Entry<String,String> entry : _rawToEncryptedKeyMap.entrySet()) {
             String encrypted = apiKeyEncryption.encrypt(entry.getKey());
             assertEquals(encrypted, entry.getValue());
         }
@@ -44,7 +44,7 @@ public class ApiKeyEncryptionTest {
     public void testDecryptKey() {
         ApiKeyEncryption apiKeyEncryption = new ApiKeyEncryption(CLUSTER);
 
-        for (Map.Entry<String, String> entry : _rawToEncryptedKeyMap.inverse().entrySet()) {
+        for (Map.Entry<String,String> entry : _rawToEncryptedKeyMap.inverse().entrySet()) {
             String decrypted = apiKeyEncryption.decrypt(entry.getKey());
             assertEquals(decrypted, entry.getValue());
         }
@@ -54,7 +54,7 @@ public class ApiKeyEncryptionTest {
     public void testUniqueKeyPerCluster() {
         ApiKeyEncryption apiKeyEncryption = new ApiKeyEncryption("different_cluster");
 
-        for (Map.Entry<String, String> entry : _rawToEncryptedKeyMap.entrySet()) {
+        for (Map.Entry<String,String> entry : _rawToEncryptedKeyMap.entrySet()) {
             String encrypted = apiKeyEncryption.encrypt(entry.getKey());
             assertNotEquals(encrypted, entry.getValue());
         }
