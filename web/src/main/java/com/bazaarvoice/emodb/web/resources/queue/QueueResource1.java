@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.resources.queue;
 
 import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
-import com.bazaarvoice.emodb.web.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.queue.api.Message;
 import com.bazaarvoice.emodb.queue.api.MoveQueueStatus;
 import com.bazaarvoice.emodb.queue.api.QueueService;

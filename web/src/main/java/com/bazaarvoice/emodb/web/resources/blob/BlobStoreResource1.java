@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.resources.blob;
 
 import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
-import com.bazaarvoice.emodb.web.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.blob.api.Blob;
 import com.bazaarvoice.emodb.blob.api.BlobMetadata;
 import com.bazaarvoice.emodb.blob.api.BlobStore;

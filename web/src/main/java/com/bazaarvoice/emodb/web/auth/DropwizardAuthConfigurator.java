@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.web.auth;
 
-import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfiguration;
-import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfigurationBuilder;
+import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfiguration;
+import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfigurationBuilder;
 import com.sun.jersey.spi.container.ResourceFilterFactory;
 import io.dropwizard.setup.Environment;
 import org.apache.shiro.mgt.SecurityManager;

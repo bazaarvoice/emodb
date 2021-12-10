@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.jersey;
+package com.bazaarvoice.emodb.auth.jersey;
 
 import com.sun.jersey.api.model.Parameter;
 import com.sun.jersey.core.spi.component.ComponentContext;

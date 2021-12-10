@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.resources.databus;
 
-import com.bazaarvoice.emodb.web.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.databus.api.Databus;
 import com.bazaarvoice.emodb.databus.api.Event;
 import com.bazaarvoice.emodb.databus.api.MoveSubscriptionStatus;

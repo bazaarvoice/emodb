@@ -11,7 +11,7 @@ import com.bazaarvoice.emodb.auth.permissions.PermissionUpdateRequest;
 import com.bazaarvoice.emodb.auth.test.ResourceTestAuthUtil;
 import com.bazaarvoice.emodb.web.auth.SecurityManagerBuilder;
 import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
-import com.bazaarvoice.emodb.web.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;

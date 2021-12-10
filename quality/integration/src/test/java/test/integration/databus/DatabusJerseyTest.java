@@ -2,7 +2,7 @@ package test.integration.databus;
 
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
-import com.bazaarvoice.emodb.web.auth.jersey.Subject;
+import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.common.api.ServiceUnavailableException;
 import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;

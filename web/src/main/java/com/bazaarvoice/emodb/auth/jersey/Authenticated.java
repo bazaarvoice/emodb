@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.jersey;
+package com.bazaarvoice.emodb.auth.jersey;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;

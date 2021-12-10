@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.auth.test;
 
-import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfiguration;
-import com.bazaarvoice.emodb.web.auth.jersey.JerseyAuthConfigurationBuilder;
+import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfiguration;
+import com.bazaarvoice.emodb.auth.jersey.JerseyAuthConfigurationBuilder;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;

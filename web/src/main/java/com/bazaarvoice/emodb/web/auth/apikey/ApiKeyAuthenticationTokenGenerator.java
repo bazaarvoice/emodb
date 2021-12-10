@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.web.auth.apikey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
 import com.bazaarvoice.emodb.auth.apikey.ApiKeyRequest;
-import com.bazaarvoice.emodb.web.auth.jersey.AuthenticationTokenGenerator;
+import com.bazaarvoice.emodb.auth.jersey.AuthenticationTokenGenerator;
 import com.google.common.base.Strings;
 import com.sun.jersey.api.core.HttpRequestContext;
 

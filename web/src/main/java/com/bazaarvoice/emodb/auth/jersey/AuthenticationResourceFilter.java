@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.jersey;
+package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
 import com.bazaarvoice.emodb.web.auth.shiro.PrincipalWithRoles;
