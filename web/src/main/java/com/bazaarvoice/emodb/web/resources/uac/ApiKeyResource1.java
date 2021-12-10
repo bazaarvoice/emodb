@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.resources.uac;
 
-import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
+import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.CreateEmoApiKeyResponse;
@@ -25,7 +25,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.net.URI;
 
 import static com.google.common.base.Preconditions.checkArgument;

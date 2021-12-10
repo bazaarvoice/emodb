@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
-import com.bazaarvoice.emodb.web.auth.shiro.PrincipalWithRoles;
+import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 import com.sun.jersey.spi.container.ContainerResponse;

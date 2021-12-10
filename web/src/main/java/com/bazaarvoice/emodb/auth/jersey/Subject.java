@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
-import com.bazaarvoice.emodb.web.auth.shiro.PrincipalWithRoles;
+import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import org.apache.shiro.authz.Permission;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.subject.PrincipalCollection;

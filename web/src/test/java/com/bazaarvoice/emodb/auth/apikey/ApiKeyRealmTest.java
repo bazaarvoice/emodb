@@ -1,9 +1,5 @@
-package com.bazaarvoice.emodb.web.auth.apikey;
+package com.bazaarvoice.emodb.auth.apikey;
 
-import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
-import com.bazaarvoice.emodb.auth.apikey.ApiKeyModification;
-import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.CacheManagingAuthIdentityManager;
 import com.bazaarvoice.emodb.auth.identity.InMemoryAuthIdentityManager;

@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.web.scanner.resource;
 
-import com.bazaarvoice.emodb.web.auth.jersey.Authenticated;
+import com.bazaarvoice.emodb.auth.jersey.Authenticated;
 import com.bazaarvoice.emodb.auth.jersey.Subject;
 import com.bazaarvoice.emodb.web.jersey.params.InstantParam;
 import com.bazaarvoice.emodb.web.resources.SuccessResponse;
