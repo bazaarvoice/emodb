@@ -1,17 +1,15 @@
-package com.bazaarvoice.emodb.web.auth.apikey;
+package com.bazaarvoice.emodb.auth.apikey;
 
-import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationToken;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
 import com.bazaarvoice.emodb.auth.permissions.PermissionIDs;
 import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousCredentialsMatcher;
 import com.bazaarvoice.emodb.auth.shiro.AnonymousToken;
 import com.bazaarvoice.emodb.auth.shiro.InvalidatableCacheManager;
+import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import com.bazaarvoice.emodb.auth.shiro.RolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.SimpleRolePermissionSet;
 import com.bazaarvoice.emodb.auth.shiro.ValidatingCacheManager;
-import com.bazaarvoice.emodb.web.auth.shiro.PrincipalWithRoles;
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;

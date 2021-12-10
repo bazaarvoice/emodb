@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.apikey;
+package com.bazaarvoice.emodb.auth.apikey;
 
 import com.bazaarvoice.emodb.auth.EmoSecurityManager;
 import com.google.common.collect.ImmutableList;

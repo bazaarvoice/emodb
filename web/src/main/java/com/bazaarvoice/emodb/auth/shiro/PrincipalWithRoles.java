@@ -1,4 +1,4 @@
-package com.bazaarvoice.emodb.web.auth.shiro;
+package com.bazaarvoice.emodb.auth.shiro;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableSet;

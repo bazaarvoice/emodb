@@ -2,11 +2,11 @@ package com.bazaarvoice.emodb.web.auth;
 
 import com.bazaarvoice.emodb.auth.EmoSecurityManager;
 import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.web.auth.apikey.ApiKeySecurityManager;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeySecurityManager;
 import com.bazaarvoice.emodb.auth.identity.AuthIdentityReader;
 import com.bazaarvoice.emodb.auth.permissions.PermissionReader;
 import com.bazaarvoice.emodb.auth.shiro.GuavaCacheManager;
-import com.bazaarvoice.emodb.web.auth.apikey.ApiKeyRealm;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyRealm;
 import org.apache.shiro.cache.CacheManager;
 import org.apache.shiro.mgt.SecurityManager;
 import org.apache.shiro.util.LifecycleUtils;

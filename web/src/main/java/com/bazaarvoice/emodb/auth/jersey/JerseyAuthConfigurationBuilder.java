@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.auth.jersey;
 
-import com.bazaarvoice.emodb.web.auth.apikey.ApiKeyAuthenticationTokenGenerator;
+import com.bazaarvoice.emodb.auth.apikey.ApiKeyAuthenticationTokenGenerator;
 import com.google.common.collect.ImmutableList;
 import com.sun.jersey.spi.container.ResourceFilterFactory;
 import org.apache.shiro.mgt.SecurityManager;

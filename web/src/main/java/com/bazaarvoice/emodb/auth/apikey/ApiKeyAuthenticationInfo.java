@@ -1,7 +1,6 @@
-package com.bazaarvoice.emodb.web.auth.apikey;
+package com.bazaarvoice.emodb.auth.apikey;
 
-import com.bazaarvoice.emodb.auth.apikey.ApiKey;
-import com.bazaarvoice.emodb.web.auth.shiro.PrincipalWithRoles;
+import com.bazaarvoice.emodb.auth.shiro.PrincipalWithRoles;
 import org.apache.shiro.authc.AuthenticationInfo;
 import org.apache.shiro.subject.PrincipalCollection;
 import org.apache.shiro.subject.SimplePrincipalCollection;
