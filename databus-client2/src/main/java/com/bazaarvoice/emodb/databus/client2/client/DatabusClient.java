@@ -55,15 +55,12 @@ public class DatabusClient implements Databus, Closeable {
     private EmoServiceDiscovery _databusDiscovery;
     private final EmoClient _client;
     private final String _apiKey;
-// TODO    this is always false, do we want to add ability to configure that
-//    or convert to constant?
-    private final boolean _partitionSafe;
+    private static final boolean _partitionSafe = false;
 
     public DatabusClient(EmoServiceDiscovery databusDiscovery, EmoClient client, String apiKey) {
         _databusDiscovery = databusDiscovery;
         _client = client;
         _apiKey = apiKey;
-        _partitionSafe = false;
     }
 
     @Override

@@ -165,11 +165,6 @@ public abstract class ZKEmoServiceDiscovery extends AbstractService implements E
             return _zookeeperConnectionString;
         }
 
-//        TODO this is still unused, do we miss something?
-        protected String getZookeeperNamespace() {
-            return _zookeeperNamespace;
-        }
-
         protected void validate() {
             if (_zookeeperConnectionString == null) {
                 throw new IllegalStateException("zookeeperConnectionString is required");
