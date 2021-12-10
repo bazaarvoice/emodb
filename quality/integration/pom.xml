@@ -93,12 +93,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-auth-test</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <scope>test</scope>

@@ -24,7 +24,7 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-dropwizard-client</artifactId>
+            <artifactId>emodb-common-jersey-client</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

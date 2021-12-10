@@ -50,13 +50,13 @@ public class ResourcePermissionsTest {
         QUERY
     }
 
-    @Path ("explicit/country/{country}")
-    @Produces (MediaType.TEXT_PLAIN)
+    @Path("explicit/country/{country}")
+    @Produces(MediaType.TEXT_PLAIN)
     @RequiresAuthentication
     public static class ExplicitPermissionResource {
-        @Path ("city/{city}")
+        @Path("city/{city}")
         @GET
-        public String getCity(@PathParam ("country") String country, @PathParam("city") String city,
+        public String getCity(@PathParam("country") String country, @PathParam("city") String city,
                               @Authenticated Subject subject) {
             if (!subject.hasPermissions(format("country|get|%s", escape(country)), format("city|get|%s", escape(city)))) {
                 throw new WebApplicationException(Response.Status.FORBIDDEN);
@@ -65,11 +65,11 @@ public class ResourcePermissionsTest {
         }
     }
 
-    @Path ("path/country/{country}")
-    @Produces (MediaType.TEXT_PLAIN)
-    @RequiresPermissions ("country|get|{country}")
+    @Path("path/country/{country}")
+    @Produces(MediaType.TEXT_PLAIN)
+    @RequiresPermissions("country|get|{country}")
     public static class PathPermissionResource {
-        @Path ("city/{city}")
+        @Path("city/{city}")
         @RequiresPermissions("city|get|{city}")
         @GET
         public String getCity(@PathParam("country") String country, @PathParam("city") String city) {
@@ -77,17 +77,17 @@ public class ResourcePermissionsTest {
         }
     }
 
-    @Path ("query/welcome")
-    @Produces (MediaType.TEXT_PLAIN)
+    @Path("query/welcome")
+    @Produces(MediaType.TEXT_PLAIN)
     public static class QueryPermissionResource {
         @RequiresPermissions({"country|get|{?country}", "city|get|{?city}"})
         @GET
-        public String getCity(@QueryParam ("country") String country, @QueryParam("city") String city) {
+        public String getCity(@QueryParam("country") String country, @QueryParam("city") String city) {
             return format("Welcome to %s, %s", city, country);
         }
     }
 
-    protected ResourceTestRule setupResourceTestRule()  {
+    protected ResourceTestRule setupResourceTestRule() {
         ResourceTestRule.Builder resourceTestRuleBuilder = ResourceTestRule.builder();
 
         ResourceTestAuthUtil.setUpResources(resourceTestRuleBuilder, SecurityManagerBuilder.create()

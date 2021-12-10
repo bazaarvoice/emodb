@@ -142,7 +142,7 @@ public abstract class ResourceTest {
      * is complex enough and creating roles is done with sufficient frequency that this method is beneficial to
      * maintain readability.
      */
-    protected static void createRole(RoleManager roleManager, @Nullable String group, String id,Set<String> permissions) {
+    protected static void createRole(RoleManager roleManager, @Nullable String group, String id, Set<String> permissions) {
         roleManager.createRole(new RoleIdentifier(group, id),
                 new RoleModification().withPermissionUpdate(new PermissionUpdateRequest().permit(permissions)));
     }

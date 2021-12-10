@@ -40,12 +40,8 @@
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-dropwizard-client</artifactId>
+            <artifactId>emodb-common-jersey-client</artifactId>
             <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.ostrich</groupId>
-            <artifactId>ostrich-dropwizard</artifactId>
         </dependency>
 
         <!-- 3rd-party dependencies -->
@@ -56,7 +52,6 @@
         <dependency>
             <groupId>io.dropwizard</groupId>
             <artifactId>dropwizard-jersey</artifactId>
-            <version>${dropwizard.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

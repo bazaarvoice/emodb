@@ -26,5 +26,11 @@
             <artifactId>emodb-blob-jersey2-client-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+            <version>${jersey2.version}</version>
+        </dependency>
+
     </dependencies>
 </project>
