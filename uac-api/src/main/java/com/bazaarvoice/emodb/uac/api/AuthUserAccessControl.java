@@ -1,7 +1,6 @@
 package com.bazaarvoice.emodb.uac.api;
 
 import com.bazaarvoice.emodb.auth.proxy.Credential;
-import com.bazaarvoice.emodb.common.api.UnauthorizedException;
 
 import java.util.Iterator;
 
