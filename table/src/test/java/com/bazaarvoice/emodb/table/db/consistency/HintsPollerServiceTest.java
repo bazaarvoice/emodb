@@ -6,7 +6,7 @@ import com.codahale.metrics.MetricRegistry;
 import com.datastax.driver.core.Session;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
-import org.junit.Test;
+import org.testng.annotations.Test;
 
 import java.net.InetAddress;
 

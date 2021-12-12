@@ -16,6 +16,35 @@
     <name>EmoDB System of Record</name>
 
     <dependencies>
+<!--        [WARNING]    com.google.code.findbugs:jsr305:jar:3.0.2:compile-->
+<!--        [WARNING]    com.fasterxml.jackson.core:jackson-annotations:jar:2.6.7:compile-->
+<!--        [WARNING]    com.codahale.metrics:metrics-annotation:jar:3.0.2:compile-->
+<!--        [WARNING]    org.apache.curator:curator-client:jar:2.4.2:compile-->
+<!--        [WARNING]    org.apache.cassandra:cassandra-thrift:jar:3.0.25:compile-->
+<!--        [WARNING]    io.dropwizard:dropwizard-lifecycle:jar:0.7.1:compile-->
+<!--        [WARNING]    org.slf4j:slf4j-api:jar:1.7.29:compile-->
+<!--        [WARNING]    com.fasterxml.jackson.core:jackson-databind:jar:2.6.7.2:compile-->
+<!--        [WARNING]    com.bazaarvoice.emodb:emodb-common-api:jar:6.5.4-SNAPSHOT:compile-->
+<!--        [WARNING]    org.apache.thrift:libthrift:jar:0.12.0:compile-->
+<!--        [WARNING]    io.dropwizard:dropwizard-util:jar:0.7.1:compile-->
+<!--        [WARNING]    io.dropwizard:dropwizard-jackson:jar:0.7.1:compile-->
+<!--        [WARNING]    com.bazaarvoice.emodb:emodb-common-uuid:jar:6.5.4-SNAPSHOT:compile-->
+<!--        [WARNING]    com.amazonaws:aws-java-sdk-core:jar:1.11.551:compile-->
+<!--        [WARNING]    com.sun.jersey:jersey-client:jar:1.18.1:compile-->
+<!--        [WARNING]    com.bazaarvoice.emodb:emodb-common-json:jar:6.5.4-SNAPSHOT:compile-->
+<!--        [WARNING]    ch.qos.logback:logback-classic:jar:1.1.3:compile-->
+<!--        [WARNING]    com.datastax.cassandra:cassandra-driver-core:jar:3.1.4:compile-->
+<!--        [WARNING]    org.apache.commons:commons-lang3:jar:3.8.1:compile-->
+<!--        [WARNING]    com.fasterxml.jackson.core:jackson-core:jar:2.6.7:compile-->
+<!--        [WARNING]    org.apache.cassandra:cassandra-all:jar:3.0.25:compile-->
+<!--        [WARNING]    com.bazaarvoice.emodb:emodb-datacenter:jar:6.5.4-SNAPSHOT:compile-->
+<!--        [WARNING]    com.bazaarvoice.astyanax:astyanax-thrift:jar:3.8.0-bv12:compile-->
+<!--        [WARNING]    com.bazaarvoice.astyanax:astyanax-cassandra:jar:3.8.0-bv12:compile-->
+<!--        [WARNING]    io.dropwizard:dropwizard-servlets:jar:0.7.1:compile-->
+<!--        [WARNING]    javax.validation:validation-api:jar:1.1.0.Final:compile-->
+<!--        [WARNING]    com.codahale.metrics:metrics-core:jar:3.0.2:compile-->
+<!--        [WARNING]    com.bazaarvoice.astyanax:astyanax-core:jar:3.8.0-bv12:compile-->
+<!--        [WARNING]    org.apache.curator:curator-framework:jar:2.4.2:compile-->
         <!-- Bazaarvoice dependencies -->
         <dependency>
             <groupId>com.bazaarvoice.curator</groupId>

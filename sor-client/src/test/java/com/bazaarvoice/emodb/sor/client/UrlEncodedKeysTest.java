@@ -6,6 +6,8 @@ import com.bazaarvoice.emodb.sor.api.AuditBuilder;
 import com.bazaarvoice.emodb.sor.delta.Deltas;
 import com.bazaarvoice.emodb.sor.uuid.TimeUUIDs;
 import org.mockito.ArgumentMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -16,26 +18,19 @@ import java.util.Objects;
 import java.util.UUID;
 
 import static java.lang.String.format;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 public class UrlEncodedKeysTest {
-    private EmoClient _client = mock(EmoClient.class);
+    private EmoClient _client = Mockito.mock(EmoClient.class);
 
     @BeforeMethod
     public void setUp() {
-        EmoResource resource = mock(EmoResource.class);
-        _client = mock(EmoClient.class);
+        EmoResource resource = Mockito.mock(EmoResource.class);
+        _client = Mockito.mock(EmoClient.class);
 
-        when(_client.resource(any(URI.class))).thenReturn(resource);
-        when(resource.accept(any(MediaType.class))).thenReturn(resource);
-        when(resource.type(any(MediaType.class))).thenReturn(resource);
-        when(resource.header(anyString(), anyString())).thenReturn(resource);
+        Mockito.when(_client.resource(ArgumentMatchers.any(URI.class))).thenReturn(resource);
+        Mockito.when(resource.accept(ArgumentMatchers.any(MediaType.class))).thenReturn(resource);
+        Mockito.when(resource.type(ArgumentMatchers.any(MediaType.class))).thenReturn(resource);
+        Mockito.when(resource.header(ArgumentMatchers.anyString(), ArgumentMatchers.anyString())).thenReturn(resource);
     }
 
     @Test
@@ -46,7 +41,7 @@ public class UrlEncodedKeysTest {
 
         dataStore.get("api_key", table, key);
 
-        verify(_client, times(1)).resource(argThat(getURIMatcher("test.server", table, key)));
+        Mockito.verify(_client, Mockito.times(1)).resource(ArgumentMatchers.argThat(getURIMatcher("test.server", table, key)));
     }
 
     @Test
@@ -57,7 +52,7 @@ public class UrlEncodedKeysTest {
 
         dataStore.get("api_key", table, key);
 
-        verify(_client, times(1)).resource(argThat(getURIMatcher("test.server", table, key)));
+        Mockito.verify(_client, Mockito.times(1)).resource(ArgumentMatchers.argThat(getURIMatcher("test.server", table, key)));
     }
 
     @Test
@@ -74,7 +69,7 @@ public class UrlEncodedKeysTest {
                         .build(),
                 new AuditBuilder().setComment("judgement").build());
 
-        verify(_client, times(1)).resource(argThat(getURIMatcher("test.server", table, key)));
+        Mockito.verify(_client, Mockito.times(1)).resource(ArgumentMatchers.argThat(getURIMatcher("test.server", table, key)));
     }
 
     @Test
@@ -91,7 +86,7 @@ public class UrlEncodedKeysTest {
                         .build(),
                 new AuditBuilder().setComment("judgement").build());
 
-        verify(_client, times(1)).resource(argThat(getURIMatcher("test.server", table, key)));
+        Mockito.verify(_client, Mockito.times(1)).resource(ArgumentMatchers.argThat(getURIMatcher("test.server", table, key)));
     }
 
     public ArgumentMatcher<URI> getURIMatcher(final String host, final String table, String key)
