@@ -10,9 +10,9 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.bazaarvoice.emodb.blob.db.s3.config.S3BucketConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.config.S3ClientConfiguration;
 import com.bazaarvoice.emodb.blob.db.s3.config.S3Configuration;
+import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;

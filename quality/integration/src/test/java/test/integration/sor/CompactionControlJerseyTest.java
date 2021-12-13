@@ -11,7 +11,7 @@ import com.bazaarvoice.emodb.client.EmoClientException;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
 import com.bazaarvoice.emodb.sor.api.DataStore;
-import com.bazaarvoice.emodb.sor.client.CompactionControlClient;
+import com.bazaarvoice.emodb.web.compactioncontrol.client.CompactionControlClient;
 import com.bazaarvoice.emodb.sor.core.DataStoreAsync;
 import com.bazaarvoice.emodb.test.ResourceTest;
 import com.bazaarvoice.emodb.web.auth.DefaultRoles;

@@ -1,9 +1,10 @@
-package com.bazaarvoice.emodb.sor.client;
+package com.bazaarvoice.emodb.web.compactioncontrol.client;
 
 import com.bazaarvoice.emodb.client.EmoClient;
 import com.bazaarvoice.emodb.common.dropwizard.discovery.Payload;
 import com.bazaarvoice.emodb.common.jersey.dropwizard.JerseyEmoClient;
 import com.bazaarvoice.emodb.sor.api.CompactionControlSource;
+import com.bazaarvoice.emodb.sor.client.AbstractDataStoreClientFactoryBase;
 import com.bazaarvoice.ostrich.ServiceEndPoint;
 import com.sun.jersey.api.client.Client;
 
