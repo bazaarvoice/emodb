@@ -481,7 +481,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -494,7 +494,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -752,7 +752,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -765,7 +765,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1023,7 +1023,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -1036,7 +1036,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1294,7 +1294,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -1307,7 +1307,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1561,7 +1561,7 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -1574,7 +1574,7 @@
 															"query": [
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1668,7 +1668,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -1982,7 +1982,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -2214,7 +2214,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -2368,7 +2368,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -2381,7 +2381,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -2550,7 +2550,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -2563,11 +2563,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -2685,7 +2685,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?consistency=STRONG",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -2699,11 +2699,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -2711,15 +2711,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -2805,7 +2805,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -2818,7 +2818,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -2945,11 +2945,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -2957,15 +2957,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -3138,7 +3138,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4444,7 +4444,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4457,11 +4457,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4540,7 +4540,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -4694,7 +4694,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -4707,7 +4707,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4876,7 +4876,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4889,11 +4889,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4972,7 +4972,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -5126,7 +5126,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -5139,7 +5139,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5308,7 +5308,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5321,11 +5321,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5404,7 +5404,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -5558,7 +5558,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -5571,7 +5571,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5740,7 +5740,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5753,11 +5753,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5838,7 +5838,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -5992,7 +5992,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -6005,7 +6005,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6174,7 +6174,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6187,11 +6187,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6303,7 +6303,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6317,11 +6317,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -6329,15 +6329,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6423,7 +6423,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -6436,7 +6436,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6606,7 +6606,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6619,11 +6619,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6747,7 +6747,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6761,11 +6761,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -6773,15 +6773,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6867,7 +6867,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -6880,7 +6880,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7054,7 +7054,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7067,11 +7067,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7136,7 +7136,7 @@
 															"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
 														},
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'delete+piece+of+content+from+facade'&consistency=STRONG&tag=<string>&tag=<string>&debug=false",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'delete+piece+of+content+from+facade'&consistency=STRONG&debug=false",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7150,7 +7150,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -7163,11 +7163,11 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "debug",
@@ -7184,7 +7184,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7198,11 +7198,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -7210,15 +7210,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7304,7 +7304,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -7317,7 +7317,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7486,7 +7486,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7499,11 +7499,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7582,7 +7582,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -7617,7 +7617,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7631,11 +7631,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -7643,15 +7643,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7737,7 +7737,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -7750,7 +7750,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7919,7 +7919,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7932,11 +7932,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8049,7 +8049,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -8063,11 +8063,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -8075,15 +8075,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8169,7 +8169,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -8182,7 +8182,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8351,7 +8351,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -8364,11 +8364,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8447,7 +8447,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -8481,7 +8481,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -8495,11 +8495,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -8507,15 +8507,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8601,7 +8601,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -8614,7 +8614,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8783,7 +8783,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -8796,11 +8796,11 @@
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -8881,7 +8881,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -8915,7 +8915,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -8929,11 +8929,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -8941,15 +8941,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -9035,7 +9035,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -9048,7 +9048,7 @@
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -9129,7 +9129,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -9163,7 +9163,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -9177,11 +9177,11 @@
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -9189,15 +9189,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -9241,7 +9241,7 @@
 													"raw": "{\n    \"id\": \"<string>\",\n    \"authenticationId\": \"<string>\"\n}"
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -9255,11 +9255,11 @@
 													"query": [
 														{
 															"key": "changeId",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "audit",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "consistency",
@@ -9267,26 +9267,26 @@
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "debug",
-															"value": "<string>"
+															"value": ""
 														}
 													],
 													"variable": [
 														{
 															"key": "table",
-															"value": "<string>",
+															"value": "",
 															"description": "(Required) "
 														},
 														{
 															"key": "key",
-															"value": "<string>",
+															"value": "",
 															"description": "(Required) "
 														}
 													]
@@ -9300,9 +9300,9 @@
 														"method": "DELETE",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
@@ -9314,11 +9314,11 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "consistency",
@@ -9326,15 +9326,15 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -9445,12 +9445,12 @@
 											"query": [
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												},
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												}
 											]
@@ -9464,9 +9464,9 @@
 												"method": "POST",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
 													"host": [
-														"{{baseUrl}}"
+														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
@@ -9477,11 +9477,11 @@
 													"query": [
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														}
 													]
 												}
@@ -9629,12 +9629,12 @@
 											"query": [
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												},
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												}
 											]
@@ -9648,9 +9648,9 @@
 												"method": "POST",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
 													"host": [
-														"{{baseUrl}}"
+														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
@@ -9661,11 +9661,11 @@
 													"query": [
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														}
 													]
 												}
@@ -9739,7 +9739,7 @@
 												"method": "DELETE",
 												"header": [],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -9752,7 +9752,7 @@
 													"query": [
 														{
 															"key": "audit",
-															"value": "<string>"
+															"value": ""
 														}
 													],
 													"variable": [
@@ -9919,9 +9919,9 @@
 												"method": "PUT",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 													"host": [
-														"{{baseUrl}}"
+														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
@@ -9932,11 +9932,11 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "audit",
-															"value": "<string>"
+															"value": ""
 														}
 													],
 													"variable": [
@@ -10032,9 +10032,9 @@
 												"method": "POST",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
 													"host": [
-														"{{baseUrl}}"
+														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
@@ -10045,11 +10045,11 @@
 													"query": [
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														}
 													]
 												}
@@ -10139,9 +10139,9 @@
 												"method": "POST",
 												"header": [],
 												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
 													"host": [
-														"{{baseUrl}}"
+														"{{baseurl_dc1}}"
 													],
 													"path": [
 														"sor",
@@ -10152,11 +10152,11 @@
 													"query": [
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														},
 														{
 															"key": "tag",
-															"value": "<string>"
+															"value": ""
 														}
 													]
 												}
@@ -10232,7 +10232,7 @@
 												"method": "DELETE",
 												"header": [],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -10245,7 +10245,7 @@
 													"query": [
 														{
 															"key": "audit",
-															"value": "<string>"
+															"value": ""
 														}
 													],
 													"variable": [
