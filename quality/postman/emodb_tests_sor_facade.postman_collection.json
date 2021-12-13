@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "79242d88-9c1f-459e-b899-f9004bcf2e9f",
+		"_postman_id": "d0f2123b-1ed3-4c8a-9eed-54455464c605",
 		"name": "EmoDB_Tests_sor_facade",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -35,6 +35,16 @@
 														],
 														"type": "text/javascript"
 													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"pm.environment.set('table', 'table_'+uuid.v4());"
+														],
+														"type": "text/javascript"
+													}
 												}
 											],
 											"request": {
@@ -47,7 +57,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_eu}}",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -55,23 +65,17 @@
 														"sor",
 														"1",
 														"_facade",
-														":table"
+														"{{table}}"
 													],
 													"query": [
 														{
 															"key": "options",
-															"value": "<string>"
+															"value": "{{options_eu}}"
 														},
 														{
 															"key": "audit",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
+															"value": "",
+															"disabled": true
 														}
 													]
 												},
@@ -84,24 +88,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -142,9 +146,19 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"message\":\"Unknown table: not_existing_table\",\"table\":\"not_existing_table\",\"suppressed\":[]});",
+															"    pm.expect(pm.response.json()).to.eql({\"message\":`Unknown table: ${pm.environment.get('table')}`,\"table\":`${pm.environment.get('table')}`,\"suppressed\":[]});",
 															"});",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"var uuid = require('uuid');",
+															"pm.environment.set('table', 'table_'+uuid.v4());"
 														],
 														"type": "text/javascript"
 													}
@@ -160,7 +174,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/not_existing_table?options=placement:'ugc_global:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=audit=comment:'initial+facade+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -168,12 +182,12 @@
 														"sor",
 														"1",
 														"_facade",
-														"not_existing_table"
+														"{{table}}"
 													],
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -190,24 +204,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -284,7 +298,7 @@
 													}
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -297,7 +311,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -352,12 +366,12 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "<string>",
+															"value": "{{options_eu}}",
 															"disabled": true
 														},
 														{
 															"key": "audit",
-															"value": "<string>",
+															"value": "",
 															"disabled": true
 														}
 													]
@@ -371,24 +385,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -475,7 +489,7 @@
 																"sor",
 																"1",
 																"_table",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -557,7 +571,7 @@
 													}
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -570,7 +584,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -594,7 +608,7 @@
 															"});",
 															"",
 															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql(\"Cannot create a facade in the same placement as its table: ugc_global:ugc\");",
+															"    pm.expect(pm.response.text()).to.eql(\"Cannot create a facade in the same placement as its table: ugc_us:ugc\");",
 															"});",
 															""
 														],
@@ -612,9 +626,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=placement:'ugc_global:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=audit=comment:'initial+facade+provisioning'",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -625,7 +639,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -642,24 +656,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -712,9 +726,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
+													"raw": "{{baseurl_dc2}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -746,7 +760,7 @@
 																"sor",
 																"1",
 																"_table",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -828,7 +842,7 @@
 													}
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -841,7 +855,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -913,24 +927,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1017,7 +1031,7 @@
 																"sor",
 																"1",
 																"_table",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -1099,7 +1113,7 @@
 													}
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -1112,7 +1126,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -1154,7 +1168,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=placement:'catalog_global:cat'&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -1167,7 +1181,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'catalog_global:cat'"
+															"value": "{{options_eu}}"
 														},
 														{
 															"key": "audit",
@@ -1184,24 +1198,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1288,7 +1302,7 @@
 																"sor",
 																"1",
 																"_table",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -1370,7 +1384,7 @@
 													}
 												},
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -1383,7 +1397,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_us}}"
 														},
 														{
 															"key": "audit",
@@ -1425,9 +1439,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=placement:'ugc_global:ugc'",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -1438,7 +1452,7 @@
 													"query": [
 														{
 															"key": "options",
-															"value": "placement:'ugc_global:ugc'"
+															"value": "{{options_eu}}"
 														}
 													]
 												},
@@ -1451,24 +1465,24 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 															"host": [
-																"{{baseUrl}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
 																"1",
 																"_facade",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
 																	"key": "options",
-																	"value": "<string>"
+																	"value": ""
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": ""
 																}
 															],
 															"variable": [
@@ -1555,7 +1569,7 @@
 																"sor",
 																"1",
 																"_table",
-																":table"
+																"{{table}}"
 															],
 															"query": [
 																{
@@ -1583,1192 +1597,6 @@
 													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 												}
 											]
-										}
-									]
-								},
-								{
-									"name": "Creates a facade",
-									"request": {
-										"method": "PUT",
-										"header": [],
-										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?options=<string>&audit=<string>",
-											"host": [
-												"{{baseurl_dc1}}"
-											],
-											"path": [
-												"sor",
-												"1",
-												"_facade",
-												":table"
-											],
-											"query": [
-												{
-													"key": "options",
-													"value": "<string>"
-												},
-												{
-													"key": "audit",
-													"value": "<string>"
-												}
-											],
-											"variable": [
-												{
-													"key": "table",
-													"value": "<string>",
-													"description": "(Required) "
-												}
-											]
-										},
-										"description": "Returns a SuccessResponse if facade is created"
-									},
-									"response": [
-										{
-											"name": "successful operation",
-											"originalRequest": {
-												"method": "PUT",
-												"header": [],
-												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
-													"host": [
-														"{{baseUrl}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table"
-													],
-													"query": [
-														{
-															"key": "options",
-															"value": "<string>"
-														},
-														{
-															"key": "audit",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table"
-														}
-													]
-												}
-											},
-											"status": "OK",
-											"code": 200,
-											"_postman_previewlanguage": "json",
-											"header": [
-												{
-													"key": "Content-Type",
-													"value": "application/json"
-												}
-											],
-											"cookie": [],
-											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-										}
-									]
-								}
-							]
-						},
-						{
-							"name": "Drops a Facade",
-							"item": [
-								{
-									"name": "TC: Request without api-key",
-									"item": [
-										{
-											"name": "Drops a Facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Status code is 403\", function () {",
-															"    pm.response.to.have.status(403);",
-															"});",
-															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
-															"});",
-															""
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key_no_rights}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/not_existing_table?audit=<string>&placement=<string>",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														"not_existing_table"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "<string>"
-														},
-														{
-															"key": "placement",
-															"value": "<string>"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										}
-									]
-								},
-								{
-									"name": "TC: Request without placement to drop facade",
-									"item": [
-										{
-											"name": "Drops a Facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Status code is 400\", function () {",
-															"    pm.response.to.have.status(400);",
-															"});",
-															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql('Missing required placement.');",
-															"});"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?audit=comment:'facade+deletion'",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'facade+deletion'"
-														},
-														{
-															"key": "placement",
-															"value": "<string>",
-															"disabled": true
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										}
-									]
-								},
-								{
-									"name": "TC: Request without audit param",
-									"item": [
-										{
-											"name": "Drops a Facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Status code is 400\", function () {",
-															"    pm.response.to.have.status(400);",
-															"});",
-															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql('Missing required query parameter: audit');",
-															"});"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?placement=ugc_global:ugc",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'facade+deletion'",
-															"disabled": true
-														},
-														{
-															"key": "placement",
-															"value": "ugc_global:ugc"
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										}
-									]
-								},
-								{
-									"name": "TC: Drop facade",
-									"item": [
-										{
-											"name": "Creates table /sor/1/_table/{table}",
-											"event": [
-												{
-													"listen": "prerequest",
-													"script": {
-														"exec": [
-															"var uuid = require('uuid');",
-															"pm.environment.set('table', 'table_'+uuid.v4());"
-														],
-														"type": "text/javascript"
-													}
-												},
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 200\", function () {",
-															"        pm.response.to.have.status(200);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"    });",
-															"}",
-															""
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "PUT",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"type": "text",
-														"value": "{{api_key}}"
-													}
-												],
-												"body": {
-													"mode": "raw",
-													"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
-													"options": {
-														"raw": {
-															"language": "json"
-														}
-													}
-												},
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_table",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "options",
-															"value": "placement:'ugc_eu:ugc'"
-														},
-														{
-															"key": "audit",
-															"value": "comment:'initial+provisioning'"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if table is created"
-											},
-											"response": []
-										},
-										{
-											"name": "Drops a Facade before it is created",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 404\", function () {",
-															"        pm.response.to.have.status(404);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({",
-															"            message:`Unknown facade: ${pm.environment.get('table')} in ugc_us:ugc`,",
-															"            facade: pm.environment.get('table'),",
-															"            suppressed:[]",
-															"        });",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=ugc_us:ugc",
-													"host": [
-														"{{baseurl_dc2}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'facade+deletion'"
-														},
-														{
-															"key": "placement",
-															"value": "ugc_us:ugc"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										},
-										{
-											"name": "Creates a facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 200\", function () {",
-															"        pm.response.to.have.status(200);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "PUT",
-												"header": [
-													{
-														"key": "X-BV-Api-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
-													"host": [
-														"{{baseurl_dc2}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "options",
-															"value": "placement:'ugc_us:ugc'"
-														},
-														{
-															"key": "audit",
-															"value": "audit=comment:'initial+facade+provisioning'"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is created"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "PUT",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "options",
-																	"value": "<string>"
-																},
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										},
-										{
-											"name": "Drops a Facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 200\", function () {",
-															"        pm.response.to.have.status(200);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=ugc_us:ugc",
-													"host": [
-														"{{baseurl_dc2}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'facade+deletion'"
-														},
-														{
-															"key": "placement",
-															"value": "ugc_us:ugc"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										}
-									]
-								},
-								{
-									"name": "TC: Request with not existing placement",
-									"item": [
-										{
-											"name": "Creates table /sor/1/_table/{table}",
-											"event": [
-												{
-													"listen": "prerequest",
-													"script": {
-														"exec": [
-															"var uuid = require('uuid');",
-															"pm.environment.set('table', 'table_'+uuid.v4());"
-														],
-														"type": "text/javascript"
-													}
-												},
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 200\", function () {",
-															"        pm.response.to.have.status(200);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "PUT",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"type": "text",
-														"value": "{{api_key}}"
-													}
-												],
-												"body": {
-													"mode": "raw",
-													"raw": "{\n    \"type\":\"create_table_test\",\n    \"client\":\"iuliia_customer\",\n    \"test_field\":\"postman\"\n}",
-													"options": {
-														"raw": {
-															"language": "json"
-														}
-													}
-												},
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_table",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "options",
-															"value": "placement:'ugc_eu:ugc'"
-														},
-														{
-															"key": "audit",
-															"value": "comment:'initial+provisioning'"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if table is created"
-											},
-											"response": []
-										},
-										{
-											"name": "Drops a Facade",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 400\", function () {",
-															"        pm.response.to.have.status(400);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.text()).to.eql('Unknown placement string: not_existing:placement');",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"value": "{{api_key}}",
-														"type": "text"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'&placement=not_existing:placement",
-													"host": [
-														"{{baseurl_dc2}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'facade+deletion'"
-														},
-														{
-															"key": "placement",
-															"value": "not_existing:placement"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if facade is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "placement",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										},
-										{
-											"name": "Drops a table",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
-															"",
-															"if(!isLocal) {",
-															"    pm.test(\"Status code is 200\", function () {",
-															"        pm.response.to.have.status(200);",
-															"    });",
-															"",
-															"    pm.test(\"Body matches string\", function () {",
-															"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"    });",
-															"}"
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "DELETE",
-												"header": [
-													{
-														"key": "X-BV-API-Key",
-														"type": "text",
-														"value": "{{api_key}}"
-													}
-												],
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=comment:'table_removal'",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_table",
-														"{{table}}"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "comment:'table_removal'"
-														}
-													]
-												},
-												"description": "Returns a SuccessResponse if table is dropped"
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "DELETE",
-														"header": [],
-														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
-															"host": [
-																"{{baseurl_dc1}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_table",
-																":table"
-															],
-															"query": [
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
-												}
-											]
-										}
-									]
-								},
-								{
-									"name": "Drops a Facade",
-									"request": {
-										"method": "DELETE",
-										"header": [],
-										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-											"host": [
-												"{{baseurl_dc1}}"
-											],
-											"path": [
-												"sor",
-												"1",
-												"_facade",
-												":table"
-											],
-											"query": [
-												{
-													"key": "audit",
-													"value": "<string>"
-												},
-												{
-													"key": "placement",
-													"value": "<string>"
-												}
-											],
-											"variable": [
-												{
-													"key": "table",
-													"value": "<string>",
-													"description": "(Required) "
-												}
-											]
-										},
-										"description": "Returns a SuccessResponse if facade is dropped"
-									},
-									"response": [
-										{
-											"name": "successful operation",
-											"originalRequest": {
-												"method": "DELETE",
-												"header": [],
-												"url": {
-													"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
-													"host": [
-														"{{baseUrl}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table"
-													],
-													"query": [
-														{
-															"key": "audit",
-															"value": "<string>"
-														},
-														{
-															"key": "placement",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table"
-														}
-													]
-												}
-											},
-											"status": "OK",
-											"code": 200,
-											"_postman_previewlanguage": "json",
-											"header": [
-												{
-													"key": "Content-Type",
-													"value": "application/json"
-												}
-											],
-											"cookie": [],
-											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 										}
 									]
 								}
@@ -2826,7 +1654,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{table}/{key}?audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{table}/{key}?consistency=STRONG",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -2845,7 +1673,8 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>"
+																	"value": "",
+																	"disabled": true
 																},
 																{
 																	"key": "consistency",
@@ -2853,15 +1682,18 @@
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": "",
+																	"disabled": true
 																},
 																{
 																	"key": "tag",
-																	"value": "<string>"
+																	"value": "",
+																	"disabled": true
 																},
 																{
 																	"key": "debug",
-																	"value": "<string>"
+																	"value": "",
+																	"disabled": true
 																}
 															]
 														},
@@ -2874,25 +1706,25 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -2900,15 +1732,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -2997,12 +1829,12 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
 																	"key": "audit",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -3032,25 +1864,25 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -3058,15 +1890,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -3184,25 +2016,25 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -3210,15 +2042,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -3302,7 +2134,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -3315,7 +2147,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -3334,7 +2166,7 @@
 															"listen": "test",
 															"script": {
 																"exec": [
-																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
+																	"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																	"",
 																	"if(!isLocal) {",
 																	"    pm.test(\"Status code is 403\", function () {",
@@ -3368,9 +2200,9 @@
 															"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
 														},
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'update+piece+of+content'&consistency=STRONG&tag=postman&tag=postman1&debug=true",
 															"host": [
-																"{{baseurl_dc2}}"
+																"{{baseurl_dc1}}"
 															],
 															"path": [
 																"sor",
@@ -3416,25 +2248,25 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -3442,15 +2274,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -3544,7 +2376,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -3630,7 +2462,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -3643,7 +2475,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -3688,7 +2520,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -3701,7 +2533,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -3726,7 +2558,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -3760,7 +2592,7 @@
 													]
 												},
 												{
-													"name": "Creates or replaces a piece of content of a facade in the data storebefore table removal",
+													"name": "Creates or replaces a piece of content of a facade in the data store before table removal",
 													"event": [
 														{
 															"listen": "test",
@@ -3815,7 +2647,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -3853,7 +2685,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -3861,8 +2693,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -3981,7 +2813,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -4065,7 +2897,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -4099,7 +2931,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4107,8 +2939,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -4218,7 +3050,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -4231,7 +3063,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -4276,7 +3108,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -4289,7 +3121,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -4314,16 +3146,16 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4405,7 +3237,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -4439,7 +3271,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4447,17 +3279,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -4465,15 +3297,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4559,7 +3391,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -4567,12 +3399,12 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4595,159 +3427,6 @@
 															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 														}
 													]
-												}
-											]
-										},
-										{
-											"name": "Creates or replaces a piece of content of a facade in the data store",
-											"event": [
-												{
-													"listen": "test",
-													"script": {
-														"exec": [
-															"pm.test(\"Status code is 403\", function () {",
-															"    pm.response.to.have.status(403);",
-															"});",
-															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({ reason: 'not authorized' } );",
-															"});",
-															""
-														],
-														"type": "text/javascript"
-													}
-												}
-											],
-											"request": {
-												"method": "PUT",
-												"header": [
-													{
-														"key": "Content-Type",
-														"value": "application/json"
-													}
-												],
-												"body": {
-													"mode": "raw",
-													"raw": "{\"author\":\"Bob\",\"title\":\"Best Ever!\",\"rating\":5}"
-												},
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table",
-														":key"
-													],
-													"query": [
-														{
-															"key": "changeId",
-															"value": "<string>"
-														},
-														{
-															"key": "audit",
-															"value": "<string>"
-														},
-														{
-															"key": "consistency",
-															"value": "STRONG"
-														},
-														{
-															"key": "tag",
-															"value": "<string>"
-														},
-														{
-															"key": "tag",
-															"value": "<string>"
-														},
-														{
-															"key": "debug",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
-														},
-														{
-															"key": "key",
-															"value": "<string>",
-															"description": "(Required) "
-														}
-													]
-												},
-												"description": "Creates or replaces a piece of content of a facade in the data store.  Overwrites the old\n version of the content, if it exists.  Expects a literal JSON representation\n of the object."
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "PUT",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table",
-																":key"
-															],
-															"query": [
-																{
-																	"key": "changeId",
-																	"value": "<string>"
-																},
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "consistency",
-																	"value": "STRONG"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "debug",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																},
-																{
-																	"key": "key"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 												}
 											]
 										}
@@ -4811,7 +3490,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -4824,7 +3503,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -4869,7 +3548,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -4882,7 +3561,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -4899,7 +3578,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -4907,16 +3586,16 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -4981,9 +3660,9 @@
 															"raw": "\"<string>\""
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'modify+info+in+facade'&consistency=STRONG&tag=postman&tag=postman1&debug=false",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?audit=comment:'modify+info+in+facade'&consistency=STRONG&tag=postman&tag=postman1&debug=false",
 															"host": [
-																"{{baseurl_dc1}}"
+																"{{baseurl_dc2}}"
 															],
 															"path": [
 																"sor",
@@ -4995,7 +3674,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -5029,7 +3708,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5037,17 +3716,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -5055,15 +3734,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5149,7 +3828,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -5157,12 +3836,12 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5243,7 +3922,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -5256,7 +3935,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -5301,7 +3980,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -5314,7 +3993,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -5331,7 +4010,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5339,16 +4018,16 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "options",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5429,7 +4108,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -5463,7 +4142,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5471,17 +4150,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -5489,15 +4168,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5583,7 +4262,7 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+																	"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -5591,12 +4270,12 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -5677,7 +4356,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -5690,7 +4369,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -5735,7 +4414,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -5748,7 +4427,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -5773,7 +4452,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -5895,7 +4574,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -5903,17 +4582,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -5921,15 +4600,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6023,7 +4702,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -6109,7 +4788,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -6122,7 +4801,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -6167,7 +4846,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -6180,7 +4859,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -6205,7 +4884,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -6327,7 +5006,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6335,17 +5014,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -6353,15 +5032,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6455,7 +5134,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -6541,7 +5220,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -6554,7 +5233,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -6599,7 +5278,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -6612,7 +5291,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -6637,7 +5316,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -6759,7 +5438,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -6767,17 +5446,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -6785,15 +5464,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -6887,7 +5566,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -6973,7 +5652,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -6986,7 +5665,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -7031,7 +5710,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7044,7 +5723,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -7069,7 +5748,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -7193,7 +5872,7 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
+																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
 																		"{{baseUrl}}"
 																	],
@@ -7201,17 +5880,17 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
 																			"key": "changeId",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "audit",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "consistency",
@@ -7219,15 +5898,15 @@
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "tag",
-																			"value": "<string>"
+																			"value": ""
 																		},
 																		{
 																			"key": "debug",
-																			"value": "<string>"
+																			"value": ""
 																		}
 																	],
 																	"variable": [
@@ -7321,7 +6000,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -7407,7 +6086,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -7420,7 +6099,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "placement:'ugc_us:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -7465,7 +6144,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7478,7 +6157,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "placement:'ugc_eu:ugc'"
 																},
 																{
 																	"key": "audit",
@@ -7503,7 +6182,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -7632,8 +6311,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -7752,7 +6431,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -7839,7 +6518,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -7852,7 +6531,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -7897,7 +6576,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7910,7 +6589,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -7935,7 +6614,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -7977,7 +6656,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 400\", function () {",
 																	"        pm.response.to.have.status(400);",
 																	"    });",
@@ -7986,6 +6665,16 @@
 																	"        pm.expect(pm.response.text()).to.eql(\"Missing required query parameter: audit\");",
 																	"    });",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"var uuid = require('uuid');",
+																	"pm.environment.set('key', 'key_'+uuid.v4());"
 																],
 																"type": "text/javascript"
 															}
@@ -8066,8 +6755,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -8186,7 +6875,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -8214,141 +6903,6 @@
 															"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 														}
 													]
-												}
-											]
-										},
-										{
-											"name": "Creates, modifies or deletes a piece of content in the data store by applying a delta.",
-											"request": {
-												"method": "POST",
-												"header": [
-													{
-														"key": "Content-Type",
-														"value": "application/x.json-delta"
-													}
-												],
-												"body": {
-													"mode": "raw",
-													"raw": "\"<string>\""
-												},
-												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
-													"host": [
-														"{{baseurl_dc1}}"
-													],
-													"path": [
-														"sor",
-														"1",
-														"_facade",
-														":table",
-														":key"
-													],
-													"query": [
-														{
-															"key": "changeId",
-															"value": "<string>"
-														},
-														{
-															"key": "audit",
-															"value": "<string>"
-														},
-														{
-															"key": "consistency",
-															"value": "STRONG"
-														},
-														{
-															"key": "tag",
-															"value": "<string>"
-														},
-														{
-															"key": "tag",
-															"value": "<string>"
-														},
-														{
-															"key": "debug",
-															"value": "<string>"
-														}
-													],
-													"variable": [
-														{
-															"key": "table",
-															"value": "<string>",
-															"description": "(Required) "
-														},
-														{
-															"key": "key",
-															"value": "<string>",
-															"description": "(Required) "
-														}
-													]
-												},
-												"description": "Creates, modifies or deletes a piece of content in the data store by\n applying a delta.  Expects a delta in the format produced by the\n {@link Deltas} class and {@link Delta#toString()}."
-											},
-											"response": [
-												{
-													"name": "successful operation",
-													"originalRequest": {
-														"method": "POST",
-														"header": [],
-														"url": {
-															"raw": "{{baseUrl}}/sor/1/_facade/:table/:key?changeId=<string>&audit=<string>&consistency=STRONG&tag=<string>&tag=<string>&debug=<string>",
-															"host": [
-																"{{baseUrl}}"
-															],
-															"path": [
-																"sor",
-																"1",
-																"_facade",
-																":table",
-																":key"
-															],
-															"query": [
-																{
-																	"key": "changeId",
-																	"value": "<string>"
-																},
-																{
-																	"key": "audit",
-																	"value": "<string>"
-																},
-																{
-																	"key": "consistency",
-																	"value": "STRONG"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "tag",
-																	"value": "<string>"
-																},
-																{
-																	"key": "debug",
-																	"value": "<string>"
-																}
-															],
-															"variable": [
-																{
-																	"key": "table"
-																},
-																{
-																	"key": "key"
-																}
-															]
-														}
-													},
-													"status": "OK",
-													"code": 200,
-													"_postman_previewlanguage": "json",
-													"header": [
-														{
-															"key": "Content-Type",
-															"value": "application/json"
-														}
-													],
-													"cookie": [],
-													"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 												}
 											]
 										}
@@ -8379,7 +6933,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																	"",
-																	"    if(!isLocal) {",
+																	"    if(isLocal == false) {",
 																	"    pm.test(\"Status code is 200\", function () {",
 																	"        pm.response.to.have.status(200);",
 																	"    });",
@@ -8412,7 +6966,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -8425,7 +6979,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -8446,7 +7000,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 200\", function () {",
 																	"        pm.response.to.have.status(200);",
 																	"    });",
@@ -8470,7 +7024,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -8483,7 +7037,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -8508,7 +7062,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -8638,8 +7192,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -8758,7 +7312,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -8940,7 +7494,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -8982,7 +7536,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 400\", function () {",
 																	"        pm.response.to.have.status(400);",
 																	"    });",
@@ -9071,8 +7625,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -9191,7 +7745,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -9277,7 +7831,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -9290,7 +7844,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -9335,7 +7889,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -9348,7 +7902,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -9373,7 +7927,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -9415,7 +7969,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 200\", function () {",
 																	"        pm.response.to.have.status(200);",
 																	"    });",
@@ -9461,7 +8015,7 @@
 															"query": [
 																{
 																	"key": "changeId",
-																	"value": "<string>",
+																	"value": "",
 																	"disabled": true
 																},
 																{
@@ -9503,8 +8057,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -9623,7 +8177,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -9709,7 +8263,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -9722,7 +8276,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -9767,7 +8321,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -9780,7 +8334,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -9805,7 +8359,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -9847,7 +8401,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 403\", function () {",
 																	"        pm.response.to.have.status(403);",
 																	"    });",
@@ -9935,8 +8489,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -10055,7 +8609,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -10141,7 +8695,7 @@
 															}
 														},
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+															"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -10154,7 +8708,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
@@ -10199,7 +8753,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -10212,7 +8766,7 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
@@ -10237,7 +8791,7 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -10279,7 +8833,7 @@
 																"exec": [
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
+																	"if(isLocal == false) {",
 																	"    pm.test(\"Status code is 200\", function () {",
 																	"        pm.response.to.have.status(200);",
 																	"    });",
@@ -10369,8 +8923,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -10489,7 +9043,7 @@
 																		"sor",
 																		"1",
 																		"_table",
-																		":table"
+																		"{{table}}"
 																	],
 																	"query": [
 																		{
@@ -10617,8 +9171,8 @@
 																		"sor",
 																		"1",
 																		"_facade",
-																		":table",
-																		":key"
+																		"{{table}}",
+																		"{{key}}"
 																	],
 																	"query": [
 																		{
@@ -10695,8 +9249,8 @@
 														"sor",
 														"1",
 														"_facade",
-														":table",
-														":key"
+														"{{table}}",
+														"{{key}}"
 													],
 													"query": [
 														{
@@ -10754,8 +9308,8 @@
 																"sor",
 																"1",
 																"_facade",
-																":table",
-																":key"
+																"{{table}}",
+																"{{key}}"
 															],
 															"query": [
 																{
@@ -10810,6 +9364,27 @@
 									]
 								}
 							]
+						}
+					],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.environment.set(\"options_us\", \"placement:\\'ugc_us:ugc\\'\");",
+									"pm.environment.set(\"options_eu\", \"placement:\\'ugc_eu:ugc\\'\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									""
+								]
+							}
 						}
 					]
 				},
@@ -11172,7 +9747,7 @@
 														"sor",
 														"1",
 														"_table",
-														":table"
+														"{{table}}"
 													],
 													"query": [
 														{
@@ -11257,7 +9832,7 @@
 											}
 										},
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+provisioning'",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -11270,7 +9845,7 @@
 											"query": [
 												{
 													"key": "options",
-													"value": "placement:'ugc_eu:ugc'"
+													"value": "{{options_us}}"
 												},
 												{
 													"key": "audit",
@@ -11314,7 +9889,7 @@
 											}
 										],
 										"url": {
-											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
 											"host": [
 												"{{baseurl_dc2}}"
 											],
@@ -11327,7 +9902,7 @@
 											"query": [
 												{
 													"key": "options",
-													"value": "placement:'ugc_us:ugc'"
+													"value": "{{options_eu}}"
 												},
 												{
 													"key": "audit",
@@ -11352,7 +9927,7 @@
 														"sor",
 														"1",
 														"_facade",
-														":table"
+														"{{table}}"
 													],
 													"query": [
 														{
@@ -11438,12 +10013,12 @@
 											"query": [
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												},
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												}
 											]
@@ -11545,12 +10120,12 @@
 											"query": [
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												},
 												{
 													"key": "tag",
-													"value": "<string>",
+													"value": "",
 													"disabled": true
 												}
 											]
@@ -11665,7 +10240,7 @@
 														"sor",
 														"1",
 														"_table",
-														":table"
+														"{{table}}"
 													],
 													"query": [
 														{
@@ -11693,92 +10268,6 @@
 											"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 										}
 									]
-								}
-							]
-						},
-						{
-							"name": "Does update all for Facade",
-							"request": {
-								"method": "POST",
-								"header": [
-									{
-										"key": "Content-Type",
-										"value": "application/json"
-									},
-									{
-										"key": "X-BV-API-Key",
-										"value": "{{api_key}}",
-										"type": "text"
-									}
-								],
-								"body": {
-									"mode": "raw",
-									"raw": "\"<object>\""
-								},
-								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream?tag=postman&tag=postman1",
-									"host": [
-										"{{baseurl_dc1}}"
-									],
-									"path": [
-										"sor",
-										"1",
-										"_facade",
-										"_stream"
-									],
-									"query": [
-										{
-											"key": "tag",
-											"value": "postman"
-										},
-										{
-											"key": "tag",
-											"value": "postman1"
-										}
-									]
-								},
-								"description": "Facade-equivalent operation for \"_stream\"\n See (@link #updateAll(java.io.InputStream, BooleanParam, Subject)}"
-							},
-							"response": [
-								{
-									"name": "successful operation",
-									"originalRequest": {
-										"method": "POST",
-										"header": [],
-										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/_stream?tag=<string>&tag=<string>",
-											"host": [
-												"{{baseUrl}}"
-											],
-											"path": [
-												"sor",
-												"1",
-												"_facade",
-												"_stream"
-											],
-											"query": [
-												{
-													"key": "tag",
-													"value": "<string>"
-												},
-												{
-													"key": "tag",
-													"value": "<string>"
-												}
-											]
-										}
-									},
-									"status": "OK",
-									"code": 200,
-									"_postman_previewlanguage": "json",
-									"header": [
-										{
-											"key": "Content-Type",
-											"value": "application/json"
-										}
-									],
-									"cookie": [],
-									"body": "{\n \"success\": false,\n \"debug\": {}\n}"
 								}
 							]
 						}
