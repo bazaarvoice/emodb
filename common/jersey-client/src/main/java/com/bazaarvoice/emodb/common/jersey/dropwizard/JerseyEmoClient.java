@@ -6,7 +6,8 @@ import com.sun.jersey.api.client.Client;
 
 import java.net.URI;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * EmoClient implementation that uses a Jersey client.
@@ -16,7 +17,7 @@ public class JerseyEmoClient implements EmoClient {
     private final Client _client;
 
     public JerseyEmoClient(Client client) {
-        _client = checkNotNull(client, "client");
+        _client = requireNonNull(client, "client");
     }
 
     @Override

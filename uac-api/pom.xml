@@ -22,16 +22,19 @@
             <artifactId>emodb-auth-client</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
 
         <!-- 3rd-party dependencies -->
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
