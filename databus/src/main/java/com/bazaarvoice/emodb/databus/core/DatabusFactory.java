@@ -8,9 +8,9 @@ import com.bazaarvoice.emodb.databus.api.ReplaySubscriptionStatus;
 import com.bazaarvoice.emodb.databus.api.Subscription;
 import com.bazaarvoice.emodb.databus.api.UnknownSubscriptionException;
 import com.bazaarvoice.emodb.sor.condition.Condition;
+import com.google.inject.Inject;
 
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Date;

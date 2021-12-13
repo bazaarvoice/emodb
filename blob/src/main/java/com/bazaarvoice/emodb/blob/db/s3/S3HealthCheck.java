@@ -7,8 +7,8 @@ import com.codahale.metrics.health.HealthCheck;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
+import com.google.inject.Inject;
 
-import javax.inject.Inject;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
