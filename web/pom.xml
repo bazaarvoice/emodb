@@ -50,12 +50,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-databus-client</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -66,12 +60,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-queue-client</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -92,12 +80,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-common-stash</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -118,12 +100,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-uac-client</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -139,12 +115,6 @@
             <groupId>com.bazaarvoice.emodb</groupId>
             <artifactId>emodb-blob-client</artifactId>
             <version>${project.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>commons-logging</groupId>
-                    <artifactId>commons-logging</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
@@ -218,12 +188,6 @@
             <groupId>io.swagger</groupId>
             <artifactId>swagger-jaxrs</artifactId>
             <version>${swagger.version}</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.google.guava</groupId>
-                    <artifactId>guava</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>javax.xml.bind</groupId>

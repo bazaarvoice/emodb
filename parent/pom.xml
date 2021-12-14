@@ -618,6 +618,11 @@
             <!-- Megabus dependencies -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
+                <artifactId>connect-json</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>${kafka.version}</version>
             </dependency>
@@ -626,6 +631,7 @@
                 <artifactId>kafka-streams</artifactId>
                 <version>${kafka.version}</version>
             </dependency>
+
 
             <!-- Test dependencies -->
             <dependency>
@@ -828,7 +834,8 @@
                             <goal>analyze-only</goal>
                         </goals>
                         <configuration>
-                            <failOnWarning>false</failOnWarning>
+                            <failOnWarning>true</failOnWarning>
+                            <ignoreNonCompile>true</ignoreNonCompile>
                         </configuration>
                     </execution>
                 </executions>
