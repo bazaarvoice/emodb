@@ -22,7 +22,6 @@ import com.bazaarvoice.emodb.sor.condition.Conditions;
 import com.bazaarvoice.emodb.sor.core.DataProvider;
 import com.bazaarvoice.emodb.sor.core.DatabusEventWriterRegistry;
 import com.bazaarvoice.emodb.sor.core.UpdateRef;
-import com.beust.jcommander.internal.Sets;
 import com.codahale.metrics.MetricRegistry;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -34,6 +33,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.mockito.ArgumentMatcher;
 import org.testng.annotations.Test;
@@ -406,7 +406,7 @@ public class DefaultDatabusTest {
                 3, masterPartitioner, new MetricRegistry(), Clock.systemUTC());
 
         List<UpdateRef> updateRefs = Lists.newArrayListWithCapacity(4);
-        for (int i=0; i < 4; i++) {
+        for (int i = 0; i < 4; i++) {
             updateRefs.add(new UpdateRef("test-table", "key" + i, TimeUUIDs.newUUID(), ImmutableSet.of()));
         }
 
@@ -432,7 +432,7 @@ public class DefaultDatabusTest {
         Duration subscriptionTtl = Duration.ofDays(365 * 10).plus(Duration.ofDays(1));
         Duration eventTtl = Duration.ofDays(2);
 
-        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
+        testDatabus.subscribe("id", "test-subscription", condition, subscriptionTtl, eventTtl);
     }
 
     @Test(expectedExceptions = IllegalArgumentException.class)
@@ -448,7 +448,7 @@ public class DefaultDatabusTest {
         Duration subscriptionTtl = Duration.ofDays(15);
         Duration eventTtl = Duration.ofDays(365).plus(Duration.ofDays(1));
 
-        testDatabus.subscribe("id", "test-subscription", condition,subscriptionTtl, eventTtl);
+        testDatabus.subscribe("id", "test-subscription", condition, subscriptionTtl, eventTtl);
     }
 
     private static EventData newEvent(final String id, String table, String key, UUID changeId) {

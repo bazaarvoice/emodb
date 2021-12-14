@@ -70,7 +70,6 @@ protected void initialize(Configuration configuration, Environment environment) 
             .withHostDiscovery(new ZooKeeperHostDiscovery(curator, dataStoreFactory.getServiceName()))
             .withServiceFactory(dataStoreFactory)
             .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
-    environment.addHealthCheck(new DataStoreHealthCheck(dataStore));
     environment.manage(new ManagedServicePoolProxy(dataStore));
 
     ... use "dataStore" to access the System of Record ...

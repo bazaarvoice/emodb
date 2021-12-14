@@ -13,8 +13,7 @@ import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * EmoResource implementation that uses a WebResource returned by a Jersey client.
@@ -25,19 +24,23 @@ public class JerseyEmoResource implements EmoResource {
     private WebResource.Builder _builder;
 
     JerseyEmoResource(WebResource resource) {
-        _resource = checkNotNull(resource, "resource");
+        _resource = requireNonNull(resource, "resource");
     }
 
     @Override
     public EmoResource queryParam(String key, String value) {
-        checkState(_resource != null, "Invalid state to add a query param");
+        if (_resource == null) {
+            throw new IllegalStateException("Invalid state to add a query param");
+        }
         _resource = _resource.queryParam(key, value);
         return this;
     }
 
     @Override
     public EmoResource path(String path) {
-        checkState(_resource != null, "Invalid state to add a path");
+        if (_resource == null) {
+            throw new IllegalStateException("Invalid state to add a path");
+        }
         _resource = _resource.path(path);
         return this;
     }

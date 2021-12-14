@@ -117,6 +117,11 @@
             <!-- 3rd-party dependencies -->
             <dependency>
                 <groupId>com.codahale.metrics</groupId>
+                <artifactId>metrics-annotation</artifactId>
+                <version>${metrics.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.codahale.metrics</groupId>
                 <artifactId>metrics-core</artifactId>
                 <version>${metrics.version}</version>
             </dependency>
@@ -148,6 +153,10 @@
                     <exclusion>
                         <groupId>org.slf4j</groupId>
                         <artifactId>slf4j-log4j12</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>log4j</groupId>
+                        <artifactId>log4j</artifactId>
                     </exclusion>
                 </exclusions>
             </dependency>
@@ -287,6 +296,11 @@
             <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-servlets</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-jackson</artifactId>
                 <version>${dropwizard.version}</version>
             </dependency>
             <dependency>
@@ -582,6 +596,11 @@
                 <version>${jna.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.sun.jersey.contribs</groupId>
+                <artifactId>jersey-apache-client4</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.sun.jersey</groupId>
                 <artifactId>jersey-core</artifactId>
                 <version>${jersey.version}</version>
@@ -591,7 +610,11 @@
                 <artifactId>jersey-client</artifactId>
                 <version>${jersey.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.apache.shiro</groupId>
+                <artifactId>shiro-core</artifactId>
+                <version>${shiro.version}</version>
+            </dependency>
             <!-- Megabus dependencies -->
             <dependency>
                 <groupId>org.apache.kafka</groupId>
@@ -759,6 +782,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <argLine>${jacoco.agent.argLine}</argLine> <!-- activate the JaCoCo javaagent -->
+                    <parallel>classes</parallel>
+                    <threadCount>2</threadCount>
+                    <perCoreThreadCount>true</perCoreThreadCount>
                 </configuration>
             </plugin>
 
@@ -830,7 +856,14 @@
                                 <banDuplicatePomDependencyVersions />
                                 <bannedDependencies>
                                     <excludes>
+                                        <!-- This should not exist until DW 0.8.x+ upgrade -->
                                         <exclude>io.dropwizard.metrics:*</exclude>
+                                        <!-- This should not exist as it will force SLF4J calls to be delegated to log4j -->
+                                        <exclude>org.slf4j:slf4j-log4j12</exclude>
+                                        <!-- This should not exist as it will force SLF4J calls to be delegated to jul -->
+                                        <exclude>org.slf4j:slf4j-jdk14</exclude>
+                                        <!-- Ensure only the slf4j binding for logback is on the classpath -->
+                                        <exclude>log4j:log4j</exclude>
                                     </excludes>
                                 </bannedDependencies>
                             </rules>

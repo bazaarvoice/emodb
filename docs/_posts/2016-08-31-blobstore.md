@@ -80,7 +80,6 @@ protected void initialize(Configuration configuration, Environment environment) 
             .withHostDiscovery(new ZooKeeperHostDiscovery(curator, blobStoreFactory.getServiceName()))
             .withServiceFactory(blobStoreFactory)
             .buildProxy(new ExponentialBackoffRetry(5, 50, 1000, TimeUnit.MILLISECONDS));
-    environment.addHealthCheck(new BlobStoreHealthCheck(blobStore));
     environment.manage(new ManagedServicePoolProxy(blobStore));
 
     // ... use "blobStore" to access the BlobStore ...

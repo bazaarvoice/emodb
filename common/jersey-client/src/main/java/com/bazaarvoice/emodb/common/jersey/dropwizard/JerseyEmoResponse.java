@@ -12,7 +12,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
+
 
 /**
  * EmoResponse implementation that wraps a Jersey {@link ClientResponse}.
@@ -22,7 +23,7 @@ public class JerseyEmoResponse implements EmoResponse {
     private final ClientResponse _response;
 
     public JerseyEmoResponse(ClientResponse response) {
-        _response = checkNotNull(response, "response");
+        _response = requireNonNull(response, "response");
     }
 
     @Override
