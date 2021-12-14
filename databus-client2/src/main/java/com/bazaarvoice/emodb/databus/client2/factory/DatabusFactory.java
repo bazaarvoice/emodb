@@ -35,7 +35,6 @@ public class DatabusFactory implements Serializable {
     }
 
     public DatabusClient create() {
-//        dirty hack :) but it's ok for now
         if (_emoServiceDiscovery instanceof ZKEmoServiceDiscovery) {
             Service service = ((ZKEmoServiceDiscovery) _emoServiceDiscovery).startAsync();
 
