@@ -96,7 +96,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?&consistency=STRONG",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -219,7 +219,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -923,7 +923,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1365,7 +1365,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1459,7 +1459,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_global:ugc'&audit=comment:'initial+provisioning'",
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -1472,7 +1472,7 @@
 									"query": [
 										{
 											"key": "options",
-											"value": "placement:'ugc_global:ugc'"
+											"value": "{{options_us}}"
 										},
 										{
 											"key": "audit",
@@ -1537,16 +1537,35 @@
 									"listen": "test",
 									"script": {
 										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
 											"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
 											"",
-											"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
+											"(isLocal ? pm.test.skip : pm.test)(\"Assert response\", asyncTest(async function () {",
+											"    var response = pm.response;",
+											"    if (response.code == 500 || response.code == 400) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.code !== 500 && response.code !== 400;",
+											"        }, \"Retrying until there is facade available \");",
+											"    }",
 											"",
-											"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
+											"    pm.expect(response.code).to.eql(200);",
 											"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-											"});",
-											""
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+											"",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"PUT\");"
 										],
 										"type": "text/javascript"
 									}
@@ -1562,7 +1581,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+									"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 									"host": [
 										"{{baseurl_dc2}}"
 									],
@@ -1575,11 +1594,11 @@
 									"query": [
 										{
 											"key": "options",
-											"value": "placement:'ugc_us:ugc'"
+											"value": "{{options_eu}}"
 										},
 										{
 											"key": "audit",
-											"value": "audit=comment:'initial+facade+provisioning'"
+											"value": "comment:'initial+facade+provisioning'"
 										}
 									]
 								},
@@ -1592,9 +1611,9 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseurl_dc1}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
@@ -1708,7 +1727,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG>",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1902,7 +1921,7 @@
 									}
 								},
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=placement:'ugc_us:ugc'&audit=comment:'initial+provisioning'",
+									"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options={{options_us}}&audit=comment:'initial+provisioning'",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -1915,7 +1934,7 @@
 									"query": [
 										{
 											"key": "options",
-											"value": "placement:'ugc_us:ugc'"
+											"value": "{{options_us}}"
 										},
 										{
 											"key": "audit",
@@ -1980,16 +1999,35 @@
 									"listen": "test",
 									"script": {
 										"exec": [
+											"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+											"const retryRequest = eval(retryRequestCall.retryRequest);",
+											"",
 											"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
 											"",
-											"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
-											"    pm.response.to.have.status(200);",
-											"});",
+											"(isLocal ? pm.test.skip : pm.test)(\"Assert response\", asyncTest(async function () {",
+											"    var response = pm.response;",
+											"    if (response.code == 500) {",
+											"        await waitUntil(setTimeout, clearTimeout, async () => {",
+											"            response = await retryRequest();",
+											"            return response.code !== 500;",
+											"        }, \"Retrying until there is facade available \");",
+											"    }",
 											"",
-											"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
-											"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-											"});",
-											""
+											"    pm.expect(response.code).to.eql(200);",
+											"    pm.expect(response.json()).to.eql({\"success\":true});",
+											"}));"
+										],
+										"type": "text/javascript"
+									}
+								},
+								{
+									"listen": "prerequest",
+									"script": {
+										"exec": [
+											"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+											"",
+											"pm.environment.set(\"url\", url);",
+											"pm.environment.set(\"method\", \"PUT\");"
 										],
 										"type": "text/javascript"
 									}
@@ -2005,7 +2043,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+									"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 									"host": [
 										"{{baseurl_dc2}}"
 									],
@@ -2018,11 +2056,11 @@
 									"query": [
 										{
 											"key": "options",
-											"value": "placement:'ugc_eu:ugc'"
+											"value": "{{options_eu}}"
 										},
 										{
 											"key": "audit",
-											"value": "audit=comment:'initial+facade+provisioning'"
+											"value": "comment:'initial+facade+provisioning'"
 										}
 									]
 								},
@@ -2035,9 +2073,9 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseurl_dc1}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
@@ -2153,9 +2191,9 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc2}}/sor/1?consistency=STRONG",
 											"host": [
-												"{{baseurl_dc1}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
@@ -2291,6 +2329,51 @@
 							]
 						}
 					]
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"                \"Content-Type\": \"application/json\"",
+							"            }",
+							"",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);            ",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+							"pm.environment.set(\"options_eu\", \"placement:'ugc_eu:ugc'\");",
+							"pm.environment.set(\"options_us\", \"placement:'ugc_us:ugc'\");"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		}

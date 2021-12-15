@@ -148,6 +148,8 @@
 															"pm.test(\"Body matches string\", function () {",
 															"    pm.expect(pm.response.json()).to.eql({\"message\":`Unknown table: ${pm.environment.get('table')}`,\"table\":`${pm.environment.get('table')}`,\"suppressed\":[]});",
 															"});",
+															"",
+															"",
 															""
 														],
 														"type": "text/javascript"
@@ -174,7 +176,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=comment:'initial+facade+provisioning'",
 													"host": [
 														"{{baseurl_dc1}}"
 													],
@@ -191,7 +193,7 @@
 														},
 														{
 															"key": "audit",
-															"value": "audit=comment:'initial+facade+provisioning'"
+															"value": "comment:'initial+facade+provisioning'"
 														}
 													]
 												},
@@ -353,9 +355,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -385,7 +387,7 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=&audit=",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -603,14 +605,38 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Status code is 400\", function () {",
-															"    pm.response.to.have.status(400);",
-															"});",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql(\"Cannot create a facade in the same placement as its table: ugc_us:ugc\");",
-															"});",
+															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
+															"",
+															"if(isLocal == false) {",
+															"    var response = pm.response;",
+															"",
+															"    pm.test(\"Assert response\", asyncTest(async function () {",
+															"        if (response.code == 500) {",
+															"            await waitUntil(setTimeout, clearTimeout, async () => {",
+															"                response = await retryRequest();",
+															"                return response.code !== 500;",
+															"            }, \"Retrying until there is facade available \");",
+															"        }",
+															"        pm.expect(response.code).to.eql(400);",
+															"        pm.expect(response.text()).to.eql(\"Cannot create a facade in the same placement as its table: ugc_us:ugc\");",
+															"    }));",
+															"}",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_us\")}&audit=comment:'initial+facade+provisioning'`;",
+															"",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"PUT\");"
 														],
 														"type": "text/javascript"
 													}
@@ -626,7 +652,7 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=comment:'initial+facade+provisioning'",
 													"host": [
 														"{{baseurl_dc2}}"
 													],
@@ -643,7 +669,7 @@
 														},
 														{
 															"key": "audit",
-															"value": "audit=comment:'initial+facade+provisioning'"
+															"value": "comment:'initial+facade+provisioning'"
 														}
 													]
 												},
@@ -656,7 +682,7 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=&audit=",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -704,13 +730,33 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Status code is 200\", function () {",
-															"    pm.response.to.have.status(200);",
-															"});",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"});"
+															"var response = pm.response;",
+															"",
+															"pm.test(\"Assert response\", asyncTest(async function () {",
+															"    if (response.code == 500) {",
+															"        await waitUntil(setTimeout, clearTimeout, async () => {",
+															"            response = await retryRequest();",
+															"            return response.code !== 500;",
+															"        }, \"Retrying until there is facade available \");",
+															"    }",
+															"    pm.expect(response.code).to.eql(200);",
+															"    pm.expect(response.json()).to.eql({\"success\":true});",
+															"}));"
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_table/${pm.environment.get(\"table\")}?audit=comment:'table_removal'`;",
+															"",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"DELETE\");"
 														],
 														"type": "text/javascript"
 													}
@@ -874,14 +920,39 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Status code is 400\", function () {",
-															"    pm.response.to.have.status(400);",
-															"});",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.text()).to.eql(\"Unknown placement string: not_existing:placement\");",
-															"});",
+															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
+															"",
+															"if(isLocal == false) {",
+															"    var response = pm.response;",
+															"",
+															"    pm.test(\"Assert response\", asyncTest(async function () {",
+															"        if (response.code == 500) {",
+															"            await waitUntil(setTimeout, clearTimeout, async () => {",
+															"                response = await retryRequest();",
+															"                return response.code !== 500;",
+															"            }, \"Retrying until there is facade available \");",
+															"        }",
+															"        pm.expect(response.code).to.eql(400);",
+															"        pm.expect(response.text()).to.eql(\"Unknown placement string: not_existing:placement\");",
+															"    }));",
+															"}",
+															"",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=placement:'not_existing:placement'&audit=comment:'initial+facade+provisioning'`;",
+															"",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"PUT\");"
 														],
 														"type": "text/javascript"
 													}
@@ -897,9 +968,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=placement:'not_existing:placement'&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'not_existing:placement'&audit=comment:'initial+facade+provisioning'",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -914,7 +985,7 @@
 														},
 														{
 															"key": "audit",
-															"value": "audit=comment:'initial+facade+provisioning'"
+															"value": "comment:'initial+facade+provisioning'"
 														}
 													]
 												},
@@ -927,7 +998,7 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=&audit=",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -1145,14 +1216,38 @@
 													"listen": "test",
 													"script": {
 														"exec": [
-															"pm.test(\"Status code is 200\", function () {",
-															"    pm.response.to.have.status(200);",
-															"});",
+															"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+															"const retryRequest = eval(retryRequestCall.retryRequest);",
 															"",
-															"pm.test(\"Body matches string\", function () {",
-															"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-															"});",
+															"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
+															"",
+															"if(isLocal == false) {",
+															"    var response = pm.response;",
+															"",
+															"    pm.test(\"Assert response\", asyncTest(async function () {",
+															"        if (response.code == 500) {",
+															"            await waitUntil(setTimeout, clearTimeout, async () => {",
+															"                response = await retryRequest();",
+															"                return response.code !== 500;",
+															"            }, \"Retrying until there is facade available \");",
+															"        }",
+															"        pm.expect(response.code).to.eql(200);",
+															"        pm.expect(response.json()).to.eql({\"success\":true});",
+															"    }));",
+															"}",
 															""
+														],
+														"type": "text/javascript"
+													}
+												},
+												{
+													"listen": "prerequest",
+													"script": {
+														"exec": [
+															"const url = `${pm.environment.get(\"baseurl_dc1\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+															"",
+															"pm.environment.set(\"url\", url);",
+															"pm.environment.set(\"method\", \"PUT\");"
 														],
 														"type": "text/javascript"
 													}
@@ -1168,9 +1263,9 @@
 													}
 												],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -1185,7 +1280,7 @@
 														},
 														{
 															"key": "audit",
-															"value": "audit=comment:'initial+facade+provisioning'"
+															"value": "comment:'initial+facade+provisioning'"
 														}
 													]
 												},
@@ -1198,7 +1293,7 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+															"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?options=&audit=",
 															"host": [
 																"{{baseurl_dc1}}"
 															],
@@ -1465,7 +1560,7 @@
 														"method": "PUT",
 														"header": [],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=&audit=",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -1706,7 +1801,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?changeId=&audit=&consistency=STRONG&tag=&tag=&debug=",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -1864,7 +1959,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?changeId=&audit=&consistency=STRONG&tag=&tag=&debug=",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -2016,7 +2111,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?changeId=&audit=&consistency=STRONG&tag=&tag=&debug=",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -2248,7 +2343,7 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}/consistency=STRONG",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?changeId=&audit=&consistency=STRONG&tag=&tag=&debug=",
 																	"host": [
 																		"{{baseurl_dc1}}"
 																	],
@@ -2494,17 +2589,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -2520,7 +2635,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -2537,7 +2652,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -2550,9 +2665,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -2685,15 +2800,15 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
 																		"1",
 																		"_facade",
-																		"{{table}}",
+																		":{{table}}",
 																		"{{key}}"
 																	],
 																	"query": [
@@ -2931,9 +3046,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -3082,17 +3197,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -3108,7 +3243,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -3121,11 +3256,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -3138,9 +3273,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -3271,9 +3406,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -3522,17 +3657,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    const response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.response.to.have.status(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -3548,7 +3703,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -3561,11 +3716,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -3578,9 +3733,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -3708,9 +3863,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -3980,7 +4135,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -3993,11 +4148,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -4010,9 +4165,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -4142,9 +4297,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{able}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -4414,7 +4569,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -4427,11 +4582,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -4444,9 +4599,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -4574,9 +4729,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -4846,7 +5001,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -4859,11 +5014,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -4876,9 +5031,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -5006,9 +5161,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
@@ -5252,17 +5407,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -5278,7 +5453,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -5295,7 +5470,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -5308,9 +5483,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -5438,9 +5613,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -5684,17 +5859,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -5710,7 +5905,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -5723,11 +5918,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -5740,9 +5935,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -5872,9 +6067,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -6118,17 +6313,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -6144,7 +6359,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_eu:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -6157,11 +6372,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_eu:ugc'"
+																	"value": "{{options_eu}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -6174,9 +6389,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -6303,9 +6518,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -6550,17 +6765,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -6576,7 +6811,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -6593,7 +6828,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -6606,9 +6841,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -6747,9 +6982,9 @@
 																"method": "POST",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -6998,17 +7233,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
 																	"if(isLocal == false) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -7024,7 +7279,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7041,7 +7296,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -7054,9 +7309,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -7184,9 +7439,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -7430,17 +7685,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -7456,7 +7731,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=placement:'ugc_us:ugc'&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_us}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7469,11 +7744,11 @@
 															"query": [
 																{
 																	"key": "options",
-																	"value": "placement:'ugc_us:ugc'"
+																	"value": "{{options_us}}"
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -7486,9 +7761,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -7617,9 +7892,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -7863,17 +8138,38 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");",
+																	""
 																],
 																"type": "text/javascript"
 															}
@@ -7889,7 +8185,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -7906,7 +8202,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -7919,9 +8215,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -8049,9 +8345,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -8295,17 +8591,38 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");",
+																	""
 																],
 																"type": "text/javascript"
 															}
@@ -8321,7 +8638,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -8338,7 +8655,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -8351,9 +8668,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -8481,9 +8798,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc1}}"
 																	],
 																	"path": [
 																		"sor",
@@ -8727,17 +9044,37 @@
 															"listen": "test",
 															"script": {
 																"exec": [
+																	"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+																	"const retryRequest = eval(retryRequestCall.retryRequest);",
+																	"",
 																	"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 																	"",
-																	"if(!isLocal) {",
-																	"    pm.test(\"Status code is 200\", function () {",
-																	"        pm.response.to.have.status(200);",
-																	"    });",
+																	"if(isLocal == false) {",
+																	"    var response = pm.response;",
 																	"",
-																	"    pm.test(\"Body matches string\", function () {",
-																	"        pm.expect(pm.response.json()).to.eql({\"success\":true});",
-																	"    });",
+																	"    pm.test(\"Assert response\", asyncTest(async function () {",
+																	"        if (response.code == 500) {",
+																	"            await waitUntil(setTimeout, clearTimeout, async () => {",
+																	"                response = await retryRequest();",
+																	"                return response.code !== 500;",
+																	"            }, \"Retrying until there is facade available \");",
+																	"        }",
+																	"        pm.expect(response.code).to.eql(200);",
+																	"        pm.expect(response.json()).to.eql({\"success\":true});",
+																	"    }));",
 																	"}"
+																],
+																"type": "text/javascript"
+															}
+														},
+														{
+															"listen": "prerequest",
+															"script": {
+																"exec": [
+																	"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+																	"",
+																	"pm.environment.set(\"url\", url);",
+																	"pm.environment.set(\"method\", \"PUT\");"
 																],
 																"type": "text/javascript"
 															}
@@ -8753,7 +9090,7 @@
 															}
 														],
 														"url": {
-															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+															"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 															"host": [
 																"{{baseurl_dc2}}"
 															],
@@ -8770,7 +9107,7 @@
 																},
 																{
 																	"key": "audit",
-																	"value": "audit=comment:'initial+facade+provisioning'"
+																	"value": "comment:'initial+facade+provisioning'"
 																}
 															]
 														},
@@ -8783,9 +9120,9 @@
 																"method": "PUT",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -8915,9 +9252,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -9163,9 +9500,9 @@
 																"method": "DELETE",
 																"header": [],
 																"url": {
-																	"raw": "{{baseUrl}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
+																	"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}/{{key}}?consistency=STRONG",
 																	"host": [
-																		"{{baseUrl}}"
+																		"{{baseurl_dc2}}"
 																	],
 																	"path": [
 																		"sor",
@@ -9864,16 +10201,36 @@
 											"listen": "test",
 											"script": {
 												"exec": [
-													"const isLocal = pm.environment.get(\"baseurl_dc1\").includes('localhost'); ",
+													"const retryRequestCall = JSON.parse(pm.globals.get(\"retryRequestCall\"));",
+													"const retryRequest = eval(retryRequestCall.retryRequest);",
 													"",
-													"(isLocal ? pm.test.skip : pm.test)(\"Status code is 200\", function () {",
-													"    pm.response.to.have.status(200);",
-													"});",
+													"const isLocal = pm.environment.get(\"baseurl_dc2\").includes('localhost');",
 													"",
-													"(isLocal ? pm.test.skip : pm.test)(\"Body matches string\", function () {",
-													"    pm.expect(pm.response.json()).to.eql({\"success\":true});",
-													"});",
+													"",
+													"(isLocal ? pm.test.skip : pm.test)(\"Assert response\", asyncTest(async function () {",
+													"    var response = pm.response;",
+													"    if (response.code == 500) {",
+													"        await waitUntil(setTimeout, clearTimeout, async () => {",
+													"            response = await retryRequest();",
+													"            return response.code !== 500;",
+													"        }, \"Retrying until there is facade available \");",
+													"    }",
+													"    pm.expect(response.code).to.eql(200);",
+													"    pm.expect(response.json()).to.eql({\"success\":true});",
+													"}));",
 													""
+												],
+												"type": "text/javascript"
+											}
+										},
+										{
+											"listen": "prerequest",
+											"script": {
+												"exec": [
+													"const url = `${pm.environment.get(\"baseurl_dc2\")}/sor/1/_facade/${pm.environment.get(\"table\")}?options=${pm.environment.get(\"options_eu\")}&audit=comment:'initial+facade+provisioning'`;",
+													"",
+													"pm.environment.set(\"url\", url);",
+													"pm.environment.set(\"method\", \"PUT\");"
 												],
 												"type": "text/javascript"
 											}
@@ -9889,7 +10246,7 @@
 											}
 										],
 										"url": {
-											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=audit=comment:'initial+facade+provisioning'",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options={{options_eu}}&audit=comment:'initial+facade+provisioning'",
 											"host": [
 												"{{baseurl_dc2}}"
 											],
@@ -9906,7 +10263,7 @@
 												},
 												{
 													"key": "audit",
-													"value": "audit=comment:'initial+facade+provisioning'"
+													"value": "comment:'initial+facade+provisioning'"
 												}
 											]
 										},
@@ -9919,9 +10276,9 @@
 												"method": "PUT",
 												"header": [],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -10032,9 +10389,9 @@
 												"method": "POST",
 												"header": [],
 												"url": {
-													"raw": "{{baseurl_dc1}}/sor/1/_facade/_stream",
+													"raw": "{{baseurl_dc2}}/sor/1/_facade/_stream",
 													"host": [
-														"{{baseurl_dc1}}"
+														"{{baseurl_dc2}}"
 													],
 													"path": [
 														"sor",
@@ -10273,7 +10630,229 @@
 						}
 					]
 				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"const retryRequest = () => {",
+							"    return new Promise((resolve, reject) => {",
+							"        pm.sendRequest({",
+							"            url: `${pm.environment.get(\"url\")}`,",
+							"            method: `${pm.environment.get(\"method\")}`,",
+							"            header: {",
+							"                \"X-BV-API-Key\": pm.environment.get(\"api_key\"),",
+							"                \"Content-Type\": \"application/json\"",
+							"            }",
+							"",
+							"        }, (error, response) => {",
+							"            if (error) {",
+							"                reject(error);",
+							"            }",
+							"            resolve(response);            ",
+							"        });",
+							"    });",
+							"};",
+							"",
+							"const retryRequestCall = {",
+							"    retryRequest: retryRequest.toString()",
+							"};",
+							"",
+							"pm.globals.set(\"retryRequestCall\", JSON.stringify(retryRequestCall));",
+							"pm.environment.set(\"options_eu\", \"placement:'ugc_eu:ugc'\");",
+							"pm.environment.set(\"options_us\", \"placement:'ugc_us:ugc'\");"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							""
+						]
+					}
+				}
 			]
+		},
+		{
+			"name": "Returns Table metadata",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 403\", function () {",
+							"    pm.response.to.have.status(403);",
+							"});",
+							"",
+							"pm.test(\"Body matches string\", function () {",
+							"    pm.expect(pm.response.json()).to.eql({\"reason\":\"not authorized\"});",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-BV-Api-Key",
+						"value": "{{api_key_no_rights}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}/metadata",
+					"host": [
+						"{{baseurl_dc1}}"
+					],
+					"path": [
+						"sor",
+						"1",
+						"_table",
+						"{{table}}",
+						"metadata"
+					],
+					"variable": [
+						{
+							"key": "table",
+							"value": "",
+							"description": "(Required) "
+						}
+					]
+				},
+				"description": "Returns a Table object"
+			},
+			"response": [
+				{
+					"name": "successful operation",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}/metadata",
+							"host": [
+								"{{baseurl_dc1}}"
+							],
+							"path": [
+								"sor",
+								"1",
+								"_table",
+								"{{table}}",
+								"metadata"
+							],
+							"variable": [
+								{
+									"key": "table"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						}
+					],
+					"cookie": [],
+					"body": "{\n \"options\": {\n  \"placement\": \"cupidatat dolor Excepteur\",\n  \"facades\": [\n   {\n    \"placement\": \"laboris magna s\"\n   },\n   {\n    \"placement\": \"minim deserunt\"\n   }\n  ]\n },\n \"template\": {},\n \"name\": \"eiusmod\",\n \"availability\": {\n  \"placement\": \"quis\",\n  \"facade\": false\n }\n}"
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"/**",
+					" * Waits until the given predicate returns a truthy value. Calls and awaits the predicate",
+					" * function at the given interval time. Can be used to poll until a certain condition is true.",
+					" *",
+					" * @example",
+					" * ```js",
+					" * import { fixture, waitUntil } from '@open-wc/testing-helpers';",
+					" *",
+					" * const element = await fixture(html`<my-element></my-element>`);",
+					" *",
+					" * await waitUntil(() => element.someAsyncProperty, 'element should become ready');",
+					" *",
+					"",
+					" *",
+					" * @param {() => boolean | Promise<boolean>} predicate - predicate function which is called each poll interval.",
+					" *   The predicate is awaited, so it can return a promise.",
+					" * @param {string} [message] an optional message to display when the condition timed out",
+					" * @param {{ interval?: number, timeout?: number }} [options] timeout and polling interval",
+					" */",
+					"waitUntil = (setTimeout, clearTimeout, predicate, message, options = {}) => {",
+					"  const { interval = 1000, timeout = 120000 } = options;",
+					"",
+					"  return new Promise((resolve, reject) => {",
+					"    let timeoutId;",
+					"    let failTimeoutId;",
+					"",
+					"    failTimeoutId = setTimeout(() => {",
+					"      clearTimeout(timeoutId);",
+					"      try {",
+					"          pm.expect.fail(message ? `Timeout: ${message}` : `waitUntil timed out after ${timeout}ms`);",
+					"      } catch(err) {",
+					"          reject(err);",
+					"      }",
+					"    }, timeout);",
+					"",
+					"    async function nextInterval() {",
+					"      try {",
+					"        const result = await predicate();",
+					"        if (result) {",
+					"          clearTimeout(failTimeoutId);",
+					"          resolve();",
+					"        } else {",
+					"          timeoutId = setTimeout(function() {",
+					"            nextInterval();",
+					"          }, interval);",
+					"        }",
+					"      } catch (error) {",
+					"        clearTimeout(failTimeoutId);",
+					"        reject(error);",
+					"      }",
+					"    }",
+					"    nextInterval();",
+					"  });",
+					"};",
+					"",
+					"asyncTest = (cb) => {",
+					"    return (done) => {",
+					"        try {",
+					"            cb(done).then(() => done()).catch((err) => done(err));",
+					"        } catch (err) {",
+					"            done(err);",
+					"        }",
+					"    };",
+					"}",
+					"",
+					"delay = (setTimeout, timeInMs) => {",
+					"    return new Promise((resolve) => setTimeout(resolve, timeInMs));",
+					"}",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
 		}
 	]
 }
