@@ -19,7 +19,7 @@ import java.util.List;
  *
  * Modifications to the original code are commented with EMODB-MODIFICATION.
  */
-public class EmoUriComponent2 {
+public class EmoUriComponent {
 
     // TODO rewrite to use masks and not lookup tables
 
@@ -78,7 +78,7 @@ public class EmoUriComponent2 {
         FRAGMENT,
     }
 
-    private EmoUriComponent2() {
+    private EmoUriComponent() {
     }
 
     /**
@@ -502,7 +502,7 @@ public class EmoUriComponent2 {
      */
     public static MultivaluedMap<String, String> decodeQuery(String q, boolean decodeNames, boolean decodeValues) {
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        MultivaluedMap<String, String> queryParameters = EmoMultivaluedMap2.create();
+        MultivaluedMap<String, String> queryParameters = EmoMultivaluedMap.create();
 
         if (q == null || q.length() == 0) {
             return queryParameters;
@@ -553,11 +553,11 @@ public class EmoUriComponent2 {
 
         PathSegmentImpl(String path, boolean decode) {
             // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-            this(path, decode, EmoMultivaluedMap2.<String, String>create());
+            this(path, decode, EmoMultivaluedMap.<String, String>create());
         }
 
         PathSegmentImpl(String path, boolean decode, MultivaluedMap<String, String> matrixParameters) {
-            this.path = (decode) ? EmoUriComponent2.decode(path, EmoUriComponent2.Type.PATH_SEGMENT) : path;
+            this.path = (decode) ? EmoUriComponent.decode(path, EmoUriComponent.Type.PATH_SEGMENT) : path;
             this.matrixParameters = matrixParameters;
         }
 
@@ -669,7 +669,7 @@ public class EmoUriComponent2 {
      */
     public static MultivaluedMap<String, String> decodeMatrix(String pathSegment, boolean decode) {
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        MultivaluedMap<String, String> matrixMap = EmoMultivaluedMap2.create();
+        MultivaluedMap<String, String> matrixMap = EmoMultivaluedMap.create();
 
         // Skip over path segment
         int s = pathSegment.indexOf(';') + 1;
@@ -697,14 +697,14 @@ public class EmoUriComponent2 {
         int equals = param.indexOf('=');
         if (equals > 0) {
             params.add(
-                    EmoUriComponent2.decode(param.substring(0, equals), EmoUriComponent2.Type.MATRIX_PARAM),
-                    (decode) ? EmoUriComponent2.decode(param.substring(equals + 1), EmoUriComponent2.Type.MATRIX_PARAM) : param
+                    EmoUriComponent.decode(param.substring(0, equals), EmoUriComponent.Type.MATRIX_PARAM),
+                    (decode) ? EmoUriComponent.decode(param.substring(equals + 1), EmoUriComponent.Type.MATRIX_PARAM) : param
                             .substring(equals + 1));
         } else if (equals == 0) {
             // no key declared, ignore
         } else if (param.length() > 0) {
             params.add(
-                    EmoUriComponent2.decode(param, EmoUriComponent2.Type.MATRIX_PARAM),
+                    EmoUriComponent.decode(param, EmoUriComponent.Type.MATRIX_PARAM),
                     "");
         }
     }

@@ -15,7 +15,7 @@ import java.util.Iterator;
 /**
  * Helper class for reading entity responses from the EmoDB API.
  */
-abstract public class EntityHelper2 {
+abstract public class EntityHelper {
 
     /**
      * Reads the entity input stream and deserializes the JSON content to the given class.

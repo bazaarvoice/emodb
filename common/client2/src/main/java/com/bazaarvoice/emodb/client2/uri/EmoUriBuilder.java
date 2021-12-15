@@ -29,7 +29,7 @@ import java.util.Map;
  *
  * Modifications to the original code are commented with EMODB-MODIFICATION.
  */
-public class EmoUriBuilder2 extends UriBuilder {
+public class EmoUriBuilder extends UriBuilder {
 
     // All fields should be in the percent-encoded form
     private String scheme;
@@ -44,12 +44,12 @@ public class EmoUriBuilder2 extends UriBuilder {
     private MultivaluedMap<String, String> queryParams;
     private String fragment;
 
-    public EmoUriBuilder2() {
+    public EmoUriBuilder() {
         path = new StringBuilder();
         query = new StringBuilder();
     }
 
-    private EmoUriBuilder2(EmoUriBuilder2 that) {
+    private EmoUriBuilder(EmoUriBuilder that) {
         this.scheme = that.scheme;
         this.ssp = that.ssp;
         this.authority = that.authority;
@@ -58,16 +58,16 @@ public class EmoUriBuilder2 extends UriBuilder {
         this.port = that.port;
         this.path = new StringBuilder(that.path);
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        this.matrixParams = that.matrixParams == null ? null : EmoMultivaluedMap2.copy(that.matrixParams);
+        this.matrixParams = that.matrixParams == null ? null : EmoMultivaluedMap.copy(that.matrixParams);
         this.query = new StringBuilder(that.query);
         // EMODB-MODIFICATION Replaced with EmoMultivaluedMap implementation
-        this.queryParams = that.queryParams == null ? null : EmoMultivaluedMap2.copy(that.queryParams);
+        this.queryParams = that.queryParams == null ? null : EmoMultivaluedMap.copy(that.queryParams);
         this.fragment = that.fragment;
     }
 
     @Override
-    public EmoUriBuilder2 clone() {
-        return new EmoUriBuilder2(this);
+    public EmoUriBuilder clone() {
+        return new EmoUriBuilder(this);
     }
 
     /**
@@ -76,7 +76,7 @@ public class EmoUriBuilder2 extends UriBuilder {
      * {@link UriBuilder#fromUri(URI)}.
      */
     public static UriBuilder fromUri(URI uri) {
-        return new EmoUriBuilder2().uri(uri);
+        return new EmoUriBuilder().uri(uri);
     }
 
     /**
@@ -85,7 +85,7 @@ public class EmoUriBuilder2 extends UriBuilder {
      * {@link UriBuilder#fromUri(String)}.
      */
     public static UriBuilder fromUri(String uri) {
-        return new EmoUriBuilder2().uri(URI.create(uri));
+        return new EmoUriBuilder().uri(URI.create(uri));
     }
 
     @Override
@@ -151,14 +151,14 @@ public class EmoUriBuilder2 extends UriBuilder {
 
     @Override
     public UriBuilder uri(String uri) {
-        return new EmoUriBuilder2().uri(URI.create(uri));
+        return new EmoUriBuilder().uri(URI.create(uri));
     }
 
     @Override
     public UriBuilder scheme(String scheme) {
         if (scheme != null) {
             this.scheme = scheme;
-            EmoUriComponent2.validate(scheme, EmoUriComponent2.Type.SCHEME, true);
+            EmoUriComponent.validate(scheme, EmoUriComponent.Type.SCHEME, true);
         } else {
             this.scheme = null;
         }
@@ -217,7 +217,7 @@ public class EmoUriBuilder2 extends UriBuilder {
     public UriBuilder userInfo(String ui) {
         checkSsp();
         this.userInfo = (ui != null)
-                ? encode(ui, EmoUriComponent2.Type.USER_INFO) : null;
+                ? encode(ui, EmoUriComponent.Type.USER_INFO) : null;
         return this;
     }
 
@@ -229,7 +229,7 @@ public class EmoUriBuilder2 extends UriBuilder {
             {
                 throw new IllegalArgumentException("Invalid host name");
             }
-            this.host = encode(host, EmoUriComponent2.Type.HOST);
+            this.host = encode(host, EmoUriComponent.Type.HOST);
         } else {
             this.host = null;
         }
@@ -360,7 +360,7 @@ public class EmoUriBuilder2 extends UriBuilder {
         }
 
         if (matrix != null) {
-            path.append(encode(matrix, EmoUriComponent2.Type.PATH));
+            path.append(encode(matrix, EmoUriComponent.Type.PATH));
         }
         return this;
     }
@@ -378,7 +378,7 @@ public class EmoUriBuilder2 extends UriBuilder {
             return this;
         }
 
-        name = encode(name, EmoUriComponent2.Type.MATRIX_PARAM);
+        name = encode(name, EmoUriComponent.Type.MATRIX_PARAM);
         if (matrixParams == null) {
             for (Object value : values) {
                 path.append(';').append(name);
@@ -389,7 +389,7 @@ public class EmoUriBuilder2 extends UriBuilder {
 
                 final String stringValue = value.toString();
                 if (stringValue.length() > 0) {
-                    path.append('=').append(encode(stringValue, EmoUriComponent2.Type.MATRIX_PARAM));
+                    path.append('=').append(encode(stringValue, EmoUriComponent.Type.MATRIX_PARAM));
                 }
             }
         } else {
@@ -398,7 +398,7 @@ public class EmoUriBuilder2 extends UriBuilder {
                     throw new IllegalArgumentException("One or more of matrix value parameters are null");
                 }
 
-                matrixParams.add(name, encode(value.toString(), EmoUriComponent2.Type.MATRIX_PARAM));
+                matrixParams.add(name, encode(value.toString(), EmoUriComponent.Type.MATRIX_PARAM));
             }
         }
         return this;
@@ -417,14 +417,14 @@ public class EmoUriBuilder2 extends UriBuilder {
             if (i != -1) {
                 i = 0;
             }
-            matrixParams = EmoUriComponent2.decodeMatrix((i != -1) ? path.substring(i) : "", false);
+            matrixParams = EmoUriComponent.decodeMatrix((i != -1) ? path.substring(i) : "", false);
             i = path.indexOf(";", i);
             if (i != -1) {
                 path.setLength(i);
             }
         }
 
-        name = encode(name, EmoUriComponent2.Type.MATRIX_PARAM);
+        name = encode(name, EmoUriComponent.Type.MATRIX_PARAM);
         matrixParams.remove(name);
         if (values != null) {
             for (Object value : values) {
@@ -432,7 +432,7 @@ public class EmoUriBuilder2 extends UriBuilder {
                     throw new IllegalArgumentException("One or more of matrix value parameters are null");
                 }
 
-                matrixParams.add(name, encode(value.toString(), EmoUriComponent2.Type.MATRIX_PARAM));
+                matrixParams.add(name, encode(value.toString(), EmoUriComponent.Type.MATRIX_PARAM));
             }
         }
         return this;
@@ -443,7 +443,7 @@ public class EmoUriBuilder2 extends UriBuilder {
         checkSsp();
         this.query.setLength(0);
         if (query != null) {
-            this.query.append(encode(query, EmoUriComponent2.Type.QUERY));
+            this.query.append(encode(query, EmoUriComponent.Type.QUERY));
         }
         return this;
     }
@@ -461,7 +461,7 @@ public class EmoUriBuilder2 extends UriBuilder {
             return this;
         }
 
-        name = encode(name, EmoUriComponent2.Type.QUERY_PARAM);
+        name = encode(name, EmoUriComponent.Type.QUERY_PARAM);
         if (queryParams == null) {
             for (Object value : values) {
                 if (query.length() > 0) {
@@ -473,7 +473,7 @@ public class EmoUriBuilder2 extends UriBuilder {
                     throw new IllegalArgumentException("One or more of query value parameters are null");
                 }
 
-                query.append('=').append(encode(value.toString(), EmoUriComponent2.Type.QUERY_PARAM));
+                query.append('=').append(encode(value.toString(), EmoUriComponent.Type.QUERY_PARAM));
             }
         } else {
             for (Object value : values) {
@@ -481,7 +481,7 @@ public class EmoUriBuilder2 extends UriBuilder {
                     throw new IllegalArgumentException("One or more of query value parameters are null");
                 }
 
-                queryParams.add(name, encode(value.toString(), EmoUriComponent2.Type.QUERY_PARAM));
+                queryParams.add(name, encode(value.toString(), EmoUriComponent.Type.QUERY_PARAM));
             }
         }
         return this;
@@ -492,11 +492,11 @@ public class EmoUriBuilder2 extends UriBuilder {
         checkSsp();
 
         if (queryParams == null) {
-            queryParams = EmoUriComponent2.decodeQuery(query.toString(), false);
+            queryParams = EmoUriComponent.decodeQuery(query.toString(), false);
             query.setLength(0);
         }
 
-        name = encode(name, EmoUriComponent2.Type.QUERY_PARAM);
+        name = encode(name, EmoUriComponent.Type.QUERY_PARAM);
         queryParams.remove(name);
 
         if (values == null) {
@@ -508,7 +508,7 @@ public class EmoUriBuilder2 extends UriBuilder {
                 throw new IllegalArgumentException("One or more of query value parameters are null");
             }
 
-            queryParams.add(name, encode(value.toString(), EmoUriComponent2.Type.QUERY_PARAM));
+            queryParams.add(name, encode(value.toString(), EmoUriComponent.Type.QUERY_PARAM));
         }
         return this;
     }
@@ -516,7 +516,7 @@ public class EmoUriBuilder2 extends UriBuilder {
     @Override
     public UriBuilder fragment(String fragment) {
         this.fragment = (fragment != null)
-                ? encode(fragment, EmoUriComponent2.Type.FRAGMENT)
+                ? encode(fragment, EmoUriComponent.Type.FRAGMENT)
                 : null;
         return this;
     }
@@ -581,7 +581,7 @@ public class EmoUriBuilder2 extends UriBuilder {
         encodeMatrix();
 
         segments = encode(segments,
-                (isSegment) ? EmoUriComponent2.Type.PATH_SEGMENT : EmoUriComponent2.Type.PATH);
+                (isSegment) ? EmoUriComponent.Type.PATH_SEGMENT : EmoUriComponent.Type.PATH);
 
         final boolean pathEndsInSlash = path.length() > 0 && path.charAt(path.length() - 1) == '/';
         final boolean segmentStartsWithSlash = segments.charAt(0) == '/';
@@ -634,10 +634,10 @@ public class EmoUriBuilder2 extends UriBuilder {
         queryParams = null;
     }
 
-    private String encode(String s, EmoUriComponent2.Type type) {
+    private String encode(String s, EmoUriComponent.Type type) {
         // EMODB-MODIFICATION:
         // return EmoUriComponent.contextualEncode(s, type, true);
-        return EmoUriComponent2.encode(s, type, false);
+        return EmoUriComponent.encode(s, type, false);
     }
 
 
@@ -752,7 +752,7 @@ public class EmoUriBuilder2 extends UriBuilder {
             sb.append('#').append(fragment);
         }
 
-        return EmoUriComponent2.encodeTemplateNames(sb.toString());
+        return EmoUriComponent.encodeTemplateNames(sb.toString());
     }
 
     private URI createURI(String uri) {

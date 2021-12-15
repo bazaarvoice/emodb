@@ -7,27 +7,27 @@ import javax.ws.rs.core.MediaType;
 /**
  * Defines the fluent interface for making API resource requests to the EmoDB service.
  */
-public interface EmoResource2 {
+public interface EmoResource {
 
     // The following two methods -- queryParam() and path() -- must be called prior to any other calls in this interface.
 
     /** Adds a query parameter to the request. */
-    EmoResource2 queryParam(String key, String value);
+    EmoResource queryParam(String key, String value);
 
     /** Appends the path element to the request path */
-    EmoResource2 path(String path);
+    EmoResource path(String path);
 
     /** Adds a header to the request. */
-    EmoResource2 header(String header, Object value);
+    EmoResource header(String header, Object value);
 
     /** Sets the media type for the request. */
-    EmoResource2 type(MediaType mediaType);
+    EmoResource type(MediaType mediaType);
 
     /** Adds an accepted response media type to the request. */
-    EmoResource2 accept(MediaType mediaType);
+    EmoResource accept(MediaType mediaType);
 
     /** Performs a HEAD request. */
-    EmoResponse2 head();
+    EmoResponse head();
 
     /** Performs a GET request and transforms the response entity to the given type. */
     <T> T get(Class<T> clazz);

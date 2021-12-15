@@ -7,10 +7,10 @@ import java.net.URI;
  * fluent API similar to that used by Jersey Client, although without a dependency on Jersey or any other
  * HTTP client implementation.
  */
-public interface EmoClient2 {
+public interface EmoClient {
 
     /**
      * Starts a request to the resource at the provided URI.
      */
-    EmoResource2 resource(URI uri);
+    EmoResource resource(URI uri);
 }

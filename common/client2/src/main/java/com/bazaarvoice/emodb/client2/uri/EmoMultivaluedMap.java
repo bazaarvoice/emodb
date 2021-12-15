@@ -13,23 +13,23 @@ import java.util.*;
 /**
  * Implementation of MultivaludedMap that has no dependencies on Jersey.
  */
-public class EmoMultivaluedMap2<K, V> implements MultivaluedMap<K, V>{
+public class EmoMultivaluedMap<K, V> implements MultivaluedMap<K, V>{
 
     private final ListMultimap<K, V> _map;
 
-    public static <K, V> EmoMultivaluedMap2<K, V> create() {
-        return new EmoMultivaluedMap2<>();
+    public static <K, V> EmoMultivaluedMap<K, V> create() {
+        return new EmoMultivaluedMap<>();
     }
 
-    public static <K, V> EmoMultivaluedMap2<K, V> copy(MultivaluedMap<K, V> other) {
-        EmoMultivaluedMap2<K, V> map = new EmoMultivaluedMap2<>();
+    public static <K, V> EmoMultivaluedMap<K, V> copy(MultivaluedMap<K, V> other) {
+        EmoMultivaluedMap<K, V> map = new EmoMultivaluedMap<>();
         for (Map.Entry<K, List<V>> entry : other.entrySet()) {
             map.put(entry.getKey(), entry.getValue());
         }
         return map;
     }
 
-    private EmoMultivaluedMap2() {
+    private EmoMultivaluedMap() {
         _map = ArrayListMultimap.create();
     }
 

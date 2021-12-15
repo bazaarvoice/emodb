@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * Response class that can be returned as the entity for a API requests.
  */
-public interface EmoResponse2 {
+public interface EmoResponse {
 
     /** Returns the HTTP status of the request, such as 200. */
     int getStatus();
