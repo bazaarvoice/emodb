@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "fe6e6720-5102-4158-8de2-c086df4b7015",
+		"_postman_id": "c3c311f0-75cb-4dde-9cb2-e4929c1b5c1d",
 		"name": "EmoDB_Tests_sor_imports_arbitary_size",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -96,7 +96,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?&consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -219,7 +219,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -340,7 +340,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -469,7 +469,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -585,7 +585,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -683,7 +683,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -807,7 +807,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -923,7 +923,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1021,7 +1021,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1145,7 +1145,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1267,7 +1267,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1489,7 +1489,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1611,7 +1611,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc2}}"
 											],
@@ -1727,7 +1727,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1?consistency=STRONG>",
+											"raw": "{{baseurl_dc1}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1825,7 +1825,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -1951,7 +1951,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -2073,7 +2073,7 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}?options=&audit=",
 											"host": [
 												"{{baseurl_dc2}}"
 											],
@@ -2191,7 +2191,7 @@
 										"method": "POST",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc2}}/sor/1?consistency=STRONG",
+											"raw": "{{baseurl_dc2}}/sor/1?changeId=&audit=&consistency=STRONG&facade=",
 											"host": [
 												"{{baseurl_dc2}}"
 											],
@@ -2291,7 +2291,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}?audit=",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
