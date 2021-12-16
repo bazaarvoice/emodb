@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.common.jersey2;
 
-import com.bazaarvoice.emodb.client.EmoResponse;
-import com.bazaarvoice.emodb.client.EntityHelper;
+import com.bazaarvoice.emodb.client2.EmoResponse;
+import com.bazaarvoice.emodb.client2.EntityHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import javax.ws.rs.core.MediaType;

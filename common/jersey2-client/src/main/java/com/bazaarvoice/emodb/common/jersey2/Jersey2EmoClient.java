@@ -1,7 +1,7 @@
 package com.bazaarvoice.emodb.common.jersey2;
 
-import com.bazaarvoice.emodb.client.EmoClient;
-import com.bazaarvoice.emodb.client.EmoResource;
+import com.bazaarvoice.emodb.client2.EmoClient;
+import com.bazaarvoice.emodb.client2.EmoResource;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 
 import javax.ws.rs.client.Client;
