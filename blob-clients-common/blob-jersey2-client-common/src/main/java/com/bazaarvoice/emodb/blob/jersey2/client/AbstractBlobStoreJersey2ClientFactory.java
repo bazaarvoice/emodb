@@ -2,8 +2,8 @@ package com.bazaarvoice.emodb.blob.jersey2.client;
 
 import com.bazaarvoice.emodb.blob.api.AuthBlobStore;
 import com.bazaarvoice.emodb.blob.api.BlobStore;
-import com.bazaarvoice.emodb.client.EmoClient;
-import com.bazaarvoice.emodb.client.EmoClientException;
+import com.bazaarvoice.emodb.client2.EmoClient;
+import com.bazaarvoice.emodb.client2.EmoClientException;
 import com.bazaarvoice.emodb.common.json.JsonStreamingEOFException;
 
 import java.io.Serializable;

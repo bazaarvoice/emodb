@@ -1,9 +1,9 @@
 package com.bazaarvoice.emodb.common.jersey2;
 
-import com.bazaarvoice.emodb.client.EmoClientException;
-import com.bazaarvoice.emodb.client.EmoResource;
-import com.bazaarvoice.emodb.client.EmoResponse;
-import com.bazaarvoice.emodb.client.EntityHelper;
+import com.bazaarvoice.emodb.client2.EmoClientException;
+import com.bazaarvoice.emodb.client2.EmoResource;
+import com.bazaarvoice.emodb.client2.EmoResponse;
+import com.bazaarvoice.emodb.client2.EntityHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
