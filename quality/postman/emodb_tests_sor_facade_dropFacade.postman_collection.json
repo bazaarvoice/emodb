@@ -41,7 +41,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_facade/not_existing_table?audit=<string>&placement=<string>",
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/not_existing_table",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -54,11 +54,11 @@
 									"query": [
 										{
 											"key": "audit",
-											"value": "<string>"
+											"value": ""
 										},
 										{
 											"key": "placement",
-											"value": "<string>"
+											"value": ""
 										}
 									]
 								},
@@ -71,24 +71,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -146,7 +146,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?audit=comment:'facade+deletion'",
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?audit=comment:'facade+deletion'",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -154,7 +154,7 @@
 										"sor",
 										"1",
 										"_facade",
-										":table"
+										"{{table}}"
 									],
 									"query": [
 										{
@@ -163,14 +163,14 @@
 										},
 										{
 											"key": "placement",
-											"value": "<string>",
+											"value": "",
 											"disabled": true
 										}
 									],
 									"variable": [
 										{
 											"key": "table",
-											"value": "<string>",
+											"value": "",
 											"description": "(Required) "
 										}
 									]
@@ -184,24 +184,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -259,7 +259,7 @@
 									}
 								],
 								"url": {
-									"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?placement=ugc_global:ugc",
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}?placement=ugc_global:ugc",
 									"host": [
 										"{{baseurl_dc1}}"
 									],
@@ -267,7 +267,7 @@
 										"sor",
 										"1",
 										"_facade",
-										":table"
+										"{{table}}"
 									],
 									"query": [
 										{
@@ -283,7 +283,7 @@
 									"variable": [
 										{
 											"key": "table",
-											"value": "<string>",
+											"value": "",
 											"description": "(Required) "
 										}
 									]
@@ -297,24 +297,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc1}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -488,24 +488,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -592,24 +592,24 @@
 										"method": "PUT",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?options=<string>&audit=<string>",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "options",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -696,24 +696,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -882,24 +882,24 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+											"raw": "{{baseurl_dc2}}/sor/1/_facade/{{table}}",
 											"host": [
-												"{{baseUrl}}"
+												"{{baseurl_dc2}}"
 											],
 											"path": [
 												"sor",
 												"1",
 												"_facade",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												},
 												{
 													"key": "placement",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -982,7 +982,7 @@
 										"method": "DELETE",
 										"header": [],
 										"url": {
-											"raw": "{{baseurl_dc1}}/sor/1/_table/:table?audit=<string>",
+											"raw": "{{baseurl_dc1}}/sor/1/_table/{{table}}",
 											"host": [
 												"{{baseurl_dc1}}"
 											],
@@ -990,12 +990,12 @@
 												"sor",
 												"1",
 												"_table",
-												":table"
+												"{{table}}"
 											],
 											"query": [
 												{
 													"key": "audit",
-													"value": "<string>"
+													"value": ""
 												}
 											],
 											"variable": [
@@ -1027,7 +1027,7 @@
 						"method": "DELETE",
 						"header": [],
 						"url": {
-							"raw": "{{baseurl_dc1}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+							"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 							"host": [
 								"{{baseurl_dc1}}"
 							],
@@ -1035,22 +1035,22 @@
 								"sor",
 								"1",
 								"_facade",
-								":table"
+								"{{table}}"
 							],
 							"query": [
 								{
 									"key": "audit",
-									"value": "<string>"
+									"value": ""
 								},
 								{
 									"key": "placement",
-									"value": "<string>"
+									"value": ""
 								}
 							],
 							"variable": [
 								{
 									"key": "table",
-									"value": "<string>",
+									"value": "",
 									"description": "(Required) "
 								}
 							]
@@ -1064,24 +1064,24 @@
 								"method": "DELETE",
 								"header": [],
 								"url": {
-									"raw": "{{baseUrl}}/sor/1/_facade/:table?audit=<string>&placement=<string>",
+									"raw": "{{baseurl_dc1}}/sor/1/_facade/{{table}}",
 									"host": [
-										"{{baseUrl}}"
+										"{{baseurl_dc1}}"
 									],
 									"path": [
 										"sor",
 										"1",
 										"_facade",
-										":table"
+										"{{table}}"
 									],
 									"query": [
 										{
 											"key": "audit",
-											"value": "<string>"
+											"value": ""
 										},
 										{
 											"key": "placement",
-											"value": "<string>"
+											"value": ""
 										}
 									],
 									"variable": [
