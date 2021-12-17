@@ -17,7 +17,7 @@
     <dependencies>
         <dependency>
             <groupId>com.bazaarvoice.emodb</groupId>
-            <artifactId>emodb-common-client</artifactId>
+            <artifactId>emodb-common-client2</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
