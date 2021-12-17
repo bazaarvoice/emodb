@@ -9,10 +9,10 @@ import com.bazaarvoice.emodb.uac.api.EmoRoleKey;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoApiKeyRequest;
 import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 import com.bazaarvoice.emodb.uac.api.UserAccessControl;
-import com.beust.jcommander.internal.Sets;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

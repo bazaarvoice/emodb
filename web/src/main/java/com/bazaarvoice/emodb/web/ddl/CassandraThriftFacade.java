@@ -6,7 +6,7 @@ import org.apache.cassandra.thrift.Cassandra;
 import org.apache.cassandra.thrift.Compression;
 import org.apache.cassandra.thrift.ConsistencyLevel;
 import org.apache.cassandra.thrift.KsDef;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.transport.TFramedTransport;
 import org.apache.thrift.transport.TSocket;
@@ -20,7 +20,9 @@ import java.nio.ByteBuffer;
 final class CassandraThriftFacade implements Closeable {
     private static final Logger _log = LoggerFactory.getLogger(CassandraThriftFacade.class);
 
-    /** Note: <code>seeds</code> may be a single host or comma-delimited list. */
+    /**
+     * Note: <code>seeds</code> may be a single host or comma-delimited list.
+     */
     public static CassandraThriftFacade forSeedsAndPort(String seeds, int defaultPort) {
         final String seed = seeds.contains(",") ? seeds.substring(0, seeds.indexOf(',')) : seeds;
         HostAndPort host = HostAndPort.fromString(seed).withDefaultPort(defaultPort);
