@@ -76,7 +76,7 @@ import io.swagger.jaxrs.config.BeanConfig;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.Namespace;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -246,7 +246,7 @@ public class EmoService extends Application<EmoConfiguration> {
         DataStoreAsync dataStoreAsync = _injector.getInstance(DataStoreAsync.class);
         CompactionControlSource compactionControlSource = _injector.getInstance(Key.get(CompactionControlSource.class, LocalCompactionControl.class));
         DataStoreUpdateThrottler updateThrottle = _injector.getInstance(DataStoreUpdateThrottler.class);
-        
+
         // Start the System Of Record service
         resources.addResource(_cluster, "emodb-sor-1", new DataStoreResource1(dataStore, dataStoreAsync, compactionControlSource, updateThrottle));
     }
@@ -411,7 +411,7 @@ public class EmoService extends Application<EmoConfiguration> {
         BeanConfig beanConfig = new BeanConfig();
         beanConfig.setVersion("1.0");
         beanConfig.setTitle("EMO REST Resources");
-        beanConfig.setSchemes(new String[] {"http"});
+        beanConfig.setSchemes(new String[]{"http"});
         beanConfig.setHost("localhost:8080");
         beanConfig.setBasePath("/");
         // add the packages that swagger should scan to pick up the resources
@@ -436,7 +436,7 @@ public class EmoService extends Application<EmoConfiguration> {
         resources.addResource(_cluster, "emodb-uac-1", authResource);
     }
 
-    private boolean runPerServiceMode (EmoServiceMode.Aspect aspect) {
+    private boolean runPerServiceMode(EmoServiceMode.Aspect aspect) {
         if (_serviceMode.specifies(aspect)) {
             _log.info("running {}", aspect);
             return true;

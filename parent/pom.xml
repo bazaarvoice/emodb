@@ -33,7 +33,8 @@
         <dropwizard.version>0.7.1</dropwizard.version>
         <guava.version>18.0</guava.version>
         <guice.version>4.0</guice.version>
-        <jackson.version>2.6.7.2</jackson.version>
+        <jackson.version>2.6.7.4</jackson.version>
+        <jetty.version>9.0.7.v20131107</jetty.version>
         <jna.version>4.1.0</jna.version>
         <org.codehaus.jackson.version>1.9.13</org.codehaus.jackson.version>
         <metrics.version>3.0.2</metrics.version>
@@ -49,6 +50,7 @@
         <shiro.version>1.7.0</shiro.version>
         <cassandra.driver.version>3.1.4</cassandra.driver.version>
         <kafka.version>2.8.0</kafka.version>
+        <swagger.version>1.5.8</swagger.version>
         <jaxb.version>2.3.1</jaxb.version>
         <nexus.autoReleaseAfterClose>true</nexus.autoReleaseAfterClose>
         <skipDependencyChecks>true</skipDependencyChecks>
@@ -210,37 +212,16 @@
                 <groupId>com.bazaarvoice.astyanax</groupId>
                 <artifactId>astyanax-cassandra</artifactId>
                 <version>${astyanax.version}</version>
-                <exclusions>
-                    <!-- Astyanax includes the entirety of Cassandra.  Ignore it and specify a specific version of Cassandra separately. -->
-                    <exclusion>
-                        <groupId>org.apache.cassandra</groupId>
-                        <artifactId>cassandra-all</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.astyanax</groupId>
                 <artifactId>astyanax-core</artifactId>
                 <version>${astyanax.version}</version>
-                <exclusions>
-                    <!-- Astyanax includes the entirety of Cassandra.  Ignore it and specify a specific version of Cassandra separately. -->
-                    <exclusion>
-                        <groupId>org.apache.cassandra</groupId>
-                        <artifactId>cassandra-all</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.bazaarvoice.astyanax</groupId>
                 <artifactId>astyanax-thrift</artifactId>
                 <version>${astyanax.version}</version>
-                <exclusions>
-                    <!-- Astyanax includes the entirety of Cassandra.  Ignore it and specify a specific version of Cassandra separately. -->
-                    <exclusion>
-                        <groupId>org.apache.cassandra</groupId>
-                        <artifactId>cassandra-all</artifactId>
-                    </exclusion>
-                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.codehaus.jackson</groupId>
@@ -295,6 +276,11 @@
             </dependency>
             <dependency>
                 <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-metrics</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-servlets</artifactId>
                 <version>${dropwizard.version}</version>
             </dependency>
@@ -307,6 +293,26 @@
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-jersey</artifactId>
                 <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-jetty</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-jaxrs</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.sourceforge.argparse4j</groupId>
+                <artifactId>argparse4j</artifactId>
+                <version>0.4.3</version>
             </dependency>
             <dependency>
                 <groupId>org.coursera</groupId>
@@ -398,6 +404,41 @@
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
                 <version>3.8.1</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty.orbit</groupId>
+                <artifactId>javax.servlet</artifactId>
+                <version>3.0.0.v201112011016</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-http</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-io</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-security</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-server</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-servlet</artifactId>
+                <version>${jetty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+                <version>${jetty.version}</version>
             </dependency>
             <dependency>
                 <groupId>javax.validation</groupId>
@@ -531,11 +572,6 @@
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
-                <artifactId>aws-java-sdk-ec2</artifactId>
-                <version>${aws-sdk.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk-s3</artifactId>
                 <version>${aws-sdk.version}</version>
             </dependency>
@@ -611,6 +647,11 @@
                 <version>${jersey.version}</version>
             </dependency>
             <dependency>
+                <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-server</artifactId>
+                <version>${jersey.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.shiro</groupId>
                 <artifactId>shiro-core</artifactId>
                 <version>${shiro.version}</version>
@@ -620,6 +661,12 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>connect-json</artifactId>
                 <version>${kafka.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>javax.ws.rs</groupId>
+                        <artifactId>javax.ws.rs-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
