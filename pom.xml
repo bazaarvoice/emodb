@@ -6,7 +6,7 @@
     <parent>
         <groupId>com.bazaarvoice.emodb</groupId>
         <artifactId>emodb-parent</artifactId>
-        <version>6.5.4-SNAPSHOT</version>
+        <version>6.5.6-SNAPSHOT</version>
         <relativePath>parent/pom.xml</relativePath>
     </parent>
 
@@ -31,6 +31,7 @@
         <module>common/zookeeper</module>
         <module>common/stash</module>
         <module>common/client</module>
+        <module>common/client2</module>
         <module>common/jersey-client</module>
         <module>common/jersey2-client</module>
         <module>auth/auth-client</module>

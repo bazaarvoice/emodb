@@ -4,11 +4,10 @@ import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.kafka.KafkaCluster;
 import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.codahale.metrics.health.HealthCheck;
+import com.google.inject.Inject;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.common.utils.AppInfoParser;
 
-
-import javax.inject.Inject;
 import java.util.Collection;
 
 import static java.util.Objects.requireNonNull;

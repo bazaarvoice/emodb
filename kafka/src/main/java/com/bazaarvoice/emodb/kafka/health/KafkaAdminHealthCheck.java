@@ -4,12 +4,12 @@ import com.bazaarvoice.emodb.common.dropwizard.healthcheck.HealthCheckRegistry;
 import com.bazaarvoice.emodb.kafka.BootstrapServers;
 import com.bazaarvoice.emodb.kafka.KafkaConfiguration;
 import com.codahale.metrics.health.HealthCheck;
+import com.google.inject.Inject;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.DescribeClusterResult;
 import org.apache.kafka.common.Node;
 import org.apache.kafka.common.utils.AppInfoParser;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
