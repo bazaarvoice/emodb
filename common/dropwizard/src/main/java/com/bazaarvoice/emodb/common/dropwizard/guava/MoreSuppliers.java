@@ -8,7 +8,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Extension of {@link Suppliers}.
@@ -59,8 +59,8 @@ public final class MoreSuppliers {
         RandomExpirationSupplier(Supplier<T> delegate, long minDuration, long maxDuration, TimeUnit timeUnit) {
             checkArgument(minDuration >= 0, "minDuration cannot be negative");
             checkArgument(maxDuration > minDuration, "maxDuration must be greater than minDuration");
-            checkNotNull(delegate, "delegate");
-            checkNotNull(timeUnit, "timeUnit");
+            requireNonNull(delegate, "delegate");
+            requireNonNull(timeUnit, "timeUnit");
 
             long minDurationNanos = timeUnit.toNanos(minDuration);
             long maxDurationNanos = timeUnit.toNanos(maxDuration);

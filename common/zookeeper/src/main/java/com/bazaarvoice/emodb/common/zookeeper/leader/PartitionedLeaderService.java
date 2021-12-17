@@ -24,7 +24,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * There are circumstances where a service has multiple partitions and it is desirable to balance the workers for these
@@ -84,7 +84,7 @@ public class PartitionedLeaderService implements Managed {
     }
 
     final protected void setServiceFactory(PartitionedServiceSupplier serviceFactory) {
-        checkNotNull(serviceFactory, "serviceFactory");
+        requireNonNull(serviceFactory, "serviceFactory");
         if (_serviceFactory != null) {
             throw new IllegalStateException("Service factory has already been set");
         }

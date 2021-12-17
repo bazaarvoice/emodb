@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.auth.identity;
 import com.bazaarvoice.emodb.auth.DataCenterSynchronizer;
 import org.apache.curator.framework.CuratorFramework;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Identity manager implementation which synchronizes mutative identity updates in the current data center to prevent
@@ -17,7 +17,7 @@ public class DataCenterSynchronizedAuthIdentityManager<T extends AuthIdentity> i
     private final DataCenterSynchronizer _synchronizer;
 
     public DataCenterSynchronizedAuthIdentityManager(AuthIdentityManager<T> delegate, CuratorFramework curator) {
-        _delegate = checkNotNull(delegate, "delegate");
+        _delegate = requireNonNull(delegate, "delegate");
         _synchronizer = new DataCenterSynchronizer(curator, LOCK_PATH);
     }
 

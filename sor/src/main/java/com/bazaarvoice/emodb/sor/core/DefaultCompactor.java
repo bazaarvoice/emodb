@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultCompactor extends AbstractCompactor {
 
@@ -32,7 +32,7 @@ public class DefaultCompactor extends AbstractCompactor {
     public Expanded doExpand(Record record, long fullConsistencyTimestamp, MutableIntrinsics intrinsics, boolean ignoreRecent,
                                 Map.Entry<DeltaClusteringKey, Compaction> compactionEntry)
             throws RestartException {
-        checkNotNull(compactionEntry, "A legacy compaction needs to be provided to this legacy compactor");
+        requireNonNull(compactionEntry, "A legacy compaction needs to be provided to this legacy compactor");
         List<DeltaClusteringKey> keysToDelete = Lists.newArrayList();
         DeltasArchive deltasArchive = new DeltasArchive();
 

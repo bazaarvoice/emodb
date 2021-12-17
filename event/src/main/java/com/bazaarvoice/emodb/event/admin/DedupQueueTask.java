@@ -13,7 +13,7 @@ import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard task for inspecting the internals of active {@link DedupQueue} instances.
@@ -36,7 +36,7 @@ public class DedupQueueTask extends Task {
     @Inject
     public DedupQueueTask(@MetricsGroupName String metricsGroup, DedupQueueAdmin admin, TaskRegistry tasks) {
         super("dedup-" + metricsGroup.substring(metricsGroup.lastIndexOf('.') + 1));
-        _admin = checkNotNull(admin, "_admin");
+        _admin = requireNonNull(admin, "_admin");
         tasks.addTask(this);
     }
 

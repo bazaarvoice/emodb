@@ -19,8 +19,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This object takes a string which contains a JSON object and lazily provides a Map&lt;String, Object&gt; interface
@@ -66,7 +66,7 @@ public class LazyJsonMap implements Map<String, Object> {
 
     @JsonCreator
     public LazyJsonMap(String json) {
-        this(new DeserializationState(checkNotNull(json, "json")));
+        this(new DeserializationState(requireNonNull(json, "json")));
     }
 
     private LazyJsonMap(DeserializationState deserState) {

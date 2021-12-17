@@ -11,7 +11,7 @@ import com.google.common.base.Optional;
 import javax.annotation.Nullable;
 import java.util.Date;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO which maintains metadata about the scan ranges being processed as part of a scan and upload operation.
@@ -42,11 +42,11 @@ public class ScanRangeStatus {
     public ScanRangeStatus(int taskId, String placement, ScanRange scanRange, int batchId,
                            Optional<Integer> blockedByBatchId, Optional<Integer> concurrencyId) {
         _taskId = taskId;
-        _placement = checkNotNull(placement, "placement");
-        _scanRange = checkNotNull(scanRange, "scanRange");
+        _placement = requireNonNull(placement, "placement");
+        _scanRange = requireNonNull(scanRange, "scanRange");
         _batchId = batchId;
-        _blockedByBatchId = checkNotNull(blockedByBatchId, "blockedByBatchId");
-        _concurrencyId = checkNotNull(concurrencyId, "concurrencyId");
+        _blockedByBatchId = requireNonNull(blockedByBatchId, "blockedByBatchId");
+        _concurrencyId = requireNonNull(concurrencyId, "concurrencyId");
     }
 
     public int getTaskId() {

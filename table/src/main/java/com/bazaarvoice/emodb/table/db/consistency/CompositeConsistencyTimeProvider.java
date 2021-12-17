@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Combines the effect of {@link HintsConsistencyTimeProvider} and {@link MinLagConsistencyTimeProvider}.
@@ -28,8 +28,8 @@ public class CompositeConsistencyTimeProvider implements FullConsistencyTimeProv
     public CompositeConsistencyTimeProvider(Collection<ClusterInfo> clusterInfo,
                                             List<FullConsistencyTimeProvider> providers,
                                             MetricRegistry metricRegistry) {
-        checkNotNull(clusterInfo, "clusterInfo");
-        _providers = checkNotNull(providers, "providers");
+        requireNonNull(clusterInfo, "clusterInfo");
+        _providers = requireNonNull(providers, "providers");
 
         // Publish metrics for the full consistency timestamp as a time lag compared to now.  It's easier to alert
         // on a time lag that exceeds min/max bounds compared to alerting on the timestamp itself.

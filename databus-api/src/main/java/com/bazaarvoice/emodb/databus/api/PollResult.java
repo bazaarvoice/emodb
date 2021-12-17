@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.util.Iterator;
 import java.util.List;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Result returned from {@link Databus#poll(String, Duration, int)}.  The result contains to attributes:
@@ -36,7 +36,7 @@ public class PollResult {
     private final boolean _moreEvents;
 
     public PollResult(Iterator<Event> eventIterator, int approximateSize, boolean moreEvents) {
-        checkNotNull(eventIterator, "eventIterator");
+        requireNonNull(eventIterator, "eventIterator");
         _events = Lists.newArrayListWithCapacity(approximateSize);
         _moreEvents = moreEvents;
 

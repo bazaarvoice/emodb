@@ -14,7 +14,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Utility class for encrypting and decrypting credentials.  This is useful when credentials need to be explicitly
@@ -38,7 +38,7 @@ public class CredentialEncrypter {
      * will always produce the same encrypted values when given the same input.
      */
     public CredentialEncrypter(byte[] initializationBytes) {
-        checkNotNull(initializationBytes, "initializationBytes");
+        requireNonNull(initializationBytes, "initializationBytes");
 
         _key = createKey(initializationBytes);
         _iv = createInitializationVector(initializationBytes);
@@ -48,7 +48,7 @@ public class CredentialEncrypter {
      * Convenience constructor to initialize from a string converted to a UTF-8 byte array.
      */
     public CredentialEncrypter(String initializationString) {
-        this(checkNotNull(initializationString, "initializationString").getBytes(Charsets.UTF_8));
+        this(requireNonNull(initializationString, "initializationString").getBytes(Charsets.UTF_8));
     }
 
     private SecretKey createKey(byte[] initializationBytes) {
@@ -84,7 +84,7 @@ public class CredentialEncrypter {
      * can be recovered using {@link #decryptBytes(String)}.
      */
     public String encryptBytes(byte[] credentials) {
-        checkNotNull(credentials, "credentials");
+        requireNonNull(credentials, "credentials");
 
         try {
             int length = credentials.length;
@@ -108,7 +108,7 @@ public class CredentialEncrypter {
      * can be recovered using {@link #decryptString(String)}.
      */
     public String encryptString(String credentials) {
-        byte[] credentialBytes = checkNotNull(credentials, "credentials").getBytes(Charsets.UTF_8);
+        byte[] credentialBytes = requireNonNull(credentials, "credentials").getBytes(Charsets.UTF_8);
         return encryptBytes(credentialBytes);
     }
 
@@ -116,7 +116,7 @@ public class CredentialEncrypter {
      * Recovers the plaintext bytes from the encrypted value returned by {@link #encryptBytes(byte[])}.
      */
     public byte[] decryptBytes(String encryptedCredentials) {
-        checkNotNull(encryptedCredentials, "encryptedCredentials");
+        requireNonNull(encryptedCredentials, "encryptedCredentials");
 
         try {
             byte[] encryptedBytes = BaseEncoding.base64().omitPadding().decode(encryptedCredentials);
@@ -146,7 +146,7 @@ public class CredentialEncrypter {
      * by a specific instance.
      */
     public static boolean isPotentiallyEncryptedBytes(byte[] bytes) {
-        checkNotNull(bytes, "bytes");
+        requireNonNull(bytes, "bytes");
 
         // The number of bytes is a non-zero multiple of the block size.
         try {
@@ -162,7 +162,7 @@ public class CredentialEncrypter {
      * by a specific instance.
      */
     public static boolean isPotentiallyEncryptedString(String string) {
-        checkNotNull(string, "string");
+        requireNonNull(string, "string");
 
         // String is base64 encoded
         byte[] encryptedBytes;

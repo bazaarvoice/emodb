@@ -9,7 +9,7 @@ import org.apache.shiro.authz.AuthorizationInfo;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Object implementation for the unique identifier for a role.  This ID consists of the role's group and id.
@@ -35,7 +35,7 @@ public class RoleIdentifier implements Comparable<RoleIdentifier> {
 
     public RoleIdentifier(@Nullable String group, String id) {
         _group = group;
-        _id = checkNotNull(id, "id");
+        _id = requireNonNull(id, "id");
     }
 
     @Nullable

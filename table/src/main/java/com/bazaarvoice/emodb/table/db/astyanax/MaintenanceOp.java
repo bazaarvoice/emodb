@@ -5,7 +5,7 @@ import com.google.common.base.Objects;
 import java.time.Instant;
 import java.util.Optional;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Describes a pending table maintenance operation.
@@ -18,11 +18,11 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     private MaintenanceTask _task;
 
     static MaintenanceOp forMetadata(String name, Instant when, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", checkNotNull(task, "task"));
+        return new MaintenanceOp(name, when, MaintenanceType.METADATA, "<system>", requireNonNull(task, "task"));
     }
 
     static MaintenanceOp forData(String name, Instant when, String dataCenter, MaintenanceTask task) {
-        return new MaintenanceOp(name, when, MaintenanceType.DATA, Optional.ofNullable(dataCenter).orElse("<n/a>"), checkNotNull(task, "task"));
+        return new MaintenanceOp(name, when, MaintenanceType.DATA, Optional.ofNullable(dataCenter).orElse("<n/a>"), requireNonNull(task, "task"));
     }
 
     static MaintenanceOp reschedule(MaintenanceOp op, Instant when) {
@@ -30,9 +30,9 @@ class MaintenanceOp implements Comparable<MaintenanceOp> {
     }
 
     private MaintenanceOp(String name, Instant when, MaintenanceType type, String dataCenter, MaintenanceTask task) {
-        _name = checkNotNull(name, "name");
-        _when = checkNotNull(when, "when");
-        _type = checkNotNull(type, "type");
+        _name = requireNonNull(name, "name");
+        _when = requireNonNull(when, "when");
+        _type = requireNonNull(type, "type");
         _dataCenter = dataCenter;
         _task = task;
     }

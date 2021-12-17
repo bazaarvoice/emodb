@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.util.Iterator;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps an iterator such that {@link #hasNext()} returns {@code false} after a certain period of time.
@@ -24,7 +24,7 @@ class TimeLimitedIterator<T> extends AbstractIterator<T> implements PeekingItera
     }
 
     private TimeLimitedIterator(Iterator<T> iterator, Duration duration, long minimum) {
-        _iterator = checkNotNull(iterator, "iterator");
+        _iterator = requireNonNull(iterator, "iterator");
         _expireAt = System.currentTimeMillis() + duration.toMillis();
         checkArgument(minimum >= 0, "Minimum must be >= 0");
         _minimum = minimum;

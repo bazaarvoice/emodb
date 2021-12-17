@@ -14,7 +14,7 @@ import com.bazaarvoice.emodb.uac.api.UpdateEmoRoleRequest;
 
 import java.util.Iterator;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * SubjectUserAccessControl implementation which forwards all requests to an {@link AuthUserAccessControl} using the
@@ -25,7 +25,7 @@ public class RemoteSubjectUserAccessControl implements SubjectUserAccessControl 
     private final AuthUserAccessControl _client;
 
     public RemoteSubjectUserAccessControl(AuthUserAccessControl client) {
-        _client = checkNotNull(client, "client");
+        _client = requireNonNull(client, "client");
     }
 
     @Override

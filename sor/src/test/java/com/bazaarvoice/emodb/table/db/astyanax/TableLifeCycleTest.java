@@ -82,8 +82,8 @@ import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_1;
 import static com.bazaarvoice.emodb.table.db.astyanax.StorageState.PURGED_2;
 import static com.bazaarvoice.emodb.table.db.eventregistry.TableEvent.Action.DROP;
 import static com.bazaarvoice.emodb.table.db.eventregistry.TableEvent.Action.PROMOTE;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -130,14 +130,14 @@ public class TableLifeCycleTest {
         TableJson table = tableDAO.readTableJson(TABLE, true);
 
         // Verify top-level attributes.
-        String uuid = checkNotNull(table.getUuidString());
+        String uuid = requireNonNull(table.getUuidString());
         assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
         assertEquals(table.getStorages().size(), 1);
         assertFalse(table.isDeleted());
         assertFalse(table.isDropped());
 
         // Verify storage-level attributes.
-        Storage storage = checkNotNull(table.getMasterStorage());
+        Storage storage = requireNonNull(table.getMasterStorage());
         assertEquals(storage.getUuidString(), uuid);
         assertEquals(storage.getState(), PRIMARY);
         assertEquals(storage.getRawJson(), ImmutableMap.of(
@@ -156,12 +156,12 @@ public class TableLifeCycleTest {
         TableJson table = tableDAO.readTableJson(TABLE, true);
 
         // Verify top-level attributes.
-        String uuid = checkNotNull(table.getUuidString());
+        String uuid = requireNonNull(table.getUuidString());
         assertEquals(table.getAttributeMap(), ImmutableMap.<String, Object>of("space", "test"));
         assertEquals(table.getStorages().size(), 3);
 
         // Verify storage-level attributes.
-        Storage storage = checkNotNull(table.getMasterStorage());
+        Storage storage = requireNonNull(table.getMasterStorage());
         assertEquals(storage.getUuidString(), uuid);
         assertEquals(storage.getState(), PRIMARY);
         assertEquals(storage.getRawJson(), ImmutableMap.of(
@@ -188,7 +188,7 @@ public class TableLifeCycleTest {
             throws Exception {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
-        String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+        String uuid = requireNonNull(tableDAO.readTableJson(TABLE, true).getUuidString());
 
         // Drop the table
         Instant start = Instant.now();
@@ -206,7 +206,7 @@ public class TableLifeCycleTest {
         // Verify storage-level attributes.
         assertNull(table.getMasterStorage());
         assertEquals(table.getFacades().size(), 0);
-        Storage storage = checkNotNull(getStorage(table, uuid));
+        Storage storage = requireNonNull(getStorage(table, uuid));
         Instant droppedAt = storage.getTransitionedTimestamp(DROPPED);
         assertEquals(storage.getUuidString(), uuid);
         assertEquals(storage.getState(), DROPPED);
@@ -226,7 +226,7 @@ public class TableLifeCycleTest {
         AstyanaxTableDAO tableDAO = newTableDAO(backingStore, DC_US, mock(DataCopyDAO.class), mock(DataPurgeDAO.class), fct);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         registerTableEventListeners(backingStore);
-        String uuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+        String uuid = requireNonNull(tableDAO.readTableJson(TABLE, true).getUuidString());
         tableDAO.drop(TABLE, newAudit());
         Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), uuid)
                 .getTransitionedTimestamp(DROPPED);
@@ -317,7 +317,7 @@ public class TableLifeCycleTest {
             Instant end = Instant.now();
 
             TableJson table = tableDAO.readTableJson(TABLE, false);
-            Storage storage = checkNotNull(getStorage(table, uuid));
+            Storage storage = requireNonNull(getStorage(table, uuid));
             purgedAt2 = storage.getTransitionedTimestamp(PURGED_2);
             assertBetween(start, purgedAt2, end);
             assertEquals(storage.getTransitionedTimestamp(PURGED_1), purgedAt1);
@@ -382,9 +382,9 @@ public class TableLifeCycleTest {
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String masterUuid = checkNotNull(table.getUuidString());
-        String usUuid = checkNotNull(table.getFacadeForPlacement(PL_US).getUuidString());
-        String euUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
+        String masterUuid = requireNonNull(table.getUuidString());
+        String usUuid = requireNonNull(table.getFacadeForPlacement(PL_US).getUuidString());
+        String euUuid = requireNonNull(table.getFacadeForPlacement(PL_EU).getUuidString());
 
         // Drop a facade
         Instant start = Instant.now();
@@ -392,7 +392,7 @@ public class TableLifeCycleTest {
         Instant end = Instant.now();
 
         table = tableDAO.readTableJson(TABLE, false);
-        Instant droppedAt = checkNotNull(getStorage(table, usUuid).getTransitionedTimestamp(DROPPED));
+        Instant droppedAt = requireNonNull(getStorage(table, usUuid).getTransitionedTimestamp(DROPPED));
 
         // Verify top-level attributes.
         assertEquals(table.getUuidString(), masterUuid);
@@ -400,13 +400,13 @@ public class TableLifeCycleTest {
         assertEquals(table.getStorages().size(), 3);
 
         // Verify storage-level attributes.
-        Storage master = checkNotNull(table.getMasterStorage());
+        Storage master = requireNonNull(table.getMasterStorage());
         assertEquals(master.getUuidString(), masterUuid);
         assertEquals(master.getState(), PRIMARY);
         assertEquals(master.getRawJson(), ImmutableMap.of(
                 "placement", PL_APAC,
                 "shards", 16));
-        Storage us = checkNotNull(getStorage(table, usUuid));
+        Storage us = requireNonNull(getStorage(table, usUuid));
         assertEquals(us.getUuidString(), usUuid);
         assertEquals(us.getState(), DROPPED);
         assertEquals(us.getRawJson(), ImmutableMap.of(
@@ -414,7 +414,7 @@ public class TableLifeCycleTest {
                 "placement", PL_US,
                 "shards", 16,
                 "droppedAt", formatTimestamp(droppedAt)));
-        Storage eu = checkNotNull(getStorage(table, euUuid));
+        Storage eu = requireNonNull(getStorage(table, euUuid));
         assertEquals(eu.getUuidString(), euUuid);
         assertEquals(eu.getState(), PRIMARY);
         assertEquals(eu.getRawJson(), ImmutableMap.of(
@@ -443,8 +443,8 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_APAC), ImmutableMap.<String, Object>of("space", "test"), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_US), newAudit());
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String masterUuid = checkNotNull(table.getUuidString());
-        String facadeUuid = checkNotNull(table.getFacadeForPlacement(PL_US).getUuidString());
+        String masterUuid = requireNonNull(table.getUuidString());
+        String facadeUuid = requireNonNull(table.getFacadeForPlacement(PL_US).getUuidString());
         tableDAO.dropFacade(TABLE, PL_US, newAudit());
         Instant droppedAt = getStorage(tableDAO.readTableJson(TABLE, false), facadeUuid).getTransitionedTimestamp(DROPPED);
 
@@ -543,7 +543,7 @@ public class TableLifeCycleTest {
             assertEquals(table.getMasterStorage().getRawJson(), ImmutableMap.of(
                     "placement", PL_APAC,
                     "shards", 16));
-            Storage facade = checkNotNull(getStorage(table, facadeUuid));
+            Storage facade = requireNonNull(getStorage(table, facadeUuid));
             droppedAt = facade.getTransitionedTimestamp(DROPPED);
             assertEquals(facade.getUuidString(), facadeUuid);
             assertEquals(facade.getState(), PURGED_2);
@@ -604,7 +604,7 @@ public class TableLifeCycleTest {
         AstyanaxTableDAO tableDAO = newTableDAO(DC_US, backingStore);
         registerTableEventListeners(backingStore);
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
-        String srcUuid = checkNotNull(tableDAO.readTableJson(TABLE, true).getUuidString());
+        String srcUuid = requireNonNull(tableDAO.readTableJson(TABLE, true).getUuidString());
 
         Instant start = Instant.now();
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
@@ -620,8 +620,8 @@ public class TableLifeCycleTest {
         assertEquals(table.getStorages().size(), 2);
 
         // Verify storage-level attributes.
-        Storage src = checkNotNull(table.getMasterStorage());
-        Storage dest = checkNotNull(src.getMoveTo());
+        Storage src = requireNonNull(table.getMasterStorage());
+        Storage dest = requireNonNull(src.getMoveTo());
         assertEquals(src.getUuidString(), srcUuid);
         assertEquals(src.getState(), PRIMARY);
         assertTrue(src.isPrimary());
@@ -683,8 +683,8 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.createFacade(TABLE, newFacadeOptions(PL_EU), newAudit());
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String masterUuid = checkNotNull(table.getUuidString());
-        String srcUuid = checkNotNull(table.getFacadeForPlacement(PL_EU).getUuidString());
+        String masterUuid = requireNonNull(table.getUuidString());
+        String srcUuid = requireNonNull(table.getFacadeForPlacement(PL_EU).getUuidString());
 
         Instant start = Instant.now();
         tableDAO.moveFacade(TABLE, PL_EU, PL_EU, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
@@ -700,9 +700,9 @@ public class TableLifeCycleTest {
         assertEquals(table.getFacades().size(), 1);
 
         // Verify storage-level attributes.
-        Storage master = checkNotNull(table.getMasterStorage());
-        Storage src = checkNotNull(getStorage(table, srcUuid));
-        Storage dest = checkNotNull(src.getMoveTo());
+        Storage master = requireNonNull(table.getMasterStorage());
+        Storage src = requireNonNull(getStorage(table, srcUuid));
+        Storage dest = requireNonNull(src.getMoveTo());
         assertEquals(master.getUuidString(), masterUuid);
         assertEquals(master.getState(), PRIMARY);
         assertEquals(master.getRawJson(), ImmutableMap.<String, Object>builder()
@@ -758,8 +758,8 @@ public class TableLifeCycleTest {
         TableJson table = tableDAO.readTableJson(TABLE, true);
         String srcUuid = table.getMasterStorage().getUuidString();
         String destUuid = table.getMasterStorage().getMoveTo().getUuidString();
-        Instant mirrorCreatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
-        Instant mirrorActivatedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
+        Instant mirrorCreatedAt = requireNonNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CREATED));
+        Instant mirrorActivatedAt = requireNonNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_ACTIVATED));
 
         assertTableEventsPresent(backingStore, ImmutableSet.of(DC_EU, DC_SA, DC_ZZ), TABLE, destUuid, PROMOTE);
         assertTableEventsAbsent(backingStore, ImmutableSet.of(DC_US, DC_EU, DC_SA, DC_ZZ), TABLE, srcUuid);
@@ -803,7 +803,7 @@ public class TableLifeCycleTest {
             table = tableDAO.readTableJson(TABLE, true);
             assertEquals(table.getMasterStorage().getState(), PRIMARY);
             assertEquals(table.getMasterStorage().getMoveTo().getState(), MIRROR_COPIED);
-            mirrorCopiedAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_COPIED));
+            mirrorCopiedAt = requireNonNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_COPIED));
             assertBetween(start, mirrorCopiedAt, end);
 
             // Did we copy to the right place?
@@ -856,7 +856,7 @@ public class TableLifeCycleTest {
             table = tableDAO.readTableJson(TABLE, true);
             assertEquals(table.getMasterStorage().getState(), PRIMARY);
             assertEquals(table.getMasterStorage().getMoveTo().getState(), MIRROR_CONSISTENT);
-            mirrorConsistentAt = checkNotNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CONSISTENT));
+            mirrorConsistentAt = requireNonNull(table.getMasterStorage().getMoveTo().getTransitionedTimestamp(MIRROR_CONSISTENT));
             assertBetween(start, mirrorConsistentAt, end);
             verifyNoMoreInteractions(usDataCopyDAO, usDataPurgeDAO);
 
@@ -890,10 +890,10 @@ public class TableLifeCycleTest {
             assertEquals(table.getStorages().size(), 2);
 
             // Verify storage-level attributes.
-            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage dest = requireNonNull(table.getMasterStorage());
             Storage src = Iterables.getOnlyElement(dest.getMirrors());
             promotionId = dest.getPromotionId();
-            primaryAt = checkNotNull(dest.getTransitionedTimestamp(PRIMARY));
+            primaryAt = requireNonNull(dest.getTransitionedTimestamp(PRIMARY));
             assertEquals(dest.getUuidString(), destUuid);
             assertEquals(dest.getState(), PRIMARY);
             assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
@@ -948,9 +948,9 @@ public class TableLifeCycleTest {
             assertEquals(table.getStorages().size(), 2);
 
             // Verify storage-level attributes.
-            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage dest = requireNonNull(table.getMasterStorage());
             Storage src = Iterables.getOnlyElement(dest.getMirrors());
-            mirrorExpiresAt = checkNotNull(src.getMirrorExpiresAt());
+            mirrorExpiresAt = requireNonNull(src.getMirrorExpiresAt());
             assertEquals(dest.getUuidString(), destUuid);
             assertEquals(dest.getState(), PRIMARY);
             assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
@@ -1045,10 +1045,10 @@ public class TableLifeCycleTest {
             assertEquals(table.getStorages().size(), 2);
 
             // Verify storage-level attributes.
-            Storage dest = checkNotNull(table.getMasterStorage());
+            Storage dest = requireNonNull(table.getMasterStorage());
             Storage src = getStorage(table, srcUuid);
-            mirrorExpiredAt = checkNotNull(src.getTransitionedTimestamp(MIRROR_EXPIRED));
-            droppedAt = checkNotNull(src.getTransitionedTimestamp(DROPPED));
+            mirrorExpiredAt = requireNonNull(src.getTransitionedTimestamp(MIRROR_EXPIRED));
+            droppedAt = requireNonNull(src.getTransitionedTimestamp(DROPPED));
             assertEquals(dest.getUuidString(), destUuid);
             assertEquals(dest.getRawJson(), ImmutableMap.<String, Object>builder()
                     .put("placement", PL_GLOBAL)
@@ -1112,8 +1112,8 @@ public class TableLifeCycleTest {
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
 
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String srcUuid = checkNotNull(table.getUuidString());
-        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+        String srcUuid = requireNonNull(table.getUuidString());
+        String destUuid = requireNonNull(table.getMasterStorage().getMoveTo().getUuidString());
 
         // Hack the table JSON to get to the state where promote has occurred.
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
@@ -1205,8 +1205,8 @@ public class TableLifeCycleTest {
         tableDAO.create(TABLE, newOptions(PL_US), ImmutableMap.<String, Object>of(), newAudit());
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String srcUuid = checkNotNull(table.getUuidString());
-        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+        String srcUuid = requireNonNull(table.getUuidString());
+        String destUuid = requireNonNull(table.getMasterStorage().getMoveTo().getUuidString());
 
         try {
             tableDAO.move(TABLE, PL_US, Optional.of(32), newAudit(), MoveType.SINGLE_TABLE);
@@ -1235,8 +1235,8 @@ public class TableLifeCycleTest {
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), moveType);
 
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String srcUuid = checkNotNull(table.getUuidString());
-        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+        String srcUuid = requireNonNull(table.getUuidString());
+        String destUuid = requireNonNull(table.getMasterStorage().getMoveTo().getUuidString());
 
         // Hack the table JSON to get to the state where promote has occurred.
         advanceActivatedToSourcePurged(destUuid, tableDAO, backingStore, fct);
@@ -1274,8 +1274,8 @@ public class TableLifeCycleTest {
         tableDAO.move(TABLE, PL_GLOBAL, Optional.<Integer>absent(), newAudit(), MoveType.SINGLE_TABLE);
 
         TableJson table = tableDAO.readTableJson(TABLE, true);
-        String srcUuid = checkNotNull(table.getUuidString());
-        String destUuid = checkNotNull(table.getMasterStorage().getMoveTo().getUuidString());
+        String srcUuid = requireNonNull(table.getUuidString());
+        String destUuid = requireNonNull(table.getMasterStorage().getMoveTo().getUuidString());
 
         // Hack the table JSON to get to the state where promote has occurred.
         advanceActivatedToPromoted(destUuid, tableDAO, backingStore, fct);
@@ -1495,7 +1495,7 @@ public class TableLifeCycleTest {
         // create a second table
         tableDAO.create(TABLE2, newOptions(PL_US), ImmutableMap.<String, Object>of("space", "test"), newAudit());
 
-        String table2Uuid = checkNotNull(tableDAO.readTableJson(TABLE2, true).getUuidString());
+        String table2Uuid = requireNonNull(tableDAO.readTableJson(TABLE2, true).getUuidString());
 
         // drop the second table
         tableDAO.drop(TABLE2, newAudit());
@@ -2041,6 +2041,6 @@ public class TableLifeCycleTest {
     }
 
     private String formatTimestamp(Instant timestamp) {
-        return JsonMap.TimestampAttribute.format(checkNotNull(timestamp));
+        return JsonMap.TimestampAttribute.format(requireNonNull(timestamp));
     }
 }

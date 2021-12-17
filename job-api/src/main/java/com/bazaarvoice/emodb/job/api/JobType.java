@@ -1,6 +1,6 @@
 package com.bazaarvoice.emodb.job.api;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base class which defines a job type.
@@ -15,9 +15,9 @@ abstract public class JobType<Q, R> {
     private final Class<R> _resultType;
 
     protected JobType(String name, Class<Q> requestType, Class<R> resultType) {
-        _name = checkNotNull(name, "name");
-        _requestType = checkNotNull(requestType, "requestType");
-        _resultType = checkNotNull(resultType, "resultType");
+        _name = requireNonNull(name, "name");
+        _requestType = requireNonNull(requestType, "requestType");
+        _resultType = requireNonNull(resultType, "resultType");
     }
 
     public String getName() {

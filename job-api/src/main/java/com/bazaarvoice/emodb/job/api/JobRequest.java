@@ -2,7 +2,7 @@ package com.bazaarvoice.emodb.job.api;
 
 import javax.annotation.Nullable;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class JobRequest<Q, R> {
 
@@ -10,7 +10,7 @@ public class JobRequest<Q, R> {
     private final Q _request;
 
     public JobRequest(JobType<Q, R> type, @Nullable Q request) {
-        _type = checkNotNull(type, "type");
+        _type = requireNonNull(type, "type");
         _request = request;
     }
 

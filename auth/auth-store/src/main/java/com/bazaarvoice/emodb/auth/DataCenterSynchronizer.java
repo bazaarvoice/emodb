@@ -8,7 +8,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Utility class for serially executing operations within the local data center using a the ZooKeeper
@@ -20,7 +20,7 @@ public class DataCenterSynchronizer {
     private final InterProcessMutex _mutex;
 
     public DataCenterSynchronizer(CuratorFramework curator, String lockPath) {
-        _mutex = new InterProcessMutex(checkNotNull(curator, "curator"), checkNotNull(lockPath, "lockPath"));
+        _mutex = new InterProcessMutex(requireNonNull(curator, "curator"), requireNonNull(lockPath, "lockPath"));
     }
 
     public void inMutex(Runnable runnable) {

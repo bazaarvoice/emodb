@@ -9,7 +9,7 @@ import com.bazaarvoice.emodb.sor.delta.NoopDelta;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class ConditionalDeltaImpl extends AbstractDelta implements ConditionalDelta {
 
@@ -18,9 +18,9 @@ public class ConditionalDeltaImpl extends AbstractDelta implements ConditionalDe
     private final Delta _else;
 
     public ConditionalDeltaImpl(Condition test, Delta then, Delta anElse) {
-        _test = checkNotNull(test);
-        _then = checkNotNull(then);
-        _else = checkNotNull(anElse);
+        _test = requireNonNull(test);
+        _then = requireNonNull(then);
+        _else = requireNonNull(anElse);
     }
 
     @Override

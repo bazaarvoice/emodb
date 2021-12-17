@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Shows or changes the current per-Cassandra cluster rate limits for background data maintenance operations
@@ -43,8 +43,8 @@ public class MaintenanceRateLimitTask extends Task {
                                     @Maintenance RateLimiterCache rateLimiterCache,
                                     @KeyspaceMap Map<String, CassandraKeyspace> keyspaceMap) {
         super(scope + "-rate-limits");
-        _rateLimits = checkNotNull(rateLimits, "rateLimits");
-        _rateLimiterCache = checkNotNull(rateLimiterCache, "rateLimiterCache");
+        _rateLimits = requireNonNull(rateLimits, "rateLimits");
+        _rateLimiterCache = requireNonNull(rateLimiterCache, "rateLimiterCache");
         _clusters = Ordering.natural().immutableSortedCopy(Sets.newHashSet(
                 Iterables.transform(keyspaceMap.values(), new Function<CassandraKeyspace, String>() {
                     @Override

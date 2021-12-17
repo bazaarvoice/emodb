@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * POJO to hold the options for how a scan and upload operation is configured.
@@ -50,7 +50,7 @@ public class ScanOptions {
     }
 
     public ScanOptions(Collection<String> placements) {
-        _placements = ImmutableSortedSet.copyOf(checkNotNull(placements, "placements"));
+        _placements = ImmutableSortedSet.copyOf(requireNonNull(placements, "placements"));
         checkArgument(!placements.isEmpty(), "At least one placement is required");
     }
 
@@ -97,13 +97,13 @@ public class ScanOptions {
     }
 
     public ScanOptions addDestination(ScanDestination destination) {
-        _destinations.add(checkNotNull(destination, "destination"));
+        _destinations.add(requireNonNull(destination, "destination"));
         return this;
     }
 
     public ScanOptions addDestinations(Collection<ScanDestination> destinations) {
         for (ScanDestination destination : destinations) {
-            _destinations.add(checkNotNull(destination, "destination"));
+            _destinations.add(requireNonNull(destination, "destination"));
         }
         return this;
     }
@@ -152,7 +152,7 @@ public class ScanOptions {
     }
 
     public ScanOptions setMaxRangeScanTime(Duration maxRangeScanTime) {
-        checkNotNull(maxRangeScanTime, "maxRangeScanTime");
+        requireNonNull(maxRangeScanTime, "maxRangeScanTime");
         checkArgument(maxRangeScanTime.compareTo(Duration.ZERO) > 0, "Duration must not be empty");
         _maxRangeScanTime = maxRangeScanTime;
         return this;

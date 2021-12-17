@@ -1,24 +1,18 @@
 package com.bazaarvoice.emodb.sor.condition.impl;
 
-import com.bazaarvoice.emodb.common.json.OrderedJson;
 import com.bazaarvoice.emodb.sor.api.Intrinsic;
 import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
-import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
-import com.bazaarvoice.emodb.sor.condition.OrCondition;
 import com.bazaarvoice.emodb.sor.delta.deser.DeltaJson;
-import com.google.common.base.Joiner;
 import com.google.common.io.CharStreams;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Collection;
-import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class IntrinsicConditionImpl extends AbstractCondition implements IntrinsicCondition {
 
@@ -26,8 +20,8 @@ public class IntrinsicConditionImpl extends AbstractCondition implements Intrins
     private final Condition _condition;
 
     public IntrinsicConditionImpl(String name, Condition condition) {
-        _name = checkNotNull(name, "name");
-        _condition = checkNotNull(condition, "condition");
+        _name = requireNonNull(name, "name");
+        _condition = requireNonNull(condition, "condition");
         checkArgument(Intrinsic.DATA_FIELDS.contains(name), name);
         checkArgument(!Intrinsic.VERSION.equals(name), name);
     }

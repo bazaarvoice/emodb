@@ -43,8 +43,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static com.bazaarvoice.emodb.sortedq.db.QueueDAO.UpdateRequest;
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 /**
  * An implementation of {@link SortedQueue} backed by a Cassandra-like data store.
@@ -115,8 +115,8 @@ public class PersistentSortedQueue implements SortedQueue {
 
     @VisibleForTesting
     PersistentSortedQueue(String name, boolean readOnly, long splitThresholdBytes, int splitWorkBytes, QueueDAO dao, MetricRegistry metricRegistry) {
-        _dao = checkNotNull(dao, "dao");
-        _name = checkNotNull(name, "name");
+        _dao = requireNonNull(dao, "dao");
+        _name = requireNonNull(name, "name");
         _readOnly = readOnly;
         _splitThresholdBytes = splitThresholdBytes;
         _splitWorkBytes = splitWorkBytes;
@@ -171,7 +171,7 @@ public class PersistentSortedQueue implements SortedQueue {
 
     @Override
     public void addAll(Collection<ByteBuffer> records) {
-        checkNotNull(records, "records");
+        requireNonNull(records, "records");
         checkWritesAllowed();
 
         if (records.isEmpty()) {
@@ -274,7 +274,7 @@ public class PersistentSortedQueue implements SortedQueue {
 
     @Override
     public void drainTo(Consumer consumer, long limit, @Nullable Duration timeout) {
-        checkNotNull(consumer, "consumer");
+        requireNonNull(consumer, "consumer");
         checkArgument(limit > 0, "Limit must be >0");
 
         long timeoutAt = (timeout != null) ? System.currentTimeMillis() + timeout.toMillis() : Long.MAX_VALUE;

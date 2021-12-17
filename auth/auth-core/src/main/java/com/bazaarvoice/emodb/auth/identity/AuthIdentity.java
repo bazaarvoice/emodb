@@ -1,6 +1,5 @@
 package com.bazaarvoice.emodb.auth.identity;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 
@@ -8,7 +7,7 @@ import java.util.Date;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Base unit of identity for a client which can be authenticated in the application.
@@ -57,7 +56,7 @@ abstract public class AuthIdentity {
     protected AuthIdentity(String id, Set<String> roles) {
         checkArgument(!Strings.isNullOrEmpty(id), "id");
         _id = id;
-        _roles = ImmutableSet.copyOf(checkNotNull(roles, "roles"));
+        _roles = ImmutableSet.copyOf(requireNonNull(roles, "roles"));
     }
 
     public String getId() {

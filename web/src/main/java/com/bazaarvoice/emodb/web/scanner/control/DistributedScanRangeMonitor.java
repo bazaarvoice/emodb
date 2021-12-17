@@ -29,7 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Managed process which listens for scan ranges ready to be uploaded via a previous call to
@@ -60,9 +60,9 @@ public class DistributedScanRangeMonitor implements Managed {
     public DistributedScanRangeMonitor(ScanWorkflow scanWorkflow, ScanStatusDAO scanStatusDAO,
                                        RangeScanUploader rangeScanUploader,
                                        @MaxConcurrentScans int maxConcurrentScans, LifeCycleRegistry lifecycle) {
-        _scanWorkflow = checkNotNull(scanWorkflow, "scanWorkflow");
-        _scanStatusDAO = checkNotNull(scanStatusDAO, "scanStatusDAO");
-        _rangeScanUploader = checkNotNull(rangeScanUploader, "rangeScanUploader");
+        _scanWorkflow = requireNonNull(scanWorkflow, "scanWorkflow");
+        _scanStatusDAO = requireNonNull(scanStatusDAO, "scanStatusDAO");
+        _rangeScanUploader = requireNonNull(rangeScanUploader, "rangeScanUploader");
         checkArgument(maxConcurrentScans > 0, "maxConcurrentScans <= 0");
         _maxConcurrentScans = maxConcurrentScans;
 

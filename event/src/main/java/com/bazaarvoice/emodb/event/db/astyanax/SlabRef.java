@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.event.db.astyanax;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class SlabRef {
     private final String _channel;
@@ -12,9 +12,9 @@ public class SlabRef {
     private final AtomicInteger _refCount = new AtomicInteger(1);
 
     SlabRef(String channel, ByteBuffer slabId, ManifestPersister persister) {
-        _channel = checkNotNull(channel);
-        _slabId = checkNotNull(slabId);
-        _persister = checkNotNull(persister);
+        _channel = requireNonNull(channel);
+        _slabId = requireNonNull(slabId);
+        _persister = requireNonNull(persister);
         _persister.open(_channel, _slabId);
     }
 

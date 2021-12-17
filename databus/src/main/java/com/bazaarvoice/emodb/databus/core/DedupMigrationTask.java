@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintWriter;
 import java.util.Collection;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Disables dedup queues and reverts to using non-dedup'd queues for the Databus.
@@ -52,8 +52,8 @@ public class DedupMigrationTask extends Task {
     public DedupMigrationTask(TaskRegistry tasks, LifeCycleRegistry lifeCycle, DedupEventStore eventStore,
                               @DedupEnabled ValueStore<Boolean> dedupEnabled) {
         super("dedup-databus-migration");
-        _eventStore = checkNotNull(eventStore, "eventStore");
-        _dedupEnabled = checkNotNull(dedupEnabled, "dedupEnabled");
+        _eventStore = requireNonNull(eventStore, "eventStore");
+        _dedupEnabled = requireNonNull(dedupEnabled, "dedupEnabled");
         tasks.addTask(this);
 
         // Default is enabled, so at startup warn if disabled since otherwise essential functionality won't work.

@@ -6,7 +6,6 @@ import com.bazaarvoice.emodb.sor.condition.Condition;
 import com.bazaarvoice.emodb.sor.condition.ConditionVisitor;
 import com.bazaarvoice.emodb.sor.condition.ConstantCondition;
 import com.bazaarvoice.emodb.sor.condition.ContainsCondition;
-import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.EqualCondition;
 import com.bazaarvoice.emodb.sor.condition.InCondition;
 import com.bazaarvoice.emodb.sor.condition.IntrinsicCondition;
@@ -15,13 +14,14 @@ import com.bazaarvoice.emodb.sor.condition.LikeCondition;
 import com.bazaarvoice.emodb.sor.condition.MapCondition;
 import com.bazaarvoice.emodb.sor.condition.NotCondition;
 import com.bazaarvoice.emodb.sor.condition.OrCondition;
+import com.bazaarvoice.emodb.sor.condition.PartitionCondition;
 import com.bazaarvoice.emodb.sor.condition.State;
 import com.google.common.base.Objects;
 import com.google.common.collect.Sets;
 
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Evaluator for determining if, for two conditions left and right, left is a subset of right.  This relationship
@@ -38,7 +38,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 public class SubsetEvaluator implements ConditionVisitor<Condition, Boolean> {
 
     public static boolean isSubset(Condition left, Condition right) {
-        return new SubsetEvaluator().checkIsSubset(checkNotNull(left, "left"), checkNotNull(right, "right"));
+        return new SubsetEvaluator().checkIsSubset(requireNonNull(left, "left"), requireNonNull(right, "right"));
     }
 
     private boolean checkIsSubset(Condition left, Condition right) {

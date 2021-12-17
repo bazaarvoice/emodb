@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Condition visitor to return the inverse of a condition.  If possible this returns an inverse, <code>i</code>,
@@ -43,7 +43,7 @@ class InverseEvaluator implements ConditionVisitor<Void, Condition> {
 
     @Nullable
     public static Condition getInverseOf(Condition condition) {
-        return checkNotNull(condition, "condition").visit(new InverseEvaluator(), null);
+        return requireNonNull(condition, "condition").visit(new InverseEvaluator(), null);
     }
 
     @Nullable

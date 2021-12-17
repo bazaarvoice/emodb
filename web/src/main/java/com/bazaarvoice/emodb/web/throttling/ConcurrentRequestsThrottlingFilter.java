@@ -6,7 +6,7 @@ import com.sun.jersey.spi.container.ContainerResponse;
 import com.sun.jersey.spi.container.ContainerResponseFilter;
 import com.sun.jersey.spi.container.ResourceFilter;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * This filter limits the number of concurrent requests based on the request parameters.  It is mostly a thin
@@ -20,7 +20,7 @@ public class ConcurrentRequestsThrottlingFilter implements ResourceFilter, Conta
 
     /** Creates a new filter which regulates request throttling using the given supplier. */
     public ConcurrentRequestsThrottlingFilter(ConcurrentRequestRegulatorSupplier regulatorSupplier) {
-        _regulatorSupplier = checkNotNull(regulatorSupplier, "Concurrent request regulator supplier is required");
+        _regulatorSupplier = requireNonNull(regulatorSupplier, "Concurrent request regulator supplier is required");
     }
 
     @Override

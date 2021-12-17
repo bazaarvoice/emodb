@@ -21,7 +21,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Wraps a SOA {@link ServiceFactory} and returns SOA clients for remote end points and the in-JVM service
@@ -39,9 +39,9 @@ public class PartitionAwareServiceFactory<S> implements MultiThreadedServiceFact
     public PartitionAwareServiceFactory(Class<S> serviceClass, MultiThreadedServiceFactory<S> delegate, S local,
                                         HostAndPort self, HealthCheckRegistry healthCheckRegistry,
                                         MetricRegistry metricRegistry) {
-        _serviceClass = checkNotNull(serviceClass, "serviceClass");
-        _delegate = checkNotNull(delegate, "delegate");
-        _local = checkNotNull(local, "local");
+        _serviceClass = requireNonNull(serviceClass, "serviceClass");
+        _delegate = requireNonNull(delegate, "delegate");
+        _local = requireNonNull(local, "local");
         _localId = self.toString();
         _healthCheckRegistry = healthCheckRegistry;
         _errorMeter = metricRegistry.meter(MetricRegistry.name("bv.emodb.web.partition-forwarding",

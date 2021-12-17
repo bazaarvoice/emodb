@@ -3,7 +3,7 @@ package com.bazaarvoice.emodb.blob.api;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public final class DefaultBlob extends DefaultBlobMetadata implements Blob, StreamSupplier {
     private final Range _range;
@@ -11,8 +11,8 @@ public final class DefaultBlob extends DefaultBlobMetadata implements Blob, Stre
 
     public DefaultBlob(BlobMetadata metadata, Range byteRange, StreamSupplier streamSupplier) {
         super(metadata);
-        _range = checkNotNull(byteRange, "byteRange");
-        _streamSupplier = checkNotNull(streamSupplier, "streamSupplier");
+        _range = requireNonNull(byteRange, "byteRange");
+        _streamSupplier = requireNonNull(streamSupplier, "streamSupplier");
     }
 
     @Override

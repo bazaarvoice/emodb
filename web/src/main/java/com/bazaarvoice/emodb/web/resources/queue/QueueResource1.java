@@ -38,7 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 @Path("/queue/1")
 @Produces(MediaType.APPLICATION_JSON)
@@ -50,8 +50,8 @@ public class QueueResource1 {
     private final QueueServiceAuthenticator _queueClient;
 
     public QueueResource1(QueueService queueService, QueueServiceAuthenticator queueClient) {
-        _queueService = checkNotNull(queueService, "queueService");
-        _queueClient = checkNotNull(queueClient, "queueClient");
+        _queueService = requireNonNull(queueService, "queueService");
+        _queueClient = requireNonNull(queueClient, "queueClient");
     }
 
     @POST

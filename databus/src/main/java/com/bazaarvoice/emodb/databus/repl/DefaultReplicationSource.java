@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultReplicationSource implements ReplicationSource {
     private final EventStore _eventStore;
@@ -24,7 +24,7 @@ public class DefaultReplicationSource implements ReplicationSource {
 
     @Override
     public List<ReplicationEvent> get(String channel, int limit) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
         checkArgument(limit > 0, "Limit must be >0");
 
         List<EventData> rawEvents = _eventStore.peek(channel, limit);
@@ -40,8 +40,8 @@ public class DefaultReplicationSource implements ReplicationSource {
 
     @Override
     public void delete(String channel, Collection<String> eventIds) {
-        checkNotNull(channel, "channel");
-        checkNotNull(eventIds, "eventIds");
+        requireNonNull(channel, "channel");
+        requireNonNull(eventIds, "eventIds");
 
         _eventStore.delete(channel, eventIds, false);
     }

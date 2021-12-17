@@ -37,7 +37,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class AstyanaxQueueDAO implements QueueDAO {
     private static final ColumnFamily<String, UUID> CF_DEDUP_MD = new ColumnFamily<>("dedup_md",
@@ -52,8 +52,8 @@ public class AstyanaxQueueDAO implements QueueDAO {
 
     @Inject
     public AstyanaxQueueDAO(CassandraKeyspace keyspace, ChannelConfiguration channelConfiguration) {
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _channelConfiguration = checkNotNull(channelConfiguration, "channelConfiguration");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _channelConfiguration = requireNonNull(channelConfiguration, "channelConfiguration");
     }
 
     @Override

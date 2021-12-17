@@ -12,7 +12,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Enumerates Cassandra keyspaces, filtered by data center.
@@ -22,7 +22,7 @@ public class AstyanaxKeyspaceDiscovery implements KeyspaceDiscovery {
 
     @Inject
     public AstyanaxKeyspaceDiscovery(@KeyspaceMap Map<String, CassandraKeyspace> keyspaceMap) {
-        _keyspaceMap = checkNotNull(keyspaceMap, "keyspaceMap");
+        _keyspaceMap = requireNonNull(keyspaceMap, "keyspaceMap");
     }
 
     @Override

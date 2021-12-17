@@ -49,8 +49,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 import static java.util.Optional.ofNullable;
 
 /**
@@ -176,7 +176,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public AstyanaxCluster cluster() {
-            checkNotNull(_cluster, "cluster");
+            requireNonNull(_cluster, "cluster");
             String metricName;
             ConnectionPoolConfiguration poolConfig;
 
@@ -186,7 +186,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = CassandraConfiguration.this;
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = keyspaceConfig;
             }
@@ -312,7 +312,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
         }
 
         public CqlCluster cluster() {
-            checkNotNull(_cluster, "cluster");
+            requireNonNull(_cluster, "cluster");
             String metricName;
             FilterConnectionPoolConfiguration poolConfig;
 
@@ -322,7 +322,7 @@ public class CassandraConfiguration implements ConnectionPoolConfiguration {
                 poolConfig = new FilterConnectionPoolConfiguration(CassandraConfiguration.this);
             } else {
                 // Use the configuration specifically for this keyspace
-                KeyspaceConfiguration keyspaceConfig = checkNotNull(_keyspaces.get(_keyspace), "keyspaceConfig");
+                KeyspaceConfiguration keyspaceConfig = requireNonNull(_keyspaces.get(_keyspace), "keyspaceConfig");
                 metricName = ofNullable(keyspaceConfig.getKeyspaceMetric()).orElse(_keyspace);
                 poolConfig = new FilterConnectionPoolConfiguration(keyspaceConfig);
             }

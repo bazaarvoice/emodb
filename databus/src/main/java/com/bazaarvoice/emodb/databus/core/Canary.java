@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Polls and acks events from all emo tables once every second (approx.)
@@ -56,11 +56,11 @@ public class Canary extends AbstractScheduledService {
     @VisibleForTesting
     Canary(ClusterInfo cluster, Condition subscriberCondition, Databus databus, RateLimitedLogFactory logFactory,
            MetricRegistry metricRegistry, @Nullable ScheduledExecutorService executor) {
-        _databus = checkNotNull(databus, "databus");
+        _databus = requireNonNull(databus, "databus");
         _timers = new MetricsGroup(metricRegistry);
-        checkNotNull(cluster, "cluster");
+        requireNonNull(cluster, "cluster");
         _subscriptionName = ChannelNames.getMasterCanarySubscription(cluster.getCluster());
-        _subscriptionCondition = checkNotNull(subscriberCondition, "subscriptionCondition");
+        _subscriptionCondition = requireNonNull(subscriberCondition, "subscriptionCondition");
         _timerName = newTimerName("readEventsByCanaryPoll-" + cluster.getClusterMetric());
         _rateLimitedLog = logFactory.from(_log);
         _executor = executor;

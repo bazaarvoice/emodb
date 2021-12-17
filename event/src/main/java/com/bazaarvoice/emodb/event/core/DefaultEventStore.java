@@ -36,7 +36,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 public class DefaultEventStore implements EventStore {
     private static final Logger _log = LoggerFactory.getLogger(DefaultEventStore.class);
@@ -57,10 +57,10 @@ public class DefaultEventStore implements EventStore {
     @Inject
     public DefaultEventStore(EventReaderDAO readerDao, EventWriterDAO writerDao,
                              EventIdSerializer eventIdSerializer, ClaimStore claimStore) {
-        _readerDao = checkNotNull(readerDao, "readerDao");
-        _writerDao = checkNotNull(writerDao, "writerDao");
-        _eventIdSerializer = checkNotNull(eventIdSerializer, "eventIdSerializer");
-        _claimStore = checkNotNull(claimStore, "claimStore");
+        _readerDao = requireNonNull(readerDao, "readerDao");
+        _writerDao = requireNonNull(writerDao, "writerDao");
+        _eventIdSerializer = requireNonNull(eventIdSerializer, "eventIdSerializer");
+        _claimStore = requireNonNull(claimStore, "claimStore");
         _emptyCache = CacheBuilder.newBuilder().expireAfterWrite(1, TimeUnit.SECONDS).build();
     }
 
@@ -72,8 +72,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void add(String channel, ByteBuffer event) {
-        checkNotNull(channel, "channel");
-        checkNotNull(event, "event");
+        requireNonNull(channel, "channel");
+        requireNonNull(event, "event");
 
         addAll(ImmutableMultimap.of(channel, event));
     }
@@ -81,8 +81,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void addAll(String channel, Collection<ByteBuffer> events) {
-        checkNotNull(channel, "channel");
-        checkNotNull(events, "events");
+        requireNonNull(channel, "channel");
+        requireNonNull(events, "events");
 
         if (events.isEmpty()) {
             return;
@@ -94,7 +94,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void addAll(Multimap<String, ByteBuffer> eventsByChannel) {
-        checkNotNull(eventsByChannel, "eventsByChannel");
+        requireNonNull(eventsByChannel, "eventsByChannel");
 
         if (eventsByChannel.isEmpty()) {
             return;
@@ -115,7 +115,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public long getSizeEstimate(String channel, long limit) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
         checkLimit(limit, Long.MAX_VALUE);
 
         return _readerDao.count(channel, limit);
@@ -124,7 +124,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public long getClaimCount(String channel) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
 
         return _claimStore.withClaimSet(channel, new Function<ClaimSet, Long>() {
             @Override
@@ -151,7 +151,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public boolean peek(String channel, EventSink sink) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
         int limit = sink.remaining();
         checkLimit(limit, Limits.MAX_PEEK_LIMIT);
 
@@ -168,8 +168,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public boolean addAllAndPeek(String channel, Collection<ByteBuffer> events, EventSink sink) {
-        checkNotNull(channel, "channel");
-        checkNotNull(events, "events");
+        requireNonNull(channel, "channel");
+        requireNonNull(events, "events");
 
         if (events.isEmpty()) {
             // No events were provided, so by definition there aren't any more
@@ -197,7 +197,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public boolean poll(final String channel, final Duration claimTtl, final EventSink sink) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
         checkClaimTtl(claimTtl);
         final int limit = sink.remaining();
         checkLimit(limit, Limits.MAX_POLL_LIMIT);
@@ -240,8 +240,8 @@ public class DefaultEventStore implements EventStore {
     @Override
     public boolean addAllAndPoll(final String channel, final Collection<ByteBuffer> events,
                               final Duration claimTtl, final EventSink sink) {
-        checkNotNull(channel, "channel");
-        checkNotNull(events, "events");
+        requireNonNull(channel, "channel");
+        requireNonNull(events, "events");
         checkClaimTtl(claimTtl);
 
         if (events.isEmpty()) {
@@ -271,8 +271,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void renew(String channel, Collection<String> eventIds, final Duration claimTtl, final boolean extendOnly) {
-        checkNotNull(channel, "channel");
-        checkNotNull(eventIds, "eventIds");
+        requireNonNull(channel, "channel");
+        requireNonNull(eventIds, "eventIds");
         checkClaimTtl(claimTtl);
 
         if (eventIds.isEmpty() || (extendOnly && claimTtl.isZero())) {
@@ -308,8 +308,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void delete(String channel, Collection<String> eventIds, boolean cancelClaims) {
-        checkNotNull(channel, "channel");
-        checkNotNull(eventIds, "eventIds");
+        requireNonNull(channel, "channel");
+        requireNonNull(eventIds, "eventIds");
 
         if (isDebugLoggingEnabled(channel)) {
             _log.debug("delete {} count={} cancel={}", channel, eventIds.size(), cancelClaims);
@@ -344,9 +344,9 @@ public class DefaultEventStore implements EventStore {
 
     private void scanInternal(String channel, final Predicate<ByteBuffer> filter,
                               final ScanSink sink, final int batchSize, Date since) {
-        checkNotNull(channel, "channel");
-        checkNotNull(filter, "filter");
-        checkNotNull(sink, "sink");
+        requireNonNull(channel, "channel");
+        requireNonNull(filter, "filter");
+        requireNonNull(sink, "sink");
         checkArgument(batchSize > 0, "batchSize must be >0");
 
         if (isDebugLoggingEnabled(channel)) {
@@ -375,9 +375,9 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void copy(String fromChannel, final String toChannel, final Predicate<ByteBuffer> filter, Date since) {
-        checkNotNull(fromChannel, "fromChannel");
-        checkNotNull(toChannel, "toChannel");
-        checkNotNull(filter, "filter");
+        requireNonNull(fromChannel, "fromChannel");
+        requireNonNull(toChannel, "toChannel");
+        requireNonNull(filter, "filter");
 
         if (isDebugLoggingEnabled(toChannel)) {
             _log.debug("copy from={} to={}", fromChannel, toChannel);
@@ -394,8 +394,8 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void move(final String fromChannel, final String toChannel) {
-        checkNotNull(fromChannel, "fromChannel");
-        checkNotNull(toChannel, "toChannel");
+        requireNonNull(fromChannel, "fromChannel");
+        requireNonNull(toChannel, "toChannel");
 
         if (fromChannel.equals(toChannel)) {
             return; // nothing to do
@@ -445,7 +445,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void unclaimAll(String channel) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
 
         if (isDebugLoggingEnabled(channel)) {
             _log.debug("unclaimAll {}", channel);
@@ -463,7 +463,7 @@ public class DefaultEventStore implements EventStore {
     @ParameterizedTimed(type="DefaultEventStore")
     @Override
     public void purge(String channel) {
-        checkNotNull(channel, "channel");
+        requireNonNull(channel, "channel");
 
         if (isDebugLoggingEnabled(channel)) {
             _log.debug("purge {}", channel);

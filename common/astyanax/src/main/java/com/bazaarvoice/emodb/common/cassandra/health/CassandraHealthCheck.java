@@ -12,8 +12,8 @@ import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.netflix.astyanax.model.ConsistencyLevel.CL_ONE;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Dropwizard health check for Cassandra.
@@ -28,9 +28,9 @@ public class CassandraHealthCheck extends HealthCheck {
     private transient volatile long _cacheRefreshTimeoutTime = Long.MAX_VALUE;
 
     public CassandraHealthCheck(CassandraKeyspace keyspace, String healthCheckCql, Clock clock) {
-        _keyspace = checkNotNull(keyspace, "keyspace");
-        _healthCheckCql = checkNotNull(healthCheckCql, "healthCheckCql");
-        _clock = checkNotNull(clock, "clock");
+        _keyspace = requireNonNull(keyspace, "keyspace");
+        _healthCheckCql = requireNonNull(healthCheckCql, "healthCheckCql");
+        _clock = requireNonNull(clock, "clock");
 
         // Optimistically return positive cached health check results until the first actual health check
         // returns a result
