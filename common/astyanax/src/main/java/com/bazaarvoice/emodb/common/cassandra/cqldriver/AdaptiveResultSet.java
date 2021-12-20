@@ -10,8 +10,6 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.Statement;
 import com.datastax.driver.core.exceptions.FrameTooLongException;
 import com.datastax.driver.core.exceptions.NoHostAvailableException;
-import com.datastax.driver.core.exceptions.OperationTimedOutException;
-import com.datastax.driver.core.exceptions.ReadTimeoutException;
 import com.datastax.driver.core.utils.MoreFutures;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
@@ -68,7 +66,7 @@ public class AdaptiveResultSet implements ResultSet {
             }
         });
 
-        return Futures.withFallback(adaptiveFuture, t -> {
+        return Futures.catchingAsync(adaptiveFuture, Throwable.class, t -> {
             if (isAdaptiveException(t) && remainingAdaptations > 0 && fetchSize > MIN_FETCH_SIZE) {
                 // Try again with half the fetch size
                 int reducedFetchSize = Math.max(fetchSize / 2, MIN_FETCH_SIZE);
